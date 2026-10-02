@@ -26,21 +26,28 @@ jobs:
           New-Item Publish/Agent -ItemType Directory -Force | Out-Null
           Copy-Item DomainConsole-CSharp/Agent/bin/Release/net462/DomainConsole.Agent.exe Publish/Agent/
           Copy-Item DomainConsole-CSharp/README.txt Publish/README-source.txt
-      - name: Verify application window starts
+      - name: Verify window and history after restart
         shell: pwsh
         run: |
           $env:DOMAINCONSOLE_UI_SMOKE = '1'
           $env:TEMP = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           New-Item $env:TEMP -ItemType Directory -Force | Out-Null
-          $p = Start-Process ./Publish/DomainConsole.exe -PassThru
-          Start-Sleep -Seconds 5
-          $p.Refresh()
-          if ($p.HasExited) { throw "Application exited during startup: $($p.ExitCode)" }
-          if ($p.MainWindowHandle -eq 0) { Stop-Process -Id $p.Id; throw "Application window was not created" }
-          Write-Output "Window created: $($p.MainWindowTitle)"
-          $null = $p.CloseMainWindow()
-          if (!$p.WaitForExit(10000)) { Stop-Process -Id $p.Id; throw "Application did not close normally" }
-          if ($p.ExitCode -ne 0) { throw "Application exited with code $($p.ExitCode)" }
+          function Test-Window {
+            $p = Start-Process ./Publish/DomainConsole.exe -PassThru
+            Start-Sleep -Seconds 5
+            $p.Refresh()
+            if ($p.HasExited) { throw "Application exited during startup: $($p.ExitCode)" }
+            if ($p.MainWindowHandle -eq 0) { Stop-Process -Id $p.Id; throw "Application window was not created" }
+            Write-Output "Window created: $($p.MainWindowTitle)"
+            $null = $p.CloseMainWindow()
+            if (!$p.WaitForExit(10000)) { Stop-Process -Id $p.Id; throw "Application did not close normally" }
+            if ($p.ExitCode -ne 0) { throw "Application exited with code $($p.ExitCode)" }
+          }
+          Test-Window
+          $env:DOMAINCONSOLE_EXPECT_HISTORY = '1'
+          Test-Window
+          Remove-Item Publish/Data -Recurse -Force
+          Write-Output "History persisted, opened without network, and survived AD list refresh."
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:
