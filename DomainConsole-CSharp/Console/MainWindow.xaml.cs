@@ -26,13 +26,13 @@ public partial class MainWindow:Window {
   if(Library.Count==0)Seed();
   CollectionViewSource.GetDefaultView(Computers).Filter=o=>{var r=(ComputerRow)o;return (r.Name+" "+r.OS).Contains(SearchBox.Text,StringComparison.OrdinalIgnoreCase)&&(ou==""||r.OU.Equals(ou,StringComparison.OrdinalIgnoreCase)||r.OU.EndsWith(","+ou,StringComparison.OrdinalIgnoreCase));};
   CollectionViewSource.GetDefaultView(Library).Filter=o=>{var e=(LibraryEntry)o;return(e.Name+" "+e.Category+" "+e.Description).Contains(LibrarySearch.Text,StringComparison.OrdinalIgnoreCase);};
-  if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_UI_SMOKE")=="1"){
+  Loaded+=(sender,args)=>{if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_UI_SMOKE")=="1"){
    if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_EXPECT_HISTORY")=="1"&&History.Count==0)throw new Exception("History was not restored after restart.");
    var samples=Enumerable.Range(0,50).Select(i=>new TargetRecord{Name="TEST-"+i,Host="test-"+i+".invalid",OS="Windows test"}).ToList();
    if(History.Count==0){var j=new RemoteJob{Name="History smoke test"};var t=Store.Clone(samples[0]);t.Status="Completed";t.Output="SMOKE_RESULT";t.State=new(){Status="Completed",Progress=100};j.Targets.Add(t);History.Add(j);Save();}
    LoadRows(samples);if(Computers[0].JobId!=History[0].Id||Computers[0].Target.Output!="SMOKE_RESULT")throw new Exception("AD refresh lost saved job association.");
-   OpenJob(History[0],false);if(OutputBox.Text!="SMOKE_RESULT")throw new Exception("History result did not open.");LoadRows(samples);
-  }else LoadRows(Store.Read("computers.json",new List<TargetRecord>()));
+   OpenJob(History[0],false);if(OutputBox.Text!="SMOKE_RESULT")throw new Exception("History result did not open: selected="+(ComputerGrid.SelectedItem as ComputerRow)?.Name+"; output="+OutputBox.Text);LoadRows(samples);
+  }else LoadRows(Store.Read("computers.json",new List<TargetRecord>()));};
   timer.Tick+=async(s,e)=>await Guard(async()=>{await Task.WhenAll(Computers.Where(r=>r.JobId!=""&&(r.Target.Status is "Submitted" or "Running" or "AwaitingReboot" or "RebootScheduled")).Select(Poll));await SendQueue();});timer.Start();Closing+=OnClosing;
  }
  void Notify(string text)=>StatusBar.Text=text;
