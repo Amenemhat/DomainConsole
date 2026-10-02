@@ -1,19 +1,9 @@
-# Domain Console
+# DomainConsole
 
-Windows-приложение на C# / WPF для удалённого обслуживания компьютеров Active Directory.
+Windows C# / WPF domain administration console, version 0.3.
 
-Исходный проект находится в `DomainConsole-Source.zip`. Сборка автоматически распаковывает его.
+Editable source is in `DomainConsole-CSharp/`. The ZIP at the repository root is the original 0.2 source snapshot; builds use the editable source tree.
 
-## Сборка
+GitHub Actions builds the Windows x64 portable app and verifies that its window starts and closes. Download `DomainConsole-Windows-x64` from a successful workflow run; extract all files and launch `DomainConsole.exe` with the adjacent `Agent` folder.
 
-Во вкладке **Actions** запустить **Build Windows application**. При успешной сборке скачать artifact **DomainConsole-Windows-x64** и распаковать целиком. Точка входа: `DomainConsole.exe`; папка `Agent` должна оставаться рядом.
-
-Приложение публикуется для Windows x64 с включённой средой .NET. Удалённый исполнитель использует .NET Framework 4.6.2 или выше на целевом компьютере.
-
-## Статус
-
-Исходники и workflow подготовлены. Успешная компиляция и запуск ещё не подтверждены. Испытания WinRM, WSUS и восстановления настроек нужно проводить на тестовой машине.
-
-Подробности и ограничения: README.txt внутри архива исходников.
-
-В репозитории не следует хранить `Data`, журналы, учётные данные или конфигурацию конкретного домена.
+Version 0.3 adds direct editor command execution, automatic result display, connection checks, readable PowerShell errors, Russian connection statuses, and copy/export controls. Domain connectivity and remote execution require testing in your environment.

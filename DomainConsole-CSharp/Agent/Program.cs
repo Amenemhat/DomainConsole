@@ -1,0 +1,149 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Web.Script.Serialization;
+using Microsoft.Win32;
+using System.ServiceProcess;
+using DomainConsole.Shared;
+namespace DomainConsole.Agent {
+ public class RegistrySnapshot {public string Key {get;set;}public string Name {get;set;}public bool Exists {get;set;}public int Value {get;set;}}
+ internal static class Program {
+  static readonly JavaScriptSerializer Json=new JavaScriptSerializer{MaxJsonLength=int.MaxValue,RecursionLimit=100};
+  static readonly object Gate=new object();static string Folder;static RemoteState State;static RemoteJob Job;
+  static string FilePath(string name)=>Path.Combine(Folder,name);
+  static string Quote(string s){
+   var result=new StringBuilder("\"");int slashes=0;
+   foreach(char c in s){if(c=='\\'){slashes++;continue;}if(c=='\"'){result.Append('\\',slashes*2+1);result.Append(c);}else{result.Append('\\',slashes);result.Append(c);}slashes=0;}
+   result.Append('\\',slashes*2);result.Append('\"');return result.ToString();
+  }
+  static void WriteJson(string name,object value){lock(Gate){var path=FilePath(name);File.WriteAllText(path+".tmp",Json.Serialize(value),new UTF8Encoding(true));if(File.Exists(path))File.Delete(path);File.Move(path+".tmp",path);}}
+  static void Save(){lock(Gate){State.Updated=DateTime.UtcNow.ToString("o");WriteJson("status.json",State);}}
+  static void Log(string message){lock(Gate)File.AppendAllText(FilePath("runner.log"),DateTime.UtcNow.ToString("o")+" "+message+Environment.NewLine,Encoding.UTF8);}
+  static bool Cancelled()=>File.Exists(FilePath("cancel.flag"));
+  static int Run(string exe,string args,string prefix=null){
+   var psi=new ProcessStartInfo(exe,args){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true};
+   using(var process=new Process{StartInfo=psi}){
+    object sync=new object();
+    process.OutputDataReceived+=(s,e)=>{if(e.Data==null)return;lock(sync){File.AppendAllText(FilePath((prefix??"system")+".out"),e.Data+Environment.NewLine,Encoding.UTF8);}var matches=Regex.Matches(e.Data,@"(?<!\d)(\d{1,3})(?:[.,]\d+)?\s*%");if(State!=null&&matches.Count>0){int p=int.Parse(matches[matches.Count-1].Groups[1].Value);if(p<=100){State.Progress=p;Save();}}};
+    process.ErrorDataReceived+=(s,e)=>{if(e.Data!=null)lock(sync)File.AppendAllText(FilePath((prefix??"system")+".err"),e.Data+Environment.NewLine,Encoding.UTF8);};
+    process.Start();process.BeginOutputReadLine();process.BeginErrorReadLine();process.WaitForExit();return process.ExitCode;
+   }
+  }
+  static int PowerShell(string code,string prefix){
+   var file=FilePath(prefix+".command.txt");File.WriteAllText(file,code,new UTF8Encoding(true));
+   var loader="& ([ScriptBlock]::Create([IO.File]::ReadAllText('"+file.Replace("'","''")+"',[Text.Encoding]::UTF8)))";
+   var exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),@"WindowsPowerShell\v1.0\powershell.exe");
+   return Run(exe,"-NoLogo -NoProfile -NonInteractive -EncodedCommand "+Convert.ToBase64String(Encoding.Unicode.GetBytes(loader)),prefix);
+  }
+  static void StartupTask(string suffix,string mode){
+   var executable=Path.Combine(Folder,"DomainConsole.Agent.exe");var action=Quote(executable)+" "+mode+" "+Quote(Folder);
+   int code=Run("schtasks.exe","/Create /TN "+Quote("DomainConsoleCSharp-"+suffix+"-"+Job.Id)+" /TR "+Quote(action)+" /SC ONSTART /RU SYSTEM /RL HIGHEST /F","scheduler");
+   if(code!=0)throw new Exception("Cannot register startup recovery task: "+code);
+  }
+  static void DeleteTask(string suffix){Run("schtasks.exe","/Delete /TN "+Quote("DomainConsoleCSharp-"+suffix+"-"+Job.Id)+" /F","scheduler");}
+  static void EnableMicrosoft(){
+   var list=new List<RegistrySnapshot>();
+   foreach(var pair in new[]{new[]{@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate","DoNotConnectToWindowsUpdateInternetLocations"},new[]{@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU","UseWUServer"}}){
+    using(var key=Registry.LocalMachine.OpenSubKey(pair[0])){var value=key==null?null:key.GetValue(pair[1]);if(value!=null&&!(value is int))throw new Exception("Unexpected registry type: "+pair[1]);list.Add(new RegistrySnapshot{Key=pair[0],Name=pair[1],Exists=value!=null,Value=value==null?0:(int)value});}
+   }
+   using(var service=new ServiceController("wuauserv")){WriteJson("service-original.json",service.Status.ToString());}
+   WriteJson("original.json",list);StartupTask("Restore","restore");State.RestoreStatus="Pending";Save();
+   foreach(var item in list)using(var key=Registry.LocalMachine.CreateSubKey(item.Key)){key.SetValue(item.Name,0,RegistryValueKind.DWord);}
+   int stop=Run("net.exe","stop wuauserv","services");Log("wuauserv stop result: "+stop);
+   if(Run("net.exe","start wuauserv","services")!=0)throw new Exception("Cannot start wuauserv after source change.");
+  }
+  static void Restore(){
+   if(!File.Exists(FilePath("original.json")))return;
+   var list=Json.Deserialize<List<RegistrySnapshot>>(File.ReadAllText(FilePath("original.json")));
+   foreach(var item in list)using(var key=Registry.LocalMachine.CreateSubKey(item.Key)){if(item.Exists)key.SetValue(item.Name,item.Value,RegistryValueKind.DWord);else key.DeleteValue(item.Name,false);}
+   Log("wuauserv stop result: "+Run("net.exe","stop wuauserv","services"));
+   if(Run("net.exe","start wuauserv","services")!=0)throw new Exception("Settings restored, but wuauserv restart failed.");
+   if(File.Exists(FilePath("service-original.json"))&&Json.Deserialize<string>(File.ReadAllText(FilePath("service-original.json")))=="Stopped"){if(Run("net.exe","stop wuauserv","services")!=0)throw new Exception("Cannot restore stopped service state.");}
+   WriteJson("restored.json",new{RestoredAt=DateTime.UtcNow.ToString("o")});if(State!=null){State.RestoreStatus="Restored";Save();}DeleteTask("Restore");
+  }
+  static dynamic Com(string name){var type=Type.GetTypeFromProgID(name);if(type==null)throw new Exception("COM component missing: "+name);return Activator.CreateInstance(type);}
+  static int Updates(string prefix){
+   using(var key=Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate")){if(key==null||string.IsNullOrWhiteSpace(key.GetValue("WUServer") as string))throw new Exception("WSUS not configured; public fallback prohibited.");Log("WSUS: "+key.GetValue("WUServer"));}
+   dynamic session=Com("Microsoft.Update.Session");session.ClientApplicationID="DomainConsole CSharp";
+   dynamic search=session.CreateUpdateSearcher();search.ServerSelection=1;State.Stage="WSUS · поиск обновлений";Save();
+   dynamic result=search.Search("IsInstalled=0 and IsHidden=0");if((int)result.ResultCode!=2)throw new Exception("Search ResultCode: "+result.ResultCode);
+   var details=new List<object>();int failures=0;int total=(int)result.Updates.Count;
+   for(int i=0;i<total;i++){
+    if(Cancelled())break;dynamic update=result.Updates.Item(i);
+    if((bool)update.InstallationBehavior.CanRequestUserInput){Log("Skipped interactive update: "+update.Title);continue;}
+    if(!(bool)update.EulaAccepted)update.AcceptEula();dynamic one=Com("Microsoft.Update.UpdateColl");one.Add(update);
+    State.Stage="Скачивание · "+(string)update.Title;State.Progress=total==0?100:100*i/total;Save();
+    dynamic downloader=session.CreateUpdateDownloader();downloader.Updates=one;dynamic downloaded=downloader.Download();
+    if(!(bool)update.IsDownloaded){failures++;details.Add(new{Title=(string)update.Title,Download=(int)downloaded.ResultCode,HResult=(int)downloaded.HResult});continue;}
+    State.Stage="Установка · "+(string)update.Title;Save();dynamic installer=session.CreateUpdateInstaller();installer.Updates=one;installer.AllowSourcePrompts=false;
+    dynamic installed=installer.Install();dynamic item=installed.GetUpdateResult(0);int code=(int)item.ResultCode;
+    details.Add(new{Title=(string)update.Title,ResultCode=code,HResult=(int)item.HResult,RebootRequired=(bool)installed.RebootRequired});
+    if(code!=2)failures++;State.RebootRequired=State.RebootRequired||(bool)installed.RebootRequired;
+    State.UpdatesRemaining=total-i-1;WriteJson(prefix+".updates.json",details);if(State.RebootRequired)break;
+   }
+   dynamic info=Com("Microsoft.Update.SystemInfo");State.RebootRequired=State.RebootRequired||(bool)info.RebootRequired;WriteJson(prefix+".updates.json",details);
+   int report=Run("UsoClient.exe","Report","report");Log("Report request exit: "+report+". WSUS receipt not confirmed.");return failures>0?1:0;
+  }
+  static void Verify(){
+   if(File.Exists(FilePath("original.json"))&&!File.Exists(FilePath("restored.json")))Restore();
+   dynamic session=Com("Microsoft.Update.Session");dynamic search=session.CreateUpdateSearcher();search.ServerSelection=1;dynamic result=search.Search("IsInstalled=0 and IsHidden=0");
+   State.UpdatesRemaining=(int)result.Updates.Count;State.RebootRequired=(bool)Com("Microsoft.Update.SystemInfo").RebootRequired;
+   WriteJson("post-reboot.json",new{Checked=DateTime.UtcNow.ToString("o"),SearchResult=(int)result.ResultCode,RemainingUpdates=State.UpdatesRemaining,RebootRequired=State.RebootRequired});State.Status="VerifiedAfterReboot";State.Stage="Проверка после перезагрузки завершена";Save();DeleteTask("Verify");
+  }
+  static int Main(string[] args){
+   if(args.Length!=2)return 2;Folder=Path.GetFullPath(args[1]);if(!Directory.Exists(Folder))return 2;
+   try{Job=Json.Deserialize<RemoteJob>(File.ReadAllText(FilePath("job.json")));Guid parsed;if(!Guid.TryParse(Job.Id,out parsed))throw new Exception("Invalid job ID");
+    if(args[0]=="restore"||args[0]=="verify"){
+     if(File.Exists(FilePath("status.json")))State=Json.Deserialize<RemoteState>(File.ReadAllText(FilePath("status.json")));else State=new RemoteState{Id=Job.Id};
+     if(args[0]=="restore")Restore();else Verify();return 0;
+    }
+    if(args[0]!="run")return 2;
+    if(File.Exists(FilePath("status.json"))){var previous=Json.Deserialize<RemoteState>(File.ReadAllText(FilePath("status.json")));if(previous.Status!="Queued")return 0;}
+    State=new RemoteState{Id=Job.Id,Total=Job.Steps.Count,Started=DateTime.UtcNow.ToString("o"),Status="Queued",Stage="Ожидание других заданий"};Save();
+    using(var mutex=new Mutex(false,@"Global\DomainConsoleCSharp.Execution")){
+     bool owns=false;try{try{owns=mutex.WaitOne();}catch(AbandonedMutexException){owns=true;}
+      State.Status="Running";Save();using(var heartbeat=new Timer(o=>{try{Save();}catch{}},null,5000,5000)){
+       try{
+        if(Cancelled()){State.Status="Cancelled";return 0;}
+        if(Job.MicrosoftSource&&Job.Steps.Any(s=>s.Kind=="Updates"))throw new Exception("Separate Microsoft repair and WSUS update jobs.");
+        if(Job.MicrosoftSource)EnableMicrosoft();
+        foreach(var step in Job.Steps){
+         if(Cancelled()){State.Status="Cancelled";break;}
+         State.Step++;State.Stage=step.Name;State.Progress=null;Save();var prefix="step-"+State.Step;var stepResult=new StepResult{Name=step.Name,Started=DateTime.UtcNow.ToString("o")};
+         try{
+          if(step.Kind=="Updates")stepResult.ExitCode=Updates(prefix);
+          else if(step.Kind=="Diagnostics")stepResult.ExitCode=PowerShell("Get-WindowsUpdateLog -LogPath "+"'"+FilePath(prefix+".WindowsUpdate.log").Replace("'","''")+"'",prefix);
+          else if(step.Kind=="PowerShell")stepResult.ExitCode=PowerShell(step.Code,prefix);
+          else if(step.Kind=="CMD"){
+           var file=FilePath(prefix+".cmd");File.WriteAllText(file,step.Code,Encoding.GetEncoding(System.Globalization.CultureInfo.CurrentCulture.TextInfo.OEMCodePage));stepResult.ExitCode=Run("cmd.exe","/d /c \"\""+file+"\"\"",prefix);
+          }else throw new Exception("Unknown command kind");
+          if(stepResult.ExitCode==3010){State.RebootRequired=true;stepResult.ExitCode=0;}
+         }catch(Exception ex){stepResult.ExitCode=1;stepResult.Error=ex.Message;Log(ex.ToString());}
+         if(step.Kind=="Updates"&&stepResult.ExitCode!=0){try{PowerShell("Get-WindowsUpdateLog -LogPath '"+FilePath(prefix+".WindowsUpdate.log").Replace("'","''")+"'",prefix+"-diagnostics");}catch(Exception ex){Log(ex.Message);}}
+         stepResult.Ended=DateTime.UtcNow.ToString("o");lock(Gate){State.Results.Add(stepResult);}Save();
+         if(stepResult.ExitCode!=0&&!Job.ContinueOnError){State.Status="Failed";break;}
+        }
+        if(Cancelled())State.Status="Cancelled";
+        if(State.Status=="Running")State.Status=State.Results.Any(r=>r.ExitCode!=0)?"CompletedWithErrors":State.RebootRequired?"AwaitingReboot":"Completed";
+       }catch(Exception ex){State.Status="Failed";State.Error=ex.Message;Log(ex.ToString());}
+       finally{
+        if(State.RestoreStatus=="Pending"){try{Restore();}catch(Exception ex){State.RestoreStatus="InterventionRequired";State.Status="InterventionRequired";State.Error=ex.Message;Log(ex.ToString());}}
+        State.Ended=DateTime.UtcNow.ToString("o");Save();
+        if(State.RebootRequired&&Job.Steps.Any(s=>s.Kind=="Updates")){try{StartupTask("Verify","verify");}catch(Exception ex){Log(ex.Message);}}
+        if(Job.AutoReboot&&State.RebootRequired&&(State.Status=="Completed"||State.Status=="AwaitingReboot")&&State.RestoreStatus!="InterventionRequired"){
+         if(Run("shutdown.exe","/r /t 900 /c \"Domain Console: maintenance completed. Reboot in 15 minutes.\"","reboot")==0){State.Status="RebootScheduled";Save();}
+        }
+       }
+      }
+     }finally{if(owns)mutex.ReleaseMutex();}
+    }
+    return 0;
+   }catch(Exception ex){try{Log(ex.ToString());}catch{}Console.Error.WriteLine(ex);return 1;}
+  }
+ }
+}
