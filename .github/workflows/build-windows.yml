@@ -36,7 +36,7 @@ jobs:
             $p = Start-Process ./Publish/DomainConsole.exe -PassThru
             Start-Sleep -Seconds 5
             $p.Refresh()
-            if ($p.HasExited) { throw "Application exited during startup: $($p.ExitCode)" }
+            if ($p.HasExited) { if (Test-Path Publish/smoke-error.txt) { Get-Content Publish/smoke-error.txt }; throw "Application exited during startup: $($p.ExitCode)" }
             if ($p.MainWindowHandle -eq 0) { Stop-Process -Id $p.Id; throw "Application window was not created" }
             Write-Output "Window created: $($p.MainWindowTitle)"
             $null = $p.CloseMainWindow()
