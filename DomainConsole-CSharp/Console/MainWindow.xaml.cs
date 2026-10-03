@@ -44,8 +44,8 @@ public partial class MainWindow:Window {
   Computers[1].Selected=true;UpdateSelectionCount();if(Selected().Count!=1)throw new Exception("Tree checkbox selection failed.");Computers[1].Selected=false;
   OutputBox.Text=string.Join("\n",Enumerable.Range(1,80).Select(i=>"12:30:00  Проверка компонента "+i+" · результат: успешно"));WsusOutput.Text=OutputBox.Text;WsusServerOutput.Text="TEST-1 · LastReportedStatusTime: 03.10.2026 12:30:00\nСвежий статус получен сервером.\nУстановлено: 124 · Требуется: 6 · Ошибок: 0";
   void Capture(string name){UpdateLayout();var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap((int)ActualWidth,(int)ActualHeight,96,96,System.Windows.Media.PixelFormats.Pbgra32);bitmap.Render(this);var encoder=new System.Windows.Media.Imaging.PngBitmapEncoder();encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));using var file=File.Create(Path.Combine(Path.GetTempPath(),"ui-"+name+".png"));encoder.Save(file);}
-  MainTabs.SelectedIndex=4;UpdateLayout();if(WsusOutput.ActualHeight<250||WsusOutput.ActualWidth<500)throw new Exception("WSUS workspace is too small: "+WsusOutput.ActualWidth+" x "+WsusOutput.ActualHeight);Capture("wsus");
-  MainTabs.SelectedIndex=2;UpdateLayout();if(OutputBox.ActualHeight<500)throw new Exception("Output workspace is too short.");Capture("output");
+  MainTabs.SelectedIndex=4;UpdateLayout();if(WsusOutput.ActualHeight<250||WsusOutput.ActualWidth<ActualWidth*0.28)throw new Exception("WSUS workspace is too small: "+WsusOutput.ActualWidth+" x "+WsusOutput.ActualHeight);Capture("wsus");
+  MainTabs.SelectedIndex=2;UpdateLayout();if(OutputBox.ActualHeight<ActualHeight*0.55)throw new Exception("Output workspace is too short.");Capture("output");
   MainTabs.SelectedIndex=0;Capture("commands");Width=1000;Height=640;MainTabs.SelectedIndex=4;Capture("compact");Width=1480;Height=940;
  }
  void Notify(string text)=>StatusBar.Text=text;
