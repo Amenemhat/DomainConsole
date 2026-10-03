@@ -54,3 +54,10 @@ jobs:
           name: DomainConsole-Windows-x64
           path: Publish/
           if-no-files-found: error
+      - name: Save UI review images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DomainConsole-UI-review
+          path: ${{ runner.temp }}/DomainConsole-smoke/ui-*.png
+          if-no-files-found: warn
