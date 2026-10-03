@@ -24,6 +24,8 @@ namespace DomainConsole.Agent {
   static void WriteJson(string name,object value){lock(Gate){var path=FilePath(name);File.WriteAllText(path+".tmp",Json.Serialize(value),new UTF8Encoding(true));if(File.Exists(path))File.Delete(path);File.Move(path+".tmp",path);}}
   static void Save(){lock(Gate){State.Updated=DateTime.UtcNow.ToString("o");WriteJson("status.json",State);}}
   static void Log(string message){lock(Gate)File.AppendAllText(FilePath("runner.log"),DateTime.UtcNow.ToString("o")+" "+message+Environment.NewLine,Encoding.UTF8);}
+  static void Stage(string value){lock(Gate){DateTimeOffset started;if(DateTimeOffset.TryParse(State.StageStarted,out started))Log("Этап завершён: "+State.Stage+"; секунд: "+(int)(DateTimeOffset.UtcNow-started).TotalSeconds);State.Stage=value;State.StageStarted=DateTime.UtcNow.ToString("o");State.Progress=null;Log("Начат этап: "+value);Save();}}
+  static int Report(){Stage("WSUS · запрос отправки отчёта");int a=Run("UsoClient.exe","Report","report"),b=Run("wuauclt.exe","/reportnow","report");State.ReportRequestStatus="Запросы завершены: UsoClient="+a+", wuauclt="+b+". Приём сервером ещё не подтверждён.";Log(State.ReportRequestStatus);Save();return a==0||b==0?0:1;}
   static bool Cancelled()=>File.Exists(FilePath("cancel.flag"));
   static int Run(string exe,string args,string prefix=null){
    var psi=new ProcessStartInfo(exe,args){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true};
@@ -36,7 +38,7 @@ namespace DomainConsole.Agent {
   }
   static int PowerShell(string code,string prefix){
    var file=FilePath(prefix+".command.txt");File.WriteAllText(file,code,new UTF8Encoding(true));
-   var loader="& ([ScriptBlock]::Create([IO.File]::ReadAllText('"+file.Replace("'","''")+"',[Text.Encoding]::UTF8)))";
+   var loader="$ProgressPreference='SilentlyContinue';$ErrorActionPreference='Stop';try{& ([ScriptBlock]::Create([IO.File]::ReadAllText('"+file.Replace("'","''")+"',[Text.Encoding]::UTF8)))}catch{[Console]::Error.WriteLine($_.Exception.Message);exit 1}";
    var exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),@"WindowsPowerShell\v1.0\powershell.exe");
    return Run(exe,"-NoLogo -NoProfile -NonInteractive -EncodedCommand "+Convert.ToBase64String(Encoding.Unicode.GetBytes(loader)),prefix);
   }
@@ -67,27 +69,35 @@ namespace DomainConsole.Agent {
    WriteJson("restored.json",new{RestoredAt=DateTime.UtcNow.ToString("o")});if(State!=null){State.RestoreStatus="Restored";Save();}DeleteTask("Restore");
   }
   static dynamic Com(string name){var type=Type.GetTypeFromProgID(name);if(type==null)throw new Exception("COM component missing: "+name);return Activator.CreateInstance(type);}
-  static int Updates(string prefix){
-   using(var key=Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate")){if(key==null||string.IsNullOrWhiteSpace(key.GetValue("WUServer") as string))throw new Exception("WSUS not configured; public fallback prohibited.");Log("WSUS: "+key.GetValue("WUServer"));}
+  static int Updates(string prefix,bool scanOnly=false){
+   Stage("WSUS · проверка политики клиента");string source;
+   using(var key=Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate")){source=key==null?"":key.GetValue("WUServer") as string;if(string.IsNullOrWhiteSpace(source))throw new Exception("Политика WUServer не задана.");Log("Источник клиента: "+source);}
+   using(var au=Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU")){if(au==null||Convert.ToInt32(au.GetValue("UseWUServer",0))!=1)throw new Exception("UseWUServer не равен 1. Проверка остановлена без изменения политики.");}
+   Uri address;if(!Uri.TryCreate(source,UriKind.Absolute,out address)||(address.Scheme!="http"&&address.Scheme!="https"))throw new Exception("Некорректный адрес WUServer.");
+   Stage("WSUS · DNS и предварительная проверка TCP");try{var addresses=System.Net.Dns.GetHostAddresses(address.DnsSafeHost);Log("DNS: "+string.Join(", ",addresses.Select(a=>a.ToString())));
+   using(var tcp=new System.Net.Sockets.TcpClient()){var connect=tcp.ConnectAsync(address.DnsSafeHost,address.Port);if(!connect.Wait(5000))throw new Exception("TCP-подключение к WSUS не завершилось за 5 секунд. Проверьте сеть, VPN и порт.");Log("TCP-порт WSUS доступен. Это не проверка HTTP, TLS или авторизации WUA.");}}catch(Exception ex){Log("Предварительная проверка сети: "+ex.Message+". Продолжается проверка через WUA: он может использовать собственный прокси-маршрут.");}
+   Stage("WSUS · создание сеанса Windows Update Agent");
    dynamic session=Com("Microsoft.Update.Session");session.ClientApplicationID="DomainConsole CSharp";
-   dynamic search=session.CreateUpdateSearcher();search.ServerSelection=1;State.Stage="WSUS · поиск обновлений";Save();
+   dynamic search=session.CreateUpdateSearcher();search.ServerSelection=1;search.Online=true;Stage("WSUS · подключение WUA и поиск обновлений");
    dynamic result=search.Search("IsInstalled=0 and IsHidden=0");if((int)result.ResultCode!=2)throw new Exception("Search ResultCode: "+result.ResultCode);
    var details=new List<object>();int failures=0;int total=(int)result.Updates.Count;
+   State.UpdatesRemaining=total;Log("Поиск завершён. Применимых обновлений: "+total);Save();
+   if(scanOnly){for(int n=0;n<total;n++){dynamic u=result.Updates.Item(n);details.Add(new{Title=(string)u.Title,Downloaded=(bool)u.IsDownloaded});}WriteJson(prefix+".updates.json",details);return Report();}
    for(int i=0;i<total;i++){
     if(Cancelled())break;dynamic update=result.Updates.Item(i);
     if((bool)update.InstallationBehavior.CanRequestUserInput){Log("Skipped interactive update: "+update.Title);continue;}
     if(!(bool)update.EulaAccepted)update.AcceptEula();dynamic one=Com("Microsoft.Update.UpdateColl");one.Add(update);
-    State.Stage="Скачивание · "+(string)update.Title;State.Progress=total==0?100:100*i/total;Save();
+    Stage("Скачивание · "+(string)update.Title);State.Progress=total==0?100:100*i/total;Save();
     dynamic downloader=session.CreateUpdateDownloader();downloader.Updates=one;dynamic downloaded=downloader.Download();
     if(!(bool)update.IsDownloaded){failures++;details.Add(new{Title=(string)update.Title,Download=(int)downloaded.ResultCode,HResult=(int)downloaded.HResult});continue;}
-    State.Stage="Установка · "+(string)update.Title;Save();dynamic installer=session.CreateUpdateInstaller();installer.Updates=one;installer.AllowSourcePrompts=false;
+    Stage("Установка · "+(string)update.Title);dynamic installer=session.CreateUpdateInstaller();installer.Updates=one;installer.AllowSourcePrompts=false;
     dynamic installed=installer.Install();dynamic item=installed.GetUpdateResult(0);int code=(int)item.ResultCode;
     details.Add(new{Title=(string)update.Title,ResultCode=code,HResult=(int)item.HResult,RebootRequired=(bool)installed.RebootRequired});
     if(code!=2)failures++;State.RebootRequired=State.RebootRequired||(bool)installed.RebootRequired;
     State.UpdatesRemaining=total-i-1;WriteJson(prefix+".updates.json",details);if(State.RebootRequired)break;
    }
    dynamic info=Com("Microsoft.Update.SystemInfo");State.RebootRequired=State.RebootRequired||(bool)info.RebootRequired;WriteJson(prefix+".updates.json",details);
-   int report=Run("UsoClient.exe","Report","report");Log("Report request exit: "+report+". WSUS receipt not confirmed.");return failures>0?1:0;
+   int report=Report();return failures>0?1:report;
   }
   static void Verify(){
    if(File.Exists(FilePath("original.json"))&&!File.Exists(FilePath("restored.json")))Restore();
@@ -110,21 +120,22 @@ namespace DomainConsole.Agent {
       State.Status="Running";Save();using(var heartbeat=new Timer(o=>{try{Save();}catch{}},null,5000,5000)){
        try{
         if(Cancelled()){State.Status="Cancelled";return 0;}
-        if(Job.MicrosoftSource&&Job.Steps.Any(s=>s.Kind=="Updates"))throw new Exception("Separate Microsoft repair and WSUS update jobs.");
+        if(Job.MicrosoftSource&&Job.Steps.Any(s=>(s.Kind=="Updates"||s.Kind=="UpdateScan")))throw new Exception("Separate Microsoft repair and WSUS update jobs.");
         if(Job.MicrosoftSource)EnableMicrosoft();
         foreach(var step in Job.Steps){
          if(Cancelled()){State.Status="Cancelled";break;}
-         State.Step++;State.Stage=step.Name;State.Progress=null;Save();var prefix="step-"+State.Step;var stepResult=new StepResult{Name=step.Name,Started=DateTime.UtcNow.ToString("o")};
+         State.Step++;Stage(step.Name);var prefix="step-"+State.Step;var stepResult=new StepResult{Name=step.Name,Started=DateTime.UtcNow.ToString("o")};
          try{
           if(step.Kind=="Updates")stepResult.ExitCode=Updates(prefix);
+          else if(step.Kind=="UpdateScan")stepResult.ExitCode=Updates(prefix,true);
           else if(step.Kind=="Diagnostics")stepResult.ExitCode=PowerShell("Get-WindowsUpdateLog -LogPath "+"'"+FilePath(prefix+".WindowsUpdate.log").Replace("'","''")+"'",prefix);
           else if(step.Kind=="PowerShell")stepResult.ExitCode=PowerShell(step.Code,prefix);
           else if(step.Kind=="CMD"){
            var file=FilePath(prefix+".cmd");File.WriteAllText(file,step.Code,Encoding.GetEncoding(System.Globalization.CultureInfo.CurrentCulture.TextInfo.OEMCodePage));stepResult.ExitCode=Run("cmd.exe","/d /c \"\""+file+"\"\"",prefix);
           }else throw new Exception("Unknown command kind");
           if(stepResult.ExitCode==3010){State.RebootRequired=true;stepResult.ExitCode=0;}
-         }catch(Exception ex){stepResult.ExitCode=1;stepResult.Error=ex.Message;Log(ex.ToString());}
-         if(step.Kind=="Updates"&&stepResult.ExitCode!=0){try{PowerShell("Get-WindowsUpdateLog -LogPath '"+FilePath(prefix+".WindowsUpdate.log").Replace("'","''")+"'",prefix+"-diagnostics");}catch(Exception ex){Log(ex.Message);}}
+         }catch(Exception ex){stepResult.ExitCode=1;stepResult.Error=ex.Message+" [HRESULT 0x"+ex.HResult.ToString("X8")+"]";State.Error=stepResult.Error;Log(ex.ToString());}
+         if((step.Kind=="Updates"||step.Kind=="UpdateScan")&&stepResult.ExitCode!=0){try{PowerShell("Get-WindowsUpdateLog -LogPath '"+FilePath(prefix+".WindowsUpdate.log").Replace("'","''")+"'",prefix+"-diagnostics");}catch(Exception ex){Log(ex.Message);}}
          stepResult.Ended=DateTime.UtcNow.ToString("o");lock(Gate){State.Results.Add(stepResult);}Save();
          if(stepResult.ExitCode!=0&&!Job.ContinueOnError){State.Status="Failed";break;}
         }
@@ -134,7 +145,7 @@ namespace DomainConsole.Agent {
        finally{
         if(State.RestoreStatus=="Pending"){try{Restore();}catch(Exception ex){State.RestoreStatus="InterventionRequired";State.Status="InterventionRequired";State.Error=ex.Message;Log(ex.ToString());}}
         State.Ended=DateTime.UtcNow.ToString("o");Save();
-        if(State.RebootRequired&&Job.Steps.Any(s=>s.Kind=="Updates")){try{StartupTask("Verify","verify");}catch(Exception ex){Log(ex.Message);}}
+        if(State.RebootRequired&&Job.Steps.Any(s=>(s.Kind=="Updates"||s.Kind=="UpdateScan"))){try{StartupTask("Verify","verify");}catch(Exception ex){Log(ex.Message);}}
         if(Job.AutoReboot&&State.RebootRequired&&(State.Status=="Completed"||State.Status=="AwaitingReboot")&&State.RestoreStatus!="InterventionRequired"){
          if(Run("shutdown.exe","/r /t 900 /c \"Domain Console: maintenance completed. Reboot in 15 minutes.\"","reboot")==0){State.Status="RebootScheduled";Save();}
         }

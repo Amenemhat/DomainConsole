@@ -33,6 +33,7 @@ public static class PowerShellBridge {
  }
 }
 public sealed class PollResult {public RemoteState? State {get;set;}public string Output {get;set;}="";}
+public sealed class WsusSettings {public string Host {get;set;}="";public int Port {get;set;}=8530;public bool Ssl {get;set;}}
 public sealed class RemoteService {
  public Task<string> CheckConnection(TargetRecord target)=>PowerShellBridge.Execute(Invoke(target.Host,"'Подключение WinRM успешно.';whoami;hostname"));
  string Invoke(string host,string body)=>"Invoke-Command -ComputerName "+PowerShellBridge.Literal(host)+" -SessionOption (New-PSSessionOption -OpenTimeout 12000 -OperationTimeout 30000) -ScriptBlock { "+body+" } -ErrorAction Stop";
@@ -64,7 +65,7 @@ public sealed class RemoteService {
   return PowerShellBridge.Execute("$s=New-PSSession -ComputerName "+PowerShellBridge.Literal(target.Host)+" -ErrorAction Stop;try{$p=Invoke-Command $s {Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') "+PowerShellBridge.Literal(id)+"};Copy-Item ($p+'\\*') -Destination "+PowerShellBridge.Literal(local)+" -FromSession $s -Recurse -Force;"+PowerShellBridge.Literal(local)+"}finally{Remove-PSSession $s}");
  }
  public Task<string> Wsus(string host,int port,bool ssl,string computer)=>PowerShellBridge.Execute(Invoke(host,
-  "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');$s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($env:COMPUTERNAME,"+(ssl?"$true":"$false")+","+port+");$scope=New-Object Microsoft.UpdateServices.Administration.ComputerTargetScope;$scope.NameIncludes="+PowerShellBridge.Literal(computer.Split('.')[0])+";$targets=@($s.GetComputerTargets($scope)|Where-Object {$_.FullDomainName -eq "+PowerShellBridge.Literal(computer)+" -or $_.FullDomainName.Split('.')[0] -eq "+PowerShellBridge.Literal(computer.Split('.')[0])+"});if(!$targets.Count){throw 'Компьютер не найден в WSUS'};foreach($t in $targets){$t|Select-Object FullDomainName,LastReportedStatusTime,LastSyncTime,LastSyncResult|Format-List|Out-String;$t.GetUpdateInstallationSummary()|Format-List *|Out-String}"));
+  "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');$s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($env:COMPUTERNAME,"+(ssl?"$true":"$false")+","+port+");$scope=New-Object Microsoft.UpdateServices.Administration.ComputerTargetScope;$scope.NameIncludes="+PowerShellBridge.Literal(computer.Split('.')[0])+";$targets=@($s.GetComputerTargets($scope)|Where-Object {$_.FullDomainName -eq "+PowerShellBridge.Literal(computer)+" -or $_.FullDomainName.Split('.')[0] -eq "+PowerShellBridge.Literal(computer.Split('.')[0])+"});if(!$targets.Count){throw 'Компьютер не найден в WSUS'};if($targets.Count -ne 1){throw 'Найдено несколько клиентов; уточните полное доменное имя'};$t=$targets[0];$text=($t|Select-Object FullDomainName,LastReportedStatusTime,LastSyncTime,LastSyncResult|Format-List|Out-String)+($t.GetUpdateInstallationSummary()|Format-List *|Out-String);@{LastReportedUtc=$t.LastReportedStatusTime.ToUniversalTime().ToString('o');Details=$text}|ConvertTo-Json -Compress"));
 }
 public static class DirectoryReader {
  public static List<TargetRecord> Read(){
