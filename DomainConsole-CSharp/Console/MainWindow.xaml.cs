@@ -78,7 +78,7 @@ public partial class MainWindow:Window {
    var header=new Grid{MinWidth=145,DataContext=r,Margin=new(0,2,0,2)};
    var bar=new ProgressBar{Height=22,Opacity=0.22,Maximum=100,Background=System.Windows.Media.Brushes.Transparent,Foreground=System.Windows.Media.Brushes.DodgerBlue};bar.SetBinding(ProgressBar.ValueProperty,new Binding("Progress"){Mode=BindingMode.OneWay});bar.SetBinding(ProgressBar.IsIndeterminateProperty,new Binding("Busy"));header.Children.Add(bar);
    var check=new CheckBox{Content=r.Name,Foreground=System.Windows.Media.Brushes.White,Margin=new(3,2,3,2),ToolTip=r.Host+"\n"+r.OS};check.SetBinding(CheckBox.IsCheckedProperty,new Binding("Selected"){Mode=BindingMode.TwoWay});check.Checked+=(sender,args)=>UpdateSelectionCount();check.Unchecked+=(sender,args)=>UpdateSelectionCount();header.Children.Add(check);
-   var leaf=new TreeViewItem{Header=header,Tag=r};leaf.SetBinding(TreeViewItem.ToolTipProperty,new Binding("Stage"){Source=r});parent.Items.Add(leaf);computerNodes[r.Host]=leaf;
+   var leaf=new TreeViewItem{Header=header,Tag=r};leaf.PreviewMouseLeftButtonDown+=(sender,args)=>{leaf.IsSelected=true;ComputerGrid.SelectedItem=r;};leaf.SetBinding(TreeViewItem.ToolTipProperty,new Binding("Stage"){Source=r});parent.Items.Add(leaf);computerNodes[r.Host]=leaf;
   }
   UpdateSelectionCount();
  }

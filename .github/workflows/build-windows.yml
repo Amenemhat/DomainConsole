@@ -31,6 +31,7 @@ jobs:
         run: |
           $env:DOMAINCONSOLE_UI_SMOKE = '1'
           $env:TEMP = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
+          $env:TMP = $env:TEMP
           New-Item $env:TEMP -ItemType Directory -Force | Out-Null
           function Test-Window {
             $p = Start-Process ./Publish/DomainConsole.exe -PassThru
