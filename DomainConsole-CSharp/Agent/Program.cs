@@ -29,9 +29,10 @@ namespace DomainConsole.Agent {
   static bool Cancelled()=>File.Exists(FilePath("cancel.flag"));
   static int Run(string exe,string args,string prefix=null){
    var psi=new ProcessStartInfo(exe,args){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true};
-   using(var process=new Process{StartInfo=psi}){
+   using(var process=new Process{StartInfo=psi})
+   using(var output=new ProgressLogWriter(FilePath((prefix??"system")+".out"))){
     object sync=new object();
-    process.OutputDataReceived+=(s,e)=>{if(e.Data==null)return;lock(sync){File.AppendAllText(FilePath((prefix??"system")+".out"),e.Data+Environment.NewLine,Encoding.UTF8);}var matches=Regex.Matches(e.Data,@"(?<!\d)(\d{1,3})(?:[.,]\d+)?\s*%");if(State!=null&&matches.Count>0){int p=int.Parse(matches[matches.Count-1].Groups[1].Value);if(p<=100){State.Progress=p;Save();}}};
+    process.OutputDataReceived+=(s,e)=>{if(e.Data==null)return;lock(sync){File.AppendAllText(FilePath((prefix??"system")+".stdout.raw"),e.Data+Environment.NewLine,Encoding.UTF8);output.WriteLine(e.Data);}var matches=Regex.Matches(e.Data,@"(?<!\d)(\d{1,3})(?:[.,]\d+)?\s*%");if(State!=null&&matches.Count>0){int p=int.Parse(matches[matches.Count-1].Groups[1].Value);if(p<=100){State.Progress=p;Save();}}};
     process.ErrorDataReceived+=(s,e)=>{if(e.Data!=null)lock(sync)File.AppendAllText(FilePath((prefix??"system")+".err"),e.Data+Environment.NewLine,Encoding.UTF8);};
     process.Start();process.BeginOutputReadLine();process.BeginErrorReadLine();process.WaitForExit();return process.ExitCode;
    }
@@ -105,7 +106,9 @@ namespace DomainConsole.Agent {
    State.UpdatesRemaining=(int)result.Updates.Count;State.RebootRequired=(bool)Com("Microsoft.Update.SystemInfo").RebootRequired;
    WriteJson("post-reboot.json",new{Checked=DateTime.UtcNow.ToString("o"),SearchResult=(int)result.ResultCode,RemainingUpdates=State.UpdatesRemaining,RebootRequired=State.RebootRequired});State.Status="VerifiedAfterReboot";State.Stage="Проверка после перезагрузки завершена";Save();DeleteTask("Verify");
   }
+  static int VerifyOutput(string folder){Directory.CreateDirectory(folder);Folder=folder;State=new RemoteState();var script=FilePath("fixture.cmd");File.WriteAllText(script,"@echo off\r\necho Header\r\necho [==== 10.0%% ====]\r\necho.\r\necho [==== 20.0%% ====]\r\necho Error diagnostic: 25%% complete\r\necho [==== 30.0%% ====]\r\necho Done\r\nexit /b 0\r\n",Encoding.ASCII);if(Run("cmd.exe","/d /c "+Quote(script),"fixture")!=0)return 1;var text=File.ReadAllText(FilePath("fixture.out"));var raw=File.ReadAllText(FilePath("fixture.stdout.raw"));if(text.Contains("10.0%")||!text.Contains("20.0%")||!text.Contains("30.0%")||!text.Contains("Error diagnostic: 25% complete")||!text.Contains("Header")||!text.Contains("Done")||!raw.Contains("10.0%"))throw new Exception("Progress output integration check failed.");Console.WriteLine("Progress output replaced; diagnostics and raw stdout preserved.");return 0;}
   static int Main(string[] args){
+   if(args.Length==2&&args[0]=="output-smoke")return VerifyOutput(args[1]);
    if(args.Length!=2)return 2;Folder=Path.GetFullPath(args[1]);if(!Directory.Exists(Folder))return 2;
    try{Job=Json.Deserialize<RemoteJob>(File.ReadAllText(FilePath("job.json")));Guid parsed;if(!Guid.TryParse(Job.Id,out parsed))throw new Exception("Invalid job ID");
     if(args[0]=="restore"||args[0]=="verify"){
