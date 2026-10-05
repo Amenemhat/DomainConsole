@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 using System.Web.Script.Serialization;
 using Microsoft.Win32;
 using System.ServiceProcess;
@@ -24,22 +26,22 @@ namespace DomainConsole.Agent {
   static void WriteJson(string name,object value){lock(Gate){var path=FilePath(name);File.WriteAllText(path+".tmp",Json.Serialize(value),new UTF8Encoding(true));if(File.Exists(path))File.Delete(path);File.Move(path+".tmp",path);}}
   static void Save(){lock(Gate){State.Updated=DateTime.UtcNow.ToString("o");WriteJson("status.json",State);}}
   static void Log(string message){lock(Gate)File.AppendAllText(FilePath("runner.log"),DateTime.UtcNow.ToString("o")+" "+message+Environment.NewLine,Encoding.UTF8);}
-  static void Stage(string value){lock(Gate){DateTimeOffset started;if(DateTimeOffset.TryParse(State.StageStarted,out started))Log("Этап завершён: "+State.Stage+"; секунд: "+(int)(DateTimeOffset.UtcNow-started).TotalSeconds);State.Stage=value;State.StageStarted=DateTime.UtcNow.ToString("o");State.Progress=null;Log("Начат этап: "+value);Save();}}
+  static void Stage(string value){lock(Gate){DateTimeOffset started;if(DateTimeOffset.TryParse(State.StageStarted,out started))Log("Этап завершён: "+State.Stage+"; секунд: "+(int)(DateTimeOffset.UtcNow-started).TotalSeconds);State.Stage=value;State.StageStarted=DateTime.UtcNow.ToString("o");State.Progress=null;State.ProgressValue="";State.LastOutputUtc="";State.LastProgressUtc="";Log("Начат этап: "+value);Save();}}
   static int Report(){Stage("WSUS · запрос отправки отчёта");int a=Run("UsoClient.exe","Report","report"),b=Run("wuauclt.exe","/reportnow","report");State.ReportRequestStatus="Запросы завершены: UsoClient="+a+", wuauclt="+b+". Приём сервером ещё не подтверждён.";Log(State.ReportRequestStatus);Save();return a==0||b==0?0:1;}
   static bool Cancelled()=>File.Exists(FilePath("cancel.flag"));
+  [DllImport("kernel32.dll")]static extern uint GetOEMCP();
   static int Run(string exe,string args,string prefix=null){
-   var psi=new ProcessStartInfo(exe,args){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true};
-   using(var process=new Process{StartInfo=psi})
-   using(var output=new ProgressLogWriter(FilePath((prefix??"system")+".out"))){
-    object sync=new object();
-    process.OutputDataReceived+=(s,e)=>{if(e.Data==null)return;lock(sync){File.AppendAllText(FilePath((prefix??"system")+".stdout.raw"),e.Data+Environment.NewLine,Encoding.UTF8);output.WriteLine(e.Data);}var matches=Regex.Matches(e.Data,@"(?<!\d)(\d{1,3})(?:[.,]\d+)?\s*%");if(State!=null&&matches.Count>0){int p=int.Parse(matches[matches.Count-1].Groups[1].Value);if(p<=100){State.Progress=p;Save();}}};
-    process.ErrorDataReceived+=(s,e)=>{if(e.Data!=null)lock(sync)File.AppendAllText(FilePath((prefix??"system")+".err"),e.Data+Environment.NewLine,Encoding.UTF8);};
-    process.Start();process.BeginOutputReadLine();process.BeginErrorReadLine();process.WaitForExit();return process.ExitCode;
+   var psi=new ProcessStartInfo(exe,args){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true};string name=prefix??"system";
+   using(var process=new Process{StartInfo=psi})using(var output=new ProgressLogWriter(FilePath(name+".out")))using(var rawOut=new FileStream(FilePath(name+".stdout.bin"),FileMode.Append,FileAccess.Write,FileShare.ReadWrite))using(var rawErr=new FileStream(FilePath(name+".stderr.bin"),FileMode.Append,FileAccess.Write,FileShare.ReadWrite)){
+    var native=Encoding.GetEncoding((int)GetOEMCP());process.Start();if(State!=null){lock(Gate){State.ProcessId=process.Id;State.ProcessName=Path.GetFileName(exe);Save();}}
+    var stdout=Task.Run(()=>OutputReader.Read(process.StandardOutput.BaseStream,rawOut,native,line=>{File.AppendAllText(FilePath(name+".stdout.raw"),line+Environment.NewLine,Encoding.UTF8);output.WriteLine(line);if(State!=null&&!string.IsNullOrWhiteSpace(line)){lock(Gate){State.LastOutputUtc=DateTime.UtcNow.ToString("o");var match=Regex.Match(line,@"(?<!\d)(\d{1,3}(?:[.,]\d+)?)\s*%");if(match.Success&&ProgressText.Key(line)!=null){var number=match.Groups[1].Value.Replace(',','.');decimal value=decimal.Parse(number,System.Globalization.CultureInfo.InvariantCulture);if(value<=100){if(State.ProgressValue!=number)State.LastProgressUtc=State.LastOutputUtc;State.ProgressValue=number;State.Progress=(int)value;}}Save();}}}));
+    var stderr=Task.Run(()=>OutputReader.Read(process.StandardError.BaseStream,rawErr,native,line=>File.AppendAllText(FilePath(name+".err"),line+Environment.NewLine,Encoding.UTF8)));
+    process.WaitForExit();Task.WaitAll(stdout,stderr);if(State!=null){lock(Gate){State.ProcessId=0;State.ProcessName="";Save();}}return process.ExitCode;
    }
   }
   static int PowerShell(string code,string prefix){
    var file=FilePath(prefix+".command.txt");File.WriteAllText(file,code,new UTF8Encoding(true));
-   var loader="$ProgressPreference='SilentlyContinue';$ErrorActionPreference='Stop';try{& ([ScriptBlock]::Create([IO.File]::ReadAllText('"+file.Replace("'","''")+"',[Text.Encoding]::UTF8)))}catch{[Console]::Error.WriteLine($_.Exception.Message);exit 1}";
+   var loader="[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false);$OutputEncoding=[Console]::OutputEncoding;$ProgressPreference='SilentlyContinue';$ErrorActionPreference='Stop';try{& ([ScriptBlock]::Create([IO.File]::ReadAllText('"+file.Replace("'","''")+"',[Text.Encoding]::UTF8)))}catch{[Console]::Error.WriteLine($_.Exception.Message);exit 1}";
    var exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),@"WindowsPowerShell\v1.0\powershell.exe");
    return Run(exe,"-NoLogo -NoProfile -NonInteractive -EncodedCommand "+Convert.ToBase64String(Encoding.Unicode.GetBytes(loader)),prefix);
   }
@@ -106,8 +108,10 @@ namespace DomainConsole.Agent {
    State.UpdatesRemaining=(int)result.Updates.Count;State.RebootRequired=(bool)Com("Microsoft.Update.SystemInfo").RebootRequired;
    WriteJson("post-reboot.json",new{Checked=DateTime.UtcNow.ToString("o"),SearchResult=(int)result.ResultCode,RemainingUpdates=State.UpdatesRemaining,RebootRequired=State.RebootRequired});State.Status="VerifiedAfterReboot";State.Stage="Проверка после перезагрузки завершена";Save();DeleteTask("Verify");
   }
-  static int VerifyOutput(string folder){Directory.CreateDirectory(folder);Folder=folder;State=new RemoteState();var script=FilePath("fixture.cmd");File.WriteAllText(script,"@echo off\r\necho Header\r\necho [==== 10.0%% ====]\r\necho.\r\necho [==== 20.0%% ====]\r\necho Error diagnostic: 25%% complete\r\necho [==== 30.0%% ====]\r\necho Done\r\nexit /b 0\r\n",Encoding.ASCII);if(Run("cmd.exe","/d /c "+Quote(script),"fixture")!=0)return 1;var text=File.ReadAllText(FilePath("fixture.out"));var raw=File.ReadAllText(FilePath("fixture.stdout.raw"));if(text.Contains("10.0%")||!text.Contains("20.0%")||!text.Contains("30.0%")||!text.Contains("Error diagnostic: 25% complete")||!text.Contains("Header")||!text.Contains("Done")||!raw.Contains("10.0%"))throw new Exception("Progress output integration check failed.");Console.WriteLine("Progress output replaced; diagnostics and raw stdout preserved.");return 0;}
+  static void EmitEncodingFixture(){var stream=Console.OpenStandardOutput();Action<Encoding,string> write=(encoding,text)=>{var bytes=encoding.GetBytes(text);for(int i=0;i<bytes.Length;i+=3){int count=Math.Min(3,bytes.Length-i);stream.Write(bytes,i,count);stream.Flush();Thread.Sleep(1);}};write(Encoding.ASCII,"Header OEM\r\n");write(Encoding.Unicode,"Начало проверки системных файлов.\r\nПроверка 10% завершена.\rПроверка 20% завершена.\r\nЗащита ресурсов Windows обнаружила повреждённые файлы.\r\n");write(new UTF8Encoding(false),"UTF8: Привет мир ✓\r\n");write(Encoding.ASCII,"OEM diagnostic: 25% retained\r\n");}
+  static int VerifyOutput(string folder){Directory.CreateDirectory(folder);Folder=folder;State=new RemoteState();var oem="Русская OEM строка\r\n";var decoded=new StringBuilder();using(var input=new MemoryStream(Encoding.GetEncoding(866).GetBytes(oem)))using(var binary=new MemoryStream())OutputReader.Read(input,binary,Encoding.GetEncoding(866),line=>decoded.Append(line));if(decoded.ToString().Trim()!="Русская OEM строка")throw new Exception("OEM866 decoding failed.");var script=FilePath("fixture.cmd");File.WriteAllText(script,"@echo off\r\necho Header\r\necho [==== 10.0%% ====]\r\necho.\r\necho [==== 20.0%% ====]\r\necho Error diagnostic: 25%% complete\r\necho [==== 30.0%% ====]\r\necho Done\r\nexit /b 0\r\n",Encoding.ASCII);if(Run("cmd.exe","/d /c "+Quote(script),"fixture")!=0)return 1;var text=File.ReadAllText(FilePath("fixture.out"));var raw=File.ReadAllText(FilePath("fixture.stdout.raw"));if(text.Contains("10.0%")||!text.Contains("20.0%")||!text.Contains("30.0%")||!text.Contains("Error diagnostic: 25% complete")||!text.Contains("Header")||!text.Contains("Done")||!raw.Contains("10.0%"))throw new Exception("Progress output integration check failed.");var executable=System.Reflection.Assembly.GetExecutingAssembly().Location;if(Run(executable,"emit-encoding-fixture","encoding")!=0)return 1;var encoded=File.ReadAllText(FilePath("encoding.out"));if(!encoded.Contains("Начало проверки")||!encoded.Contains("Проверка 20% завершена.")||encoded.Contains("Проверка 10% завершена.")||!encoded.Contains("повреждённые файлы")||!encoded.Contains("Привет мир ✓")||!encoded.Contains("OEM diagnostic: 25% retained")||encoded.Contains("\u0004"))throw new Exception("Mixed UTF-16 / UTF-8 / OEM pipe check failed.");Console.WriteLine("Progress replaced; Cyrillic mixed encoding and raw binary stdout verified.");return 0;}
   static int Main(string[] args){
+   if(args.Length==1&&args[0]=="emit-encoding-fixture"){EmitEncodingFixture();return 0;}
    if(args.Length==2&&args[0]=="output-smoke")return VerifyOutput(args[1]);
    if(args.Length!=2)return 2;Folder=Path.GetFullPath(args[1]);if(!Directory.Exists(Folder))return 2;
    try{Job=Json.Deserialize<RemoteJob>(File.ReadAllText(FilePath("job.json")));Guid parsed;if(!Guid.TryParse(Job.Id,out parsed))throw new Exception("Invalid job ID");
