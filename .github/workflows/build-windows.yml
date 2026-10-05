@@ -31,6 +31,21 @@ jobs:
         run: |
           & ./Publish/Agent/DomainConsole.Agent.exe output-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-output-smoke")
           if ($LASTEXITCODE -ne 0) { throw "Progress output check failed" }
+      - name: Verify command failure state
+        shell: pwsh
+        run: |
+          foreach ($continue in @($false,$true)) {
+            $folder = Join-Path $env:RUNNER_TEMP ("DomainConsole-failure-" + $continue)
+            New-Item $folder -ItemType Directory -Force | Out-Null
+            $job = @{Id=[guid]::NewGuid().ToString(); MicrosoftSource=$false; AutoReboot=$false; ContinueOnError=$continue; Steps=@(@{Name='Failure fixture';Kind='CMD';Code='exit /b 7'},@{Name='Next step';Kind='CMD';Code='exit /b 0'})}
+            $job | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $folder 'job.json') -Encoding utf8
+            & ./Publish/Agent/DomainConsole.Agent.exe run $folder
+            if ($LASTEXITCODE -ne 0) { throw 'Executor failed unexpectedly' }
+            $state = Get-Content (Join-Path $folder 'status.json') -Raw | ConvertFrom-Json
+            $expected = if ($continue) { 'CompletedWithErrors' } else { 'Failed' }
+            if ($state.Status -ne $expected -or !$state.Ended -or $state.Results[0].ExitCode -ne 7 -or $state.Error -notmatch '0x00000007') { throw 'Failure status/code/diagnosis was not saved' }
+          }
+          Write-Output 'Nonzero command exit is terminal; continue-on-error preserves failure diagnosis.'
       - name: Verify window and history after restart
         shell: pwsh
         run: |

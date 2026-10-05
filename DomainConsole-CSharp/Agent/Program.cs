@@ -142,10 +142,11 @@ namespace DomainConsole.Agent {
           }else throw new Exception("Unknown command kind");
           if(stepResult.ExitCode==3010){State.RebootRequired=true;stepResult.ExitCode=0;}
          }catch(Exception ex){stepResult.ExitCode=1;stepResult.Error=ex.Message+" [HRESULT 0x"+ex.HResult.ToString("X8")+"]";State.Error=stepResult.Error;Log(ex.ToString());}
-         if((step.Kind=="Updates"||step.Kind=="UpdateScan")&&stepResult.ExitCode!=0){try{PowerShell("Get-WindowsUpdateLog -LogPath '"+FilePath(prefix+".WindowsUpdate.log").Replace("'","''")+"'",prefix+"-diagnostics");}catch(Exception ex){Log(ex.Message);}}
          if(stepResult.ExitCode!=0){if(string.IsNullOrWhiteSpace(stepResult.Error))stepResult.Error="Код завершения: "+ExecutionDiagnosis.Code(stepResult.ExitCode)+". "+ExecutionDiagnosis.Explain(stepResult.ExitCode);State.Error=stepResult.Error;Log(stepResult.Error);}
          stepResult.Ended=DateTime.UtcNow.ToString("o");lock(Gate){State.Results.Add(stepResult);}Save();
-         if(stepResult.ExitCode!=0&&!Job.ContinueOnError){State.Status="Failed";break;}
+         if(stepResult.ExitCode!=0&&!Job.ContinueOnError){State.Status="Failed";Save();}
+         if((step.Kind=="Updates"||step.Kind=="UpdateScan")&&stepResult.ExitCode!=0){try{PowerShell("Get-WindowsUpdateLog -LogPath '"+FilePath(prefix+".WindowsUpdate.log").Replace("'","''")+"'",prefix+"-diagnostics");}catch(Exception ex){Log(ex.Message);}}
+         if(stepResult.ExitCode!=0&&!Job.ContinueOnError)break;
         }
         if(Cancelled())State.Status="Cancelled";
         if(State.Status=="Running")State.Status=State.Results.Any(r=>r.ExitCode!=0)?"CompletedWithErrors":State.RebootRequired?"AwaitingReboot":"Completed";
