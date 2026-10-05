@@ -2,4 +2,4 @@
   <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><EnableWindowsTargeting>true</EnableWindowsTargeting><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>DomainConsole</AssemblyName><ApplicationIcon>Assets/DomainConsole.ico</ApplicationIcon><ApplicationManifest>app.manifest</ApplicationManifest></PropertyGroup>
   <ItemGroup><PackageReference Include="System.DirectoryServices" Version="10.0.0"/><Compile Include="..\Shared\Models.cs" Link="Models.cs"/></ItemGroup>
   <ItemGroup><Resource Include="Assets/DomainConsole.ico"/></ItemGroup>
-<ItemGroup><Compile Include="..\Shared\ProgressText.cs" Link="ProgressText.cs"/></ItemGroup></Project>
+<ItemGroup><Compile Include="..\Shared\ProgressText.cs" Link="ProgressText.cs"/></ItemGroup><ItemGroup><Compile Include="..\Shared\ExecutionDiagnosis.cs" Link="ExecutionDiagnosis.cs"/></ItemGroup></Project>
