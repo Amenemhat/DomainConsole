@@ -26,6 +26,15 @@ jobs:
           New-Item Publish/Agent -ItemType Directory -Force | Out-Null
           Copy-Item DomainConsole-CSharp/Agent/bin/Release/net462/DomainConsole.Agent.exe Publish/Agent/
           Copy-Item DomainConsole-CSharp/README.txt Publish/README-source.txt
+      - name: Verify local SYSTEM execution and logs
+        shell: pwsh
+        run: |
+          $p = Start-Process ./Publish/DomainConsole.exe -ArgumentList 'local-smoke' -PassThru
+          if (!$p.WaitForExit(60000)) { Stop-Process -Id $p.Id; throw 'Local transport timeout' }
+          if ($p.ExitCode -ne 0 -or !(Test-Path Publish/local-smoke-ok.txt)) { if (Test-Path Publish/local-smoke-error.txt) { Get-Content Publish/local-smoke-error.txt }; throw 'Local transport failed' }
+          Get-Content Publish/local-smoke-ok.txt
+          Remove-Item Publish/local-smoke-*.txt
+          Remove-Item Publish/Data -Recurse -Force -ErrorAction SilentlyContinue
       - name: Verify redirected progress output
         shell: pwsh
         run: |

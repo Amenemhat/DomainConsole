@@ -27,7 +27,7 @@ namespace DomainConsole.Agent {
   static void Save(){lock(Gate){State.Updated=DateTime.UtcNow.ToString("o");WriteJson("status.json",State);}}
   static void Log(string message){lock(Gate)File.AppendAllText(FilePath("runner.log"),DateTime.UtcNow.ToString("o")+" "+message+Environment.NewLine,Encoding.UTF8);}
   static void Stage(string value){lock(Gate){DateTimeOffset started;if(DateTimeOffset.TryParse(State.StageStarted,out started))Log("Этап завершён: "+State.Stage+"; секунд: "+(int)(DateTimeOffset.UtcNow-started).TotalSeconds);State.Stage=value;State.StageEnded="";State.StageStarted=DateTime.UtcNow.ToString("o");State.Progress=null;State.ProgressValue="";State.LastOutputUtc="";State.LastProgressUtc="";Log("Начат этап: "+value);Save();}}
-  static int Report(){Stage("WSUS · запрос отправки отчёта");int a=Run("UsoClient.exe","Report","report"),b=Run("wuauclt.exe","/reportnow","report");State.ReportRequestStatus="Запросы завершены: UsoClient="+a+", wuauclt="+b+". Приём сервером ещё не подтверждён.";Log(State.ReportRequestStatus);Save();return a==0||b==0?0:1;}
+  static int Report(){Stage("WSUS · запрос отправки отчёта");int a=Run("UsoClient.exe","Report","report"),b=Run("wuauclt.exe","/reportnow","report");State.ReportRequestStatus="Запросы завершены: UsoClient="+a+", wuauclt="+b+". Это результат команд клиента; получение отчёта проверяется отдельно на сервере.";Log(State.ReportRequestStatus);Save();return a==0||b==0?0:1;}
   static bool Cancelled()=>File.Exists(FilePath("cancel.flag"));
   [DllImport("kernel32.dll")]static extern uint GetOEMCP();
   static int Run(string exe,string args,string prefix=null,int diagnosticTimeout=0){
