@@ -39,7 +39,7 @@ public sealed class RemoteService {
  public static bool IsLocal(string host){var name=host.Trim().TrimEnd('.');var machine=Environment.MachineName;var domain=System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;return name.Equals(machine,StringComparison.OrdinalIgnoreCase)||(!string.IsNullOrEmpty(domain)&&name.Equals(machine+"."+domain,StringComparison.OrdinalIgnoreCase))||name.Equals("localhost",StringComparison.OrdinalIgnoreCase)||name==".";}
  static void RequireLocalAdmin(){using var identity=System.Security.Principal.WindowsIdentity.GetCurrent();if(!new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))throw new UnauthorizedAccessException("Для работы с собственным компьютером запустите DomainConsole от имени администратора. Задание не запускалось.");}
 
- public Task<string> CheckConnection(TargetRecord target)=>PowerShellBridge.Execute(Invoke(target.Host,"'Подключение WinRM успешно.';whoami;hostname"));
+ public Task<string> CheckConnection(TargetRecord target){if(IsLocal(target.Host))RequireLocalAdmin();return PowerShellBridge.Execute(Invoke(target.Host,(IsLocal(target.Host)?"'Локальный доступ с правами администратора успешен.';":"'Подключение WinRM успешно.';")+"whoami;hostname"));}
  string Invoke(string host,string body)=>IsLocal(host)?"& { "+body+" }":"Invoke-Command -ComputerName "+PowerShellBridge.Literal(host)+" -SessionOption (New-PSSessionOption -OpenTimeout 12000 -OperationTimeout 30000) -ScriptBlock { "+body+" } -ErrorAction Stop";
  public async Task Deploy(TargetRecord target,RemoteJob job){
   if(IsLocal(target.Host)){RequireLocalAdmin();await DeployLocal(job);return;}
