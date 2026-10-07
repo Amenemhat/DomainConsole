@@ -25,6 +25,7 @@ public static class PowerShellBridge {
   var exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),"WindowsPowerShell","v1.0","powershell.exe");
   var wrapped="$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false);try{\n"+code+"\n}catch{[Console]::Error.WriteLine($_.Exception.Message);exit 1}";
   var start=new ProcessStartInfo(exe){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true,StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};
+  start.Environment.Remove("PSModulePath"); // Windows PowerShell must build its own module path, not inherit PowerShell 7 modules.
   start.ArgumentList.Add("-NoLogo");start.ArgumentList.Add("-NoProfile");start.ArgumentList.Add("-NonInteractive");start.ArgumentList.Add("-EncodedCommand");start.ArgumentList.Add(Convert.ToBase64String(Encoding.Unicode.GetBytes(wrapped)));
   using var p=Process.Start(start)??throw new Exception("Не удалось запустить встроенный PowerShell.");
   var stdout=p.StandardOutput.ReadToEndAsync(token);var stderr=p.StandardError.ReadToEndAsync(token);
