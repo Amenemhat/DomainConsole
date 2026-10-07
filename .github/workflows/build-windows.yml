@@ -86,7 +86,7 @@ jobs:
           $old = (Get-Date).AddDays(-3).ToString('yyyy-MM-dd HH:mm:ss') + ', Error OUTSIDE_WINDOW_ERROR'
           $recent = (Get-Date).AddMinutes(-5).ToString('yyyy-MM-dd HH:mm:ss') + ', Error IN_WINDOW_ERROR'
           @($old,$recent,'Continuation context') | Set-Content (Join-Path $fixture 'Logs/CBS/CBS.log') -Encoding utf8
-          $script = Join-Path $env:TEMP 'diagnostic-script.ps1'
+          $script = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/diagnostic-script.ps1'
           $text = Get-Content $script -Raw
           $harness = @'
           $ErrorActionPreference='Stop'
