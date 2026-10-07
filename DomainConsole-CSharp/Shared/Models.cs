@@ -11,6 +11,7 @@ namespace DomainConsole.Shared {
  public class StepResult {public string Name {get;set;}="";public int ExitCode {get;set;}public string Started {get;set;}="";public string Ended {get;set;}="";public string Error {get;set;}="";}
  public class RemoteState {
   public string LastOutputUtc {get;set;}="";public string ProgressValue {get;set;}="";public string LastProgressUtc {get;set;}="";public int ProcessId {get;set;}public string ProcessName {get;set;}="";
+  public string StageEnded {get;set;}="";public string DiagnosticStatus {get;set;}="NotRequested";public string DiagnosticStarted {get;set;}="";public string DiagnosticEnded {get;set;}="";public string DiagnosticError {get;set;}="";public int DiagnosticProcessId {get;set;}
   public string StageStarted {get;set;}="";public string ReportRequestStatus {get;set;}="Не запрошен";
   public string Id {get;set;}="";public string Status {get;set;}="Queued";public string Stage {get;set;}="";public string Started {get;set;}="";public string Updated {get;set;}="";public string Ended {get;set;}="";
   public int Step {get;set;}public int Total {get;set;}public int? Progress {get;set;}public string Error {get;set;}="";public bool RebootRequired {get;set;}public string RestoreStatus {get;set;}="NotRequested";public int UpdatesRemaining {get;set;}public List<StepResult> Results {get;set;}=new List<StepResult>();

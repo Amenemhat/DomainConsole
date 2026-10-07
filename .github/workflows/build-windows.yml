@@ -31,6 +31,11 @@ jobs:
         run: |
           & ./Publish/Agent/DomainConsole.Agent.exe output-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-output-smoke")
           if ($LASTEXITCODE -ne 0) { throw "Progress output check failed" }
+      - name: Verify bounded diagnostics
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe diagnostic-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-diagnostic-smoke")
+          if ($LASTEXITCODE -ne 0) { throw "Bounded diagnostics check failed" }
       - name: Verify command failure state
         shell: pwsh
         run: |
@@ -69,6 +74,38 @@ jobs:
           Test-Window
           Remove-Item Publish/Data -Recurse -Force
           Write-Output "History persisted, opened without network, and survived AD list refresh."
+      - name: Verify diagnostic script and time window
+        shell: pwsh
+        run: |
+          $fixture = Join-Path $env:RUNNER_TEMP 'DomainConsole-diagnostic-window'
+          New-Item (Join-Path $fixture 'Logs/CBS') -ItemType Directory -Force | Out-Null
+          New-Item (Join-Path $fixture 'Logs/DISM') -ItemType Directory -Force | Out-Null
+          $jobFolder = Join-Path $fixture 'DomainConsoleCSharp/00000000-0000-0000-0000-000000000001'
+          New-Item $jobFolder -ItemType Directory -Force | Out-Null
+          @{Started=[DateTime]::UtcNow.AddMinutes(-10).ToString('o');Status='Failed';Ended=[DateTime]::UtcNow.ToString('o');Error='fixture failure';Results=@()} | ConvertTo-Json | Set-Content (Join-Path $jobFolder 'status.json') -Encoding utf8
+          $old = (Get-Date).AddDays(-3).ToString('yyyy-MM-dd HH:mm:ss') + ', Error OUTSIDE_WINDOW_ERROR'
+          $recent = (Get-Date).AddMinutes(-5).ToString('yyyy-MM-dd HH:mm:ss') + ', Error IN_WINDOW_ERROR'
+          @($old,$recent,'Continuation context') | Set-Content (Join-Path $fixture 'Logs/CBS/CBS.log') -Encoding utf8
+          $script = Join-Path $env:TEMP 'diagnostic-script.ps1'
+          $text = Get-Content $script -Raw
+          $harness = @'
+          $ErrorActionPreference='Stop'
+          $tokens=$null;$parseErrors=$null
+          $text=[IO.File]::ReadAllText($env:DOMAINCONSOLE_DIAGNOSTIC_SCRIPT)
+          $null=[Management.Automation.Language.Parser]::ParseInput($text,[ref]$tokens,[ref]$parseErrors)
+          if($parseErrors.Count){throw ($parseErrors|Out-String)}
+          function Get-Process {param($Name,$ErrorAction) @()}
+          function Get-WinEvent {param($FilterHashtable,$MaxEvents,$ErrorAction) @()}
+          $env:windir=$env:DOMAINCONSOLE_DIAGNOSTIC_FIXTURE
+          $env:ProgramData=$env:DOMAINCONSOLE_DIAGNOSTIC_FIXTURE
+          $result=(& ([ScriptBlock]::Create($text)))|Out-String
+          if($result -notmatch 'IN_WINDOW_ERROR' -or $result -match 'OUTSIDE_WINDOW_ERROR' -or $result -notmatch 'Continuation context'){throw 'Time-window/context filter failed'}
+          Write-Output 'Diagnostic script valid in Windows PowerShell 5.1; selected interval and context verified.'
+          '@
+          $env:DOMAINCONSOLE_DIAGNOSTIC_SCRIPT=$script
+          $env:DOMAINCONSOLE_DIAGNOSTIC_FIXTURE=$fixture
+          & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($harness)))
+          if ($LASTEXITCODE -ne 0) { throw 'Diagnostic script check failed' }
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:
