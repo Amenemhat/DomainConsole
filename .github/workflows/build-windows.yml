@@ -125,7 +125,7 @@ jobs:
         run: |
           $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           $check = @'
-          foreach($name in @('delivery-client.ps1','delivery-server.ps1')){
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1')){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
             if($errors.Count){throw ($errors|Out-String)}
@@ -134,6 +134,37 @@ jobs:
           '@
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
           if ($LASTEXITCODE -ne 0) { throw 'Reporting script parsing failed' }
+      - name: Verify report queue recovery
+        shell: pwsh
+        run: |
+          $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
+          $check = @'
+          $ErrorActionPreference='Stop'
+          $text=[IO.File]::ReadAllText((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS 'report-recovery.ps1'))
+          $text=$text.Replace('$keepBackup=$false;','')
+          function New-Object {param($ComObject) if($ComObject -ne 'Microsoft.Update.Installer'){throw 'Unexpected COM'};[pscustomobject]@{IsBusy=$script:busy}}
+          function Get-Service {param($Name) $s=[pscustomobject]@{Status=$script:service};$s|Add-Member ScriptMethod WaitForStatus {param($state,$timeout) if($script:service -ne $state){throw 'Service state mismatch'}};$s}
+          function Stop-Service {param($Name,$ErrorAction) $script:service='Stopped'}
+          function Start-Service {param($Name,$ErrorAction) if($script:restartFail){throw 'Restart fixture failure'};$script:service='Running'}
+          foreach($mode in @('delete','backup','busy','restart-failure')){
+            $fixture=Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS ('recovery-'+$mode)
+            $env:windir=$fixture;$env:ProgramData=$fixture
+            $source=Join-Path $fixture 'SoftwareDistribution/EventCache.v2'
+            $null=[IO.Directory]::CreateDirectory($source)
+            $null=[IO.Directory]::CreateDirectory((Join-Path $fixture 'DomainConsoleCSharp'))
+            [IO.File]::WriteAllText((Join-Path $source 'event.bin'),'KEEP_FOR_BACKUP')
+            $script:service='Running';$script:busy=$mode -eq 'busy';$script:restartFail=$mode -eq 'restart-failure';$keepBackup=$mode -eq 'backup';$failed=$false
+            try {$null=& ([ScriptBlock]::Create($text))}catch{$failed=$true}
+            $copies=@(Get-ChildItem (Join-Path $fixture 'DomainConsoleCSharp') -Directory -Filter 'ReportQueue_*')
+            if($mode -eq 'delete' -and ((Test-Path $source) -or $copies.Count -or $failed -or $script:service -ne 'Running')){throw 'Delete recovery failed'}
+            if($mode -eq 'backup' -and ($copies.Count -ne 1 -or $failed -or !(Test-Path (Join-Path $copies[0].FullName 'event.bin')))){throw 'Backup recovery failed'}
+            if($mode -eq 'busy' -and (!$failed -or !(Test-Path (Join-Path $source 'event.bin')))){throw 'Busy installer protection failed'}
+            if($mode -eq 'restart-failure' -and (!$failed -or $copies.Count -ne 1 -or !(Test-Path (Join-Path $copies[0].FullName 'event.bin')))){throw 'Recovery data lost on restart failure'}
+          }
+          Write-Output 'Recovery deletion, optional backup, busy installer guard and restart failure preservation verified.'
+          '@
+          & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
+          if ($LASTEXITCODE -ne 0) { throw 'Queue recovery verification failed' }
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:
