@@ -116,6 +116,8 @@ namespace DomainConsole.Agent {
   static int DiagnosticSmoke(string folder){Directory.CreateDirectory(folder);Folder=folder;State=new RemoteState{Status="Failed",Ended=DateTime.UtcNow.ToString("o"),StageEnded=DateTime.UtcNow.ToString("o"),Error="original failure"};string ended=State.Ended;string child=FilePath("child.pid").Replace("'","''");CollectDiagnostics("timeout","$child=Start-Process cmd.exe -ArgumentList '/d /c ping 127.0.0.1 -n 90 >nul' -PassThru;$child.Id|Set-Content '"+child+"';while($true){Start-Sleep -Milliseconds 100}",3500);if(State.DiagnosticStatus!="TimedOut"||State.Status!="Failed"||State.Ended!=ended||State.Error!="original failure")throw new Exception("Diagnostic timeout changed main outcome.");if(!File.Exists(FilePath("child.pid")))throw new Exception("Diagnostic child fixture did not start.");if(File.Exists(FilePath("child.pid"))){int pid=int.Parse(File.ReadAllText(FilePath("child.pid")).Trim());try{var p=Process.GetProcessById(pid);if(!p.HasExited)throw new Exception("Diagnostic child survived timeout.");}catch(ArgumentException){}}CollectDiagnostics("success","Write-Output 'diagnostic done'",10000);if(State.DiagnosticStatus!="Completed"||State.Ended!=ended||State.Error!="original failure")throw new Exception("Diagnostic completion changed failure.");Console.WriteLine("Bounded diagnostic group stopped only its child processes; main outcome and duration preserved.");return 0;}
   static int Main(string[] args){
    if(args.Length==1&&args[0]=="emit-encoding-fixture"){EmitEncodingFixture();return 0;}
+   if(args.Length==2&&args[0]=="cleanup-smoke")return ClientCleanup.Smoke(args[1]);
+   if(args.Length==2&&args[0]=="cleanup")return ClientCleanup.Run(args[1]);
    if(args.Length==2&&args[0]=="diagnostic-smoke")return DiagnosticSmoke(args[1]);
    if(args.Length==2&&args[0]=="output-smoke")return VerifyOutput(args[1]);
    if(args.Length!=2)return 2;Folder=Path.GetFullPath(args[1]);if(!Directory.Exists(Folder))return 2;
@@ -141,6 +143,7 @@ namespace DomainConsole.Agent {
           if(step.Kind=="Updates")stepResult.ExitCode=Updates(prefix);
           else if(step.Kind=="UpdateScan")stepResult.ExitCode=Updates(prefix,true);
           else if(step.Kind=="Diagnostics")stepResult.ExitCode=PowerShell(UpdateLogCode(prefix),prefix,300000);
+          else if(step.Kind=="DeliveryDiagnostics"){stepResult.ExitCode=PowerShell("$dcFolder='"+Folder.Replace("'","''")+"';"+step.Code,prefix,300000);if(stepResult.ExitCode==0)Report();}
           else if(step.Kind=="PowerShell")stepResult.ExitCode=PowerShell(step.Code,prefix);
           else if(step.Kind=="CMD"){
            var file=FilePath(prefix+".cmd");File.WriteAllText(file,step.Code,Encoding.GetEncoding(System.Globalization.CultureInfo.CurrentCulture.TextInfo.OEMCodePage));stepResult.ExitCode=Run("cmd.exe","/d /c \"\""+file+"\"\"",prefix);
@@ -168,6 +171,7 @@ namespace DomainConsole.Agent {
      }finally{if(owns)mutex.ReleaseMutex();}
     }
     foreach(var prefix in diagnostics)CollectUpdateDiagnostics(prefix);
+    ClientCleanup.RemoveLaunchTask(Job.Id);
     return 0;
    }catch(Exception ex){try{Log(ex.ToString());}catch{}Console.Error.WriteLine(ex);return 1;}
   }

@@ -35,6 +35,11 @@ jobs:
           Get-Content Publish/local-smoke-ok.txt
           Remove-Item Publish/local-smoke-*.txt
           Remove-Item Publish/Data -Recurse -Force -ErrorAction SilentlyContinue
+      - name: Verify client cleanup protection
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe cleanup-smoke (Join-Path $env:RUNNER_TEMP 'DomainConsole-cleanup-fixture')
+          if ($LASTEXITCODE -ne 0) { throw 'Cleanup protection failed' }
       - name: Verify redirected progress output
         shell: pwsh
         run: |
@@ -115,6 +120,20 @@ jobs:
           $env:DOMAINCONSOLE_DIAGNOSTIC_FIXTURE=$fixture
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($harness)))
           if ($LASTEXITCODE -ne 0) { throw 'Diagnostic script check failed' }
+      - name: Verify reporting scripts in Windows PowerShell
+        shell: pwsh
+        run: |
+          $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
+          $check = @'
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1')){
+            $tokens=$null;$errors=$null
+            $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
+            if($errors.Count){throw ($errors|Out-String)}
+          }
+          Write-Output 'Reporting scripts parse in Windows PowerShell 5.1.'
+          '@
+          & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
+          if ($LASTEXITCODE -ne 0) { throw 'Reporting script parsing failed' }
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:
