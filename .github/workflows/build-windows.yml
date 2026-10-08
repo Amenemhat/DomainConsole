@@ -165,6 +165,32 @@ jobs:
           '@
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
           if ($LASTEXITCODE -ne 0) { throw 'Queue recovery verification failed' }
+      - name: Verify reading live IIS journal
+        shell: pwsh
+        run: |
+          $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
+          $check = @'
+          $ErrorActionPreference='Stop'
+          $text=[IO.File]::ReadAllText((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS 'delivery-server.ps1'))
+          $begin=$text.IndexOf(' $watch=')
+          $end=$text.IndexOf([char]10+'}catch',$begin)
+          if($begin -lt 0 -or $end -lt 0){throw 'IIS parser fixture extraction failed'}
+          $code=$text.Substring($begin,$end-$begin)
+          $path=Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS 'live-iis.log'
+          $stamp=[DateTime]::UtcNow.ToString('yyyy-MM-dd HH:mm:ss')
+          [IO.File]::WriteAllText($path,("#Fields: date time c-ip cs-method cs-uri-stem sc-status sc-substatus sc-win32-status time-taken"+[Environment]::NewLine+$stamp+" 10.1.1.1 POST /ReportingWebService/ReportingWebService.asmx 200 0 0 75"+[Environment]::NewLine+$stamp+" 10.1.1.2 POST /ReportingWebService/ReportingWebService.asmx 500 0 0 20"))
+          $writer=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Write,[IO.FileShare]::ReadWrite)
+          try {
+            $files=@(Get-Item $path);$ips=@('10.1.1.1');$since=[DateTime]::UtcNow.AddMinutes(-1);$until=[DateTime]::UtcNow.AddMinutes(1)
+            $result=@{Complete=$true;Error='';Requests=@();IisRead=$false}
+            $null=& ([ScriptBlock]::Create($code))
+            if(!$result.IisRead -or $result.Requests.Count -ne 1 -or $result.Requests[0].Status -ne 200){throw 'Live log reading or client filtering failed'}
+          }finally{$writer.Dispose()}
+          $exclusive=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None);$exclusive.Dispose()
+          Write-Output 'Active writer sharing, client filtering and reader disposal verified.'
+          '@
+          & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
+          if ($LASTEXITCODE -ne 0) { throw 'Live IIS journal test failed' }
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:
