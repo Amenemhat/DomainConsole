@@ -195,7 +195,7 @@ jobs:
         run: |
           $p=Join-Path $env:RUNNER_TEMP 'force-selection-fixture'
           New-Item $p -ItemType Directory -Force|Out-Null
-          $body=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/force-update.ps1'))
+          $body=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/force-update-select.ps1'))
           $script=[ScriptBlock]::Create($body)
           $start=[DateTime]::UtcNow.AddMinutes(-10)
           $mrt=[pscustomobject]@{Name='MRT.exe';ProcessId=100;ParentProcessId=200;CreationDate=$start.AddSeconds(5);CommandLine='MRT.exe'}

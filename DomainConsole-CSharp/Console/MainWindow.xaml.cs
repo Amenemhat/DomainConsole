@@ -51,7 +51,8 @@ public partial class MainWindow:Window {
   timer.Tick+=async(s,e)=>await Guard(async()=>{await Task.WhenAll(ActivePollRows().Select(Poll));await SendQueue();await ConfirmPendingReports();await ArchiveSavedResults();UpdateWsusStage();RefreshBranches();});timer.Start();Closing+=OnClosing;
  }
  void VerifyLayout(){VerifyNavigation();
-  File.WriteAllText(Path.Combine(Path.GetTempPath(),"force-update.ps1"),RemoteService.ForceUpdateDiscovery,new UTF8Encoding(true));
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"force-update-select.ps1"),RemoteService.ForceUpdateDiscovery,new UTF8Encoding(true));
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"force-update.ps1"),RemoteService.ForceUpdateDiscovery+"\n"+RemoteService.ForceUpdateApply,new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"cache-cleanup.ps1"),CacheScripts.Build("Download",false,false),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"diagnostic-script.ps1"),RemoteService.DiagnosticsScript("00000000-0000-0000-0000-000000000001",15),new UTF8Encoding(true));
   var viewer=new LogViewer{Text="## Visible\nVISIBLE_TEXT\n## Hidden\nSECRET_TEXT"};viewer.SetExpanded("Hidden",false);if(!viewer.VisibleText().Contains("VISIBLE_TEXT")||viewer.VisibleText().Contains("SECRET_TEXT"))throw new Exception("Visible-only copy failed.");viewer.SetExpanded("Visible",false);if(viewer.VisibleText()!="")throw new Exception("Collapsed content copied.");

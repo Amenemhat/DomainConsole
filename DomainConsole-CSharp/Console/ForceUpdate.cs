@@ -27,16 +27,7 @@ $expectedDir=Join-Path $env:windir 'SoftwareDistribution\Download\Install\'
 if($installer.Name -notmatch '^Windows-KB890830[^\\/]*\.exe$' -or !$installer.CommandLine -or $installer.CommandLine.IndexOf($expectedDir,[StringComparison]::OrdinalIgnoreCase) -lt 0 -or !$installer.CreationDate -or $installer.CreationDate.ToUniversalTime() -lt $jobStart -or $installer.CreationDate -gt $mrt.CreationDate){throw 'Связь MRT с установщиком текущего задания не подтверждена. Процессы не завершались.'}
 $plan=@{MrtPid=[int]$mrt.ProcessId;InstallerPid=[int]$installer.ProcessId;MrtStarted=$mrt.CreationDate.ToUniversalTime().ToString('o');InstallerStarted=$installer.CreationDate.ToUniversalTime().ToString('o');InstallerName=[string]$installer.Name}
 """;
- public async Task<UpdateForcePlan> InspectUpdateForce(TargetRecord target,string id){
-  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(IsLocal(target.Host))RequireLocalAdmin();
-  using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(45));
-  var json=await PowerShellBridge.Execute(Invoke(target.Host,"$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') "+PowerShellBridge.Literal(id)+";"+ForceUpdateDiscovery+"\n$plan|ConvertTo-Json -Compress"),timeout.Token);
-  return JsonSerializer.Deserialize<UpdateForcePlan>(json,Store.Options)??throw new Exception("Не получен план остановки.");
- }
- public async Task<string> ForceUpdate(TargetRecord target,string id,UpdateForcePlan expected){
-  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(IsLocal(target.Host))RequireLocalAdmin();
-  using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(60));
-  var body="$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') "+PowerShellBridge.Literal(id)+";"+ForceUpdateDiscovery+"\n$expected="+PowerShellBridge.Literal(JsonSerializer.Serialize(expected))+"|ConvertFrom-Json;"+"""
+ public const string ForceUpdateApply="""
 foreach($key in @('MrtPid','InstallerPid','MrtStarted','InstallerStarted','InstallerName')){if([string]$plan[$key] -cne [string]$expected.$key){throw 'Процессы изменились после подтверждения. Повторите остановку; завершение не выполнялось.'}}
 New-Item (Join-Path $p 'cancel.flag') -ItemType File -Force|Out-Null
 New-Item (Join-Path $p 'stop-now.flag') -ItemType File -Force|Out-Null
@@ -60,6 +51,16 @@ try{
  Audit 'Процессы MRT остановлены. Итог WUA ещё не подтверждён; ожидайте обновления статуса задания. Если WUA не возвращается, выполните диагностику ожидания; может потребоваться плановая перезагрузка.'
 }catch{Audit ('Ошибка прерывания: '+$_.Exception.Message);throw}
 """;
+ public async Task<UpdateForcePlan> InspectUpdateForce(TargetRecord target,string id){
+  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(IsLocal(target.Host))RequireLocalAdmin();
+  using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(45));
+  var json=await PowerShellBridge.Execute(Invoke(target.Host,"$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') "+PowerShellBridge.Literal(id)+";"+ForceUpdateDiscovery+"\n$plan|ConvertTo-Json -Compress"),timeout.Token);
+  return JsonSerializer.Deserialize<UpdateForcePlan>(json,Store.Options)??throw new Exception("Не получен план остановки.");
+ }
+ public async Task<string> ForceUpdate(TargetRecord target,string id,UpdateForcePlan expected){
+  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(IsLocal(target.Host))RequireLocalAdmin();
+  using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(60));
+  var body="$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') "+PowerShellBridge.Literal(id)+";"+ForceUpdateDiscovery+"\n$expected="+PowerShellBridge.Literal(JsonSerializer.Serialize(expected))+"|ConvertFrom-Json;"+ForceUpdateApply;
   return await PowerShellBridge.Execute(Invoke(target.Host,body),timeout.Token);
  }
 }
