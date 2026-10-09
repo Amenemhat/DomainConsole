@@ -146,7 +146,7 @@ namespace DomainConsole.Agent {
     }
     if(args[0]!="run")return 2;
     if(File.Exists(FilePath("status.json"))){var previous=Json.Deserialize<RemoteState>(File.ReadAllText(FilePath("status.json")));if(previous.Status!="Queued")return 0;}
-    State=new RemoteState{SupportsImmediateStop=true,Id=Job.Id,Total=Job.Steps.Count,Started=DateTime.UtcNow.ToString("o"),Status="Queued",Stage="Ожидание других заданий"};Save();
+    State=new RemoteState{SupportsWuaCancel=true,SupportsImmediateStop=true,Id=Job.Id,Total=Job.Steps.Count,Started=DateTime.UtcNow.ToString("o"),Status="Queued",Stage="Ожидание других заданий"};Save();
     var diagnostics=new List<string>();using(var mutex=new Mutex(false,ExecutionLane())){
      bool owns=false;try{try{while(!(owns=mutex.WaitOne(500))){if(Cancelled()){State.Status="Cancelled";State.Ended=DateTime.UtcNow.ToString("o");Save();return 0;}}}catch(AbandonedMutexException){owns=true;}
       State.Status="Running";Save();using(var heartbeat=new Timer(o=>{try{if(File.Exists(FilePath("cancel.flag"))&&!File.Exists(FilePath("stop-now.flag"))){State.StopStatus="AfterCurrent";State.StopMessage="Остановка после текущей команды / обновления запрошена";}if(File.Exists(FilePath("stop-now.flag"))&&CurrentKind!="CMD"&&CurrentKind!="PowerShell"){if(State.StopStatus!="AbortRequested"&&State.StopStatus!="ForceRequired"){State.StopStatus="AwaitingSafePoint";State.StopMessage="Остановка запрошена; ожидается безопасная точка встроенной операции";}}Save();}catch{}},null,5000,5000)){

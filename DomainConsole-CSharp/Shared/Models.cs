@@ -18,7 +18,7 @@ namespace DomainConsole.Shared {
  public class StepResult {public string Name {get;set;}="";public int ExitCode {get;set;}public string Started {get;set;}="";public string Ended {get;set;}="";public string Error {get;set;}="";}
  public class RemoteState {
   public string ActivityMessage {get;set;}="";public string Recommendation {get;set;}="";public string RecommendationAction {get;set;}="";public string LastMovementUtc {get;set;}="";public string TransferText {get;set;}="";public int ForceCandidatePid {get;set;}public string ForceCandidateStarted {get;set;}="";
-  public bool SupportsImmediateStop {get;set;}public string StopStatus {get;set;}="";public string StopMessage {get;set;}="";
+  public bool SupportsWuaCancel {get;set;}public bool SupportsImmediateStop {get;set;}public string StopStatus {get;set;}="";public string StopMessage {get;set;}="";
   public string LastOutputUtc {get;set;}="";public string ProgressValue {get;set;}="";public string LastProgressUtc {get;set;}="";public int ProcessId {get;set;}public string ProcessName {get;set;}="";
   public string StageEnded {get;set;}="";public string DiagnosticStatus {get;set;}="NotRequested";public string DiagnosticStarted {get;set;}="";public string DiagnosticEnded {get;set;}="";public string DiagnosticError {get;set;}="";public int DiagnosticProcessId {get;set;}
   public string StageStarted {get;set;}="";public string ReportRequestStatus {get;set;}="Не запрошен";
