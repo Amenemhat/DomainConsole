@@ -40,6 +40,30 @@ jobs:
         run: |
           & ./Publish/Agent/DomainConsole.Agent.exe update-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-update-smoke")
           if ($LASTEXITCODE -ne 0) { throw "Update operation fixture failed" }
+      - name: Verify parallel command and WSUS queues
+        shell: pwsh
+        run: |
+          $folders=@();$processes=@()
+          try {
+            foreach($channel in @('WSUS','Commands')){
+              $folder=Join-Path $env:RUNNER_TEMP ('DomainConsole-lane-'+$channel)
+              New-Item $folder -ItemType Directory -Force | Out-Null
+              $code=if($channel -eq 'WSUS'){'ping -n 16 127.0.0.1 > nul'}else{'echo PARALLEL_OK'}
+              @{Id=[Guid]::NewGuid().ToString();OutputChannel=$channel;Steps=@(@{Name='lane fixture';Kind='CMD';Code=$code})}|ConvertTo-Json -Depth 6|Set-Content (Join-Path $folder 'job.json') -Encoding utf8
+              $processes+=Start-Process ./Publish/Agent/DomainConsole.Agent.exe -ArgumentList ('run "'+$folder+'"') -PassThru
+              $folders+=$folder
+              if($channel -eq 'WSUS'){
+                $ready=$false
+                for($i=0;$i -lt 40;$i++){Start-Sleep -Milliseconds 250;try{$st=Get-Content (Join-Path $folder 'status.json') -Raw|ConvertFrom-Json;if($st.Status -eq 'Running' -and $st.ProcessId){$ready=$true;break}}catch{}}
+                if(!$ready){throw 'WSUS lane fixture did not start'}
+              }
+            }
+            if(!$processes[1].WaitForExit(7000)){throw 'Command lane blocked by WSUS'}
+            $st=Get-Content (Join-Path $folders[1] 'status.json') -Raw|ConvertFrom-Json
+            if($st.Status -ne 'Completed' -or $processes[0].HasExited){throw 'Parallel lane result invalid'}
+            New-Item (Join-Path $folders[0] 'stop-now.flag') -ItemType File|Out-Null
+            if(!$processes[0].WaitForExit(10000)){throw 'WSUS fixture cancellation failed'}
+          } finally {foreach($p in $processes){if(!$p.HasExited){Stop-Process -Id $p.Id -Force}}}
       - name: Verify client cleanup protection
         shell: pwsh
         run: |
@@ -166,6 +190,32 @@ jobs:
           '@
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
           if ($LASTEXITCODE -ne 0) { throw 'Reporting script parsing failed' }
+      - name: Verify cache cleanup protection and backup
+        shell: pwsh
+        run: |
+          $fixture=Join-Path $env:RUNNER_TEMP 'DomainConsole-cache-fixture'
+          $text=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/cache-cleanup.ps1'))
+          $text=$text.Replace('(New-Object -ComObject Microsoft.Update.Installer).IsBusy','$fixtureBusy')
+          $oldWindir=$env:windir;$env:windir=$fixture
+          $states=@{wuauserv='Running';bits='Running';cryptsvc='Stopped'};$fixtureBusy=$false;$failStop=$false
+          function Get-Service($Name){$obj=[pscustomobject]@{Status=$states[$Name]};$obj|Add-Member ScriptMethod WaitForStatus {param($status,$timeout)};return $obj}
+          function Stop-Service($Name){if($failStop -and $Name -eq 'bits'){throw 'fixture stop failure'};$states[$Name]='Stopped'}
+          function Start-Service($Name){$states[$Name]='Running'}
+          try {
+            $download=Join-Path $fixture 'SoftwareDistribution/Download';New-Item $download -ItemType Directory -Force|Out-Null
+            Set-Content (Join-Path $download 'sample.bin') 'fixture'
+            $fixtureBusy=$true;$rejected=$false
+            try{& ([ScriptBlock]::Create($text))}catch{$rejected=$true}
+            if(!$rejected -or !(Test-Path (Join-Path $download 'sample.bin'))){throw 'Busy installer protection failed'}
+            $fixtureBusy=$false;$failStop=$true;$rejected=$false
+            try{& ([ScriptBlock]::Create($text))}catch{$rejected=$true}
+            if(!$rejected -or $states.wuauserv -ne 'Running' -or !(Test-Path $download)){throw 'Stop failure restoration failed'}
+            $failStop=$false
+            & ([ScriptBlock]::Create($text.Replace('$backup=$false','$backup=$true')))
+            if(Test-Path $download){throw 'Backup mode did not move cache'}
+            if(!(Get-ChildItem (Split-Path $download) -Filter 'Download.DomainConsoleBackup_*')){throw 'Backup missing'}
+            if($states.wuauserv -ne 'Running' -or $states.bits -ne 'Running'){throw 'Service restoration failed'}
+          } finally {$env:windir=$oldWindir}
       - name: Verify report queue recovery
         shell: pwsh
         run: |
