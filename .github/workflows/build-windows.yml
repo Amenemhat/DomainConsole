@@ -50,6 +50,33 @@ jobs:
         run: |
           & ./Publish/Agent/DomainConsole.Agent.exe diagnostic-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-diagnostic-smoke")
           if ($LASTEXITCODE -ne 0) { throw "Bounded diagnostics check failed" }
+      - name: Verify isolated Ctrl+C and explicit force
+        shell: pwsh
+        run: |
+          $p=Start-Process ./Publish/Agent/DomainConsole.Agent.exe -ArgumentList 'command-stop-smoke' -PassThru
+          if (!$p.WaitForExit(30000)) { Stop-Process -Id $p.Id; throw 'Console cancellation fixture timeout' }
+          if ($p.ExitCode -ne 0) { throw 'Isolated Ctrl+C / explicit force fixture failed' }
+      - name: Verify cancelling running CMD and PowerShell jobs
+        shell: pwsh
+        run: |
+          foreach ($kind in @('CMD','PowerShell')) {
+            $folder=Join-Path $env:RUNNER_TEMP ('DomainConsole-stop-'+$kind)
+            New-Item $folder -ItemType Directory -Force | Out-Null
+            $code=if($kind -eq 'CMD'){'ping -n 61 127.0.0.1 > nul'}else{'Start-Sleep -Seconds 60'}
+            @{Id=[guid]::NewGuid().ToString();Steps=@(@{Name='Long command';Kind=$kind;Code=$code},@{Name='Must not run';Kind='CMD';Code='echo SHOULD_NOT_RUN'})} | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $folder 'job.json') -Encoding utf8
+            $p=Start-Process ./Publish/Agent/DomainConsole.Agent.exe -ArgumentList @('run',('"'+$folder+'"')) -PassThru
+            $until=(Get-Date).AddSeconds(15)
+            do {
+              Start-Sleep -Milliseconds 250
+              try {$state=Get-Content (Join-Path $folder 'status.json') -Raw | ConvertFrom-Json}catch{$state=$null}
+            }while((!$state.ProcessId -or !$state.SupportsImmediateStop) -and (Get-Date) -lt $until)
+            if (!$state.ProcessId) { throw 'No running command process' }
+            Start-Sleep -Milliseconds 750
+            New-Item (Join-Path $folder 'stop-now.flag') -ItemType File -Force | Out-Null
+            if (!$p.WaitForExit(15000)) { Stop-Process -Id $p.Id; throw 'Running command did not cancel via Ctrl+C' }
+            $state=Get-Content (Join-Path $folder 'status.json') -Raw | ConvertFrom-Json
+            if ($p.ExitCode -ne 0 -or $state.Status -ne 'Cancelled' -or !$state.Ended -or $state.Step -ne 1) { throw 'Cancellation did not preserve a terminal state or skipped-step semantics' }
+          }
       - name: Verify command failure state
         shell: pwsh
         run: |

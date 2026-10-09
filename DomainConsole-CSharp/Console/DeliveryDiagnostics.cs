@@ -3,12 +3,12 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed class ReportQueueProbe {public string Name {get;set;}="";public int Files {get;set;}public long Bytes {get;set;}public string OldestUtc {get;set;}="";}
 public sealed class ClientReportProbe {
- public List<ReportQueueProbe> Queues {get;set;}=new();public string QueueError {get;set;}="";
+ public string EtlStatus {get;set;}="Не получен";public List<ReportQueueProbe> Queues {get;set;}=new();public string QueueError {get;set;}="";
  public string Computer {get;set;}="";public string Os {get;set;}="";public string Build {get;set;}="";public string WUServer {get;set;}="";public string WUStatusServer {get;set;}="";public int UseWUServer {get;set;}public string SusClientId {get;set;}="";public string[] IPs {get;set;}=Array.Empty<string>();public string CollectedUtc {get;set;}="";
 }
 public sealed class HttpReportRequest {public string Method {get;set;}="";public string Utc {get;set;}="";public string IP {get;set;}="";public string Path {get;set;}="";public int Status {get;set;}public string SubStatus {get;set;}="";public string Win32 {get;set;}="";public string Milliseconds {get;set;}="";}
 public sealed class ServerReportEvidence {
- public string Error {get;set;}="";public string SinceUtc {get;set;}="";public string UntilUtc {get;set;}="";public string LogDirectory {get;set;}="";public string PoolState {get;set;}="";public bool Complete {get;set;}public List<HttpReportRequest> Requests {get;set;}=new();public WsusReport? Report {get;set;}public string Events {get;set;}="";public string HttpErrors {get;set;}="";public string ValidationErrors {get;set;}="";public string ServerLog {get;set;}="";public bool IisRead {get;set;}
+ public string Error {get;set;}="";public string SinceUtc {get;set;}="";public string UntilUtc {get;set;}="";public string LogDirectory {get;set;}="";public string PoolState {get;set;}="";public bool Complete {get;set;}public List<HttpReportRequest> Requests {get;set;}=new();public WsusReport? Report {get;set;}public string Events {get;set;}="";public string HttpErrors {get;set;}="";public string ValidationErrors {get;set;}="";public string ServerLog {get;set;}="";public bool IisRead {get;set;}public bool EventsRead {get;set;}public bool HttpErrorsRead {get;set;}public bool ProcessingLogRead {get;set;}
 }
 public static class DeliveryPresentation {
  public static string Format(ClientReportProbe client,ServerReportEvidence server,DateTimeOffset now){
@@ -34,7 +34,7 @@ public static class DeliveryPresentation {
    "\nОчередь: "+(client.Queues.Count==0?"данные отсутствуют":string.Join("; ",client.Queues.Select(q=>q.Name+": "+q.Files+" файлов, "+q.Bytes+" байт"+(q.Files>0?", старейшее событие: "+LocalDateConverter.Format(q.OldestUtc):" (пуста)"))))+
    (client.QueueError.Length>0?"\nОграничения очереди: "+client.QueueError:"")+
    "\nПолнота диагностики: "+(server.Complete&&server.Error.Length==0?"серверные источники прочитаны":"частичная; это не оценка исправности клиента")+
-   "\nКлиент: "+client.Computer+"; ОС: "+client.Os+"; сборка: "+client.Build+"\nИсточник: "+client.WUServer+"\nАдрес отчётности: "+client.WUStatusServer+
+   "\nИсточники: очередь — "+(client.QueueError.Length==0&&client.Queues.Count>0?"получена":"неполная / недоступна")+"; WSUS API — "+(server.Report!=null?"получен":"недоступен")+"; IIS — "+(server.IisRead?"прочитан":"неполный / недоступен")+"\nСобытия сервера — "+(server.EventsRead?"прочитаны":"недоступны")+"; HTTPERR — "+(server.HttpErrorsRead?"прочитан":"недоступен")+"; журнал обработки WSUS — "+(server.ProcessingLogRead?"прочитан":"недоступен")+"; ETL — "+client.EtlStatus+"\nКлиент: "+client.Computer+"; ОС: "+client.Os+"; сборка: "+client.Build+"\nИсточник: "+client.WUServer+"\nАдрес отчётности: "+client.WUStatusServer+
    "\nUseWUServer: "+client.UseWUServer+"; IP: "+string.Join(", ",client.IPs)+"\nSusClientId: "+client.SusClientId+
    "\nИнтервал: "+LocalDateConverter.Format(server.SinceUtc)+" — "+LocalDateConverter.Format(server.UntilUtc)+"\nПул IIS: "+server.PoolState+
    (server.Error.Length>0?"\nОграничения диагностики: "+server.Error:"")+"\n## Запросы IIS выбранного клиента\n"+
@@ -82,9 +82,10 @@ $probe|ConvertTo-Json -Depth 5|Set-Content (Join-Path $dcFolder 'delivery-client
 'IP: '+($ips -join ', ')+'; SusClientId: '+$probe.SusClientId
 foreach($q in $probe.Queues){'Очередь '+$q.Name+': файлов '+$q.Files+'; байт '+$q.Bytes;if($q.Files){'Старейшее событие: '+([DateTime]::Parse($q.OldestUtc).ToLocalTime().ToString('dd.MM.yyyy HH:mm:ss zzz'))}}
 if($probe.QueueError){'Ограничения сбора очереди: '+$probe.QueueError}
-$reportPath=Join-Path $env:windir 'SoftwareDistribution\ReportingEvents.log';if(Test-Path $reportPath){'## Технический журнал · локальные события отчётности';Get-Content $reportPath -Encoding UTF8 -Tail 200 | Where-Object {$parts=$_ -split '\t';$at=[DateTimeOffset]::MinValue;$parts.Length -gt 1 -and [DateTimeOffset]::TryParse($parts[1],[ref]$at) -and $at.UtcDateTime -ge [DateTime]::UtcNow.AddHours(-1)}}
+$reportPath=Join-Path $env:windir 'SoftwareDistribution\ReportingEvents.log';if(Test-Path $reportPath){'## Технический журнал · локальные события отчётности';$recentEvents=@(Get-Content $reportPath -Encoding UTF8 -Tail 200 | Where-Object {$parts=$_ -split '\t';$at=[DateTimeOffset]::MinValue;$parts.Length -gt 1 -and [DateTimeOffset]::TryParse($parts[1],[ref]$at) -and $at.UtcDateTime -ge [DateTime]::UtcNow.AddHours(-1)});if($recentEvents.Count){$recentEvents}else{'За последний час локальных событий отчётности нет.'}}
 '## Технический журнал · события Windows Update';
-Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-WindowsUpdateClient/Operational';StartTime=(Get-Date).AddHours(-1)} -MaxEvents 60 -ErrorAction SilentlyContinue|Select-Object TimeCreated,Id,LevelDisplayName,Message|Format-List|Out-String
+$events=@(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-WindowsUpdateClient/Operational';StartTime=(Get-Date).AddHours(-1)} -MaxEvents 60 -ErrorAction SilentlyContinue);if($events.Count){$events|Select-Object TimeCreated,Id,LevelDisplayName,Message|Format-List|Out-String}else{'За последний час событий Windows Update не получено.'}
+'## Службы и прокси до запроса отчёта'
 Get-Service wuauserv,bits,cryptsvc,UsoSvc -ErrorAction SilentlyContinue|Select-Object Name,Status,StartType|Format-Table|Out-String
 netsh winhttp show proxy
 'Данные собраны; это не подтверждение исправности клиента. После этого будет запрошена только отправка отчёта, поиск и установка не запускаются.'
@@ -92,7 +93,7 @@ netsh winhttp show proxy
  public const string Server="""
 $ProgressPreference='SilentlyContinue'
 $since=[DateTime]::Parse($sinceText).ToUniversalTime().AddMinutes(-$lookback);$until=[DateTime]::UtcNow
-$result=@{SinceUtc=$since.ToString('o');UntilUtc=$until.ToString('o');LogDirectory='';PoolState='Не определён';Complete=$true;Error='';Requests=@();Events='';HttpErrors='';ValidationErrors='';ServerLog='';IisRead=$false;Report=$null}
+$result=@{SinceUtc=$since.ToString('o');UntilUtc=$until.ToString('o');LogDirectory='';PoolState='Не определён';Complete=$true;Error='';Requests=@();Events='';HttpErrors='';ValidationErrors='';ServerLog='';IisRead=$false;EventsRead=$false;HttpErrorsRead=$false;ProcessingLogRead=$false;Report=$null}
 try {
  [void][Reflection.Assembly]::LoadFrom((Join-Path $env:windir 'System32\inetsrv\Microsoft.Web.Administration.dll'))
  $manager=New-Object Microsoft.Web.Administration.ServerManager
@@ -100,8 +101,10 @@ try {
  if($site.Count -ne 1){throw 'Не найден единственный IIS-сайт с указанным портом WSUS'}
  $site=$site[0];$pool=$site.Applications['/'].ApplicationPoolName;$result.PoolState=$pool+': '+$manager.ApplicationPools[$pool].State
  $log=Join-Path ([Environment]::ExpandEnvironmentVariables($site.LogFile.Directory)) ('W3SVC'+$site.Id);$result.LogDirectory=$log
- $files=@(Get-ChildItem $log -Filter '*.log' -ErrorAction Stop|Where-Object {$_.LastWriteTimeUtc -ge $since}|Sort-Object Name -Descending)
- if(!$site.LogFile.Enabled){throw 'Журналирование IIS отключено'};if(!$files.Count){throw 'Файлы IIS не найдены в каталоге'};if([string]$site.LogFile.LogFormat -ne 'W3C'){throw 'Формат журнала IIS не W3C'}
+ $allFiles=@(Get-ChildItem $log -Filter '*.log' -ErrorAction Stop)
+ $files=@($allFiles|Where-Object {$byName=$false;if($_.Name -match '^u_ex(\d{6})(?:_|\.)'){$day=[DateTime]::ParseExact($matches[1],'yyMMdd',[Globalization.CultureInfo]::InvariantCulture);$byName=$day.Date -ge $since.Date.AddDays(-1) -and $day.Date -le $until.Date.AddDays(1)};$byName -or $_.LastWriteTimeUtc -ge $since}|Sort-Object Name -Descending)
+ if(!$files.Count -and $allFiles.Count){$files=@($allFiles|Sort-Object Name -Descending|Select-Object -First 2)}
+ if(!$site.LogFile.Enabled){throw 'Журналирование IIS отключено'};if(!$allFiles.Count){throw 'В каталоге IIS действительно отсутствуют файлы *.log'};if([string]$site.LogFile.LogFormat -ne 'W3C'){throw 'Формат журнала IIS не W3C'}
  $watch=[Diagnostics.Stopwatch]::StartNew();$requestRows=New-Object 'System.Collections.Generic.Queue[object]'
  if(-not ('DomainConsoleIisReader16' -as [type])){Add-Type -TypeDefinition @'
 using System;using System.IO;using System.Text;using System.Collections.Generic;using System.Diagnostics;using System.Globalization;
@@ -135,8 +138,8 @@ public static class DomainConsoleIisReader16 {
  $result.IisRead=$true;$result.Requests=@($requestRows.ToArray());if($requestRows.Count -eq 1000){$result.Error+='; Показаны последние 1000 запросов; возможны более ранние записи';$result.Complete=$false}
 
 }catch{$result.Complete=$false;$result.Error+=$_.Exception.Message;if($requestRows){$result.Requests=@($requestRows.ToArray())}}
-try {$result.Events=(Get-WinEvent -FilterHashtable @{LogName=@('Application','System');StartTime=$since.ToLocalTime();EndTime=$until.ToLocalTime()} -MaxEvents 2000 -ErrorAction Stop|Where-Object {$_.ProviderName -match 'Update Services|Windows Server Update|WAS|W3SVC|IIS|MSSQL'}|Select-Object -First 50 @{Name='Utc';Expression={$_.TimeCreated.ToUniversalTime().ToString('o')}},ProviderName,Id,LevelDisplayName,Message|Format-List|Out-String)}catch{if($_.FullyQualifiedErrorId -notmatch 'NoMatchingEventsFound'){$result.Complete=$false;$result.Error+='; События: '+$_.Exception.Message}}
-try {$result.HttpErrors=(Get-ChildItem (Join-Path $env:windir 'System32\LogFiles\HTTPERR') -Filter '*.log' -ErrorAction Stop|Where-Object {$_.LastWriteTimeUtc -ge $since}|Sort-Object LastWriteTimeUtc -Descending|Select-Object -First 2|ForEach-Object {Get-Content $_.FullName -Tail 2000}|Where-Object {$line=$_;$utc=[DateTime]::MinValue;$valid=$line.Length -ge 19 -and [DateTime]::TryParseExact($line.Substring(0,19),'yyyy-MM-dd HH:mm:ss',[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::AssumeUniversal,[ref]$utc);$valid -and $utc.ToUniversalTime() -ge $since -and $utc.ToUniversalTime() -le $until -and @($ips|Where-Object {$line -match ('(?:^| )'+[regex]::Escape($_)+'(?: |$)')}).Count -gt 0}|Select-Object -Last 100|ForEach-Object {$stamp=[DateTime]::ParseExact($_.Substring(0,19),'yyyy-MM-dd HH:mm:ss',[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::AssumeUniversal).ToUniversalTime();$stamp.ToString('o')+$_.Substring(19)}|Out-String)}catch{$result.Complete=$false;$result.Error+='; HTTPERR: '+$_.Exception.Message}
+try {$result.Events=(Get-WinEvent -FilterHashtable @{LogName=@('Application','System');StartTime=$since.ToLocalTime();EndTime=$until.ToLocalTime()} -MaxEvents 2000 -ErrorAction Stop|Where-Object {$_.ProviderName -match 'Update Services|Windows Server Update|WAS|W3SVC|IIS|MSSQL'}|Select-Object -First 50 @{Name='Utc';Expression={$_.TimeCreated.ToUniversalTime().ToString('o')}},ProviderName,Id,LevelDisplayName,Message|Format-List|Out-String);$result.EventsRead=$true}catch{if($_.FullyQualifiedErrorId -notmatch 'NoMatchingEventsFound'){$result.Complete=$false;$result.Error+='; События: '+$_.Exception.Message}else{$result.EventsRead=$true}}
+try {$result.HttpErrors=(Get-ChildItem (Join-Path $env:windir 'System32\LogFiles\HTTPERR') -Filter '*.log' -ErrorAction Stop|Where-Object {$_.LastWriteTimeUtc -ge $since}|Sort-Object LastWriteTimeUtc -Descending|Select-Object -First 2|ForEach-Object {Get-Content $_.FullName -Tail 2000}|Where-Object {$line=$_;$utc=[DateTime]::MinValue;$valid=$line.Length -ge 19 -and [DateTime]::TryParseExact($line.Substring(0,19),'yyyy-MM-dd HH:mm:ss',[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::AssumeUniversal,[ref]$utc);$valid -and $utc.ToUniversalTime() -ge $since -and $utc.ToUniversalTime() -le $until -and @($ips|Where-Object {$line -match ('(?:^| )'+[regex]::Escape($_)+'(?: |$)')}).Count -gt 0}|Select-Object -Last 100|ForEach-Object {$stamp=[DateTime]::ParseExact($_.Substring(0,19),'yyyy-MM-dd HH:mm:ss',[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::AssumeUniversal).ToUniversalTime();$stamp.ToString('o')+$_.Substring(19)}|Out-String);$result.HttpErrorsRead=$true}catch{$result.Complete=$false;$result.Error+='; HTTPERR: '+$_.Exception.Message}
 try {[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');$wsus=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($env:COMPUTERNAME,$ssl,$port);$scope=New-Object Microsoft.UpdateServices.Administration.ComputerTargetScope;$scope.NameIncludes=$computer;$targets=@($wsus.GetComputerTargets($scope)|Where-Object {$_.FullDomainName.Split('.')[0] -eq $computer});if($targets.Count -ne 1){throw 'WSUS: клиент не найден однозначно'};$target=$targets[0];$result.Report=@{LastReportedUtc=$target.LastReportedStatusTime.ToUniversalTime().ToString('o');LastSyncUtc=$target.LastSyncTime.ToUniversalTime().ToString('o');LastSyncResult=[string]$target.LastSyncResult;FullDomainName=$target.FullDomainName}}catch{$result.Complete=$false;$result.Error+='; WSUS API: '+$_.Exception.Message}
 
 try {
@@ -149,7 +152,7 @@ try {
   $event=$lines[$i];$detail='Событие не прошло серверную проверку';if($event -match '(?:,|\[)g=([^,\]]+)'){$value=$matches[1];if($value.Contains('|')){$detail='Ошибка формата MiscData: g содержит GUID, разделённые |'}}
   $result.ValidationErrors=$detail;$blocks.Add($stamp.ToString('o')+' '+$detail+[Environment]::NewLine+$event)
  }
- $result.ServerLog=(@($blocks)|Select-Object -Last 5)-join [Environment]::NewLine
+ $result.ServerLog=(@($blocks)|Select-Object -Last 5)-join [Environment]::NewLine;$result.ProcessingLogRead=$true
 }catch{$result.Complete=$false;$result.Error+='; Журнал обработки WSUS: '+$_.Exception.Message}
 $result|ConvertTo-Json -Depth 10 -Compress
 """;

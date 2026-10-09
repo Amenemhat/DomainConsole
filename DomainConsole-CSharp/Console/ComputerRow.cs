@@ -10,6 +10,11 @@ public sealed class ComputerRow : INotifyPropertyChanged {
  public bool Busy=>(Target.Status is "Sending" or "Submitted" or "Running") && Target.State?.Progress==null;
  public ComputerRow(TargetRecord target,string id=""){Target=target;JobId=id;}
  public void Refresh(){foreach(var name in new[]{"Status","Stage","Progress","Busy","OutcomeIcon","OutcomeBrush","OutcomeHint"})PropertyChanged?.Invoke(this,new(name));}
+ bool working,focused,workBusy;int workProgress;string recentHint="";
+ public bool Working=>working;public bool WorkBusy=>workBusy;public int WorkProgress=>workProgress;public string RecentHint=>recentHint;
+ public System.Windows.Visibility ActivityVisibility=>working?System.Windows.Visibility.Visible:System.Windows.Visibility.Collapsed;
+ public System.Windows.Media.Brush ActivityBrush=>focused?new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(37,99,235)):working?new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(26,65,96)):System.Windows.Media.Brushes.Transparent;
+ public void SetActivity(bool active,int? progress,string hint,bool focus){working=active;workBusy=active&&!progress.HasValue;workProgress=progress??0;recentHint=hint;focused=focus;foreach(var n in new[]{"Working","WorkBusy","WorkProgress","RecentHint","ActivityVisibility","ActivityBrush"})PropertyChanged?.Invoke(this,new(n));}
  public string Outcome {get;set;}="";public string OutcomeHint {get;set;}="";
  public string OutcomeIcon=>Outcome=="Error"?"✖":Outcome=="Warning"?"⚠":Outcome=="Success"?"✓":"";
  public System.Windows.Media.Brush OutcomeBrush=>Outcome=="Error"?System.Windows.Media.Brushes.OrangeRed:Outcome=="Warning"?System.Windows.Media.Brushes.Orange:System.Windows.Media.Brushes.LightGreen;
@@ -19,6 +24,6 @@ public sealed class ComputerRow : INotifyPropertyChanged {
 
 public sealed class LocalDateConverter : System.Windows.Data.IValueConverter {
  public static string Format(string value)=>DateTimeOffset.TryParse(value,out var time)?time.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss zzz"):value;
- public object Convert(object value,Type targetType,object parameter,System.Globalization.CultureInfo culture)=>Format(value?.ToString()??"");
+ public object Convert(object value,Type targetType,object parameter,System.Globalization.CultureInfo culture)=>parameter?.ToString()=="Short"&&DateTimeOffset.TryParse(value?.ToString(),out var time)?time.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss"):Format(value?.ToString()??"");
  public object ConvertBack(object value,Type targetType,object parameter,System.Globalization.CultureInfo culture)=>throw new NotSupportedException();
 }
