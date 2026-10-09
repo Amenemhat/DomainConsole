@@ -246,12 +246,40 @@ jobs:
             @{Ended=[DateTime]::UtcNow.ToString('o');Status='Failed';DiagnosticStatus='Completed'}|ConvertTo-Json|Set-Content (Join-Path $folder 'status.json') -Encoding utf8
             $result=(& $scriptBlock)|ConvertFrom-Json
             if($result.Jobs.Count){throw 'Finished job blocked execution'}
-            $fixtureBusy=$true;$result=(& $scriptBlock)|ConvertFrom-Json
-            if(!$result.Busy){throw 'Actual WUA activity ignored'}
+            $fixtureBusy=$true
             $recovery=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/defender-recover.ps1')).Replace('(New-Object -ComObject Microsoft.Update.Installer).IsBusy','$fixtureBusy')
             $blocked=$false;try{& ([ScriptBlock]::Create($recovery))}catch{$blocked=$true}
             if(!$blocked){throw 'Defender recovery ran during WUA installation'}
           }finally{$env:ProgramData=$savedProgramData}
+      - name: Verify activity probe through a real WinRM session
+        shell: pwsh
+        run: |
+          $code=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/live-updates.ps1'))
+          if($code -match 'New-Object\s+-ComObject|Microsoft\.Update\.Installer'){throw 'Remote probe must not create WUA COM'}
+          Enable-PSRemoting -SkipNetworkProfileCheck -Force
+          $user='dcprobe'+([guid]::NewGuid().ToString('N').Substring(0,8))
+          $password=ConvertTo-SecureString (([guid]::NewGuid().ToString('N'))+'A!9') -AsPlainText -Force
+          $credential=[pscredential]::new(($env:COMPUTERNAME+'\'+$user),$password)
+          $reg='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'
+          $old=(Get-ItemProperty $reg).LocalAccountTokenFilterPolicy
+          $trusted=(Get-Item WSMan:\localhost\Client\TrustedHosts).Value
+          $session=$null
+          try {
+            New-LocalUser $user -Password $password -AccountNeverExpires|Out-Null
+            Add-LocalGroupMember -Group (Get-LocalGroup -SID 'S-1-5-32-544').Name -Member $user
+            New-ItemProperty $reg -Name LocalAccountTokenFilterPolicy -Value 1 -PropertyType DWord -Force|Out-Null
+            Set-Item WSMan:\localhost\Client\TrustedHosts 'localhost' -Force
+            $session=New-PSSession -ComputerName localhost -Credential $credential -Authentication Negotiate -ErrorAction Stop
+            $result=Invoke-Command -Session $session -ScriptBlock {param($code);& ([ScriptBlock]::Create($code))} -ArgumentList $code -ErrorAction Stop
+            $probe=$result|ConvertFrom-Json
+            if($null -eq $probe.Jobs -or $probe.Busy){throw 'Unexpected remote activity result'}
+            Write-Output 'Read-only activity probe completed through authenticated WinRM without WUA COM activation.'
+          }finally{
+            if($session){Remove-PSSession $session}
+            Remove-LocalUser $user -ErrorAction SilentlyContinue
+            if($null -eq $old){Remove-ItemProperty $reg -Name LocalAccountTokenFilterPolicy -ErrorAction SilentlyContinue}else{Set-ItemProperty $reg -Name LocalAccountTokenFilterPolicy -Value $old}
+            Set-Item WSMan:\localhost\Client\TrustedHosts $trusted -Force
+          }
       - name: Verify cache cleanup protection and backup
         shell: pwsh
         run: |

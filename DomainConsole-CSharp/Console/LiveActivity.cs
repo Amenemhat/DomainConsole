@@ -14,7 +14,7 @@ foreach($proc in @(Get-CimInstance Win32_Process -Filter "Name='DomainConsole.Ag
  $state=$null;if(Test-Path (Join-Path $folder 'status.json')){$state=Get-Content (Join-Path $folder 'status.json') -Raw -Encoding UTF8|ConvertFrom-Json}
  if($job.OutputChannel -eq 'WSUS' -and (!$state -or !$state.Ended -or $state.DiagnosticStatus -in @('Pending','Running','LegacyRunning'))){$jobs+= $id}
 }
-$busy=[bool](New-Object -ComObject Microsoft.Update.Installer).IsBusy
+$busy=$false # WUA COM must only be queried by the local SYSTEM executor, never by WinRM.
 @{Busy=$busy;Jobs=@($jobs)}|ConvertTo-Json -Compress
 """;
  public async Task<LiveUpdateActivity> LiveUpdates(TargetRecord target){if(IsLocal(target.Host))RequireLocalAdmin();using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(40));return JsonSerializer.Deserialize<LiveUpdateActivity>(await PowerShellBridge.Execute(Invoke(target.Host,LiveUpdateScript),timeout.Token),Store.Options)??throw new Exception("Не получено состояние WSUS.");}
