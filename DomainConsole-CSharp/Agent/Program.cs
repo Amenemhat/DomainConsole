@@ -86,13 +86,13 @@ namespace DomainConsole.Agent {
    Uri address;if(!Uri.TryCreate(source,UriKind.Absolute,out address)||(address.Scheme!="http"&&address.Scheme!="https"))throw new Exception("Некорректный адрес WUServer.");
    Stage("WSUS · DNS и предварительная проверка TCP");try{var addresses=System.Net.Dns.GetHostAddresses(address.DnsSafeHost);Log("DNS: "+string.Join(", ",addresses.Select(a=>a.ToString())));
    using(var tcp=new System.Net.Sockets.TcpClient()){var connect=tcp.ConnectAsync(address.DnsSafeHost,address.Port);if(!connect.Wait(5000))throw new Exception("TCP-подключение к WSUS не завершилось за 5 секунд. Проверьте сеть, VPN и порт.");Log("TCP-порт WSUS доступен. Это не проверка HTTP, TLS или авторизации WUA.");}}catch(Exception ex){Log("Предварительная проверка сети: "+ex.Message+". Продолжается проверка через WUA: он может использовать собственный прокси-маршрут.");}
-   Stage("WSUS · создание сеанса Windows Update Agent");
+   if(Cancelled())return 0;Stage("WSUS · создание сеанса Windows Update Agent");
    dynamic session=Com("Microsoft.Update.Session");session.ClientApplicationID="DomainConsole CSharp";
    dynamic search=session.CreateUpdateSearcher();search.ServerSelection=1;search.Online=true;Stage("WSUS · подключение WUA и поиск обновлений");
    dynamic result=search.Search("IsInstalled=0 and IsHidden=0");if((int)result.ResultCode!=2)throw new Exception("Search ResultCode: "+result.ResultCode);
    var details=new List<object>();int failures=0;int total=(int)result.Updates.Count;
    State.UpdatesRemaining=total;Log("Поиск завершён. Применимых обновлений: "+total);Save();
-   if(scanOnly){for(int n=0;n<total;n++){dynamic u=result.Updates.Item(n);details.Add(new{Title=(string)u.Title,Downloaded=(bool)u.IsDownloaded});}WriteJson(prefix+".updates.json",details);return Report();}
+   if(Cancelled()){WriteJson(prefix+".updates.json",details);return 0;}if(scanOnly){for(int n=0;n<total;n++){dynamic u=result.Updates.Item(n);details.Add(new{Title=(string)u.Title,Downloaded=(bool)u.IsDownloaded});}WriteJson(prefix+".updates.json",details);return Report();}
    for(int i=0;i<total;i++){
     if(Cancelled())break;dynamic update=result.Updates.Item(i);
     if((bool)update.InstallationBehavior.CanRequestUserInput){Log("Skipped interactive update: "+update.Title);continue;}
@@ -100,14 +100,14 @@ namespace DomainConsole.Agent {
     Stage("Скачивание · "+(string)update.Title);State.Progress=total==0?100:100*i/total;Save();
     dynamic downloader=session.CreateUpdateDownloader();downloader.Updates=one;dynamic downloaded=downloader.Download();
     if(!(bool)update.IsDownloaded){failures++;dynamic downloadItem=downloaded.GetUpdateResult(0);int hr=(int)downloadItem.HResult;if(hr==0)hr=(int)downloaded.HResult;string failure="Не скачано: "+(string)update.Title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+". "+ExecutionDiagnosis.Explain(hr);Log(failure);State.Error=failure;details.Add(new{Title=(string)update.Title,Download=(int)downloadItem.ResultCode,HResult=hr});WriteJson(prefix+".updates.json",details);Save();continue;}
-    Stage("Установка · "+(string)update.Title);dynamic installer=session.CreateUpdateInstaller();installer.Updates=one;installer.AllowSourcePrompts=false;
+    if(Cancelled()){details.Add(new{Title=(string)update.Title,Download=2,HResult=0});WriteJson(prefix+".updates.json",details);break;}Stage("Установка · "+(string)update.Title);dynamic installer=session.CreateUpdateInstaller();installer.Updates=one;installer.AllowSourcePrompts=false;
     dynamic installed=installer.Install();dynamic item=installed.GetUpdateResult(0);int code=(int)item.ResultCode;
     details.Add(new{Title=(string)update.Title,ResultCode=code,HResult=(int)item.HResult,RebootRequired=(bool)installed.RebootRequired});
     if(code!=2){failures++;int hr=(int)item.HResult;State.Error="Не установлено: "+(string)update.Title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+". "+ExecutionDiagnosis.Explain(hr);Log(State.Error);}State.RebootRequired=State.RebootRequired||(bool)installed.RebootRequired;
     State.UpdatesRemaining=total-i-1;WriteJson(prefix+".updates.json",details);if(State.RebootRequired)break;
    }
    dynamic info=Com("Microsoft.Update.SystemInfo");State.RebootRequired=State.RebootRequired||(bool)info.RebootRequired;WriteJson(prefix+".updates.json",details);
-   int report=Report();return failures>0?1:report;
+   if(Cancelled())return failures>0?1:0;int report=Report();return failures>0?1:report;
   }
   static string UpdateLogCode(string prefix){DateTimeOffset start;if(!DateTimeOffset.TryParse(State.Started,out start))start=DateTimeOffset.UtcNow.AddHours(-1);
    string folder=FilePath("").Replace("'","''"),log=FilePath(prefix+".WindowsUpdate.log").Replace("'","''"),quality=FilePath(prefix+".quality.log").Replace("'","''");
