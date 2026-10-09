@@ -15,7 +15,7 @@ namespace DomainConsole.Shared {
   public List<CommandStep> Steps {get;set;}=new List<CommandStep>();public List<TargetRecord> Targets {get;set;}=new List<TargetRecord>();
  }
  public class TargetRecord {public string Name {get;set;}="";public string Host {get;set;}="";public string OU {get;set;}="";public string OS {get;set;}="";public string Status {get;set;}="Queued";public RemoteState State {get;set;}public string Output {get;set;}="";}
- public class StepResult {public string Name {get;set;}="";public int ExitCode {get;set;}public string Started {get;set;}="";public string Ended {get;set;}="";public string Error {get;set;}="";}
+ public class StepResult {public int? NativeExitCode {get;set;}public string Name {get;set;}="";public int ExitCode {get;set;}public string Started {get;set;}="";public string Ended {get;set;}="";public string Error {get;set;}="";}
  public class RemoteState {
   public string ActivityMessage {get;set;}="";public string Recommendation {get;set;}="";public string RecommendationAction {get;set;}="";public string LastMovementUtc {get;set;}="";public string TransferText {get;set;}="";public int ForceCandidatePid {get;set;}public string ForceCandidateStarted {get;set;}="";
   public bool SupportsWuaCancel {get;set;}public bool SupportsImmediateStop {get;set;}public string StopStatus {get;set;}="";public string StopMessage {get;set;}="";

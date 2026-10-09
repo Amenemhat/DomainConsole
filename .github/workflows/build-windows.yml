@@ -121,6 +121,15 @@ jobs:
             if ($state.Status -ne $expected -or !$state.Ended -or $state.Results[0].ExitCode -ne 7 -or $state.Error -notmatch '0x00000007') { throw 'Failure status/code/diagnosis was not saved' }
           }
           Write-Output 'Nonzero command exit is terminal; continue-on-error preserves failure diagnosis.'
+      - name: Verify native program exit capture in PowerShell
+        shell: pwsh
+        run: |
+          $folder=Join-Path $env:RUNNER_TEMP 'native-exit-fixture'
+          New-Item $folder -ItemType Directory -Force|Out-Null
+          @{Id=[guid]::NewGuid().ToString();MicrosoftSource=$false;AutoReboot=$false;Steps=@(@{Name='Native exit';Kind='PowerShell';Code='cmd.exe /c exit 5; Write-Output "script completed"'})}|ConvertTo-Json -Depth 10|Set-Content (Join-Path $folder 'job.json') -Encoding utf8
+          & ./Publish/Agent/DomainConsole.Agent.exe run $folder
+          $state=Get-Content (Join-Path $folder 'status.json') -Raw|ConvertFrom-Json
+          if($state.Results[0].ExitCode -ne 0 -or $state.Results[0].NativeExitCode -ne 5){throw 'PowerShell and native exit codes were mixed or lost'}
       - name: Verify window and history after restart
         shell: pwsh
         run: |
@@ -181,7 +190,7 @@ jobs:
         run: |
           $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           $check = @'
-          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1')){
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1')){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
             if($errors.Count){throw ($errors|Out-String)}
@@ -214,6 +223,35 @@ jobs:
           $script:fixtureProcesses=@($mrt,$mrt,$installer);Expect-Rejected;$script:fixtureProcesses=@($mrt,$installer)
           $state.Ended=[DateTime]::UtcNow.ToString('o');$state|ConvertTo-Json|Set-Content (Join-Path $p 'status.json') -Encoding UTF8;Expect-Rejected
           Write-Output 'Legacy MRT chain selected; wrong parent, old process, foreign path, ambiguity and terminal job rejected. No processes killed.'
+      - name: Verify live WSUS and Defender guards
+        shell: pwsh
+        run: |
+          $scriptText=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/live-updates.ps1'))
+          $scriptText=$scriptText.Replace("[bool](New-Object -ComObject Microsoft.Update.Installer).IsBusy",'$fixtureBusy')
+          $scriptBlock=[ScriptBlock]::Create($scriptText)
+          $fixture=Join-Path $env:RUNNER_TEMP 'live-update-fixture'
+          $savedProgramData=$env:ProgramData;$env:ProgramData=$fixture
+          $id=[guid]::NewGuid().ToString();$folder=Join-Path $fixture ('DomainConsoleCSharp/'+$id)
+          New-Item $folder -ItemType Directory -Force|Out-Null
+          @{OutputChannel='WSUS'}|ConvertTo-Json|Set-Content (Join-Path $folder 'job.json') -Encoding utf8
+          @{Ended='';Status='Running'}|ConvertTo-Json|Set-Content (Join-Path $folder 'status.json') -Encoding utf8
+          $fixtureBusy=$false;$fixtureProcesses=@()
+          function Get-CimInstance {param($ClassName,$Filter) $fixtureProcesses}
+          try {
+            $result=(& $scriptBlock)|ConvertFrom-Json
+            if($result.Busy -or $result.Jobs.Count){throw 'Dead historical job blocked execution'}
+            $fixtureProcesses=@([pscustomobject]@{CommandLine=('agent.exe run "'+$folder+'"')})
+            $result=(& $scriptBlock)|ConvertFrom-Json
+            if($result.Jobs.Count -ne 1){throw 'Live WSUS executor not detected'}
+            @{Ended=[DateTime]::UtcNow.ToString('o');Status='Failed';DiagnosticStatus='Completed'}|ConvertTo-Json|Set-Content (Join-Path $folder 'status.json') -Encoding utf8
+            $result=(& $scriptBlock)|ConvertFrom-Json
+            if($result.Jobs.Count){throw 'Finished job blocked execution'}
+            $fixtureBusy=$true;$result=(& $scriptBlock)|ConvertFrom-Json
+            if(!$result.Busy){throw 'Actual WUA activity ignored'}
+            $recovery=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/defender-recover.ps1')).Replace('(New-Object -ComObject Microsoft.Update.Installer).IsBusy','$fixtureBusy')
+            $blocked=$false;try{& ([ScriptBlock]::Create($recovery))}catch{$blocked=$true}
+            if(!$blocked){throw 'Defender recovery ran during WUA installation'}
+          }finally{$env:ProgramData=$savedProgramData}
       - name: Verify cache cleanup protection and backup
         shell: pwsh
         run: |
