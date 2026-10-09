@@ -13,7 +13,7 @@ public sealed class ComputerRow : INotifyPropertyChanged {
  bool working,focused,workBusy;int workProgress;string recentHint="";
  public bool Working=>working;public bool WorkBusy=>workBusy;public int WorkProgress=>workProgress;public string RecentHint=>recentHint;
  public System.Windows.Visibility ActivityVisibility=>working?System.Windows.Visibility.Visible:System.Windows.Visibility.Collapsed;
- public System.Windows.Media.Brush ActivityBrush=>focused?new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(37,99,235)):working?new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(26,65,96)):System.Windows.Media.Brushes.Transparent;
+ public System.Windows.Media.Brush ActivityBrush=>focused?new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(42,72,99)):working?new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(26,65,96)):System.Windows.Media.Brushes.Transparent;
  public void SetActivity(bool active,int? progress,string hint,bool focus){working=active;workBusy=active&&!progress.HasValue;workProgress=progress??0;recentHint=hint;focused=focus;foreach(var n in new[]{"Working","WorkBusy","WorkProgress","RecentHint","ActivityVisibility","ActivityBrush"})PropertyChanged?.Invoke(this,new(n));}
  public string Outcome {get;set;}="";public string OutcomeHint {get;set;}="";
  public string OutcomeIcon=>Outcome=="Error"?"✖":Outcome=="Warning"?"⚠":Outcome=="Success"?"✓":"";

@@ -35,6 +35,11 @@ jobs:
           Get-Content Publish/local-smoke-ok.txt
           Remove-Item Publish/local-smoke-*.txt
           Remove-Item Publish/Data -Recurse -Force -ErrorAction SilentlyContinue
+      - name: Verify update progress and cancellation
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe update-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-update-smoke")
+          if ($LASTEXITCODE -ne 0) { throw "Update operation fixture failed" }
       - name: Verify client cleanup protection
         shell: pwsh
         run: |
@@ -152,7 +157,7 @@ jobs:
         run: |
           $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           $check = @'
-          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1')){
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1')){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
             if($errors.Count){throw ($errors|Out-String)}
