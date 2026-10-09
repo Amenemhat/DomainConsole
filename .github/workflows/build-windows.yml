@@ -202,7 +202,7 @@ jobs:
           $installer=[pscustomobject]@{Name='Windows-KB890830-x64-test.exe';ProcessId=200;ParentProcessId=300;CreationDate=$start.AddSeconds(-2);CommandLine=('"'+(Join-Path $env:windir 'SoftwareDistribution\Download\Install\Windows-KB890830-x64-test.exe')+'" /Q /W')}
           $script:fixtureProcesses=@($mrt,$installer)
           function Get-CimInstance {param($ClassName) $script:fixtureProcesses}
-          $state=@{Stage='Установка · KB890830';StageStarted=$start.ToString('o');Started=$start.AddMinutes(-1).ToString('o');Ended=''}
+          $state=@{Stage=([Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('IwRBBEIEMAQ9BD4EMgQ6BDAEIAC3ACAASwBCADgAOQAwADgAMwAwAA==')));StageStarted=$start.ToString('o');Started=$start.AddMinutes(-1).ToString('o');Ended=''}
           $state|ConvertTo-Json|Set-Content (Join-Path $p 'status.json') -Encoding UTF8
           . $script
           if($plan.MrtPid -ne 100 -or $plan.InstallerPid -ne 200){throw 'Valid legacy MRT chain not selected'}
