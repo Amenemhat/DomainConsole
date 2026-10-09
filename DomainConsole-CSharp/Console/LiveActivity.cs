@@ -21,7 +21,8 @@ $busy=[bool](New-Object -ComObject Microsoft.Update.Installer).IsBusy
 }
 public partial class MainWindow {
  async Task<bool> HasLiveWsus(List<ComputerRow> selected){bool active=false;
-  foreach(var row in selected){var live=await remote.LiveUpdates(row.Target);active|=live.Busy||live.Jobs.Count>0||queue.Any(q=>q.Target.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)&&IsWsusJob(q.Job));
+  using var gate=new SemaphoreSlim(8);var probes=await Task.WhenAll(selected.Select(async row=>{await gate.WaitAsync();try{return (Row:row,Live:await remote.LiveUpdates(row.Target));}finally{gate.Release();}}));
+  foreach(var probe in probes){var row=probe.Row;var live=probe.Live;active|=live.Busy||live.Jobs.Count>0||queue.Any(q=>q.Target.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)&&IsWsusJob(q.Job));
    foreach(var job in History.Where(IsWsusJob)){var target=job.Targets.FirstOrDefault(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase));if(target==null||target.Status is not ("Queued" or "Submitted" or "Running")||live.Jobs.Contains(job.Id)||queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)))continue;
     // Read the specific task before reconciling: a scheduled executor may not have appeared in the process list yet.
     var data=await remote.Poll(target,job.Id);if(data.AgentAlive||data.TaskState=="Running"){active=true;continue;}

@@ -48,7 +48,7 @@ namespace DomainConsole.Agent {
   }
   static int PowerShell(string code,string prefix,int diagnosticTimeout=0){
    var file=FilePath(prefix+".command.txt");File.WriteAllText(file,code,new UTF8Encoding(true));
-   var loader="[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false);$OutputEncoding=[Console]::OutputEncoding;$ProgressPreference='SilentlyContinue';$ErrorActionPreference='Stop';$global:LASTEXITCODE=$null;try{& ([ScriptBlock]::Create([IO.File]::ReadAllText('"+file.Replace("'","''")+"',[Text.Encoding]::UTF8)));if($null -ne $LASTEXITCODE){[IO.File]::WriteAllText('"+FilePath(prefix+".native.json").Replace("'","''")+"',[string]$LASTEXITCODE)}}catch{[Console]::Error.WriteLine($_.Exception.Message);exit 1}";
+   var loader="[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false);$OutputEncoding=[Console]::OutputEncoding;$ProgressPreference='SilentlyContinue';$ErrorActionPreference='Stop';$global:LASTEXITCODE=$null;try{& ([ScriptBlock]::Create([IO.File]::ReadAllText('"+file.Replace("'","''")+"',[Text.Encoding]::UTF8)));if($null -ne $LASTEXITCODE){[IO.File]::WriteAllText('"+FilePath(prefix+".native.json").Replace("'","''")+"',[string]$LASTEXITCODE)}}catch{[Console]::Error.WriteLine($_.Exception.Message);[Console]::Error.WriteLine('Target: '+[string]$_.TargetObject);[Console]::Error.WriteLine($_.InvocationInfo.PositionMessage);exit 1}";
    var exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),@"WindowsPowerShell\v1.0\powershell.exe");
    return Run(exe,"-NoLogo -NoProfile -NonInteractive -EncodedCommand "+Convert.ToBase64String(Encoding.Unicode.GetBytes(loader)),prefix,diagnosticTimeout);
   }
