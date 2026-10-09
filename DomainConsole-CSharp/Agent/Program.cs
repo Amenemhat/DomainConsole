@@ -114,7 +114,7 @@ namespace DomainConsole.Agent {
    return "$ProgressPreference='SilentlyContinue';$since=[DateTime]::Parse('"+start.UtcDateTime.AddMinutes(-Math.Max(0,Math.Min(1440,Job==null?15:Job.DiagnosticLookbackMinutes))).ToString("o")+"').ToUniversalTime();"+
     "$all=@(Get-ChildItem (Join-Path $env:windir 'Logs\\WindowsUpdate') -Filter '*.etl'|Where-Object {$_.LastWriteTimeUtc -ge $since}|Sort-Object LastWriteTimeUtc -Descending);$etl=@($all|Select-Object -First 8 -ExpandProperty FullName);"+
     "if(!$etl.Count){'WARNING: Нет ETL-файлов, обновлённых в интервале задания; расшифровка недоступна.'|Set-Content '"+quality+"' -Encoding UTF8;exit 0};if($all.Count -gt 8){'WARNING: Выбраны последние 8 ETL-файлов; журнал интервала может быть неполным.'|Set-Content '"+quality+"' -Encoding UTF8};"+
-    "'## Технический журнал · преобразование ETL';foreach($file in $etl){Copy-Item -LiteralPath $file -Destination (Join-Path '"+folder+"' ([IO.Path]::GetFileName($file))) -Force -ErrorAction Stop};Get-WindowsUpdateLog -ETLPath $etl -LogPath '"+log+"';"+
+    "'## Технический журнал · преобразование ETL';'ETL выбраны по времени изменения файла; это не гарантирует, что все записи относятся к интервалу задания.';foreach($file in $etl){Get-Item -LiteralPath $file|Select-Object Name,LastWriteTimeUtc|Format-Table|Out-String;Copy-Item -LiteralPath $file -Destination (Join-Path '"+folder+"' ([IO.Path]::GetFileName($file))) -Force -ErrorAction Stop};Get-WindowsUpdateLog -ETLPath $etl -LogPath '"+log+"';"+
     "$bad=@(Select-String -LiteralPath '"+log+"' -Pattern 'No Format Information|Unknown\\(');if($bad.Count){('WARNING: Журнал Windows Update расшифрован не полностью: '+$bad.Count+' записей без формата. Для Windows до 1709 требуется доступ к серверу символов Microsoft; исходные ETL сохранены.')|Add-Content '"+quality+"' -Encoding UTF8}";
   }
   static void CollectUpdateDiagnostics(string prefix)=>CollectDiagnostics(prefix,UpdateLogCode(prefix),300000);
@@ -149,7 +149,7 @@ namespace DomainConsole.Agent {
     State=new RemoteState{SupportsImmediateStop=true,Id=Job.Id,Total=Job.Steps.Count,Started=DateTime.UtcNow.ToString("o"),Status="Queued",Stage="Ожидание других заданий"};Save();
     var diagnostics=new List<string>();using(var mutex=new Mutex(false,ExecutionLane())){
      bool owns=false;try{try{while(!(owns=mutex.WaitOne(500))){if(Cancelled()){State.Status="Cancelled";State.Ended=DateTime.UtcNow.ToString("o");Save();return 0;}}}catch(AbandonedMutexException){owns=true;}
-      State.Status="Running";Save();using(var heartbeat=new Timer(o=>{try{if(File.Exists(FilePath("stop-now.flag"))&&CurrentKind!="CMD"&&CurrentKind!="PowerShell"){if(State.StopStatus!="AbortRequested"&&State.StopStatus!="ForceRequired"){State.StopStatus="AwaitingSafePoint";State.StopMessage="Остановка запрошена; ожидается безопасная точка встроенной операции";}}Save();}catch{}},null,5000,5000)){
+      State.Status="Running";Save();using(var heartbeat=new Timer(o=>{try{if(File.Exists(FilePath("cancel.flag"))&&!File.Exists(FilePath("stop-now.flag"))){State.StopStatus="AfterCurrent";State.StopMessage="Остановка после текущей команды / обновления запрошена";}if(File.Exists(FilePath("stop-now.flag"))&&CurrentKind!="CMD"&&CurrentKind!="PowerShell"){if(State.StopStatus!="AbortRequested"&&State.StopStatus!="ForceRequired"){State.StopStatus="AwaitingSafePoint";State.StopMessage="Остановка запрошена; ожидается безопасная точка встроенной операции";}}Save();}catch{}},null,5000,5000)){
        try{
         if(Cancelled()){State.Status="Cancelled";return 0;}
         using(var legacyGate=new Mutex(false,@"Global\DomainConsoleCSharp.Execution")){bool legacy=false;try{try{legacy=legacyGate.WaitOne(0);}catch(AbandonedMutexException){legacy=true;}if(!legacy)throw new Exception("На клиенте выполняется задание старого исполнителя. Дождитесь его завершения; разделение очередей доступно для новых заданий.");}finally{if(legacy)legacyGate.ReleaseMutex();}}
@@ -165,6 +165,7 @@ namespace DomainConsole.Agent {
           else if(step.Kind=="Diagnostics")stepResult.ExitCode=PowerShell(UpdateLogCode(prefix),prefix,300000);
           else if(step.Kind=="CacheCleanup")stepResult.ExitCode=PowerShell(step.Code,prefix,120000);
           else if(step.Kind=="ReportRecovery")stepResult.ExitCode=PowerShell(step.Code,prefix,120000);
+          else if(step.Kind=="ClientDiagnostics")stepResult.ExitCode=PowerShell("$dcFolder='"+Folder.Replace("'","''")+"';"+step.Code,prefix,120000);
           else if(step.Kind=="DeliveryDiagnostics"){stepResult.ExitCode=PowerShell("$dcFolder='"+Folder.Replace("'","''")+"';"+step.Code,prefix,300000);if(stepResult.ExitCode==0){Report();PowerShell("Get-Service wuauserv,bits,cryptsvc,UsoSvc | Select-Object Name,Status,StartType | Format-Table | Out-String",prefix+"-after-report");}}
           else if(step.Kind=="PowerShell")stepResult.ExitCode=PowerShell(step.Code,prefix);
           else if(step.Kind=="CMD"){

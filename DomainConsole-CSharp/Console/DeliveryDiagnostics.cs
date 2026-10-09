@@ -33,7 +33,7 @@ public static class DeliveryPresentation {
    "\nПоследний отчёт WSUS: "+(hasReport?LocalDateConverter.Format(server.Report!.LastReportedUtc):"не получен; давность не установлена")+
    "\nОчередь: "+(client.Queues.Count==0?"данные отсутствуют":string.Join("; ",client.Queues.Select(q=>q.Name+": "+q.Files+" файлов, "+q.Bytes+" байт"+(q.Files>0?", старейшее событие: "+LocalDateConverter.Format(q.OldestUtc):" (пуста)"))))+
    (client.QueueError.Length>0?"\nОграничения очереди: "+client.QueueError:"")+
-   "\nПолнота диагностики: "+(server.Complete&&server.Error.Length==0?"серверные источники прочитаны":"частичная; это не оценка исправности клиента")+
+   "\nПолнота диагностики: "+(server.Complete&&server.Error.Length==0?"серверные источники прочитаны; это не подтверждение исправности клиента":"частичная; это не оценка исправности клиента")+
    "\nИсточники: очередь — "+(client.QueueError.Length==0&&client.Queues.Count>0?"получена":"неполная / недоступна")+"; WSUS API — "+(server.Report!=null?"получен":"недоступен")+"; IIS — "+(server.IisRead?"прочитан":"неполный / недоступен")+"\nСобытия сервера — "+(server.EventsRead?"прочитаны":"недоступны")+"; HTTPERR — "+(server.HttpErrorsRead?"прочитан":"недоступен")+"; журнал обработки WSUS — "+(server.ProcessingLogRead?"прочитан":"недоступен")+"; ETL — "+client.EtlStatus+"\nКлиент: "+client.Computer+"; ОС: "+client.Os+"; сборка: "+client.Build+"\nИсточник: "+client.WUServer+"\nАдрес отчётности: "+client.WUStatusServer+
    "\nUseWUServer: "+client.UseWUServer+"; IP: "+string.Join(", ",client.IPs)+"\nSusClientId: "+client.SusClientId+
    "\nИнтервал: "+LocalDateConverter.Format(server.SinceUtc)+" — "+LocalDateConverter.Format(server.UntilUtc)+"\nПул IIS: "+server.PoolState+
