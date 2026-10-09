@@ -216,6 +216,14 @@ jobs:
             $elapsed=[Diagnostics.Stopwatch]::StartNew();$null=& ([ScriptBlock]::Create($code));if($elapsed.Elapsed.TotalSeconds -gt 30){throw 'Large IIS fixture was not read efficiently'}
             if(!$result.IisRead -or $result.Requests.Count -ne 1 -or $result.Requests[0].Status -ne 200){throw 'Live log reading or client filtering failed'}
           }finally{$writer.Dispose()}
+          $named=Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS ('u_ex'+[DateTime]::UtcNow.ToString('yyMMdd')+'.log')
+          Copy-Item $path $named
+          (Get-Item $named).LastWriteTimeUtc=[DateTime]::UtcNow.AddDays(-3)
+          $log=$env:DOMAINCONSOLE_REPORT_SCRIPTS
+          $a=$text.IndexOf(' $allFiles=');$b=$text.IndexOf(' if(!$site.LogFile.Enabled)', $a)
+          if($a -lt 0 -or $b -lt 0){throw 'IIS selection extraction failed'}
+          $null=& ([ScriptBlock]::Create($text.Substring($a,$b-$a)))
+          if(!@($files|Where-Object {$_.FullName -eq $named}).Count){throw 'Active date-named IIS file was skipped because of old file timestamp'}
           $exclusive=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None);$exclusive.Dispose()
           Write-Output 'Large live IIS snapshot, client filtering and reader disposal verified.'
           '@
