@@ -53,6 +53,7 @@ public partial class MainWindow:Window {
  void VerifyLayout(){VerifyNavigation();
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"defender-diagnose.ps1"),DefenderScripts.Diagnose,new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"defender-recover.ps1"),DefenderScripts.Recover(true),new UTF8Encoding(true));
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"live-probe-wrapper.ps1"),RemoteService.LiveProbeWrapper(),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"live-updates.ps1"),RemoteService.LiveUpdateScript,new UTF8Encoding(true));
   var batch=ProbeBatch(new[]{new ComputerRow(new TargetRecord{Host="offline"},""),new ComputerRow(new TargetRecord{Host="online"},"")},t=>t.Host=="offline"?Task.FromException<LiveUpdateActivity>(new Exception("no connection")):Task.FromResult(new LiveUpdateActivity())).GetAwaiter().GetResult();if(batch.Length!=2||batch[0].Live!=null||batch[1].Live==null)throw new Exception("Offline host interrupted batch");
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"report-queue.ps1"),RemoteService.ReportQueueScript,new UTF8Encoding(true));

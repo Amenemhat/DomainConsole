@@ -191,7 +191,7 @@ jobs:
         run: |
           $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           $check = @'
-          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1')){
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1')){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
             if($errors.Count){throw ($errors|Out-String)}
@@ -255,8 +255,8 @@ jobs:
       - name: Verify activity probe through a real WinRM session
         shell: pwsh
         run: |
-          $code=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/live-updates.ps1'))
-          if($code -match 'New-Object\s+-ComObject|Microsoft\.Update\.Installer'){throw 'Remote probe must not create WUA COM'}
+          $code=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/live-probe-wrapper.ps1'))
+          if($code -notmatch "New-ScheduledTaskPrincipal -UserId SYSTEM"){throw 'Activity probe must use local SYSTEM'}
           Enable-PSRemoting -SkipNetworkProfileCheck -Force
           $user='dcprobe'+([guid]::NewGuid().ToString('N').Substring(0,8))
           $password=ConvertTo-SecureString (([guid]::NewGuid().ToString('N'))+'A!9') -AsPlainText -Force
