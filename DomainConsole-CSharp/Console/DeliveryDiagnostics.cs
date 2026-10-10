@@ -3,7 +3,7 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed class ReportQueueProbe {public string Name {get;set;}="";public int Files {get;set;}public long Bytes {get;set;}public string OldestUtc {get;set;}="";}
 public sealed class ClientReportProbe {
- public string EtlStatus {get;set;}="Не получен";public List<ReportQueueProbe> Queues {get;set;}=new();public string QueueError {get;set;}="";
+ public string Services {get;set;}="";public string EtlStatus {get;set;}="Не получен";public List<ReportQueueProbe> Queues {get;set;}=new();public string QueueError {get;set;}="";
  public string Computer {get;set;}="";public string Os {get;set;}="";public string Build {get;set;}="";public string WUServer {get;set;}="";public string WUStatusServer {get;set;}="";public int UseWUServer {get;set;}public string SusClientId {get;set;}="";public string[] IPs {get;set;}=Array.Empty<string>();public string CollectedUtc {get;set;}="";
 }
 public sealed class HttpReportRequest {public string Method {get;set;}="";public string Utc {get;set;}="";public string IP {get;set;}="";public string Path {get;set;}="";public int Status {get;set;}public string SubStatus {get;set;}="";public string Win32 {get;set;}="";public string Milliseconds {get;set;}="";}
