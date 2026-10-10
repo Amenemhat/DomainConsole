@@ -252,7 +252,7 @@ jobs:
             $fixtureBits=@([pscustomobject]@{DisplayName='WU Client Download';JobId=[guid]::NewGuid();JobState='Transferring';BytesTransferred=3500000;BytesTotal=881851753;ErrorDescription='';Error=@{ErrorCode=0}})
             $result=(& $scriptBlock)|ConvertFrom-Json
             if(!$result.Busy -or $result.Downloads.Count -ne 1 -or $result.Downloads[0].Received -ne 3500000){throw 'External BITS transfer not detected'}
-            $fixtureBits[0].JobState='Error';$fixtureBits[0].ErrorDescription='cost policy blocks transfer'
+            $fixtureBits[0].JobState='Error';$fixtureBits[0].ErrorDescription='cost policy blocks transfer';$fixtureBits[0].Error=@{ErrorCode=-2145386407}
             $result=(& $scriptBlock)|ConvertFrom-Json
             if($result.Busy -or $result.Downloads[0].Error -notmatch 'cost policy'){throw 'BITS error wrongly treated as running'}
             $fixtureBits=@();$fixtureBusy=$true

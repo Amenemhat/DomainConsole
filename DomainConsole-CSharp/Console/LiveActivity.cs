@@ -17,7 +17,7 @@ foreach($proc in @(Get-CimInstance Win32_Process -Filter "Name='DomainConsole.Ag
 }
 $busy=$false; $installerBusy=$false # This script is executed under local SYSTEM.
 $downloads=@();$limitation=''
-try {Import-Module BitsTransfer -ErrorAction Stop;foreach($b in @(Get-BitsTransfer -AllUsers -ErrorAction Stop|Where-Object {$_.DisplayName -eq 'WU Client Download'})){$downloads+=@{Id=[string]$b.JobId;State=[string]$b.JobState;Received=[long]$b.BytesTransferred;Total=[long]$b.BytesTotal;Error=[string]$b.ErrorDescription;Code='0x'+([uint32]([long]$b.Error.ErrorCode -band 0xffffffff)).ToString('X8')}}}catch{$limitation='BITS: '+$_.Exception.Message}
+try {Import-Module BitsTransfer -ErrorAction Stop;foreach($b in @(Get-BitsTransfer -AllUsers -ErrorAction Stop|Where-Object {$_.DisplayName -eq 'WU Client Download'})){$downloads+=@{Id=[string]$b.JobId;State=[string]$b.JobState;Received=[long]$b.BytesTransferred;Total=[long]$b.BytesTotal;Error=[string]$b.ErrorDescription;Code='0x'+([int]$b.Error.ErrorCode).ToString('X8')}}}catch{$limitation='BITS: '+$_.Exception.Message}
 $busy=@($downloads|Where-Object {$_.State -in @('Connecting','Transferring','Queued','TransientError')}).Count -gt 0
 $install=@(Get-CimInstance Win32_Process -Filter "Name='TiWorker.exe' OR Name='TrustedInstaller.exe' OR Name='MRT.exe'")
 try{$installerBusy=[bool](New-Object -ComObject Microsoft.Update.Installer).IsBusy;$busy=$busy -or $installerBusy}catch{$limitation+='; WUA: '+$_.Exception.Message}
