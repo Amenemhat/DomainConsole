@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using DomainConsole.Shared;
 namespace DomainConsole.Agent {
  [ComVisible(true),Guid("88aee058-d4b0-4725-a2f1-814a67ae964c"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]public interface ISearchDone {void Invoke([MarshalAs(UnmanagedType.Interface)]object job,[MarshalAs(UnmanagedType.Interface)]object args);}
  [ComVisible(true),Guid("77254866-9f5b-4c8e-b9e2-c77a8530d64b"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]public interface IDownloadDone {void Invoke([MarshalAs(UnmanagedType.Interface)]object job,[MarshalAs(UnmanagedType.Interface)]object args);}
