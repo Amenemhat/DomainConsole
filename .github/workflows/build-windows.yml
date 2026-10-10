@@ -237,7 +237,9 @@ jobs:
           @{OutputChannel='WSUS'}|ConvertTo-Json|Set-Content (Join-Path $folder 'job.json') -Encoding utf8
           @{Ended='';Status='Running'}|ConvertTo-Json|Set-Content (Join-Path $folder 'status.json') -Encoding utf8
           $fixtureBusy=$false;$fixtureProcesses=@()
-          function Get-CimInstance {param($ClassName,$Filter) $fixtureProcesses}
+          function Get-CimInstance {param($ClassName,$Filter) if($Filter -like '*Agent.exe*'){$fixtureProcesses}else{@()}}
+          $fixtureBits=@()
+          function Get-BitsTransfer {param([switch]$AllUsers,$ErrorAction) $fixtureBits}
           try {
             $result=(& $scriptBlock)|ConvertFrom-Json
             if($result.Busy -or $result.Jobs.Count){throw 'Dead historical job blocked execution'}
@@ -247,6 +249,15 @@ jobs:
             @{Ended=[DateTime]::UtcNow.ToString('o');Status='Failed';DiagnosticStatus='Completed'}|ConvertTo-Json|Set-Content (Join-Path $folder 'status.json') -Encoding utf8
             $result=(& $scriptBlock)|ConvertFrom-Json
             if($result.Jobs.Count){throw 'Finished job blocked execution'}
+            $fixtureBits=@([pscustomobject]@{DisplayName='WU Client Download';JobId=[guid]::NewGuid();JobState='Transferring';BytesTransferred=3500000;BytesTotal=881851753;ErrorDescription='';Error=@{ErrorCode=0}})
+            $result=(& $scriptBlock)|ConvertFrom-Json
+            if(!$result.Busy -or $result.Downloads.Count -ne 1 -or $result.Downloads[0].Received -ne 3500000){throw 'External BITS transfer not detected'}
+            $fixtureBits[0].JobState='Error';$fixtureBits[0].ErrorDescription='cost policy blocks transfer'
+            $result=(& $scriptBlock)|ConvertFrom-Json
+            if($result.Busy -or $result.Downloads[0].Error -notmatch 'cost policy'){throw 'BITS error wrongly treated as running'}
+            $fixtureBits=@();$fixtureBusy=$true
+            $result=(& $scriptBlock)|ConvertFrom-Json
+            if(!$result.Busy -or !$result.InstallerBusy){throw 'External WUA installation not detected'}
             $fixtureBusy=$true
             $recovery=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/defender-recover.ps1')).Replace('(New-Object -ComObject Microsoft.Update.Installer).IsBusy','$fixtureBusy')
             $blocked=$false;try{& ([ScriptBlock]::Create($recovery))}catch{$blocked=$true}
