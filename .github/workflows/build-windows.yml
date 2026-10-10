@@ -273,8 +273,8 @@ jobs:
             $session=New-PSSession -ComputerName localhost -Credential $credential -Authentication Negotiate -ErrorAction Stop
             $result=Invoke-Command -Session $session -ScriptBlock {param($code);& ([ScriptBlock]::Create($code))} -ArgumentList $code -ErrorAction Stop
             $probe=$result|ConvertFrom-Json
-            if($null -eq $probe.Jobs -or $probe.Busy){throw 'Unexpected remote activity result'}
-            Write-Output 'Read-only activity probe completed through authenticated WinRM without WUA COM activation.'
+            if($null -eq $probe.Jobs -or $probe.Limitation){throw ('Incomplete remote activity result: '+$probe.Limitation)}
+            Write-Output 'Read-only activity snapshot collected by SYSTEM through authenticated WinRM.'
           }finally{
             if($session){Remove-PSSession $session}
             Remove-LocalUser $user -ErrorAction SilentlyContinue
