@@ -23,8 +23,9 @@ namespace DomainConsole.Agent {
    foreach(char c in s){if(c=='\\'){slashes++;continue;}if(c=='\"'){result.Append('\\',slashes*2+1);result.Append(c);}else{result.Append('\\',slashes);result.Append(c);}slashes=0;}
    result.Append('\\',slashes*2);result.Append('\"');return result.ToString();
   }
-  static void WriteJson(string name,object value){lock(Gate){var path=FilePath(name);File.WriteAllText(path+".tmp",Json.Serialize(value),new UTF8Encoding(true));if(File.Exists(path))File.Delete(path);File.Move(path+".tmp",path);}}
-  static void Save(){lock(Gate){State.Updated=DateTime.UtcNow.ToString("o");WriteJson("status.json",State);}}
+  static bool statusWritePending;static DateTime nextStatusWrite;
+  static void WriteJson(string name,object value){lock(Gate){var path=FilePath(name);var staging=path+"."+Guid.NewGuid().ToString("N")+".tmp";try{File.WriteAllText(staging,Json.Serialize(value),new UTF8Encoding(true));for(int attempt=0;;attempt++){try{if(File.Exists(path))File.Replace(staging,path,null);else File.Move(staging,path);return;}catch(IOException){if(attempt>=4)throw;Thread.Sleep(50*(attempt+1));}}}finally{if(File.Exists(staging))try{File.Delete(staging);}catch(IOException){}}}}
+  static void Save(){lock(Gate){State.Updated=DateTime.UtcNow.ToString("o");if(statusWritePending&&DateTime.UtcNow<nextStatusWrite)return;try{WriteJson("status.json",State);if(statusWritePending)Log("Запись статуса восстановлена; операция продолжала контролироваться агентом.");statusWritePending=false;}catch(IOException ex){if(!statusWritePending)Log("WARNING: Временно не удалось сохранить статус; операция продолжает выполняться: "+ex.Message);statusWritePending=true;nextStatusWrite=DateTime.UtcNow.AddSeconds(3);}}}
   static void Log(string message){lock(Gate)File.AppendAllText(FilePath("runner.log"),DateTime.UtcNow.ToString("o")+" "+message+Environment.NewLine,Encoding.UTF8);}
   static void Stage(string value){lock(Gate){DateTimeOffset started;if(DateTimeOffset.TryParse(State.StageStarted,out started))Log("Этап завершён: "+State.Stage+"; секунд: "+(int)(DateTimeOffset.UtcNow-started).TotalSeconds);State.Stage=value;State.StageEnded="";State.StageStarted=DateTime.UtcNow.ToString("o");State.Progress=null;State.ProgressValue="";State.LastOutputUtc="";State.LastProgressUtc="";State.LastMovementUtc=DateTime.UtcNow.ToString("o");State.ActivityMessage="";State.TransferText="";State.ForceCandidatePid=0;Log("Начат этап: "+value);Save();}}
   static int Report(){Stage("WSUS · запрос отправки отчёта");int a=Run("UsoClient.exe","Report","report"),b=Run("wuauclt.exe","/reportnow","report");State.ReportRequestStatus="Запросы завершены: UsoClient="+a+", wuauclt="+b+". Это результат команд клиента; получение отчёта проверяется отдельно на сервере.";Log(State.ReportRequestStatus);Save();return a==0||b==0?0:1;}
@@ -88,8 +89,8 @@ namespace DomainConsole.Agent {
    using(var tcp=new System.Net.Sockets.TcpClient()){var connect=tcp.ConnectAsync(address.DnsSafeHost,address.Port);if(!connect.Wait(5000))throw new Exception("TCP-подключение к WSUS не завершилось за 5 секунд. Проверьте сеть, VPN и порт.");Log("TCP-порт WSUS доступен. Это не проверка HTTP, TLS или авторизации WUA.");}}catch(Exception ex){Log("Предварительная проверка сети: "+ex.Message+". Продолжается проверка через WUA: он может использовать собственный прокси-маршрут.");}
    if(Cancelled())return 0;Stage("WSUS · создание сеанса Windows Update Agent");
    dynamic session=Com("Microsoft.Update.Session");session.ClientApplicationID="DomainConsole CSharp";
-   dynamic search=session.CreateUpdateSearcher();search.ServerSelection=1;search.Online=true;Stage("WSUS · подключение WUA и поиск обновлений");
-   dynamic result=AsyncSearch(search);if((int)result.ResultCode!=2)throw new Exception("Search ResultCode: "+result.ResultCode);
+   dynamic search=session.CreateUpdateSearcher();search.ServerSelection=1;search.Online=true;
+   dynamic result=SearchWithRetry(search);if((int)result.ResultCode!=2)throw new Exception("Search ResultCode: "+result.ResultCode);
    var details=new List<object>();int failures=0;int total=(int)result.Updates.Count;
    State.UpdatesRemaining=total;Log("Поиск завершён. Применимых обновлений: "+total);Save();
    if(Cancelled()){WriteJson(prefix+".updates.json",details);return 0;}if(scanOnly){for(int n=0;n<total;n++){dynamic u=result.Updates.Item(n);details.Add(new{Title=(string)u.Title,Downloaded=(bool)u.IsDownloaded});}WriteJson(prefix+".updates.json",details);return Report();}
@@ -99,11 +100,11 @@ namespace DomainConsole.Agent {
     if(!(bool)update.EulaAccepted)update.AcceptEula();dynamic one=Com("Microsoft.Update.UpdateColl");one.Add(update);
     Stage("Скачивание · "+(string)update.Title);State.Progress=total==0?100:100*i/total;Save();
     dynamic downloader=session.CreateUpdateDownloader();downloader.Updates=one;dynamic downloaded=AsyncDownload(downloader);
-    if(!(bool)update.IsDownloaded){failures++;dynamic downloadItem=downloaded.GetUpdateResult(0);int hr=(int)downloadItem.HResult;if(hr==0)hr=(int)downloaded.HResult;string failure="Не скачано: "+(string)update.Title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+". "+ExecutionDiagnosis.Explain(hr);Log(failure);State.Error=failure;ApplyRecommendation(failure);details.Add(new{Title=(string)update.Title,Download=(int)downloadItem.ResultCode,HResult=hr});WriteJson(prefix+".updates.json",details);Save();continue;}
+    dynamic downloadItem=downloaded.GetUpdateResult(0);if((int)downloadItem.ResultCode!=2||(int)downloadItem.HResult!=0){failures++;int hr=(int)downloadItem.HResult;if(hr==0)hr=(int)downloaded.HResult;string failure="Не скачано: "+(string)update.Title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+"; ResultCode="+downloadItem.ResultCode+". "+ExecutionDiagnosis.Explain(hr);Log(failure);if(string.IsNullOrEmpty(State.Error))State.Error=failure;ApplyRecommendation(failure);details.Add(new{Title=(string)update.Title,Download=(int)downloadItem.ResultCode,HResult=hr});WriteJson(prefix+".updates.json",details);Save();continue;}
     if(Cancelled()){details.Add(new{Title=(string)update.Title,Download=2,HResult=0});WriteJson(prefix+".updates.json",details);break;}Stage("Установка · "+(string)update.Title);dynamic installer=session.CreateUpdateInstaller();installer.Updates=one;installer.AllowSourcePrompts=false;
     dynamic installed=AsyncInstall(installer);dynamic item=installed.GetUpdateResult(0);int code=(int)item.ResultCode;
     details.Add(new{Title=(string)update.Title,ResultCode=code,HResult=(int)item.HResult,RebootRequired=(bool)installed.RebootRequired});
-    if(code!=2){failures++;int hr=(int)item.HResult;State.Error="Не установлено: "+(string)update.Title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+". "+ExecutionDiagnosis.Explain(hr);Log(State.Error);ApplyRecommendation(State.Error);}State.RebootRequired=State.RebootRequired||(bool)installed.RebootRequired;
+    if(code!=2){failures++;int hr=(int)item.HResult;string installError="Не установлено: "+(string)update.Title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+". "+ExecutionDiagnosis.Explain(hr);Log(installError);if(string.IsNullOrEmpty(State.Error))State.Error=installError;ApplyRecommendation(installError);}State.RebootRequired=State.RebootRequired||(bool)installed.RebootRequired;
     State.UpdatesRemaining=total-i-1;WriteJson(prefix+".updates.json",details);if(State.RebootRequired)break;
    }
    dynamic info=Com("Microsoft.Update.SystemInfo");State.RebootRequired=State.RebootRequired||(bool)info.RebootRequired;WriteJson(prefix+".updates.json",details);
@@ -201,3 +202,4 @@ namespace DomainConsole.Agent {
   }
  }
 }
+

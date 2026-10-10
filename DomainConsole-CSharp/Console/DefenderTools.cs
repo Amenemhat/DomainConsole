@@ -51,3 +51,4 @@ public partial class MainWindow {
   MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;bool diagnose=choice.SelectedIndex==0;await Submit(new(){new(){Name=diagnose?"Диагностика Defender":choice.SelectedIndex==1?"Defender · откат платформы":"Defender · сброс платформы",Kind=diagnose?"PowerShell":"CacheCleanup",Code=diagnose?DefenderScripts.Diagnose:DefenderScripts.Recover(choice.SelectedIndex==2)}},diagnose?"Commands":"WSUS");
  });
 }
+

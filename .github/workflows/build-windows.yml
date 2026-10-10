@@ -164,7 +164,7 @@ jobs:
           @{Started=[DateTime]::UtcNow.AddMinutes(-10).ToString('o');Status='Failed';Ended=[DateTime]::UtcNow.ToString('o');Error='fixture failure';Results=@()} | ConvertTo-Json | Set-Content (Join-Path $jobFolder 'status.json') -Encoding utf8
           $old = (Get-Date).AddDays(-3).ToString('yyyy-MM-dd HH:mm:ss') + ', Error OUTSIDE_WINDOW_ERROR'
           $recent = (Get-Date).AddMinutes(-5).ToString('yyyy-MM-dd HH:mm:ss') + ', Error IN_WINDOW_ERROR'
-          @($old,$recent,'Continuation context') | Set-Content (Join-Path $fixture 'Logs/CBS/CBS.log') -Encoding utf8
+          @($old,$recent,'Continuation context',((Get-Date).AddMinutes(-4).ToString('yyyy-MM-dd HH:mm:ss')+', Info NORMAL_CBS_NOT_FOR_DISPLAY')) | Set-Content (Join-Path $fixture 'Logs/CBS/CBS.log') -Encoding utf8
           $script = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/diagnostic-script.ps1'
           $text = Get-Content $script -Raw
           $harness = @'
@@ -179,6 +179,7 @@ jobs:
           $env:ProgramData=$env:DOMAINCONSOLE_DIAGNOSTIC_FIXTURE
           $result=(& ([ScriptBlock]::Create($text)))|Out-String
           if($result -notmatch 'IN_WINDOW_ERROR' -or $result -match 'OUTSIDE_WINDOW_ERROR' -or $result -notmatch 'Continuation context'){throw 'Time-window/context filter failed'}
+          if($result -match 'NORMAL_CBS_NOT_FOR_DISPLAY'){throw 'Full CBS leaked into short diagnostic output'}
           Write-Output 'Diagnostic script valid in Windows PowerShell 5.1; selected interval and context verified.'
           '@
           $env:DOMAINCONSOLE_DIAGNOSTIC_SCRIPT=$script
@@ -387,3 +388,4 @@ jobs:
           name: DomainConsole-UI-review
           path: ${{ runner.temp }}/DomainConsole-smoke/ui-*.png
           if-no-files-found: warn
+

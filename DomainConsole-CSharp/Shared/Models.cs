@@ -27,3 +27,4 @@ namespace DomainConsole.Shared {
  }
  public class LibraryEntry {public string Name {get;set;}="";public string Category {get;set;}="Мои команды";public string Description {get;set;}="";public bool Favorite {get;set;}public bool MicrosoftSource {get;set;}public List<CommandStep> Steps {get;set;}=new List<CommandStep>();}
 }
+
