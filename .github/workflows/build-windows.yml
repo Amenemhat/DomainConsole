@@ -164,7 +164,7 @@ jobs:
           @{Started=[DateTime]::UtcNow.AddMinutes(-10).ToString('o');Status='Failed';Ended=[DateTime]::UtcNow.ToString('o');Error='fixture failure';Results=@()} | ConvertTo-Json | Set-Content (Join-Path $jobFolder 'status.json') -Encoding utf8
           $old = (Get-Date).AddDays(-3).ToString('yyyy-MM-dd HH:mm:ss') + ', Error OUTSIDE_WINDOW_ERROR'
           $recent = (Get-Date).AddMinutes(-5).ToString('yyyy-MM-dd HH:mm:ss') + ', Error IN_WINDOW_ERROR'
-          @($old,$recent,'Continuation context',((Get-Date).AddMinutes(-4).ToString('yyyy-MM-dd HH:mm:ss')+', Info NORMAL_CBS_NOT_FOR_DISPLAY')) | Set-Content (Join-Path $fixture 'Logs/CBS/CBS.log') -Encoding utf8
+          (@($old,$recent,'Continuation context') + @(1..10 | ForEach-Object { (Get-Date).AddMinutes(-4).ToString('yyyy-MM-dd HH:mm:ss')+', Info ordinary context' }) + @((Get-Date).AddMinutes(-4).ToString('yyyy-MM-dd HH:mm:ss')+', Info NORMAL_CBS_NOT_FOR_DISPLAY')) | Set-Content (Join-Path $fixture 'Logs/CBS/CBS.log') -Encoding utf8
           $script = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/diagnostic-script.ps1'
           $text = Get-Content $script -Raw
           $harness = @'
