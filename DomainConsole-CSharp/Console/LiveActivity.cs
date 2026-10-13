@@ -12,7 +12,7 @@ foreach($proc in @(Get-CimInstance Win32_Process -Filter "Name='DomainConsole.Ag
  $folder=$matches[1];$id=Split-Path $folder -Leaf
  $guid=[Guid]::Empty;if(![Guid]::TryParse($id,[ref]$guid) -or !(Test-Path (Join-Path $folder 'job.json'))){continue}
  $job=Get-Content (Join-Path $folder 'job.json') -Raw -Encoding UTF8|ConvertFrom-Json
- $state=$null;if(Test-Path (Join-Path $folder 'status.json')){$state=Get-Content (Join-Path $folder 'status.json') -Raw -Encoding UTF8|ConvertFrom-Json}
+ $state=$null;if(Test-Path (Join-Path $folder 'status.json')){try{$state=Get-Content (Join-Path $folder 'status.json') -Raw -Encoding UTF8|ConvertFrom-Json}catch{$state=$null}}
  if($job.OutputChannel -eq 'WSUS' -and (!$state -or !$state.Ended -or $state.DiagnosticStatus -in @('Pending','Running','LegacyRunning'))){$jobs+= $id}
 }
 $busy=$false; $installerBusy=$false # This script is executed under local SYSTEM.
