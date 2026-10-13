@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 namespace DomainConsole.Shared {
- public class CommandStep { public string Name {get;set;}="Новая команда"; public string Kind {get;set;}="CMD"; public string Code {get;set;}=""; }
+ public class CommandStep { public bool TouchesUpdates {get;set;} public string Name {get;set;}="Новая команда"; public string Kind {get;set;}="CMD"; public string Code {get;set;}=""; }
  public class RemoteJob : System.ComponentModel.INotifyPropertyChanged {
   public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;public void RefreshSummary(){if(PropertyChanged!=null)PropertyChanged(this,new System.ComponentModel.PropertyChangedEventArgs("Summary"));}
   public string CommandPreview {get {var text=string.Join("; ",Steps.Select(s=>string.IsNullOrWhiteSpace(s.Code)?s.Name:Regex.Replace(s.Code,@"\s+"," ").Trim()));return text.Length>180?text.Substring(0,177)+"…":text;}}
   public string Summary {get {int running=Targets.Count(t=>t.Status=="Queued"||t.Status=="Sending"||t.Status=="Submitted"||t.Status=="Running");int errors=Targets.Count(t=>t.Status=="Failed"||t.Status=="CompletedWithErrors"||t.Status=="InterventionRequired"||t.Status=="ConnectionFailed"||t.Status=="AccessDenied");return running>0?"Активно: "+running:errors>0?"Ошибок: "+errors:Targets.Count==0?"Нет целей":"Завершено: "+Targets.Count;}}
 
-  public bool QueueAfterWsus {get;set;}public int StallMinutes {get;set;}=10;public bool ExclusiveMaintenance {get;set;}
+  public bool AllowUpdateConflict {get;set;}public bool QueueAfterWsus {get;set;}public int StallMinutes {get;set;}=10;public bool ExclusiveMaintenance {get;set;}
   public string Id {get;set;}=Guid.NewGuid().ToString();public string Created {get;set;}=DateTime.UtcNow.ToString("o");
   public string Name {get;set;}="Задание";public string OutputChannel {get;set;}="";public bool MicrosoftSource {get;set;}public bool AutoReboot {get;set;}public bool ContinueOnError {get;set;}public int DiagnosticLookbackMinutes {get;set;}=15;
   public List<CommandStep> Steps {get;set;}=new List<CommandStep>();public List<TargetRecord> Targets {get;set;}=new List<TargetRecord>();

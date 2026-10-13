@@ -9,7 +9,7 @@ public static class CacheScripts {
  public static string Build(string mode,bool backup,bool catroot)=>"$mode='"+mode+"';$backup="+(backup?"$true":"$false")+";$catroot="+(catroot?"$true":"$false")+";"+Body;
  public const string Body="""
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
-if((New-Object -ComObject Microsoft.Update.Installer).IsBusy){throw 'Установщик WUA занят. Очистка не начата.'}
+if(!$dcAllowUpdateConflict -and (New-Object -ComObject Microsoft.Update.Installer).IsBusy){throw 'Установщик WUA занят. Очистка не начата.'}
 $root=Join-Path $env:windir 'SoftwareDistribution'
 $paths=if($mode -eq 'Download'){@(Join-Path $root 'Download')}elseif($mode -eq 'Queue'){@((Join-Path $root 'EventCache'),(Join-Path $root 'EventCache.v2'))}elseif($mode -eq 'Full'){@($root)}else{throw 'Неизвестный режим очистки'}
 if($catroot){$paths+=Join-Path $env:windir 'System32\catroot2'}

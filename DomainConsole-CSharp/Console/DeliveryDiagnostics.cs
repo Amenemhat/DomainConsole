@@ -47,7 +47,7 @@ public static class DeliveryScripts {
  public const string Recovery="""
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 $source=Join-Path $env:windir 'SoftwareDistribution\EventCache.v2'
-$installer=New-Object -ComObject Microsoft.Update.Installer;if($installer.IsBusy){throw 'Установка обновлений активна; очистка отменена'}
+$installer=New-Object -ComObject Microsoft.Update.Installer;if(!$dcAllowUpdateConflict -and $installer.IsBusy){throw 'Установка обновлений активна; очистка отменена'}
 if(!(Test-Path $source)){'Очередь отсутствует; очистка не требуется';exit 0}
 if((Get-Item $source).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Очередь является ссылкой; очистка запрещена'}
 $items=@(Get-ChildItem $source -Recurse -Force -ErrorAction Stop);if(@($items|Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}).Count){throw 'В очереди обнаружены ссылки; очистка запрещена'}

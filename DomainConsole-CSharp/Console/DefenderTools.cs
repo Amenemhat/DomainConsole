@@ -24,8 +24,8 @@ $mrt=Join-Path $env:windir 'debug\mrt.log';if(Test-Path $mrt){'## MRT · пос�
  public static string Recover(bool reset)=>"$mode="+PowerShellBridge.Literal(reset?"-ResetPlatform":"-RevertPlatform")+";"+RecoverBody;
  public const string RecoverBody="""
 $ErrorActionPreference='Stop'
-if((New-Object -ComObject Microsoft.Update.Installer).IsBusy){throw 'WUA выполняет установку. Восстановление Defender отменено.'}
-if(@(Get-CimInstance Win32_Process|Where-Object {$_.Name -eq 'MRT.exe' -or $_.Name -match '^Windows-KB890830.*\.exe$'}).Count){throw 'MRT ещё выполняется. Сначала завершите или остановите его установку.'}
+if(!$dcAllowUpdateConflict -and (New-Object -ComObject Microsoft.Update.Installer).IsBusy){throw 'WUA выполняет установку. Восстановление Defender отменено.'}
+if(!$dcAllowUpdateConflict -and @(Get-CimInstance Win32_Process|Where-Object {$_.Name -eq 'MRT.exe' -or $_.Name -match '^Windows-KB890830.*\.exe$'}).Count){throw 'MRT ещё выполняется. Сначала завершите или остановите его установку.'}
 $root=Join-Path $env:ProgramData 'Microsoft\Windows Defender\Platform'
 $exe=$null
 $folders=@(Get-ChildItem $root -Directory -ErrorAction SilentlyContinue|Where-Object {$_.Name -match '^\d+\.\d+\.\d+\.\d+-\d+$'}|Sort-Object {[Version]($_.Name.Split('-')[0])} -Descending)
