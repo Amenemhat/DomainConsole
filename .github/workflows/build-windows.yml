@@ -191,7 +191,7 @@ jobs:
         run: |
           $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           $check = @'
-          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1')){
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1')){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
             if($errors.Count){throw ($errors|Out-String)}
@@ -277,6 +277,9 @@ jobs:
             $fixtureBits[0].JobState='Error';$fixtureBits[0].ErrorDescription='cost policy blocks transfer';$fixtureBits[0].Error=@{ErrorCode=-2145386407}
             $result=(& $scriptBlock)|ConvertFrom-Json
             if($result.Busy -or $result.Downloads[0].Error -notmatch 'cost policy'){throw 'BITS error wrongly treated as running'}
+            $fixtureBits[0].BytesTotal=[uint64]::MaxValue
+            $result=(& $scriptBlock)|ConvertFrom-Json
+            if($null -ne $result.Downloads[0].Total -or $result.Downloads.Count -ne 1){throw 'BITS unknown size conversion failed'}
             $fixtureBits=@();$fixtureBusy=$true
             $result=(& $scriptBlock)|ConvertFrom-Json
             if(!$result.Busy -or !$result.InstallerBusy){throw 'External WUA installation not detected'}
