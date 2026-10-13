@@ -317,6 +317,22 @@ jobs:
             if($null -eq $old){Remove-ItemProperty $reg -Name LocalAccountTokenFilterPolicy -ErrorAction SilentlyContinue}else{Set-ItemProperty $reg -Name LocalAccountTokenFilterPolicy -Value $old}
             Set-Item WSMan:\localhost\Client\TrustedHosts $trusted -Force
           }
+      - name: Verify targeted BITS priority change and restoration
+        shell: pwsh
+        run: |
+          $fixture=Join-Path $env:RUNNER_TEMP 'priority-fixture'
+          $saved=$env:ProgramData;$env:ProgramData=$fixture
+          $id=[guid]'00000000-0000-0000-0000-000000000023'
+          $chosen=[pscustomobject]@{JobId=$id;DisplayName='WU Client Download';OwnerAccount='NT AUTHORITY\SYSTEM';Priority='High'}
+          $other=[pscustomobject]@{JobId=[guid]::NewGuid();DisplayName='WU Client Download';OwnerAccount='NT AUTHORITY\SYSTEM';Priority='Normal'}
+          function Get-BitsTransfer {param([switch]$AllUsers) @($chosen,$other)}
+          function Set-BitsTransfer {param([Parameter(ValueFromPipeline=$true)]$BitsJob,$Priority) process{$BitsJob.Priority=$Priority}}
+          try {
+            & ([ScriptBlock]::Create([IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/priority-control.ps1'))))
+            if($chosen.Priority -ne 'Foreground' -or $other.Priority -ne 'Normal'){throw 'Priority changed an unrelated job'}
+            & ([ScriptBlock]::Create([IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/priority-restore.ps1'))))
+            if($chosen.Priority -ne 'High' -or $other.Priority -ne 'Normal'){throw 'Original priority was not restored'}
+          }finally{$env:ProgramData=$saved}
       - name: Verify cache cleanup protection and backup
         shell: pwsh
         run: |
