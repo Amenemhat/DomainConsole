@@ -200,6 +200,28 @@ jobs:
           '@
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
           if ($LASTEXITCODE -ne 0) { throw 'Reporting script parsing failed' }
+      - name: Verify service restart restoration without touching real services
+        shell: powershell
+        run: |
+          $text=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/restart-services.ps1'))
+          $fixture=@{};$script:starts=New-Object 'System.Collections.Generic.List[string]';$script:failStop=$false;$script:failStart=$false
+          foreach($name in @('UsoSvc','bits','fixtureDependent')){
+            $s=[pscustomobject]@{Name=$name;ServiceName=$name;Status='Running';DependentServices=@()}
+            $s|Add-Member ScriptMethod WaitForStatus {param($state,$timeout);$this.Status=[string]$state}
+            $fixture[$name]=$s
+          }
+          $fixture['UsoSvc'].DependentServices=@($fixture['fixtureDependent'])
+          function Get-Service {param([string[]]$Name);foreach($n in $Name){$fixture[$n]}}
+          function Stop-Service {param($Name,[switch]$Force,$ErrorAction);if($script:failStop -and $Name -eq 'UsoSvc'){throw 'fixture stop failure'};$fixture[$Name].Status='Stopped'}
+          function Start-Service {param($Name,$ErrorAction);$script:starts.Add($Name);if($script:failStart -and $Name -eq 'UsoSvc'){throw 'fixture start failure'};$fixture[$Name].Status='Running'}
+          $null=& ([ScriptBlock]::Create($text))
+          if(!$script:starts.Contains('fixtureDependent') -or !$script:starts.Contains('UsoSvc') -or !$script:starts.Contains('bits')){throw 'Running dependent services were not restored'}
+          foreach($scenario in @('stop','start')){
+            $script:starts.Clear();$script:failStop=$scenario -eq 'stop';$script:failStart=$scenario -eq 'start';$failed=$false
+            try{$null=& ([ScriptBlock]::Create($text))}catch{$failed=$true}
+            if(!$failed -or !$script:starts.Contains('bits')){throw 'Restore failed to continue after another service error'}
+          }
+          Write-Output 'Selected services and dependents restored; stop/start failures reported; no actual services modified.'
       - name: Verify legacy MRT force selection guards
         shell: powershell
         run: |
