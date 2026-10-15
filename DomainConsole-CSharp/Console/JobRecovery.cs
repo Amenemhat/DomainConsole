@@ -6,6 +6,6 @@ public partial class MainWindow {
  public static bool InterruptedByBoot(RemoteState state,PollResult data)=>InactiveEvidence(data)&&DateTimeOffset.TryParse(data.BootUtc,out var boot)&&DateTimeOffset.TryParse(state.Started,out var start)&&boot>start;
  public static void ReconcileMissing(PollResult data,RemoteJob job,DateTimeOffset now){
   if(data.State!=null||!InactiveEvidence(data)||!DateTimeOffset.TryParse(job.Created,out var created)||now-created<TimeSpan.FromMinutes(2))return;
-  data.State=new(){Id=job.Id,Status="InterventionRequired",Stage="Исполнение не подтверждено",Started=job.Created,Ended=now.ToString("o"),Updated=now.ToString("o"),Error="Файл состояния отсутствует; исполнитель не найден, задача планировщика: "+data.TaskState+". Результат неизвестен. Активная очередь освобождена; повторный запуск только вручную. Отменить эту запись можно кнопкой остановки в истории."};
+  data.State=new(){Id=job.Id,Status="InterventionRequired",Stage="Исполнение не подтверждено",Started="",Ended=now.ToString("o"),Updated=now.ToString("o"),Error="Файл состояния отсутствует; исполнитель не найден, задача планировщика: "+data.TaskState+". Результат неизвестен. Активная очередь освобождена; повторный запуск только вручную. Отменить эту запись можно кнопкой остановки в истории."};
  }
 }
