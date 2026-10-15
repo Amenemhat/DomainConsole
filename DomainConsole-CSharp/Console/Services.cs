@@ -77,7 +77,7 @@ $owned=@(Get-CimInstance Win32_Process -Filter "Name='DomainConsole.Agent.exe'" 
 $statePath=Join-Path $p 'status.json'
 $state=$null
 if(Test-Path $statePath){$state=Get-Content $statePath -Raw -Encoding UTF8 -ErrorAction Stop|ConvertFrom-Json}
-if($state -and $state.Ended){Dc-Reply 'Задание уже завершено' ([string]$state.Status);return}
+if($state -and $state.Ended -and $state.DiagnosticStatus -notin @('Pending','Running','LegacyRunning')){Dc-Reply 'Задание уже завершено' ([string]$state.Status);return}
 if(!$owned.Count -and (!$task -or $task.State -ne 'Running')){
  if($task){Disable-ScheduledTask -InputObject $task -ErrorAction Stop|Out-Null}
  $check=Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue
@@ -85,6 +85,7 @@ if(!$owned.Count -and (!$task -or $task.State -ne 'Running')){
  if(($check -and $check.State -eq 'Running') -or $again.Count){throw 'Исполнитель появился во время проверки. Состояние не изменено; повторите запрос остановки.'}
 
  $closed=@{Id=$id;Status='Cancelled';Stage='Отмена неработающего задания';Ended=[DateTime]::UtcNow.ToString('o');Updated=[DateTime]::UtcNow.ToString('o');DiagnosticStatus='NotRequested';Error='';Results=@()}
+ if($state){foreach($key in @($closed.Keys|Where-Object {$_ -ne 'Results' -and $_ -ne 'Error'})){$state|Add-Member NoteProperty $key $closed[$key] -Force};$closed=$state}
  if(Test-Path (Join-Path $p 'job.json')){[IO.File]::WriteAllText($statePath,($closed|ConvertTo-Json -Depth 6),(New-Object Text.UTF8Encoding($false)))}
  if($task){Unregister-ScheduledTask -TaskName $name -Confirm:$false -ErrorAction Stop}
  Dc-Reply 'Неработающее задание отменено. История сохранена; автоматический повтор не запускается.' 'Cancelled';return

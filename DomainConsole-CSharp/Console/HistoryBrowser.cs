@@ -17,6 +17,7 @@ public sealed class HistoryEntry:INotifyPropertyChanged {
  public string Result=>ComputerRow.StatusText(Target.Status);
  public double DurationSeconds=>DateTimeOffset.TryParse(Target.State?.Started,out var start)&&DateTimeOffset.TryParse(Target.State?.Ended,out var end)?Math.Max(0,(end-start).TotalSeconds):0;
  public string Duration=>DurationSeconds>0?((int)(DurationSeconds/3600)).ToString("D2")+TimeSpan.FromSeconds(DurationSeconds).ToString(@"\:mm\:ss"):"—";
+ public List<string> BatchLines=>Job.Targets.Select(t=>t.Host+" · "+ComputerRow.StatusText(t.Status)).ToList();
  public string Batch=>Job.Targets.Count>1?"Массовый запуск · ПК: "+Job.Targets.Count:"Один компьютер";
  public event PropertyChangedEventHandler? PropertyChanged;public void Refresh()=>PropertyChanged?.Invoke(this,new(null));
 }

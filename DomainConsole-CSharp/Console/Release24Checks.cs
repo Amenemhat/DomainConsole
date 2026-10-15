@@ -6,6 +6,7 @@ namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease24(){
   if(LikelyShell("$x = Get-Service bits")!="PowerShell"||LikelyShell("Get-CimInstance Win32_OperatingSystem | Select-Object Caption")!="PowerShell"||LikelyShell("echo %windir%")!="CMD"||LikelyShell("hostname")!=null||LikelyShell("powershell.exe -NoProfile -Command Get-Service")!=null)throw new Exception("Shell hint classification invalid");
+  if(!IsIndependentControl(new(){new(){Kind="CMD",Code="shutdown.exe /r /t 10"}})||IsIndependentControl(new(){new(){Code="shutdown.exe /r /t 10 & hostname"}}))throw new Exception("Independent control classification invalid");
   var job=new RemoteJob{Created=DateTimeOffset.UtcNow.AddHours(-1).ToString("o"),Steps=new(){new(){Code="Get-Service bits",Kind="PowerShell"}},Targets=new(){new(){Host="alpha.invalid",Name="ALPHA"},new(){Host="beta.invalid",Name="BETA"}}};
   var entry=new HistoryEntry(job,job.Targets[1]);if(!HistoryMatches(entry,1,"beta","Get-Service",null)||HistoryMatches(entry,2,"beta","",null)||HistoryMatches(entry,1,"alpha","",null)||HistoryMatches(entry,0,"","","alpha.invalid"))throw new Exception("Per-client history filter invalid");
   var absent=new PollResult{TaskState="Missing",AgentAlive=false};ReconcileMissing(absent,job,DateTimeOffset.UtcNow);if(absent.State?.Status!="InterventionRequired")throw new Exception("Missing status retains active queue");

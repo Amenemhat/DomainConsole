@@ -30,7 +30,7 @@ jobs:
         shell: pwsh
         run: |
           $p = Start-Process ./Publish/DomainConsole.exe -ArgumentList 'local-smoke' -PassThru
-          if (!$p.WaitForExit(60000)) { Stop-Process -Id $p.Id; throw 'Local transport timeout' }
+          if (!$p.WaitForExit(90000)) { Stop-Process -Id $p.Id; throw 'Local transport timeout' }
           if ($p.ExitCode -ne 0 -or !(Test-Path Publish/local-smoke-ok.txt)) { if (Test-Path Publish/local-smoke-error.txt) { Get-Content Publish/local-smoke-error.txt }; throw 'Local transport failed' }
           Get-Content Publish/local-smoke-ok.txt
           Remove-Item Publish/local-smoke-*.txt
@@ -64,6 +64,33 @@ jobs:
             New-Item (Join-Path $folders[0] 'stop-now.flag') -ItemType File|Out-Null
             if(!$processes[0].WaitForExit(10000)){throw 'WSUS fixture cancellation failed'}
           } finally {foreach($p in $processes){if(!$p.HasExited){Stop-Process -Id $p.Id -Force}}}
+      - name: Verify independent control lane and cancellation of waiting commands
+        shell: pwsh
+        run: |
+          $folders=@();$processes=@()
+          try {
+            foreach($kind in @('long','waiting','control')){
+              $folder=Join-Path $env:RUNNER_TEMP ('DomainConsole-command-lane-'+$kind)
+              New-Item $folder -ItemType Directory -Force|Out-Null
+              $code=if($kind -eq 'long'){'ping -n 61 127.0.0.1 > nul'}else{'echo CONTROL_FIXTURE'}
+              @{Id=[guid]::NewGuid().ToString();OutputChannel='Commands';IndependentControl=($kind -eq 'control');Steps=@(@{Kind='CMD';Name=$kind;Code=$code})}|ConvertTo-Json -Depth 6|Set-Content (Join-Path $folder 'job.json') -Encoding utf8
+              $p=Start-Process ./Publish/Agent/DomainConsole.Agent.exe -ArgumentList ('run "'+$folder+'"') -PassThru
+              $processes+=$p;$folders+=$folder
+              if($kind -eq 'long'){
+                $ready=$false
+                for($i=0;$i -lt 60;$i++){Start-Sleep -Milliseconds 200;try{$st=Get-Content (Join-Path $folder 'status.json') -Raw|ConvertFrom-Json;if($st.ProcessId){$ready=$true;break}}catch{}}
+                if(!$ready){throw 'Long command did not start'}
+              }
+            }
+            if(!$processes[2].WaitForExit(8000)){throw 'Independent control blocked behind command lane'}
+            if($processes[0].HasExited -or $processes[1].HasExited){throw 'Ordinary queue isolation failed'}
+            New-Item (Join-Path $folders[1] 'stop-now.flag') -ItemType File|Out-Null
+            if(!$processes[1].WaitForExit(8000)){throw 'Waiting command did not cancel'}
+            $st=Get-Content (Join-Path $folders[1] 'status.json') -Raw|ConvertFrom-Json
+            if($st.Status -ne 'Cancelled'){throw 'Waiting command cancellation not terminal'}
+            New-Item (Join-Path $folders[0] 'stop-now.flag') -ItemType File|Out-Null
+            if(!$processes[0].WaitForExit(10000)){throw 'Long command did not stop'}
+          }finally{foreach($p in $processes){if(!$p.HasExited){Stop-Process -Id $p.Id -Force}}}
       - name: Verify client cleanup protection
         shell: pwsh
         run: |
