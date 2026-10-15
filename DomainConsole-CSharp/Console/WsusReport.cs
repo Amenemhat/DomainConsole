@@ -5,8 +5,9 @@ public sealed class WsusReport {
  public int UnknownCount {get;set;}public int NotApplicableCount {get;set;}public int NotInstalledCount {get;set;}public int DownloadedCount {get;set;}public int InstalledCount {get;set;}public int InstalledPendingRebootCount {get;set;}public int FailedCount {get;set;}
  public bool Fresh(string started)=>DateTimeOffset.TryParse(started,out var begin)&&DateTimeOffset.TryParse(LastReportedUtc,out var at)&&at>=begin;
  public string Severity(string started){
-  if(FailedCount>0||(!string.IsNullOrEmpty(LastSyncResult)&&LastSyncResult!="Succeeded"))return "Error";
+  if(FailedCount>0||LastSyncResult is "Failed" or "FailedWithErrors")return "Error";
   if(InstalledPendingRebootCount>0)return "Reboot";
+  if(LastSyncResult!="Succeeded")return "Unknown";
   if(!DateTimeOffset.TryParse(LastReportedUtc,out var at)||at.Year<2000)return "Unknown";
   if(DateTimeOffset.UtcNow-at>TimeSpan.FromDays(1))return "Stale";
   return "Success";

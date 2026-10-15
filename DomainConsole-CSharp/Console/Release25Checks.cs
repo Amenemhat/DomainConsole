@@ -17,6 +17,9 @@ public partial class MainWindow {
    reportCache[row.Host].Found=false;if(OverviewStatus(row).Kind!="NoWsus")throw new Exception("Missing WSUS identity not distinguished");
    clientConnections[row.Host]=new(){Error="Access is denied",LastAttempt=DateTimeOffset.UtcNow};if(OverviewStatus(row).Kind!="Access"||!StatusTags(row).Contains("NoWsus"))throw new Exception("Access denied confused with offline or server absence");
    clientConnections[row.Host].Error="WinRM timeout";if(OverviewStatus(row).Kind!="Unreachable")throw new Exception("Unreachable has no dedicated state");clientConnections.Remove(row.Host);
+   if(AccessError("Сервер недоступен"))throw new Exception("Network failure mistaken for access denied");
+   var rebootCode=HeaderRebootCode(60,"Сохраните 'документы'",false);if(!rebootCode.Contains("Start-Sleep -Seconds 60")||!rebootCode.Contains("shutdown.exe /r /t 0")||rebootCode.Contains("/f ")||!rebootCode.Contains("''документы''"))throw new Exception("Reboot forces apps or loses quoted message");
+   File.WriteAllText(Path.Combine(Path.GetTempPath(),"header-reboot.ps1"),rebootCode,new UTF8Encoding(true));
    var visible=Computers.Take(4).ToList();foreach(var item in visible)item.Selected=false;
    MarkRange(visible[0],visible,true,false,false);MarkRange(visible[2],visible,true,true,false);if(!visible.Take(3).All(r=>r.Selected)||visible[3].Selected)throw new Exception("Shift checkbox range invalid");
    MarkRange(visible[1],visible,false,false,false);if(!visible[0].Selected||visible[1].Selected||!visible[2].Selected)throw new Exception("Ctrl toggle cleared other targets");
