@@ -224,7 +224,7 @@ jobs:
         run: |
           $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           $check = @'
-          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1','header-reboot.ps1')){
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1','header-reboot.ps1','reboot-state.ps1')){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
             if($errors.Count){throw ($errors|Out-String)}
@@ -536,6 +536,14 @@ jobs:
             if($st.Status -ne 'Cancelled' -or $st.Error){throw ('Countdown cancellation failed: '+($st|ConvertTo-Json -Compress))}
             Write-Output 'Own countdown cancelled cooperatively, independent of Ctrl+C. Shutdown command stubbed; no machine rebooted.'
           } finally {if(!$p.HasExited){Stop-Process -Id $p.Id -Force}}
+      - name: Verify read-only reboot state probe
+        shell: powershell
+        run: |
+          $text=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/reboot-state.ps1'))
+          $state=(& ([ScriptBlock]::Create($text)))|ConvertFrom-Json
+          if(!$state.BootUtc -or !$state.CollectedUtc -or $null -eq $state.Required){throw ('Incomplete reboot state: '+($state|ConvertTo-Json -Compress))}
+          if([DateTime]::Parse($state.BootUtc).Year -lt 2000){throw 'Invalid boot timestamp'}
+          Write-Output 'Boot time and WUA reboot requirement read; no reboot, client scan, service or policy change.'
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:
