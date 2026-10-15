@@ -21,5 +21,5 @@ $p=Join-Path $env:windir 'debug\mrt.log';if(Test-Path $p){Get-Content $p -Tail 3
 """;
  void SaveOperationSettings_Click(object sender,RoutedEventArgs e)=>Guard(()=>{if(!int.TryParse(StallMinutesBox.Text,out var minutes)||minutes<1||minutes>120)throw new Exception("Порог ожидания: 1–120 минут.");Store.Write("stall-minutes.json",minutes);Theme.Apply(ThemeBox.SelectedIndex);RefreshActivity();Notify("Настройки ожидания и палитры сохранены.");});
  static bool Maintenance(List<CommandStep> steps,bool microsoft)=>NeedsUpdateCheck(steps,microsoft);
- async void Recommendation_Click(object sender,RoutedEventArgs e){var r=ActiveRow();string action=r.Target.State?.RecommendationAction??"";if(action=="Download")CacheCleanup_Click(sender,e);else if(action=="Defender")Defender_Click(sender,e);else if(action=="Queue")RecoverReport_Click(sender,e);else WaitingDiagnostics_Click(sender,e);}
+ async void Recommendation_Click(object sender,RoutedEventArgs e){var r=ActiveRow();string action=r.Target.State?.RecommendationAction??"";if(action=="Memory")MemoryDiagnostics_Click(sender,e);else if(action=="Download")CacheCleanup_Click(sender,e);else if(action=="Defender")Defender_Click(sender,e);else if(action=="Queue")RecoverReport_Click(sender,e);else WaitingDiagnostics_Click(sender,e);}
 }
