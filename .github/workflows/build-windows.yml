@@ -254,6 +254,8 @@ jobs:
             if($state.Results.Count -ne 1 -or $state.Error -ne 'PARTIAL_ERROR' -or (Get-Content (Join-Path $folder 'step-1.out') -Raw) -notmatch 'KEEP_PARTIAL_OUTPUT'){throw 'Cancellation discarded partial evidence'}
             Write-Output 'Exact inactive task removed; missing status handled and partial results preserved.'
           }finally{Unregister-ScheduledTask -TaskName $name -Confirm:$false -ErrorAction SilentlyContinue}
+          Write-Output 'Fixture cleanup completed.'
+          exit 0
           '@
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
           if($LASTEXITCODE -ne 0){throw 'Orphan cancellation fixture failed'}
