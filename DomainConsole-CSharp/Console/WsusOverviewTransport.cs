@@ -1,6 +1,12 @@
 using System.Text.Json;
 namespace DomainConsole;
 public sealed partial class RemoteService {
+ public async Task RequestRebootCancellation(DomainConsole.Shared.TargetRecord target,string id){
+  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание");
+  using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(25));
+  string body="$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') "+PowerShellBridge.Literal(id)+";$job=Get-Content (Join-Path $p 'job.json') -Raw -Encoding UTF8|ConvertFrom-Json;if(!$job.IndependentControl -or $job.Name -ne 'Перезагрузка текущего компьютера'){throw 'Это не задание перезагрузки из шапки'};New-Item (Join-Path $p 'cancel.flag') -ItemType File -Force|Out-Null;New-Item (Join-Path $p 'reboot-cancel.flag') -ItemType File -Force|Out-Null;";
+  await PowerShellBridge.Execute(Invoke(target.Host,body),timeout.Token);
+ }
  // One authenticated remote call per batch; the same WSUS object serves every target in it.
  public async Task<List<OverviewReply>> WsusOverview(WsusSettings settings,List<string> hosts,CancellationToken token){
   using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(TimeSpan.FromSeconds(90));

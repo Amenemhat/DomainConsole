@@ -24,8 +24,8 @@ public partial class MainWindow {
    reportCache[row.Host].Found=false;evidenceJob=new(){Name="Перезагрузка текущего компьютера",IndependentControl=true,OutputChannel="Commands",Targets=new(){new(){Host=row.Host,Name=row.Name,Status="Queued"}}};History.Insert(0,evidenceJob);
    if(OverviewStatus(row).Kind!="Reboot"||!StatusTags(row).Contains("Reboot"))throw new Exception("Scheduled reboot missing outside WSUS jobs");History.Remove(evidenceJob);evidenceJob=null;
    if(AccessError("Сервер недоступен"))throw new Exception("Network failure mistaken for access denied");
-   var rebootCode=HeaderRebootCode(60,"Сохраните 'документы'",false);if(!rebootCode.Contains("Start-Sleep -Seconds 60")||!rebootCode.Contains("shutdown.exe /r /t 0")||rebootCode.Contains("/f ")||!rebootCode.Contains("''документы''"))throw new Exception("Reboot forces apps or loses quoted message");
-   File.WriteAllText(Path.Combine(Path.GetTempPath(),"header-reboot.ps1"),rebootCode,new UTF8Encoding(true));
+   var rebootCode=HeaderRebootCode(60,"Сохраните 'документы'",false);if(!rebootCode.Contains("UtcNow.AddSeconds(60)")||!rebootCode.Contains("reboot-cancel.flag")||!rebootCode.Contains("shutdown.exe /r /t 0")||rebootCode.Contains("/f ")||!rebootCode.Contains("''документы''"))throw new Exception("Reboot forces apps or loses quoted message");
+   File.WriteAllText(Path.Combine(Path.GetTempPath(),"header-reboot.ps1"),rebootCode.Replace("{{REBOOT_JOB}}","00000000-0000-0000-0000-000000000025"),new UTF8Encoding(true));
    var visible=Computers.Take(4).ToList();foreach(var item in visible)item.Selected=false;
    MarkRange(visible[0],visible,true,false,false);MarkRange(visible[2],visible,true,true,false);if(!visible.Take(3).All(r=>r.Selected)||visible[3].Selected)throw new Exception("Shift checkbox range invalid");
    MarkRange(visible[1],visible,false,false,false);if(!visible[0].Selected||visible[1].Selected||!visible[2].Selected)throw new Exception("Ctrl toggle cleared other targets");

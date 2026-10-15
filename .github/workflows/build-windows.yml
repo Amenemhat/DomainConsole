@@ -129,7 +129,13 @@ jobs:
             if (!$state.ProcessId) { throw 'No running command process' }
             Start-Sleep -Milliseconds 750
             New-Item (Join-Path $folder 'stop-now.flag') -ItemType File -Force | Out-Null
-            if (!$p.WaitForExit(15000)) { Stop-Process -Id $p.Id; throw 'Running command did not cancel via Ctrl+C' }
+            if (!$p.WaitForExit(8000)) {
+              $state=Get-Content (Join-Path $folder 'status.json') -Raw | ConvertFrom-Json
+              if($state.StopStatus -ne 'ForceRequired'){Stop-Process -Id $p.Id;throw ('Unresponsive command has no explicit force option: '+($state|ConvertTo-Json -Compress))}
+              Write-Output ($kind+': Ctrl+C not accepted; testing administrator-confirmed termination of this owned command only.')
+              New-Item (Join-Path $folder 'force-stop.flag') -ItemType File -Force|Out-Null
+              if(!$p.WaitForExit(10000)){Stop-Process -Id $p.Id;throw 'Explicit termination did not stop owned command'}
+            }
             $state=Get-Content (Join-Path $folder 'status.json') -Raw | ConvertFrom-Json
             if ($p.ExitCode -ne 0 -or $state.Status -ne 'Cancelled' -or !$state.Ended -or $state.Step -ne 1) { throw 'Cancellation did not preserve a terminal state or skipped-step semantics' }
           }
@@ -509,6 +515,27 @@ jobs:
           if(!$result[3].Found -or $result[3].Error -notmatch 'fixture summary failure'){throw 'Per-client read failure was hidden'}
           if($result[4].Error -notmatch '.'){throw 'Ambiguous WSUS identity accepted'}
           Write-Output 'Exact identities, missing clients, partial errors and ambiguity verified; no WSUS or clients modified.'
+      - name: Verify cancellation of a scheduled header reboot without rebooting
+        shell: pwsh
+        run: |
+          $base=Join-Path $env:RUNNER_TEMP 'header-reboot-fixture'
+          $folder=Join-Path $base 'DomainConsoleCSharp/00000000-0000-0000-0000-000000000025'
+          New-Item $folder -ItemType Directory -Force|Out-Null
+          $body=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/header-reboot.ps1'))
+          $safe="function shutdown.exe { throw 'REAL_SHUTDOWN_MUST_NOT_RUN' };function msg.exe {};"+"`$env:ProgramData='"+$base.Replace("'","''")+"';"+$body
+          @{Id='00000000-0000-0000-0000-000000000025';IndependentControl=$true;OutputChannel='Commands';Steps=@(@{Name='Countdown fixture';Kind='PowerShell';Code=$safe})}|ConvertTo-Json -Depth 6|Set-Content (Join-Path $folder 'job.json') -Encoding utf8
+          $p=Start-Process ./Publish/Agent/DomainConsole.Agent.exe -ArgumentList ('run "'+$folder+'"') -PassThru
+          try {
+            $ready=$false
+            for($i=0;$i -lt 60;$i++){Start-Sleep -Milliseconds 250;try{$st=Get-Content (Join-Path $folder 'status.json') -Raw|ConvertFrom-Json;if($st.ProcessId){$ready=$true;break}}catch{}}
+            if(!$ready){throw 'Countdown did not start'}
+            New-Item (Join-Path $folder 'cancel.flag') -ItemType File -Force|Out-Null
+            New-Item (Join-Path $folder 'reboot-cancel.flag') -ItemType File -Force|Out-Null
+            if(!$p.WaitForExit(10000)){throw 'Countdown cancellation did not finish'}
+            $st=Get-Content (Join-Path $folder 'status.json') -Raw|ConvertFrom-Json
+            if($st.Status -ne 'Cancelled' -or $st.Error){throw ('Countdown cancellation failed: '+($st|ConvertTo-Json -Compress))}
+            Write-Output 'Own countdown cancelled cooperatively, independent of Ctrl+C. Shutdown command stubbed; no machine rebooted.'
+          } finally {if(!$p.HasExited){Stop-Process -Id $p.Id -Force}}
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:
