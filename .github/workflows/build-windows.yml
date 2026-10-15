@@ -501,7 +501,7 @@ jobs:
           })
           $fixtureServer=[pscustomobject]@{}
           $fixtureServer|Add-Member ScriptMethod GetComputerTargets {param($scope) return $targets}
-          $result=@((& ([ScriptBlock]::Create($text)))|ConvertFrom-Json)
+          $result=(& ([ScriptBlock]::Create($text)))|ConvertFrom-Json
           if($result.Count -ne 5){throw 'Overview lost target results'}
           if(!$result[0].Found -or $result[0].Report.InstalledCount -ne 10){throw 'Valid client summary missing'}
           if($result[1].Found -or $result[1].Error){throw 'Absent target must be NoWsus'}
