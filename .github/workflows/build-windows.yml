@@ -218,7 +218,7 @@ jobs:
         run: |
           $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           $check = @'
-          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1')){
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1')){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
             if($errors.Count){throw ($errors|Out-String)}
@@ -486,6 +486,29 @@ jobs:
           '@
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
           if ($LASTEXITCODE -ne 0) { throw 'Live IIS journal test failed' }
+      - name: Verify WSUS overview identity and partial failure handling
+        shell: powershell
+        run: |
+          $text=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/wsus-overview.ps1'))
+          $text=$text.Replace("[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration')",'')
+          $text=$text.Replace('$s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($env:COMPUTERNAME,$ssl,$port)','$s=$fixtureServer')
+          $text=$text.Replace('(New-Object Microsoft.UpdateServices.Administration.ComputerTargetScope)','([pscustomobject]@{})')
+          $summary=[pscustomobject]@{UnknownCount=0;NotApplicableCount=100;NotInstalledCount=0;DownloadedCount=0;InstalledCount=10;InstalledPendingRebootCount=0;FailedCount=0}
+          $targets=@(foreach($name in @('alpha.invalid','broken.invalid','duplicate.invalid','duplicate.invalid')){
+            $t=[pscustomobject]@{FullDomainName=$name;LastReportedStatusTime=[DateTime]::UtcNow;LastSyncTime=[DateTime]::UtcNow;LastSyncResult='Succeeded'}
+            $t|Add-Member ScriptMethod GetUpdateInstallationSummary {if($this.FullDomainName -eq 'broken.invalid'){throw 'fixture summary failure'};return $summary}
+            $t
+          })
+          $fixtureServer=[pscustomobject]@{}
+          $fixtureServer|Add-Member ScriptMethod GetComputerTargets {param($scope) return $targets}
+          $result=@((& ([ScriptBlock]::Create($text)))|ConvertFrom-Json)
+          if($result.Count -ne 5){throw 'Overview lost target results'}
+          if(!$result[0].Found -or $result[0].Report.InstalledCount -ne 10){throw 'Valid client summary missing'}
+          if($result[1].Found -or $result[1].Error){throw 'Absent target must be NoWsus'}
+          if($result[2].Found){throw 'Foreign FQDN matched by short name'}
+          if(!$result[3].Found -or $result[3].Error -notmatch 'fixture summary failure'){throw 'Per-client read failure was hidden'}
+          if($result[4].Error -notmatch '.'){throw 'Ambiguous WSUS identity accepted'}
+          Write-Output 'Exact identities, missing clients, partial errors and ambiguity verified; no WSUS or clients modified.'
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:

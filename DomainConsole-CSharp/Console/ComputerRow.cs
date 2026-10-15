@@ -16,8 +16,8 @@ public sealed class ComputerRow : INotifyPropertyChanged {
  public System.Windows.Media.Brush ActivityBrush=>focused?(System.Windows.Media.Brush)System.Windows.Application.Current.FindResource("SelectionSurface"):working?new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(26,65,96)):System.Windows.Media.Brushes.Transparent;
  public void SetActivity(bool active,int? progress,string hint,bool focus){working=active;workBusy=active&&!progress.HasValue;workProgress=progress??0;recentHint=hint;focused=focus;foreach(var n in new[]{"Working","WorkBusy","WorkProgress","RecentHint","ActivityVisibility","ActivityBrush"})PropertyChanged?.Invoke(this,new(n));}
  public string Outcome {get;set;}="";public string OutcomeHint {get;set;}="";
- public string OutcomeIcon=>Outcome=="Error"?"✖":Outcome=="Warning"?"⚠":Outcome=="Success"?"✓":"";
- public System.Windows.Media.Brush OutcomeBrush=>Outcome=="Error"?System.Windows.Media.Brushes.OrangeRed:Outcome=="Warning"?System.Windows.Media.Brushes.Orange:System.Windows.Media.Brushes.LightGreen;
+ public string OutcomeIcon=>Outcome switch {"Error"=>"✖","Warning"=>"⚠","Success" or "Stale"=>"✓","Reboot"=>"⟳","NoWsus"=>"⊘","Unreachable"=>"⌁","Access"=>"🔒",_=>"?"};
+ public System.Windows.Media.Brush OutcomeBrush=>Outcome switch {"Error"=>System.Windows.Media.Brushes.OrangeRed,"Warning" or "Reboot"=>System.Windows.Media.Brushes.Orange,"Success"=>System.Windows.Media.Brushes.LightGreen,"Stale"=>System.Windows.Media.Brushes.LightSkyBlue,_=>System.Windows.Media.Brushes.LightSlateGray};
  public void SetOutcome(string value,string hint){Outcome=value;OutcomeHint=hint;Refresh();}
  public event PropertyChangedEventHandler? PropertyChanged;
 }
