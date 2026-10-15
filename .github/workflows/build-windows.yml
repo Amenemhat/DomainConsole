@@ -227,6 +227,36 @@ jobs:
           '@
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
           if ($LASTEXITCODE -ne 0) { throw 'Reporting script parsing failed' }
+      - name: Verify cancellation with missing status and preservation of partial results
+        shell: pwsh
+        run: |
+          $env:DC_ORPHAN_FIXTURE=Join-Path $env:RUNNER_TEMP 'orphan-fixture'
+          $env:DC_ORPHAN_SCRIPT=Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/cancel-job.ps1'
+          $check=@'
+          $ErrorActionPreference='Stop'
+          $env:ProgramData=$env:DC_ORPHAN_FIXTURE
+          $id='00000000-0000-0000-0000-000000000024';$name='DomainConsoleCSharp-'+$id
+          $folder=Join-Path $env:ProgramData ('DomainConsoleCSharp/'+$id)
+          New-Item $folder -ItemType Directory -Force|Out-Null
+          @{Id=$id;Steps=@()}|ConvertTo-Json|Set-Content (Join-Path $folder 'job.json') -Encoding UTF8
+          Set-Content (Join-Path $folder 'step-1.out') 'KEEP_PARTIAL_OUTPUT'
+          $action=New-ScheduledTaskAction -Execute cmd.exe -Argument '/c exit 0'
+          $principal=New-ScheduledTaskPrincipal -UserId SYSTEM -LogonType ServiceAccount -RunLevel Highest
+          $script=[IO.File]::ReadAllText($env:DC_ORPHAN_SCRIPT)
+          try {
+            Register-ScheduledTask -TaskName $name -Action $action -Principal $principal -Force|Out-Null
+            $reply=(& ([ScriptBlock]::Create($script)))|ConvertFrom-Json
+            $state=Get-Content (Join-Path $folder 'status.json') -Raw|ConvertFrom-Json
+            if($reply.Status -ne 'Cancelled' -or $state.Status -ne 'Cancelled' -or (Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue)){throw 'Missing status cancellation did not close the exact task'}
+            @{Id=$id;Status='Running';Error='PARTIAL_ERROR';Results=@(@{Name='partial';ExitCode=1});Ended=''}|ConvertTo-Json -Depth 6|Set-Content (Join-Path $folder 'status.json') -Encoding UTF8
+            $reply=(& ([ScriptBlock]::Create($script)))|ConvertFrom-Json
+            $state=Get-Content (Join-Path $folder 'status.json') -Raw|ConvertFrom-Json
+            if($state.Results.Count -ne 1 -or $state.Error -ne 'PARTIAL_ERROR' -or (Get-Content (Join-Path $folder 'step-1.out') -Raw) -notmatch 'KEEP_PARTIAL_OUTPUT'){throw 'Cancellation discarded partial evidence'}
+            Write-Output 'Exact inactive task removed; missing status handled and partial results preserved.'
+          }finally{Unregister-ScheduledTask -TaskName $name -Confirm:$false -ErrorAction SilentlyContinue}
+          '@
+          & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
+          if($LASTEXITCODE -ne 0){throw 'Orphan cancellation fixture failed'}
       - name: Verify service restart restoration without touching real services
         shell: powershell
         run: |
