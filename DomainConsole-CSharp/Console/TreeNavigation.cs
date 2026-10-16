@@ -11,15 +11,16 @@ public partial class MainWindow {
   return null;
  }
  void SetupTreeNavigation(){
-  AddHandler(Mouse.PreviewMouseDownEvent,new MouseButtonEventHandler((sender,e)=>{
-   if(e.ChangedButton!=MouseButton.Left)return;
+  OuTree.AddHandler(FrameworkElement.RequestBringIntoViewEvent,new RequestBringIntoViewEventHandler((sender,e)=>{if(togglingTree)e.Handled=true;}),true);
+ }
+ void WireBranch(TreeViewItem item){
+  item.AddHandler(Mouse.PreviewMouseDownEvent,new MouseButtonEventHandler((sender,e)=>{
+   if(e.Handled||e.ChangedButton!=MouseButton.Left)return;
    var toggle=Ancestor<ToggleButton>(e.OriginalSource as DependencyObject);
-   if(toggle?.Name!="Expander"||Ancestor<TreeView>(toggle)!=OuTree)return;
-   var item=Ancestor<TreeViewItem>(toggle);if(item==null)return;
-   // Consume the preview before TreeView focuses/scrolls its old selected item.
+   // The expander belongs to this header, not to a nested OU or its checkbox.
+   if(toggle?.Name!="Expander"||!ReferenceEquals(toggle.TemplatedParent,item))return;
    e.Handled=true;ToggleBranch(item);
   }),true);
-  OuTree.AddHandler(FrameworkElement.RequestBringIntoViewEvent,new RequestBringIntoViewEventHandler((sender,e)=>{if(togglingTree)e.Handled=true;}),true);
  }
  void ToggleBranch(TreeViewItem item){
   var scroll=FindTreeScroll(OuTree);double offset=scroll?.VerticalOffset??0;
