@@ -13,6 +13,7 @@ public partial class MainWindow {
    rebootSnapshots[row.Host].Required=false;if(OverviewStatus(row).Kind!="Error")throw new Exception("Unresolved errors hidden after reboot flags clear");
    rebootSnapshots[row.Host].Required=null;if(OverviewStatus(row).Kind!="Error")throw new Exception("Unknown reboot flag masks an error");
   }finally{if(old==null)reportCache.Remove(row.Host);else reportCache[row.Host]=old;if(previous==null)rebootSnapshots.Remove(row.Host);else rebootSnapshots[row.Host]=previous;}
+  var freshness=new WsusReport{TaskEndedUtc=DateTime.UtcNow.ToString("o"),LastReportedUtc=DateTime.UtcNow.AddMinutes(-2).ToString("o")};if(freshness.Fresh(DateTime.UtcNow.AddMinutes(-10).ToString("o"))||!freshness.Freshness("").Contains("предшествует"))throw new Exception("Report before job end treated as final confirmation");
   var update=new WsusFailedUpdate{Id="fixture",Revision=7,Title="fixture"};var history=new[]{new ClientUpdateHistory{Id="fixture",Revision=7,Operation=1,Date=DateTime.UtcNow.ToString("o"),ResultCode=1,HResult=unchecked((int)0x80242014)},new ClientUpdateHistory{Id="fixture",Revision=7,Operation=1,Date=DateTime.UtcNow.AddHours(-1).ToString("o"),ResultCode=4,HResult=unchecked((int)0x80240034)}};
   if(WsusFailurePresentation.Describe(update,history,true).Contains("Рекомендация по неудачной"))throw new Exception("Old error recommends cleanup while reboot pending");
   if(ConnectionStore.Normalize(" 10.1.2.24 ")!="10.1.2.24"||ConnectionStore.Normalize("2001:db8::1")!="2001:db8::1")throw new Exception("IP parsing failed");
