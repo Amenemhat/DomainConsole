@@ -20,7 +20,7 @@ public sealed partial class RemoteService {
   var script="$ids=@("+ids+");$search=New-Object -ComObject Microsoft.Update.Searcher;$total=$search.GetTotalHistoryCount();$count=[Math]::Min(500,$total);$items=@();if($count -gt 0){$items=@($search.QueryHistory(0,$count)|Where-Object {$ids -contains [string]$_.UpdateIdentity.UpdateID}|ForEach-Object {@{Id=[string]$_.UpdateIdentity.UpdateID;Revision=[int]$_.UpdateIdentity.RevisionNumber;Date=[DateTime]::SpecifyKind($_.Date,[DateTimeKind]::Utc).ToString('o');HResult=[int]$_.HResult;UnmappedResult=[int]$_.UnmappedResultCode;ResultCode=[int]$_.ResultCode;Operation=[int]$_.Operation}})};@{History=@($items);Limit=$count;Total=$total}|ConvertTo-Json -Depth 5 -Compress";
   return HistoryCore(target,script,new CancellationTokenSource(TimeSpan.FromSeconds(30)));
  }
- async Task<string> HistoryCore(TargetRecord target,string script,CancellationTokenSource cancellation){using(cancellation)return await PowerShellBridge.Execute(Invoke(target.Host,LiveProbeWrapper(script)),cancellation.Token);}
+ async Task<string> HistoryCore(TargetRecord target,string script,CancellationTokenSource cancellation){using(cancellation)return await PowerShellBridge.Execute(Invoke(target,LiveProbeWrapper(script)),cancellation.Token);}
  public static string WsusEventsScript(string computer,IEnumerable<string> updateIds,bool ssl,int port)=>
   "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');$s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($env:COMPUTERNAME,"+(ssl?"$true":"$false")+","+port+");$name="+PowerShellBridge.Literal(computer)+";$scope=New-Object Microsoft.UpdateServices.Administration.ComputerTargetScope;$scope.NameIncludes=$name.Split('.')[0];$targets=@($s.GetComputerTargets($scope)|Where-Object {$_.FullDomainName -eq $name});if($targets.Count -ne 1){throw 'Клиент событий WSUS не найден однозначно по полному имени'};$target=$targets[0];$ids=@("+string.Join(",",updateIds.Select(PowerShellBridge.Literal))+");$until=[DateTime]::UtcNow;$since=$until.AddDays(-14);$items=@();$errorText='';$truncated=$false;try{$events=@($s.GetUpdateEventHistory($since,$until,$target)|Where-Object {$_.HasAssociatedUpdate -and $ids -contains [string]$_.UpdateId.UpdateId}|Sort-Object CreationDate -Descending);$truncated=$events.Count -gt 300;foreach($event in @($events|Select-Object -First 300)){$message='';try{$message=[string]$event.Message;if([string]::IsNullOrWhiteSpace($message)){$message='Описание события WSUS недоступно'} }catch{$message='Описание события недоступно: '+$_.Exception.Message};$code=$null;if($event.IsError){try{$code=[long]$event.ErrorCode}catch{}};$items+=@{UpdateId=[string]$event.UpdateId.UpdateId;Revision=[int]$event.UpdateId.RevisionNumber;Date=[DateTime]::SpecifyKind($event.CreationDate,[DateTimeKind]::Utc).ToString('o');EventId=[int]$event.WsusEventId;Type=[string]$event.WsusEventId;Message=$message;Status=[string]$event.Status;IsError=[bool]$event.IsError;ErrorCode=$code}}}catch{$errorText=$_.Exception.Message};@{Events=@($items);Error=$errorText;Truncated=$truncated}|ConvertTo-Json -Depth 6 -Compress";
  public async Task<WsusEventReply> WsusFailureEvents(WsusSettings settings,string computer,List<WsusFailedUpdate> updates){
@@ -39,11 +39,11 @@ public static class WsusFailurePresentation {
   return text;
  }
  public static string HistoryText(ClientUpdateHistory item)=>LocalDateConverter.Format(item.Date)+" · ревизия "+item.Revision+" · "+(item.Operation==1?"установка":"удаление")+" · "+(item.ResultCode switch {0=>"не начато",1=>"выполняется / результат не окончательный",2=>"успешно",3=>"с замечаниями",4=>"неудача",5=>"отменено",_=>"результат неизвестен"})+" · ResultCode "+item.ResultCode+" · HRESULT "+ExecutionDiagnosis.Code(item.HResult)+(item.HResult!=0?" · "+ExecutionDiagnosis.Explain(item.HResult):"")+(item.UnmappedResult!=0&&item.UnmappedResult!=item.HResult?" · исходный код "+ExecutionDiagnosis.Code(item.UnmappedResult):"");
- public static string Describe(WsusFailedUpdate update,IEnumerable<ClientUpdateHistory> history){
+ public static string Describe(WsusFailedUpdate update,IEnumerable<ClientUpdateHistory> history,bool reboot=false){
   var lines=new List<string>{update.Title+" · KB "+update.KB+" · сводка WSUS: неудача · ревизия "+update.Revision};
   var events=update.Events.OrderByDescending(e=>e.Date).ToList();
   if(events.Count==0)lines.Add("События WSUS для этого обновления за последние 14 дней не получены.");
-  else{lines.Add("Последнее событие WSUS:\n"+EventText(events[0]));var failure=events.FirstOrDefault(e=>e.IsError);if(failure!=null&&failure!=events[0])lines.Add("Предыдущее событие неудачи WSUS (не причина текущего задания):\n"+EventText(failure,false));}
+  else{lines.Add("Последнее событие WSUS:\n"+EventText(events[0],!reboot));var failure=events.FirstOrDefault(e=>e.IsError);if(failure!=null&&failure!=events[0])lines.Add("Предыдущее событие неудачи WSUS (не причина текущего задания):\n"+EventText(failure,false));}
   var entries=history.Where(h=>h.Id.Equals(update.Id,StringComparison.OrdinalIgnoreCase)&&h.Operation==1).OrderByDescending(h=>h.Date).ToList();
   var matching=entries.Where(h=>update.Revision==0||h.Revision==update.Revision).ToList();
   var latest=matching.FirstOrDefault();var failed=matching.FirstOrDefault(h=>h.ResultCode is 3 or 4 or 5);
@@ -55,7 +55,7 @@ public static class WsusFailurePresentation {
    if(latest.ResultCode==1||unchecked((uint)latest.HResult)==0x80242014)lines.Add("Результат истории ещё не окончательный; проверьте необходимость перезагрузки. Не считать эту запись новой ошибкой текущего задания.");
   }
   if(!events.Any(e=>e.IsError&&e.ErrorCode.HasValue&&e.ErrorCode!=0)&&(failed==null||failed.HResult==0))lines.Add("Код соответствующего сбоя не получен. Сбор WindowsUpdate / BITS и журнала пакета поможет уточнить причину; установка автоматически не запускается.");
-  if(failed!=null&&failed.HResult!=0&&latest?.ResultCode!=2)lines.Add("Рекомендация по неудачной записи истории: "+ExecutionDiagnosis.Recommend(failed.HResult));
+  if(failed!=null&&failed.HResult!=0&&!reboot&&latest==failed&&latest.ResultCode is 3 or 4 or 5)lines.Add("Рекомендация по неудачной записи истории: "+ExecutionDiagnosis.Recommend(failed.HResult));
   lines.Add("История и события описывают отдельные попытки. Их совпадение с текущим заданием не установлено.");
   return string.Join("\n",lines);
  }
@@ -72,17 +72,13 @@ public partial class MainWindow {
    if(report.FailureDetailsError.Length>0)lines.Add("Список обновлений неполный: "+report.FailureDetailsError);
    var history=new List<ClientUpdateHistory>();
    if(report.FailedUpdates.Count>0){
-    try{var reply=await remote.WsusFailureEvents(settings,row.Host,report.FailedUpdates);foreach(var u in report.FailedUpdates)u.Events=reply.Events.Where(e=>e.UpdateId.Equals(u.Id,StringComparison.OrdinalIgnoreCase)).ToList();if(reply.Error.Length>0)lines.Add("События WSUS недоступны: "+reply.Error);if(reply.Truncated)lines.Add("История событий WSUS ограничена 300 записями за 14 дней.");}catch(Exception ex){lines.Add("События WSUS недоступны: "+ex.Message);}
+    try{var reply=await remote.WsusFailureEvents(settings,ConnectionStore.WsusName(row.Host),report.FailedUpdates);foreach(var u in report.FailedUpdates)u.Events=reply.Events.Where(e=>e.UpdateId.Equals(u.Id,StringComparison.OrdinalIgnoreCase)).ToList();if(reply.Error.Length>0)lines.Add("События WSUS недоступны: "+reply.Error);if(reply.Truncated)lines.Add("История событий WSUS ограничена 300 записями за 14 дней.");}catch(Exception ex){lines.Add("События WSUS недоступны: "+ex.Message);}
     try{var reply=JsonSerializer.Deserialize<FailureHistoryReply>(await remote.FailureHistory(row.Target,report.FailedUpdates),Store.Options);history=reply?.History??new();if(reply!=null&&reply.Total>reply.Limit)lines.Add("Проверено последних записей клиентской истории: "+reply.Limit+" из "+reply.Total+".");}catch(Exception ex){lines.Add("Клиентская история недоступна: "+ex.Message);}
-    foreach(var update in report.FailedUpdates){update.Detail=WsusFailurePresentation.Describe(update,history);lines.Add(update.Detail);}
+    foreach(var update in report.FailedUpdates){update.Detail=WsusFailurePresentation.Describe(update,history,RebootReason(row).Length>0);lines.Add(update.Detail);}
    }else lines.Add("WSUS сообщает ошибки, но список обновлений недоступен. Причина не установлена.");
    if(!reportCache.TryGetValue(row.Host,out var cached)||!ReferenceEquals(cached.Report,report)||cached.Server!=server||server!=OverviewServer)return;
    report.FailureContext=string.Join("\n\n",lines);
-   report.FailureSummary=string.Join("\n",report.FailedUpdates.Select(u=>{
-    var ev=u.Events.FirstOrDefault();var hr=u.Events.FirstOrDefault(e=>e.IsError&&e.ErrorCode.HasValue&&e.ErrorCode!=0);
-    var h=history.Where(h=>h.Id.Equals(u.Id,StringComparison.OrdinalIgnoreCase)&&h.Operation==1&&(u.Revision==0||h.Revision==u.Revision)).OrderByDescending(h=>h.Date).FirstOrDefault();
-    return "KB "+u.KB+": сводка WSUS — неудача"+(ev!=null?"; последнее событие "+ev.EventId+" · "+LocalDateConverter.Format(ev.Date)+" · "+(ev.Message.Contains("ReportingEvent.")?"описание недоступно":ev.Message):"; события за 14 дней не получены")+(hr!=null?"\nКод "+(ReferenceEquals(hr,ev)?"последнего":"предыдущего")+" события WSUS "+hr.EventId+" от "+LocalDateConverter.Format(hr.Date)+": "+ExecutionDiagnosis.Code(unchecked((int)hr.ErrorCode!.Value))+" · "+ExecutionDiagnosis.Explain(unchecked((int)hr.ErrorCode.Value)):"\nКод серверного события не получен")+(h!=null?"\nПо данным клиента: "+WsusFailurePresentation.HistoryText(h):"\nКлиентская история: соответствующая запись не получена")+(h!=null&&h.HResult!=0?"\nРекомендация по записи клиента: "+ExecutionDiagnosis.Recommend(h.HResult):"");
-   }));
+   report.FailureSummary=string.Join("\n",report.FailedUpdates.Select(u=>"KB "+u.KB+": сохранённая неудача WSUS; события и коды см. в разделе «Сведения WSUS и клиентская история»."))+(RebootReason(row).Length>0?"\nКлиент подтверждает необходимость перезагрузки. Это приоритетное действие; серверная сводка может ещё не учитывать завершение установки.":"");
    wsusFailureDetails[row.Host]="## Сведения WSUS и клиентская история\n"+report.FailureContext;
    serverReports[row.Host]=report.Format(server,cached.Started);Store.Write("wsus-report-cache.json",reportCache);
    if(IsCurrent(row))ShowCurrent();

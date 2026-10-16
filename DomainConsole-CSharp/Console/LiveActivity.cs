@@ -26,8 +26,8 @@ $evidence=if($install.Count){'Работают процессы обслужив
 $policySource=[string](Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate' -ErrorAction SilentlyContinue).WUServer
 @{PolicySource=$policySource;CollectedUtc=[DateTime]::UtcNow.ToString('o');InstallerBusy=$installerBusy;Busy=$busy;Jobs=@($jobs);Downloads=@($downloads);Limitation=$limitation;InstallationEvidence=$evidence}|ConvertTo-Json -Depth 5 -Compress
 """;
- public async Task<LiveUpdateActivity> LiveUpdates(TargetRecord target){if(IsLocal(target.Host))RequireLocalAdmin();using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(15));
-  return JsonSerializer.Deserialize<LiveUpdateActivity>(await PowerShellBridge.Execute(Invoke(target.Host,LiveProbeWrapper()),timeout.Token),Store.Options)??throw new Exception("Не получено состояние WSUS.");}
+ public async Task<LiveUpdateActivity> LiveUpdates(TargetRecord target){if(Local(target))RequireLocalAdmin();using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(15));
+  return JsonSerializer.Deserialize<LiveUpdateActivity>(await PowerShellBridge.Execute(Invoke(target,LiveProbeWrapper()),timeout.Token),Store.Options)??throw new Exception("Не получено состояние WSUS.");}
  public static string LiveProbeWrapper(string? collector=null){
   // WUA/BITS access is local SYSTEM, not a remoting token. One bounded task; always remove completed probes.
   var resultScript="$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';try{$value=& {\n"+(collector??LiveUpdateScript)+"\n};[IO.File]::WriteAllText(($out+'.tmp'),[string]$value,(New-Object Text.UTF8Encoding($false)))}catch{[IO.File]::WriteAllText(($out+'.tmp'),(@{Limitation=$_.Exception.Message;Busy=$false;Jobs=@();Downloads=@()}|ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))};Move-Item ($out+'.tmp') $out -Force";

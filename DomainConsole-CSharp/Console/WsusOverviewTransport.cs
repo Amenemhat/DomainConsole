@@ -5,14 +5,14 @@ public sealed partial class RemoteService {
   if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание");
   using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(25));
   string body="$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') "+PowerShellBridge.Literal(id)+";$job=Get-Content (Join-Path $p 'job.json') -Raw -Encoding UTF8|ConvertFrom-Json;if(!$job.IndependentControl -or $job.Name -ne 'Перезагрузка текущего компьютера'){throw 'Это не задание перезагрузки из шапки'};New-Item (Join-Path $p 'cancel.flag') -ItemType File -Force|Out-Null;New-Item (Join-Path $p 'reboot-cancel.flag') -ItemType File -Force|Out-Null;";
-  await PowerShellBridge.Execute(Invoke(target.Host,body),timeout.Token);
+  await PowerShellBridge.Execute(Invoke(target,body),timeout.Token);
  }
  // One authenticated remote call per batch; the same WSUS object serves every target in it.
  public async Task<List<OverviewReply>> WsusOverview(WsusSettings settings,List<string> hosts,CancellationToken token){
   using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(TimeSpan.FromSeconds(90));
-  string body=OverviewScript(settings,hosts);
+  var names=hosts.ToDictionary(h=>h,ConnectionStore.WsusName,StringComparer.OrdinalIgnoreCase);string body=OverviewScript(settings,names.Values.Where(n=>n.Length>0).Distinct(StringComparer.OrdinalIgnoreCase).ToList());
   var json=await PowerShellBridge.Execute(Invoke(settings.Host,body),timeout.Token);
-  return JsonSerializer.Deserialize<List<OverviewReply>>(json,Store.Options)??throw new Exception("Пустой ответ обзора WSUS");
+  var replies=JsonSerializer.Deserialize<List<OverviewReply>>(json,Store.Options)??throw new Exception("Пустой ответ обзора WSUS");return hosts.Select(h=>{if(names[h].Length==0)return new OverviewReply{Host=h,Error="Имя клиента ещё не подтверждено для WSUS"};var found=replies.FirstOrDefault(r=>r.Host.Equals(names[h],StringComparison.OrdinalIgnoreCase));if(found==null)return new OverviewReply{Host=h,Error="Нет ответа WSUS для клиента"};var copy=Store.Clone(found);copy.Host=h;return copy;}).ToList();
  }
  public static string OverviewScript(WsusSettings settings,List<string> hosts)=>
   "$wanted=@("+string.Join(",",hosts.Select(PowerShellBridge.Literal))+");$port="+settings.Port+";$ssl="+(settings.Ssl?"$true":"$false")+";"+OverviewBody;
