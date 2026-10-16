@@ -64,7 +64,7 @@ public partial class MainWindow:Window {
   if(!NeedsUpdateCheck(new[]{new CommandStep{Code="DISM /Online /Cleanup-Image /RestoreHealth"}},false)||!NeedsUpdateCheck(new[]{new CommandStep{TouchesUpdates=true,Code="custom"}},false))throw new Exception("Maintenance classification missing");
   if(FreshActivity(new LiveUpdateActivity{Busy=true,CollectedUtc=DateTime.UtcNow.AddMinutes(-2).ToString("o")}))throw new Exception("Stale activity keeps animation alive");
   if(LogViewer.LineTone("Рекомендуется проверить службы")!="Warning")throw new Exception("Recommendation highlighting missing");
-  if(!Title.Contains("0.25.1"))throw new Exception("Header version differs from assembly");
+  if(!Title.Contains("0.26"))throw new Exception("Header version differs from assembly");
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"restart-services.ps1"),RestartServicesScript(new[]{"UsoSvc","bits"},true),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"update-wizard.ps1"),UpdateWizardScript,new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"live-probe-wrapper.ps1"),RemoteService.LiveProbeWrapper(),new UTF8Encoding(true));
