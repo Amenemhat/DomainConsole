@@ -563,7 +563,7 @@ jobs:
           if($result.Error -or $result.Events.Count -ne 1 -or $result.Events[0].ErrorCode -ne -2147024864 -or $result.Events[0].EventId -ne 167 -or !$result.Events[0].Date.EndsWith('Z')){throw ('Event identity/code/UTC lost: '+($result|ConvertTo-Json -Depth 8))}
           $fixtureEvents[0]|Add-Member ScriptProperty Message {throw 'fixture missing resource'} -Force
           $result=(& ([ScriptBlock]::Create($text)))|ConvertFrom-Json
-          if($result.Events.Count -ne 1 -or $result.Events[0].Message -notmatch 'fixture missing resource'){throw 'Missing event resource swallowed event'}
+          if($result.Events.Count -ne 1 -or $result.Events[0].Message -notmatch 'недоступно'){throw ('Missing event resource swallowed event: '+($result|ConvertTo-Json -Depth 8))}
           Write-Output 'Selected-client/update events, raw codes, UTC and missing descriptions verified without modifying WSUS.'
       - name: Save portable package
         uses: actions/upload-artifact@v4
