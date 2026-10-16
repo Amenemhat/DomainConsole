@@ -11,7 +11,8 @@ public partial class MainWindow {
   return null;
  }
  void SetupTreeNavigation(){
-  OuTree.PreviewMouseLeftButtonDown+=(sender,e)=>{
+  OuTree.PreviewMouseDown+=(sender,e)=>{
+   if(e.ChangedButton!=MouseButton.Left)return;
    var toggle=Ancestor<ToggleButton>(e.OriginalSource as DependencyObject);
    if(toggle?.Name!="Expander")return;
    var item=Ancestor<TreeViewItem>(toggle);if(item==null)return;
