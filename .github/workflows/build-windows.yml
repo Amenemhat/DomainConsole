@@ -553,8 +553,8 @@ jobs:
           $text=$text.Replace('New-Object Microsoft.UpdateServices.Administration.ComputerTargetScope','[pscustomobject]@{NameIncludes=""}')
           $target=[pscustomobject]@{FullDomainName='fixture.invalid'}
           $fixtureEvents=@(
-            [pscustomobject]@{HasAssociatedUpdate=$true;UpdateId='00000000-0000-0000-0000-000000000026';CreationDate=[DateTime]::UtcNow;WsusEventId=167;Status='Failed';IsError=$true;ErrorCode=-2147024864;Message='ReportingEvent.Client.167'},
-            [pscustomobject]@{HasAssociatedUpdate=$true;UpdateId='unrelated';CreationDate=[DateTime]::UtcNow;WsusEventId=182;Status='Failed';IsError=$true;ErrorCode=-1;Message='MUST_NOT_APPEAR'}
+            [pscustomobject]@{HasAssociatedUpdate=$true;UpdateId=[pscustomobject]@{UpdateId=[guid]'00000000-0000-0000-0000-000000000026';RevisionNumber=7};CreationDate=[DateTime]::UtcNow;WsusEventId=167;Status='Failed';IsError=$true;ErrorCode=-2147024864;Message='ReportingEvent.Client.167'},
+            [pscustomobject]@{HasAssociatedUpdate=$true;UpdateId=[pscustomobject]@{UpdateId=[guid]::NewGuid();RevisionNumber=7};CreationDate=[DateTime]::UtcNow;WsusEventId=182;Status='Failed';IsError=$true;ErrorCode=-1;Message='MUST_NOT_APPEAR'}
           )
           $fixtureServer=[pscustomobject]@{}
           $fixtureServer|Add-Member ScriptMethod GetComputerTargets {param($scope) @($target)}
