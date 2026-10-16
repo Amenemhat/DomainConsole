@@ -186,6 +186,7 @@ namespace DomainConsole.Agent {
        }catch(Exception ex){State.Status="Failed";State.Error=ex.Message;Log(ex.ToString());}
        finally{
         if(State.RestoreStatus=="Pending"){try{Restore();}catch(Exception ex){State.RestoreStatus="InterventionRequired";State.Status="InterventionRequired";State.Error=ex.Message;Log(ex.ToString());}}
+        State.RebootEvidence=RebootEvidence.Collect();if(State.RebootEvidence.Required==true){State.RebootRequired=true;if(State.Status=="Completed")State.Status="AwaitingReboot";}
         State.Ended=DateTime.UtcNow.ToString("o");if(State.Status=="Cancelled"){State.StopStatus="Stopped";State.StopMessage="Задание остановлено администратором";}Save();
         if(State.RebootRequired&&Job.Steps.Any(s=>(s.Kind=="Updates"||s.Kind=="UpdateScan"))){try{StartupTask("Verify","verify");}catch(Exception ex){Log(ex.Message);}}
         if(Job.AutoReboot&&State.RebootRequired&&(State.Status=="Completed"||State.Status=="AwaitingReboot")&&State.RestoreStatus!="InterventionRequired"){

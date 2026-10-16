@@ -565,6 +565,20 @@ jobs:
           $result=(& ([ScriptBlock]::Create($text)))|ConvertFrom-Json
           if($result.Events.Count -ne 1 -or ([string]$result.Events[0].Message).Length -eq 0 -or $result.Events[0].ErrorCode -ne -2147024864){throw ('Missing event resource swallowed event: '+($result|ConvertTo-Json -Depth 8))}
           Write-Output 'Selected-client/update events, raw codes, UTC and missing descriptions verified without modifying WSUS.'
+      - name: Verify IP session identity and credential isolation
+        shell: powershell
+        run: |
+          $text=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/endpoint-session.ps1'))
+          $script:wrong=$false;$script:payload=0;$script:removed=0
+          function New-PSSession {param($ComputerName,$Authentication,$Credential,$SessionOption) if($ComputerName -ne '192.0.2.10' -or $Credential.UserName -ne 'fixture-user' -or $Credential.GetNetworkCredential().Password -ne 'fixture-only-password'){throw 'Wrong endpoint/credential'};[pscustomobject]@{Fixture=$true}}
+          function Remove-PSSession {param($Session) $script:removed++}
+          function Invoke-Command {param($Session,$ScriptBlock) if($ScriptBlock.ToString().Contains('MachineGuid')){return @{Identity=$(if($script:wrong){'wrong-id'}else{'fixture-id'});ComputerName='FIXTURE'}};$script:payload++;'PAYLOAD'}
+          $result=& ([ScriptBlock]::Create($text))
+          if($result -ne 'PAYLOAD' -or $script:payload -ne 1 -or $script:removed -ne 1){throw 'Expected IP session did not execute/close'}
+          $script:wrong=$true;$blocked=$false
+          try{& ([ScriptBlock]::Create($text))}catch{$blocked=$true}
+          if(!$blocked -or $script:payload -ne 1 -or $script:removed -ne 2){throw 'Mismatched identity ran payload or leaked session'}
+          Write-Output 'IP endpoint, session-only DPAPI credential, identity guard, and session disposal verified.'
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:

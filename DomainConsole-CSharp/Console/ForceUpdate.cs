@@ -52,16 +52,16 @@ try{
 }catch{Audit ('Ошибка прерывания: '+$_.Exception.Message);throw}
 """;
  public async Task<UpdateForcePlan> InspectUpdateForce(TargetRecord target,string id){
-  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(IsLocal(target.Host))RequireLocalAdmin();
+  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(Local(target))RequireLocalAdmin();
   using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(45));
-  var json=await PowerShellBridge.Execute(Invoke(target.Host,"$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') "+PowerShellBridge.Literal(id)+";"+ForceUpdateDiscovery+"\n$plan|ConvertTo-Json -Compress"),timeout.Token);
+  var json=await PowerShellBridge.Execute(Invoke(target,"$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') "+PowerShellBridge.Literal(id)+";"+ForceUpdateDiscovery+"\n$plan|ConvertTo-Json -Compress"),timeout.Token);
   return JsonSerializer.Deserialize<UpdateForcePlan>(json,Store.Options)??throw new Exception("Не получен план остановки.");
  }
  public async Task<string> ForceUpdate(TargetRecord target,string id,UpdateForcePlan expected){
-  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(IsLocal(target.Host))RequireLocalAdmin();
+  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(Local(target))RequireLocalAdmin();
   using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(60));
   var body="$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') "+PowerShellBridge.Literal(id)+";"+ForceUpdateDiscovery+"\n$expected="+PowerShellBridge.Literal(JsonSerializer.Serialize(expected))+"|ConvertFrom-Json;"+ForceUpdateApply;
-  return await PowerShellBridge.Execute(Invoke(target.Host,body),timeout.Token);
+  return await PowerShellBridge.Execute(Invoke(target,body),timeout.Token);
  }
 }
 public partial class MainWindow {

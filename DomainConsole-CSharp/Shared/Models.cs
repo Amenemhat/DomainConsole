@@ -14,9 +14,11 @@ namespace DomainConsole.Shared {
   public string Name {get;set;}="Задание";public string OutputChannel {get;set;}="";public bool MicrosoftSource {get;set;}public bool AutoReboot {get;set;}public bool ContinueOnError {get;set;}public int DiagnosticLookbackMinutes {get;set;}=15;
   public List<CommandStep> Steps {get;set;}=new List<CommandStep>();public List<TargetRecord> Targets {get;set;}=new List<TargetRecord>();
  }
- public class TargetRecord {public string Name {get;set;}="";public string Host {get;set;}="";public string OU {get;set;}="";public string OS {get;set;}="";public string Status {get;set;}="Queued";public RemoteState State {get;set;}public string Output {get;set;}="";}
+ public class TargetRecord {public bool ConnectionSnapshot {get;set;}public string ConnectionAddress {get;set;}="";public bool ConnectionSsl {get;set;}public string ConnectionIdentity {get;set;}="";public string ConnectionName {get;set;}="";public string Name {get;set;}="";public string Host {get;set;}="";public string OU {get;set;}="";public string OS {get;set;}="";public string Status {get;set;}="Queued";public RemoteState State {get;set;}public string Output {get;set;}="";}
  public class StepResult {public int? NativeExitCode {get;set;}public string Name {get;set;}="";public int ExitCode {get;set;}public string Started {get;set;}="";public string Ended {get;set;}="";public string Error {get;set;}="";}
  public class RemoteState {
+  public RebootEvidence RebootEvidence {get;set;}
+
   public string ActivityMessage {get;set;}="";public string Recommendation {get;set;}="";public string RecommendationAction {get;set;}="";public string LastMovementUtc {get;set;}="";public string TransferText {get;set;}="";public int ForceCandidatePid {get;set;}public string ForceCandidateStarted {get;set;}="";
   public bool SupportsWuaCancel {get;set;}public bool SupportsImmediateStop {get;set;}public string StopStatus {get;set;}="";public string StopMessage {get;set;}="";
   public string LastOutputUtc {get;set;}="";public string ProgressValue {get;set;}="";public string LastProgressUtc {get;set;}="";public int ProcessId {get;set;}public string ProcessName {get;set;}="";

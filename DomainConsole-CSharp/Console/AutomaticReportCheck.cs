@@ -5,7 +5,7 @@ using System.Windows;
 namespace DomainConsole;
 public sealed partial class RemoteService {
  public static string ReportQueueScript=>DeliveryScripts.Client[..DeliveryScripts.Client.IndexOf("$probe|ConvertTo-Json",StringComparison.Ordinal)]+"\n$probe.Services=(@(Get-Service wuauserv,bits,cryptsvc,UsoSvc -ErrorAction Stop|ForEach-Object {$_.Name+': '+$_.Status}) -join '; ');$probe|ConvertTo-Json -Depth 5 -Compress";
- public async Task<ClientReportProbe> ReadReportQueue(TargetRecord target){using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(45));return JsonSerializer.Deserialize<ClientReportProbe>(await PowerShellBridge.Execute(Invoke(target.Host,ReportQueueScript),timeout.Token),Store.Options)??throw new Exception("Не получены данные очереди.");}
+ public async Task<ClientReportProbe> ReadReportQueue(TargetRecord target){using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(45));return JsonSerializer.Deserialize<ClientReportProbe>(await PowerShellBridge.Execute(Invoke(target,ReportQueueScript),timeout.Token),Store.Options)??throw new Exception("Не получены данные очереди.");}
 }
 public partial class MainWindow {
  readonly Dictionary<string,DateTimeOffset> automaticReportChecks=new(StringComparer.OrdinalIgnoreCase);
