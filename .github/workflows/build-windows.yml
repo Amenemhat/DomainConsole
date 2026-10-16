@@ -370,12 +370,21 @@ jobs:
             New-LocalUser $user -Password $password -AccountNeverExpires|Out-Null
             Add-LocalGroupMember -Group (Get-LocalGroup -SID 'S-1-5-32-544').Name -Member $user
             New-ItemProperty $reg -Name LocalAccountTokenFilterPolicy -Value 1 -PropertyType DWord -Force|Out-Null
-            Set-Item WSMan:\localhost\Client\TrustedHosts 'localhost' -Force
+            Set-Item WSMan:\localhost\Client\TrustedHosts 'localhost,127.0.0.1' -Force
             $session=New-PSSession -ComputerName localhost -Credential $credential -Authentication Negotiate -ErrorAction Stop
             $result=Invoke-Command -Session $session -ScriptBlock {param($code);& ([ScriptBlock]::Create($code))} -ArgumentList $code -ErrorAction Stop
             $probe=$result|ConvertFrom-Json
             if($null -eq $probe.Jobs -or $probe.Limitation){throw ('Incomplete remote activity result: '+$probe.Limitation)}
             Write-Output 'Read-only activity snapshot collected by SYSTEM through authenticated WinRM.'
+            $ipText=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/endpoint-session.ps1'))
+            $ipText=$ipText.Substring($ipText.IndexOf('$s=New-PSSession'))
+            $machineId=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography').MachineGuid
+            $ipText=$ipText.Replace("'192.0.2.10'","'127.0.0.1'").Replace("'fixture-id'",("'"+$machineId+"'")).Replace("'FIXTURE'",("'"+$env:COMPUTERNAME+"'"))
+            $dcCredential=$credential
+            $ipResult=& ([ScriptBlock]::Create($ipText))
+            if($ipResult -ne 'PAYLOAD'){throw 'Real IP session or identity guard failed'}
+            Write-Output 'Generated endpoint transport connected by IP and validated real client identity.'
+
           }finally{
             if($session){Remove-PSSession $session}
             Remove-LocalUser $user -ErrorAction SilentlyContinue

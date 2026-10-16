@@ -29,6 +29,7 @@ public partial class MainWindow {
    var legacy=new TargetRecord{Host=host,ConnectionSnapshot=true};if(ConnectionStore.Address(legacy).Length>0)throw new Exception("Legacy job moved to new IP");
    if(Store.Clone(captured).ConnectionIdentity!="fixture-id")throw new Exception("Connection snapshot not persisted");
   }finally{if(saved==null)ConnectionStore.Profiles.Remove(host);else ConnectionStore.Profiles[host]=saved;}
+  System.Windows.Threading.DispatcherTimer? closeDialog=null;closeDialog=new(){Interval=TimeSpan.FromMilliseconds(200)};closeDialog.Tick+=(s,e)=>{var dialog=OwnedWindows.Cast<System.Windows.Window>().FirstOrDefault(w=>w.Title.StartsWith("Адрес подключения"));if(dialog==null)return;closeDialog!.Stop();dialog.UpdateLayout();var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap((int)dialog.ActualWidth,(int)dialog.ActualHeight,96,96,System.Windows.Media.PixelFormats.Pbgra32);bitmap.Render(dialog);var encoder=new System.Windows.Media.Imaging.PngBitmapEncoder();encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));using(var file=File.Create(Path.Combine(Path.GetTempPath(),"ui-connection.png")))encoder.Save(file);dialog.Close();};closeDialog.Start();EditConnection(row,"").GetAwaiter().GetResult();closeDialog.Stop();
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"reboot-state.ps1"),RemoteService.RebootStateScript,new UTF8Encoding(true));
  }
 }
