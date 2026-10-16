@@ -20,6 +20,7 @@ public partial class MainWindow {
   string detail=WsusFailurePresentation.Describe(update,new[]{success});
   if(!detail.Contains("Данные расходятся")||detail.Contains("Рекомендация по неудачной записи"))throw new Exception("Successful history treated as failure");
   if(LogViewer.LineTone(WsusFailurePresentation.HistoryText(success))!="Success")throw new Exception("Successful history colored red");
+  var oldFailure=new ClientUpdateHistory{Id="fixture",Revision=7,Operation=1,ResultCode=4,HResult=unchecked((int)0x80070020),Date=DateTime.UtcNow.AddDays(-1).ToString("o")};if(WsusFailurePresentation.Describe(update,new[]{success,oldFailure}).Contains("Рекомендация по неудачной записи"))throw new Exception("Old failure still recommends repair after successful retry");
   var pending=new ClientUpdateHistory{Id="fixture",Revision=7,Operation=1,ResultCode=1,HResult=unchecked((int)0x80242014)};
   if(!WsusFailurePresentation.Describe(update,new[]{pending}).Contains("не окончательный")||LogViewer.LineTone(WsusFailurePresentation.HistoryText(pending))!="Warning")throw new Exception("Unfinished history treated as final error");
   success.Revision=6;if(!WsusFailurePresentation.Describe(update,new[]{success}).Contains("Другая ревизия"))throw new Exception("Different update revision incorrectly matched");success.Revision=7;

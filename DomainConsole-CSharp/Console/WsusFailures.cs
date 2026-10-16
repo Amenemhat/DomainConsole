@@ -30,11 +30,11 @@ public sealed partial class RemoteService {
  }
 }
 public static class WsusFailurePresentation {
- public static string EventText(WsusUpdateEvent item){
+ public static string EventText(WsusUpdateEvent item,bool recommend=true){
   string text=LocalDateConverter.Format(item.Date)+" · ревизия "+item.Revision+" · событие "+item.EventId+" · "+item.Type+" · состояние: "+item.Status;
   bool missing=string.IsNullOrWhiteSpace(item.Message)||item.Message.Contains("ReportingEvent.",StringComparison.OrdinalIgnoreCase)||item.Message.StartsWith("Описание события недоступно");
   text+="\n"+(missing?"Описание события WSUS не расшифровано; исходные данные: "+item.Message:item.Message);
-  if(item.IsError&&item.ErrorCode.HasValue&&item.ErrorCode!=0){int code=unchecked((int)item.ErrorCode.Value);text+="\nКод события WSUS: "+ExecutionDiagnosis.Code(code)+" · "+ExecutionDiagnosis.Explain(code)+"\nРекомендуется по этому событию: "+ExecutionDiagnosis.Recommend(code);}
+  if(item.IsError&&item.ErrorCode.HasValue&&item.ErrorCode!=0){int code=unchecked((int)item.ErrorCode.Value);text+="\nКод события WSUS: "+ExecutionDiagnosis.Code(code)+" · "+ExecutionDiagnosis.Explain(code)+(recommend?"\nРекомендуется по этому событию: "+ExecutionDiagnosis.Recommend(code):"");}
   else if(item.IsError||missing)text+="\nКод причины не получен. Номер события не является HRESULT.";
   return text;
  }
@@ -43,7 +43,7 @@ public static class WsusFailurePresentation {
   var lines=new List<string>{update.Title+" · KB "+update.KB+" · сводка WSUS: неудача · ревизия "+update.Revision};
   var events=update.Events.OrderByDescending(e=>e.Date).ToList();
   if(events.Count==0)lines.Add("События WSUS для этого обновления за последние 14 дней не получены.");
-  else{lines.Add("Последнее событие WSUS:\n"+EventText(events[0]));var failure=events.FirstOrDefault(e=>e.IsError);if(failure!=null&&failure!=events[0])lines.Add("Предыдущее событие неудачи WSUS (не причина текущего задания):\n"+EventText(failure));}
+  else{lines.Add("Последнее событие WSUS:\n"+EventText(events[0]));var failure=events.FirstOrDefault(e=>e.IsError);if(failure!=null&&failure!=events[0])lines.Add("Предыдущее событие неудачи WSUS (не причина текущего задания):\n"+EventText(failure,false));}
   var entries=history.Where(h=>h.Id.Equals(update.Id,StringComparison.OrdinalIgnoreCase)&&h.Operation==1).OrderByDescending(h=>h.Date).ToList();
   var matching=entries.Where(h=>update.Revision==0||h.Revision==update.Revision).ToList();
   var latest=matching.FirstOrDefault();var failed=matching.FirstOrDefault(h=>h.ResultCode is 3 or 4 or 5);
@@ -55,7 +55,7 @@ public static class WsusFailurePresentation {
    if(latest.ResultCode==1||unchecked((uint)latest.HResult)==0x80242014)lines.Add("Результат истории ещё не окончательный; проверьте необходимость перезагрузки. Не считать эту запись новой ошибкой текущего задания.");
   }
   if(!events.Any(e=>e.IsError&&e.ErrorCode.HasValue&&e.ErrorCode!=0)&&(failed==null||failed.HResult==0))lines.Add("Код соответствующего сбоя не получен. Сбор WindowsUpdate / BITS и журнала пакета поможет уточнить причину; установка автоматически не запускается.");
-  if(failed!=null&&failed.HResult!=0)lines.Add("Рекомендация по неудачной записи истории: "+ExecutionDiagnosis.Recommend(failed.HResult));
+  if(failed!=null&&failed.HResult!=0&&latest?.ResultCode!=2)lines.Add("Рекомендация по неудачной записи истории: "+ExecutionDiagnosis.Recommend(failed.HResult));
   lines.Add("История и события описывают отдельные попытки. Их совпадение с текущим заданием не установлено.");
   return string.Join("\n",lines);
  }
