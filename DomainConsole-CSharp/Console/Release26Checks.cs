@@ -32,7 +32,7 @@ public partial class MainWindow {
   OuTree.UpdateLayout();var root=(TreeViewItem)OuTree.Items[0];var focused=ComputerGrid.SelectedItem;bool expanded=root.IsExpanded;
   ToggleButton? FindToggle(DependencyObject node){if(node is ToggleButton t&&t.Name=="Expander")return t;for(int n=0;n<VisualTreeHelper.GetChildrenCount(node);n++){var found=FindToggle(VisualTreeHelper.GetChild(node,n));if(found!=null)return found;}return null;}
   var toggle=FindToggle(root)??throw new Exception("Tree arrow missing");var click=new MouseButtonEventArgs(Mouse.PrimaryDevice,Environment.TickCount,MouseButton.Left){RoutedEvent=UIElement.PreviewMouseDownEvent,Source=toggle};toggle.RaiseEvent(click);
-  if(!click.Handled||root.IsExpanded==expanded||!ReferenceEquals(ComputerGrid.SelectedItem,focused))throw new Exception("Expander changed focus or failed to expand");root.IsExpanded=expanded;
+  if(!click.Handled||root.IsExpanded==expanded||!ReferenceEquals(ComputerGrid.SelectedItem,focused))throw new Exception("Expander check: handled="+click.Handled+"; before="+expanded+"; after="+root.IsExpanded+"; same computer="+ReferenceEquals(ComputerGrid.SelectedItem,focused)+"; source="+click.OriginalSource?.GetType().Name);root.IsExpanded=expanded;
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"wsus-events.ps1"),RemoteService.WsusEventsScript("fixture.invalid",new[]{"00000000-0000-0000-0000-000000000026"},false,8530),new UTF8Encoding(true));
  }
 }

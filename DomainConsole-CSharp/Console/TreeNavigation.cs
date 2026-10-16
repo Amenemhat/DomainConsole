@@ -11,14 +11,14 @@ public partial class MainWindow {
   return null;
  }
  void SetupTreeNavigation(){
-  OuTree.PreviewMouseDown+=(sender,e)=>{
+  AddHandler(Mouse.PreviewMouseDownEvent,new MouseButtonEventHandler((sender,e)=>{
    if(e.ChangedButton!=MouseButton.Left)return;
    var toggle=Ancestor<ToggleButton>(e.OriginalSource as DependencyObject);
-   if(toggle?.Name!="Expander")return;
+   if(toggle?.Name!="Expander"||Ancestor<TreeView>(toggle)!=OuTree)return;
    var item=Ancestor<TreeViewItem>(toggle);if(item==null)return;
    // Consume the preview before TreeView focuses/scrolls its old selected item.
    e.Handled=true;ToggleBranch(item);
-  };
+  }),true);
   OuTree.AddHandler(FrameworkElement.RequestBringIntoViewEvent,new RequestBringIntoViewEventHandler((sender,e)=>{if(togglingTree)e.Handled=true;}),true);
  }
  void ToggleBranch(TreeViewItem item){
