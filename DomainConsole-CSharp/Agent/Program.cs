@@ -28,7 +28,7 @@ namespace DomainConsole.Agent {
   static void Save(){lock(Gate){State.Updated=DateTime.UtcNow.ToString("o");if(statusWritePending&&DateTime.UtcNow<nextStatusWrite)return;try{WriteJson("status.json",State);if(statusWritePending)Log("Запись статуса восстановлена; операция продолжала контролироваться агентом.");statusWritePending=false;}catch(IOException ex){if(!statusWritePending)Log("WARNING: Временно не удалось сохранить статус; операция продолжает выполняться: "+ex.Message);statusWritePending=true;nextStatusWrite=DateTime.UtcNow.AddSeconds(3);}}}
   static void Log(string message){lock(Gate)File.AppendAllText(FilePath("runner.log"),DateTime.UtcNow.ToString("o")+" "+message+Environment.NewLine,Encoding.UTF8);}
   static void Stage(string value){lock(Gate){DateTimeOffset started;if(DateTimeOffset.TryParse(State.StageStarted,out started))Log("Этап завершён: "+State.Stage+"; секунд: "+(int)(DateTimeOffset.UtcNow-started).TotalSeconds);State.Stage=value;State.StageEnded="";State.StageStarted=DateTime.UtcNow.ToString("o");State.Progress=null;State.ProgressValue="";State.LastOutputUtc="";State.LastProgressUtc="";State.LastMovementUtc=DateTime.UtcNow.ToString("o");State.ActivityMessage="";State.TransferText="";State.ForceCandidatePid=0;Log("Начат этап: "+value);Save();}}
-  static int Report(){Stage("WSUS · запрос отправки отчёта");int a=Run("UsoClient.exe","Report","report"),b=Run("wuauclt.exe","/reportnow","report");State.ReportRequestStatus="Запросы завершены: UsoClient="+a+", wuauclt="+b+". Это результат команд клиента; получение отчёта проверяется отдельно на сервере.";Log(State.ReportRequestStatus);Save();return a==0||b==0?0:1;}
+  static int Report(){State.ReportRequested=true;Save();Stage("WSUS · запрос отправки отчёта");int a=Run("UsoClient.exe","Report","report"),b=Run("wuauclt.exe","/reportnow","report");State.ReportRequestStatus="Запросы завершены: UsoClient="+a+", wuauclt="+b+". Это результат команд клиента; получение отчёта проверяется отдельно на сервере.";Log(State.ReportRequestStatus);Save();return a==0||b==0?0:1;}
   static bool Cancelled()=>File.Exists(FilePath("cancel.flag"))||File.Exists(FilePath("stop-now.flag"));
   static string CurrentKind="";
   [DllImport("kernel32.dll")]static extern uint GetOEMCP();
@@ -49,7 +49,7 @@ namespace DomainConsole.Agent {
   }
   static int PowerShell(string code,string prefix,int diagnosticTimeout=0){
    var file=FilePath(prefix+".command.txt");File.WriteAllText(file,code,new UTF8Encoding(true));
-   var loader="$dcAllowUpdateConflict="+(Job!=null&&Job.AllowUpdateConflict?"$true":"$false")+";[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false);$OutputEncoding=[Console]::OutputEncoding;$ProgressPreference='SilentlyContinue';$ErrorActionPreference='Stop';$global:LASTEXITCODE=$null;try{& ([ScriptBlock]::Create([IO.File]::ReadAllText('"+file.Replace("'","''")+"',[Text.Encoding]::UTF8)));if($null -ne $LASTEXITCODE){[IO.File]::WriteAllText('"+FilePath(prefix+".native.json").Replace("'","''")+"',[string]$LASTEXITCODE)}}catch{[Console]::Error.WriteLine($_.Exception.Message);[Console]::Error.WriteLine('Target: '+[string]$_.TargetObject);[Console]::Error.WriteLine($_.InvocationInfo.PositionMessage);exit 1}";
+   var loader="$dcAllowUpdateConflict="+(Job!=null&&Job.AllowUpdateConflict?"$true":"$false")+";[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false);$OutputEncoding=[Console]::OutputEncoding;$ProgressPreference='SilentlyContinue';$ErrorActionPreference='Stop';$global:LASTEXITCODE=$null;try{& ([ScriptBlock]::Create([IO.File]::ReadAllText('"+file.Replace("'","''")+"',[Text.Encoding]::UTF8)));if($null -ne $LASTEXITCODE){[IO.File]::WriteAllText('"+FilePath(prefix+".native.json").Replace("'","''")+"',[string]$LASTEXITCODE)}}catch{[IO.File]::WriteAllText('"+FilePath(prefix+".failure.txt").Replace("'","''")+"',$_.Exception.Message);[Console]::Error.WriteLine($_.Exception.Message);[Console]::Error.WriteLine('Target: '+[string]$_.TargetObject);[Console]::Error.WriteLine($_.InvocationInfo.PositionMessage);exit 1}";
    var exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),@"WindowsPowerShell\v1.0\powershell.exe");
    return Run(exe,"-NoLogo -NoProfile -NonInteractive -EncodedCommand "+Convert.ToBase64String(Encoding.Unicode.GetBytes(loader)),prefix,diagnosticTimeout);
   }
@@ -147,7 +147,7 @@ namespace DomainConsole.Agent {
     }
     if(args[0]!="run")return 2;
     if(File.Exists(FilePath("status.json"))){var previous=Json.Deserialize<RemoteState>(File.ReadAllText(FilePath("status.json")));if(previous.Status!="Queued")return 0;}
-    State=new RemoteState{SupportsWuaCancel=true,SupportsImmediateStop=true,Id=Job.Id,Total=Job.Steps.Count,Started=DateTime.UtcNow.ToString("o"),Status="Queued",Stage="Ожидание других заданий"};Save();
+    State=new RemoteState{HasUpdateSteps=Job.Steps.Any(s=>s.Kind=="Updates"||s.Kind=="UpdateScan"),SchemaVersion=28,SupportsWuaCancel=true,SupportsImmediateStop=true,Id=Job.Id,Total=Job.Steps.Count,Started=DateTime.UtcNow.ToString("o"),Status="Queued",Stage="Ожидание других заданий"};Save();
     var diagnostics=new List<string>();using(var mutex=new Mutex(false,ExecutionLane())){
      bool owns=false;try{try{while(!(owns=mutex.WaitOne(500))){if(Cancelled()){State.Status="Cancelled";State.Ended=DateTime.UtcNow.ToString("o");Save();return 0;}}}catch(AbandonedMutexException){owns=true;}
       State.Status="Running";Save();if(Job.AllowUpdateConflict)Log("Пользователь подтвердил выполнение несмотря на конфликт Windows Update. Ограничения самой ОС сохраняются.");using(var heartbeat=new Timer(o=>{try{if(File.Exists(FilePath("cancel.flag"))&&!File.Exists(FilePath("stop-now.flag"))){State.StopStatus="AfterCurrent";State.StopMessage="Остановка после текущей команды / обновления запрошена";}if(File.Exists(FilePath("stop-now.flag"))&&CurrentKind!="CMD"&&CurrentKind!="PowerShell"){if(State.StopStatus!="AbortRequested"&&State.StopStatus!="ForceRequired"){State.StopStatus="AwaitingSafePoint";State.StopMessage="Остановка запрошена; ожидается безопасная точка встроенной операции";}}Save();}catch{}},null,5000,5000)){
@@ -159,10 +159,10 @@ namespace DomainConsole.Agent {
         if(Job.QueueAfterWsus){Stage("Ожидание завершения Windows Update");while(true){if(Cancelled()){State.Status="Cancelled";return 0;}int waitCode=PowerShell("if((New-Object -ComObject Microsoft.Update.Installer).IsBusy -or @(Get-Process MRT -ErrorAction SilentlyContinue).Count -or @(Get-BitsTransfer -AllUsers|Where-Object {$_.DisplayName -eq 'WU Client Download' -and $_.JobState -in @('Connecting','Transferring','Queued','TransientError')}).Count){exit 2}","wait-updates",15000);if(waitCode==0)break;if(waitCode!=2)throw new Exception("Не удалось проверить завершение фоновых обновлений; задание ожидания остановлено.");State.ActivityMessage="Ожидание установки или загрузки Windows Update; можно отменить.";Save();Thread.Sleep(3000);}}if(Job.MicrosoftSource)EnableMicrosoft();
         foreach(var step in Job.Steps){
          if(Cancelled()){State.Status="Cancelled";break;}
-         State.Step++;CurrentKind=step.Kind;Stage(step.Name);var prefix="step-"+State.Step;var stepResult=new StepResult{Name=step.Name,Started=DateTime.UtcNow.ToString("o")};
+         State.Step++;CurrentKind=step.Kind;Stage(step.Name);var prefix="step-"+State.Step;var stepResult=new StepResult{Kind=step.Kind,Name=step.Name,Started=DateTime.UtcNow.ToString("o")};
          try{
-          if(step.Kind=="Updates")stepResult.ExitCode=Updates(prefix);
-          else if(step.Kind=="UpdateScan")stepResult.ExitCode=Updates(prefix,true);
+          if(step.Kind=="Updates"){State.UpdateOperationStarted=true;Save();stepResult.ExitCode=Updates(prefix);}
+          else if(step.Kind=="UpdateScan"){State.UpdateOperationStarted=true;Save();stepResult.ExitCode=Updates(prefix,true);}
           else if(step.Kind=="Diagnostics")stepResult.ExitCode=PowerShell(UpdateLogCode(prefix),prefix,300000);
           else if(step.Kind=="CacheCleanup")stepResult.ExitCode=PowerShell(step.Code,prefix,120000);
           else if(step.Kind=="ReportRecovery")stepResult.ExitCode=PowerShell(step.Code,prefix,120000);
@@ -175,6 +175,7 @@ namespace DomainConsole.Agent {
           var nativeFile=FilePath(prefix+".native.json");int nativeCode;if(File.Exists(nativeFile)&&int.TryParse(File.ReadAllText(nativeFile),out nativeCode))stepResult.NativeExitCode=nativeCode;
           if(stepResult.ExitCode==3010){State.RebootRequired=true;stepResult.ExitCode=0;}
          }catch(Exception ex){stepResult.ExitCode=1;stepResult.Error=ex.Message+" [HRESULT 0x"+ex.HResult.ToString("X8")+"]";State.Error=stepResult.Error;Log(ex.ToString());}
+         if(stepResult.ExitCode!=0&&File.Exists(FilePath(prefix+".failure.txt")))stepResult.Error=File.ReadAllText(FilePath(prefix+".failure.txt"));
          if(stepResult.ExitCode!=0&&!Cancelled()){if(string.IsNullOrWhiteSpace(stepResult.Error))stepResult.Error=!string.IsNullOrWhiteSpace(State.Error)&&(step.Kind=="Updates"||step.Kind=="UpdateScan")?State.Error:"Код завершения: "+ExecutionDiagnosis.Code(stepResult.ExitCode)+". "+ExecutionDiagnosis.Explain(stepResult.ExitCode);State.Error=stepResult.Error;ApplyRecommendation(stepResult.Error);Log(stepResult.Error);}
          stepResult.Ended=DateTime.UtcNow.ToString("o");State.StageEnded=stepResult.Ended;lock(Gate){State.Results.Add(stepResult);}Save();
          if(stepResult.ExitCode!=0&&!Job.ContinueOnError&&!Cancelled()){State.Status="Failed";Save();}
@@ -188,9 +189,10 @@ namespace DomainConsole.Agent {
         if(State.RestoreStatus=="Pending"){try{Restore();}catch(Exception ex){State.RestoreStatus="InterventionRequired";State.Status="InterventionRequired";State.Error=ex.Message;Log(ex.ToString());}}
         State.RebootEvidence=RebootEvidence.Collect();if(State.RebootEvidence.Required==true){State.RebootRequired=true;if(State.Status=="Completed")State.Status="AwaitingReboot";}
         State.Ended=DateTime.UtcNow.ToString("o");if(State.Status=="Cancelled"){State.StopStatus="Stopped";State.StopMessage="Задание остановлено администратором";}Save();
-        if(State.RebootRequired&&Job.Steps.Any(s=>(s.Kind=="Updates"||s.Kind=="UpdateScan"))){try{StartupTask("Verify","verify");}catch(Exception ex){Log(ex.Message);}}
+
         if(Job.AutoReboot&&State.RebootRequired&&(State.Status=="Completed"||State.Status=="AwaitingReboot")&&State.RestoreStatus!="InterventionRequired"){
-         if(Run("shutdown.exe","/r /t 900 /c \"Domain Console: maintenance completed. Reboot in 15 minutes.\"","reboot")==0){State.Status="RebootScheduled";Save();}
+         PowerShell("$os=Get-CimInstance Win32_OperatingSystem;$now=[DateTime]::UtcNow;@{RequestedUtc=$now.ToString('o');DueUtc=$now.AddSeconds(900).ToString('o');BeforeBootUtc=$os.LastBootUpTime.ToUniversalTime().ToString('o')}|ConvertTo-Json -Compress|Set-Content -Encoding UTF8 -LiteralPath '"+FilePath("reboot-plan.json").Replace("'","''")+"'", "reboot-plan");
+         if(Run("shutdown.exe","/r /t 900 /c \"Domain Console: maintenance completed. Reboot in 15 minutes.\"","reboot")==0){State.AutoRebootDueUtc=DateTime.UtcNow.AddSeconds(900).ToString("o");State.Status="RebootScheduled";Save();}
         }
        }
       }

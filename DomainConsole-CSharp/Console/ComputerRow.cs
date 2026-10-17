@@ -9,12 +9,14 @@ public sealed class ComputerRow : INotifyPropertyChanged {
  public string Status=>StatusText(Target.Status);public string Stage=>Target.State?.Stage??"";public int Progress=>Target.Status is "Completed" or "VerifiedAfterReboot" or "AwaitingReboot" or "RebootScheduled"?100:Target.State?.Progress??0;
  public bool Busy=>(Target.Status is "Sending" or "Submitted" or "Running") && Target.State?.Progress==null;
  public ComputerRow(TargetRecord target,string id=""){Target=target;JobId=id;}
- public void Refresh(){foreach(var name in new[]{"Status","Stage","Progress","Busy","OutcomeIcon","OutcomeBrush","OutcomeHint"})PropertyChanged?.Invoke(this,new(name));}
+ public void Refresh(){foreach(var name in new[]{"Status","Stage","Progress","Busy","Outcome","OutcomeIcon","OutcomeBrush","OutcomeHint"})PropertyChanged?.Invoke(this,new(name));}
  bool working,focused,workBusy;int workProgress;string recentHint="";
- public bool Working=>working;public bool WorkBusy=>workBusy;public int WorkProgress=>workProgress;public string RecentHint=>recentHint;
+ public bool Working=>working;public bool WorkBusy=>workBusy;public int WorkProgress=>workProgress;public string RecentHint=>LinkKind is "Unreachable" or "Access"?(LinkKind=="Access"?"Нет доступа":"Нет связи")+" · "+(LinkHint.Split('\n').FirstOrDefault(t=>t.StartsWith("Последний ответ:"))?.Split(" · ")[0].Replace("Последний ответ:","ответ")??"нет успешных ответов"):recentHint;
  public System.Windows.Visibility ActivityVisibility=>working?System.Windows.Visibility.Visible:System.Windows.Visibility.Collapsed;
  public System.Windows.Media.Brush ActivityBrush=>focused?(System.Windows.Media.Brush)System.Windows.Application.Current.FindResource("SelectionSurface"):working?new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(26,65,96)):System.Windows.Media.Brushes.Transparent;
  public void SetActivity(bool active,int? progress,string hint,bool focus){working=active;workBusy=active&&!progress.HasValue;workProgress=progress??0;recentHint=hint;focused=focus;foreach(var n in new[]{"Working","WorkBusy","WorkProgress","RecentHint","ActivityVisibility","ActivityBrush"})PropertyChanged?.Invoke(this,new(n));}
+ public string LinkKind {get;private set;}="Unknown";public string LinkHint {get;private set;}="";public System.Windows.Media.Brush LinkBrush=>LinkKind=="Connected"?System.Windows.Media.Brushes.LightGreen:LinkKind=="Access"?System.Windows.Media.Brushes.Orange:System.Windows.Media.Brushes.LightSlateGray;
+ public void SetConnection(string kind,string hint){LinkKind=kind;LinkHint=hint;foreach(var n in new[]{"LinkKind","LinkHint","LinkBrush","RecentHint"})PropertyChanged?.Invoke(this,new(n));}
  public string Outcome {get;set;}="";public string OutcomeHint {get;set;}="";
  public string OutcomeIcon=>Outcome switch {"Error" or "SyncError"=>"✖","Warning"=>"⚠","Success" or "Stale"=>"✓","Reboot"=>"⟳","NoWsus"=>"⊘","Unreachable"=>"⌁","Access"=>"🔒",_=>"?"};
  public System.Windows.Media.Brush OutcomeBrush=>Outcome switch {"Error" or "SyncError"=>System.Windows.Media.Brushes.OrangeRed,"Warning" or "Reboot"=>System.Windows.Media.Brushes.Orange,"Success"=>System.Windows.Media.Brushes.LightGreen,"Stale"=>System.Windows.Media.Brushes.LightSkyBlue,_=>System.Windows.Media.Brushes.LightSlateGray};
