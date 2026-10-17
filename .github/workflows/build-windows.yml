@@ -378,7 +378,7 @@ jobs:
             if($null -eq $probe.Jobs -or $probe.Limitation){throw ('Incomplete remote activity result: '+$probe.Limitation)}
             Write-Output 'Read-only activity snapshot collected by SYSTEM through authenticated WinRM.'
             $ipText=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/endpoint-session.ps1'))
-            $ipText=$ipText.Substring($ipText.IndexOf('$s=New-PSSession'))
+            $ipText=$ipText.Substring($ipText.IndexOf('$dcConnectWatch='))
             $machineId=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography').MachineGuid
             $ipText=$ipText.Replace("'192.0.2.10'","'127.0.0.1'").Replace("'fixture-id'",("'"+$machineId+"'")).Replace("'FIXTURE'",("'"+$env:COMPUTERNAME+"'"))
             $dcCredential=$credential
