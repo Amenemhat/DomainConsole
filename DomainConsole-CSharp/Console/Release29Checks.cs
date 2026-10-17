@@ -8,6 +8,8 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease29(){
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"trust-check.ps1"),RemoteService.TrustedAddressCheckScript("192.0.2.29"),new UTF8Encoding(true));
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"trust-add.ps1"),RemoteService.TrustAddressScript("192.0.2.29"),new UTF8Encoding(true));
   var row=new ComputerRow(new(){Host="unknown.invalid"});if(row.OutcomeHint.Length==0||row.LinkHint.Length==0)throw new Exception("Unknown tooltip is empty");row.SetConnection("Unknown","");row.SetOutcome("Unknown","");if(row.OutcomeHint.Length==0||row.LinkHint.Length==0)throw new Exception("Empty probe erased tooltip");
   var glyph=new StatusGlyph{Kind="Success"};glyph.Measure(new Size(18,18));glyph.Arrange(new Rect(0,0,18,18));var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap(18,18,96,96,PixelFormats.Pbgra32);bitmap.Render(glyph);foreach(var point in new[]{new Point(1,1),new Point(9,9),new Point(17,17)})if(VisualTreeHelper.HitTest(glyph,point)?.VisualHit!=glyph)throw new Exception("Glyph hit area has holes");
   using var password=new SecureString();foreach(char c in "fixture-not-a-real-password")password.AppendChar(c);

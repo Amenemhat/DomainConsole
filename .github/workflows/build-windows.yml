@@ -625,6 +625,21 @@ jobs:
             if(!$blocked -or $script:kills -ne 1){throw 'Unsafe fixture allowed termination'}
           }
           Write-Output 'Verified confirmed PID, reused PID, shared host and critical-process guards; no real process killed.'
+      - name: Verify guided IP trust check without changing Windows settings
+        shell: powershell
+        run: |
+          $check=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/trust-check.ps1'))
+          $add=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/trust-add.ps1'))
+          $script:entries='existing.example,192.0.2.10';$script:writes=0
+          function Get-Item {param($Path,$ErrorAction) [pscustomobject]@{Value=$script:entries}}
+          function Set-Item {param($Path,$Value,[switch]$Force,$ErrorAction) $script:writes++;$script:entries=$Value}
+          if((& ([ScriptBlock]::Create($check))|ConvertFrom-Json)){throw 'Unapproved IP accepted'}
+          $null=& ([ScriptBlock]::Create($add))
+          if(!(& ([ScriptBlock]::Create($check))|ConvertFrom-Json)){throw 'Added IP not detected'}
+          if($script:entries -ne 'existing.example,192.0.2.10,192.0.2.29'){throw 'Existing trust entries changed'}
+          $null=& ([ScriptBlock]::Create($add))
+          if($script:writes -ne 1 -or $script:entries.Contains('*')){throw 'Duplicate write or wildcard added'}
+          Write-Output 'Exact IP trust preflight and preservation verified with mocked WSMan only.'
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:
