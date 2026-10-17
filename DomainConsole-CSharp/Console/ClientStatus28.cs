@@ -10,7 +10,7 @@ public partial class MainWindow {
   var task=ReadClientCore(row,token);statusReads[row.Host]=task;return task;
  }
  async Task<RebootSnapshot?> ReadClientCore(ComputerRow row,CancellationToken token){await Task.Yield();bool entered=false;try{
-  var target=ConnectionStore.Capture(row.Target);var address=ConnectionStore.Address(target);if(address.Length>0&&!ConnectionStore.HasCredential(address,ConnectionStore.Ssl(target))){statusLimitations[row.Host]="Нет учётных данных для IP; подключение не проверено";return null;}
+  var target=ConnectionStore.Capture(row.Target);var address=ConnectionStore.Address(target);if(address.Length>0&&!ConnectionStore.CanConnect(target)){statusLimitations[row.Host]="Нет учётных данных для IP; подключение не проверено";return null;}
   await statusSlots.WaitAsync(token);entered=true;var result=await remote.ReadRebootState(target,token);if(token.IsCancellationRequested||closing||!CurrentEndpoint(target))return null;ConnectionSucceeded(row.Host);if(result.Error.Length>0)statusLimitations[row.Host]=result.Error;else statusLimitations.Remove(row.Host);ApplyClientSnapshot(row.Host,result);return result;
  }catch(OperationCanceledException){return null;}catch(Exception ex){if(!token.IsCancellationRequested){ConnectionFailed(row.Host,ex.Message);statusLimitations[row.Host]=ShortConnectionError(ex.Message);}return null;}finally{if(entered)statusSlots.Release();statusReads.Remove(row.Host);}}
  bool CurrentEndpoint(TargetRecord target){var current=ConnectionStore.Capture(new TargetRecord{Host=target.Host});return ConnectionStore.Address(current)==ConnectionStore.Address(target)&&ConnectionStore.Identity(current)==ConnectionStore.Identity(target);}

@@ -19,7 +19,7 @@ public partial class MainWindow {
   if(ConnectionStore.Normalize(" 10.1.2.24 ")!="10.1.2.24"||ConnectionStore.Normalize("2001:db8::1")!="2001:db8::1")throw new Exception("IP parsing failed");
   try{ConnectionStore.Normalize("10.1.2.24;hostname");throw new Exception("Invalid IP accepted");}catch(ArgumentException){}
   string host="endpoint-fixture.invalid";var saved=ConnectionStore.Profiles.GetValueOrDefault(host);
-  try{ConnectionStore.Profiles[host]=new(){Address="192.0.2.10",Identity="fixture-id",ComputerName="FIXTURE",Fqdn=host};
+  try{ConnectionStore.Profiles[host]=new(){AuthMode="Specific",Address="192.0.2.10",Identity="fixture-id",ComputerName="FIXTURE",Fqdn=host};
    var captured=ConnectionStore.Capture(new(){Host=host});ConnectionStore.Profiles[host].Address="192.0.2.11";
    if(ConnectionStore.Address(captured)!="192.0.2.10"||ConnectionStore.Address(new(){Host=host})!="192.0.2.11")throw new Exception("Changing IP redirects saved jobs");
    using var password=new SecureString();foreach(char c in "fixture-only-password")password.AppendChar(c);ConnectionStore.SetCredential("192.0.2.10",false,"fixture-user",password);
