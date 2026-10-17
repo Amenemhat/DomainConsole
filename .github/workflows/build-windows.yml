@@ -273,6 +273,7 @@ jobs:
           foreach($name in @('UsoSvc','bits','fixtureDependent')){
             $s=[pscustomobject]@{Name=$name;ServiceName=$name;Status='Running';DependentServices=@()}
             $s|Add-Member ScriptMethod WaitForStatus {param($state,$timeout);$this.Status=[string]$state}
+            $s|Add-Member ScriptMethod Stop {Stop-Service $this.Name -Force -ErrorAction Stop}
             $fixture[$name]=$s
           }
           $fixture['UsoSvc'].DependentServices=@($fixture['fixtureDependent'])
@@ -588,6 +589,25 @@ jobs:
           try{& ([ScriptBlock]::Create($text))}catch{$blocked=$true}
           if(!$blocked -or $script:payload -ne 1 -or $script:removed -ne 2){throw 'Mismatched identity ran payload or leaked session'}
           Write-Output 'IP endpoint, session-only DPAPI credential, identity guard, and session disposal verified.'
+      - name: Verify forced service process guards without terminating real processes
+        shell: powershell
+        run: |
+          $text=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/force-services-apply.ps1'))
+          $text=[regex]::Replace($text,"(?m)^Add-Type -TypeDefinition .*",'')
+          Add-Type 'using System;public static class DcCriticalService { public static bool Critical=false;public static bool IsProcessCritical(IntPtr p,out bool c){c=Critical;return true;} }'
+          $script:kills=0;$script:started=0;$script:wrong=$false;$script:other=$false
+          function Get-Process {param($Id,$ErrorAction) $p=[pscustomobject]@{Handle=[IntPtr]1;Path=(Join-Path $env:windir 'System32/svchost.exe');StartTime=[DateTime]::SpecifyKind([DateTime]'2026-01-01',[DateTimeKind]::Utc)};if($script:wrong){$p.StartTime=$p.StartTime.AddMinutes(1)};$p|Add-Member ScriptMethod Kill {$script:kills++};$p|Add-Member ScriptMethod WaitForExit {param($ms) return $true};$p|Add-Member ScriptMethod Dispose {};return $p}
+          function Get-CimInstance {param($ClassName,$Filter,$ErrorAction) @([pscustomobject]@{Name='bits';State='Running'});if($script:other){[pscustomobject]@{Name='WinRM';State='Running'}}}
+          function Get-Service {param($Name,$ErrorAction) $s=[pscustomobject]@{DependentServices=@()};$s|Add-Member ScriptMethod WaitForStatus {param($state,$wait)};return $s}
+          function Start-Service {param($Name,$ErrorAction) $script:started++}
+          & ([ScriptBlock]::Create($text))
+          if($script:kills -ne 1 -or $script:started -ne 1){throw 'Confirmed fixture did not restore service'}
+          foreach($scenario in @('identity','shared','critical')){
+            $script:wrong=$scenario -eq 'identity';$script:other=$scenario -eq 'shared';[DcCriticalService]::Critical=$scenario -eq 'critical';$blocked=$false
+            try{& ([ScriptBlock]::Create($text))}catch{$blocked=$true}
+            if(!$blocked -or $script:kills -ne 1){throw 'Unsafe fixture allowed termination'}
+          }
+          Write-Output 'Verified confirmed PID, reused PID, shared host and critical-process guards; no real process killed.'
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:

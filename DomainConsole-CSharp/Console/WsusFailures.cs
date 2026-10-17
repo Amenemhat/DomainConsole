@@ -78,7 +78,7 @@ public partial class MainWindow {
    }else lines.Add("WSUS сообщает ошибки, но список обновлений недоступен. Причина не установлена.");
    if(!reportCache.TryGetValue(row.Host,out var cached)||!ReferenceEquals(cached.Report,report)||cached.Server!=server||server!=OverviewServer)return;
    report.FailureContext=string.Join("\n\n",lines);
-   report.FailureSummary=string.Join("\n",report.FailedUpdates.Select(u=>"KB "+u.KB+": сохранённая неудача WSUS; события и коды см. в разделе «Сведения WSUS и клиентская история»."))+(RebootReason(row).Length>0?"\nКлиент подтверждает необходимость перезагрузки. Это приоритетное действие; серверная сводка может ещё не учитывать завершение установки.":"");
+   report.FailureSummary=string.Join("\n",report.FailedUpdates.Select(u=>"KB "+u.KB+": сохранённая неудача WSUS; события и коды см. в разделе «Сведения WSUS и клиентская история»."))+(RebootReason(row).Length>0?"\nКлиент подтверждает необходимость перезагрузки. Это приоритетное действие; данные WSUS показаны отдельно от клиентского флага.":"");
    wsusFailureDetails[row.Host]="## Сведения WSUS и клиентская история\n"+report.FailureContext;
    serverReports[row.Host]=report.Format(server,cached.Started);Store.Write("wsus-report-cache.json",reportCache);
    if(IsCurrent(row))ShowCurrent();
