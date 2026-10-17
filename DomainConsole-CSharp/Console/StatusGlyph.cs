@@ -16,5 +16,5 @@ public sealed class StatusGlyph:FrameworkElement {
  "Access"=>"M 4,8 L 14,8 L 14,16 L 4,16 Z M 6,8 L 6,5 A 3,3 0 0 1 12,5 L 12,8",
  "NoWsus"=>"M 9,2 A 7,7 0 1 1 8.99,2 M 4,14 L 14,4",
  _=>"M 5,5 C 5,0 15,0 13,7 L 9,10 L 9,12 M 9,15 L 9,16"};
- protected override void OnRender(DrawingContext drawing){base.OnRender(drawing);var pen=new Pen(Tint,2){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};drawing.DrawGeometry(null,pen,Geometry.Parse(Shape(Kind)));}
+ protected override void OnRender(DrawingContext drawing){base.OnRender(drawing);drawing.DrawRectangle(Brushes.Transparent,null,new Rect(RenderSize));var pen=new Pen(Tint,2){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};drawing.DrawGeometry(null,pen,Geometry.Parse(Shape(Kind)));}
 }

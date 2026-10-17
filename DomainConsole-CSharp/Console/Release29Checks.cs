@@ -1,0 +1,23 @@
+using System.IO;
+using System.Security;
+using System.Security.Cryptography;
+using System.Text;
+using System.Windows;
+using System.Windows.Media;
+using DomainConsole.Shared;
+namespace DomainConsole;
+public partial class MainWindow {
+ void VerifyRelease29(){
+  var row=new ComputerRow(new(){Host="unknown.invalid"});if(row.OutcomeHint.Length==0||row.LinkHint.Length==0)throw new Exception("Unknown tooltip is empty");row.SetConnection("Unknown","");row.SetOutcome("Unknown","");if(row.OutcomeHint.Length==0||row.LinkHint.Length==0)throw new Exception("Empty probe erased tooltip");
+  var glyph=new StatusGlyph{Kind="Success"};glyph.Measure(new Size(18,18));glyph.Arrange(new Rect(0,0,18,18));var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap(18,18,96,96,PixelFormats.Pbgra32);bitmap.Render(glyph);foreach(var point in new[]{new Point(1,1),new Point(9,9),new Point(17,17)})if(VisualTreeHelper.HitTest(glyph,point)?.VisualHit!=glyph)throw new Exception("Glyph hit area has holes");
+  using var password=new SecureString();foreach(char c in "fixture-not-a-real-password")password.AppendChar(c);
+  var secret=WindowsLoginVault.Protect("fixture-user",password);if(secret.Secret.Contains("fixture-not-a-real-password"))throw new Exception("Secret not protected");
+  string key="DomainConsole/Tests/"+Guid.NewGuid().ToString("N");try{WindowsLoginVault.Save(key,"fixture-user",password);var loaded=WindowsLoginVault.Load(key)??throw new Exception("Vault persistence missing");if(loaded.User!="fixture-user")throw new Exception("Vault user lost");var bytes=ProtectedData.Unprotect(Convert.FromBase64String(loaded.Secret),null,DataProtectionScope.CurrentUser);try{if(Encoding.Unicode.GetString(bytes)!="fixture-not-a-real-password")throw new Exception("Vault secret changed");}finally{Array.Clear(bytes);}}finally{WindowsLoginVault.Forget(key);}if(WindowsLoginVault.Load(key)!=null)throw new Exception("Forget left credential");
+  var settings=ConnectionStore.Authentication;try{ConnectionStore.Authentication=new(){Mode="Current"};var t=new TargetRecord{Host="fixture.invalid",ConnectionSnapshot=true,ConnectionAddress="192.0.2.29",ConnectionIdentity="fixture-id",ConnectionAuth="Current"};if(RemoteService.SessionCode(t).Contains("-Credential"))throw new Exception("Current mode forces password");
+   t.ConnectionAuth="Specific";ConnectionStore.SetCredential(t.ConnectionAddress,false,"fixture-user",password);var explicitCode=RemoteService.SessionCode(t);if(!explicitCode.Contains("-Credential $dcCredential")||explicitCode.Contains("fixture-not-a-real-password"))throw new Exception("Explicit credential lost or exposed");
+   // Shared credential selection is independent of endpoint. It never writes to Data.
+   var sharedField=typeof(ConnectionStore).GetField("sharedSession",System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.NonPublic)!;var prior=sharedField.GetValue(null);try{sharedField.SetValue(null,secret);t.ConnectionAuth="Shared";var other=Store.Clone(t);other.ConnectionAddress="192.0.2.30";if(ConnectionStore.Login(t)?.User!="fixture-user"||ConnectionStore.Login(other)?.User!="fixture-user")throw new Exception("Shared credential is tied to one IP");if(!ConnectionStore.CanConnect(other))throw new Exception("Shared credential unnecessarily prompts");}finally{sharedField.SetValue(null,prior);}
+   if(ConnectionStore.AuthenticationAdvice("0x8009030e").Contains("Введите пароль"))throw new Exception("Ambiguous auth failure demands password");
+  }finally{ConnectionStore.Authentication=settings;}
+ }
+}
