@@ -31,7 +31,7 @@ try{
  $running=@($current|Where-Object {$_.State -ne 'Stopped'}|Select-Object -ExpandProperty Name);$deps=@();foreach($n in $names){$deps+=@((Get-Service $n -ErrorAction Stop).DependentServices|Where-Object {$_.Status -eq 'Running'}|Select-Object -ExpandProperty ServiceName)};$deps=@($deps|Sort-Object -Unique);if(($deps -join '|') -ne (@($expected.Dependents|Sort-Object) -join '|')){throw 'Изменились зависимости; подтвердите заново'};$running+= $deps
  $p.Kill();if(!$p.WaitForExit(10000)){throw 'Выход процесса не подтверждён'}
  Write-Output ('Завершён подтверждённый PID '+$expected.Pid)
- $errors=@();foreach($name in $running){try{Start-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Running,[TimeSpan]::FromSeconds(20));Write-Output ($name+': работает')}catch{$errors+=($name+': '+$_.Exception.Message)}}
+ $errors=@();foreach($name in $running){try{Start-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Running,[TimeSpan]::FromSeconds(20));Write-Output ($name+': работает')}catch{$errors+=($name+': '+$_.Exception.Message)}}
  if($errors.Count){throw ('Часть служб не запущена: '+($errors -join '; '))}
  Write-Output 'Службы запущены. Возобновление загрузки необходимо проверить отдельно.'
 }finally{$p.Dispose()}
