@@ -2,13 +2,13 @@ using System.IO;
 using System.Text.Json;
 using DomainConsole.Shared;
 namespace DomainConsole;
-public sealed class RebootWatch {public bool Confirmed {get;set;}public bool Scan {get;set;}public bool Done {get;set;}public string Phase {get;set;}="";public string FollowupId {get;set;}="";public string BeforeBootUtc {get;set;}="";public DateTimeOffset ExpectedUtc {get;set;}public DateTimeOffset ReadyAfter {get;set;}public string JobId {get;set;}="";public string RequestedUtc {get;set;}="";public string LastError {get;set;}="";public DateTimeOffset Next {get;set;}public DateTimeOffset Until {get;set;}}
+public sealed class RebootWatch {public bool Overdue {get;set;}public string LastProbeUtc {get;set;}="";public string LastResponseUtc {get;set;}="";public string LastBootUtc {get;set;}="";public string DispatchUtc {get;set;}="";public int? DispatchExitCode {get;set;}public string DispatchError {get;set;}="";public bool Confirmed {get;set;}public bool Scan {get;set;}public bool Done {get;set;}public string Phase {get;set;}="";public string FollowupId {get;set;}="";public string BeforeBootUtc {get;set;}="";public DateTimeOffset ExpectedUtc {get;set;}public DateTimeOffset ReadyAfter {get;set;}public string JobId {get;set;}="";public string RequestedUtc {get;set;}="";public string LastError {get;set;}="";public DateTimeOffset Next {get;set;}public DateTimeOffset Until {get;set;}}
 public sealed class RebootSnapshot {public string UptimeReceivedUtc {get;set;}="";public string UptimeCollectedUtc {get;set;}="";public double? UptimeSeconds {get;set;}public string ClientUtc {get;set;}="";public bool? PreservedRequired {get;set;}public string PreservedUtc {get;set;}="";public List<string> Sources {get;set;}=new();public string BootUtc {get;set;}="";public string CollectedUtc {get;set;}="";public bool? Required {get;set;}public string Error {get;set;}="";}
 public partial class MainWindow {
  readonly Dictionary<string,RebootWatch> rebootWatches=new(Store.Read("reboot-watches.json",new Dictionary<string,RebootWatch>()),StringComparer.OrdinalIgnoreCase);
  readonly Dictionary<string,RebootSnapshot> rebootSnapshots=new(Store.Read("reboot-snapshots.json",new Dictionary<string,RebootSnapshot>()),StringComparer.OrdinalIgnoreCase);
  bool checkingReboots;
- static bool RebootReturned(RebootWatch watch,RebootSnapshot snapshot)=>snapshot.Required.HasValue&&DateTimeOffset.TryParse(watch.RequestedUtc,out var sent)&&DateTimeOffset.TryParse(snapshot.BootUtc,out var boot)&&boot>sent&&(watch.BeforeBootUtc.Length==0||snapshot.BootUtc!=watch.BeforeBootUtc);
+ static bool RebootReturned(RebootWatch watch,RebootSnapshot snapshot)=>DateTimeOffset.TryParse(watch.RequestedUtc,out var sent)&&DateTimeOffset.TryParse(snapshot.BootUtc,out var boot)&&boot>sent&&(!DateTimeOffset.TryParse(watch.BeforeBootUtc,out var before)||boot>before);
  static bool ObservedAfter(RebootSnapshot snapshot,string stamp)=>DateTimeOffset.TryParse(snapshot.CollectedUtc,out var observed)&&DateTimeOffset.TryParse(stamp,out var earlier)&&observed>=earlier;
  string RebootReason(ComputerRow row){
   var evidence=new List<(DateTimeOffset At,bool Needed,string Reason)>();

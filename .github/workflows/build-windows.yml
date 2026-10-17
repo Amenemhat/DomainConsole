@@ -546,6 +546,23 @@ jobs:
             if($st.Status -ne 'Cancelled' -or $st.Error){throw ('Countdown cancellation failed: '+($st|ConvertTo-Json -Compress))}
             Write-Output 'Own countdown cancelled cooperatively, independent of Ctrl+C. Shutdown command stubbed; no machine rebooted.'
           } finally {if(!$p.HasExited){Stop-Process -Id $p.Id -Force}}
+      - name: Verify reboot dispatch receipts without rebooting
+        shell: powershell
+        run: |
+          $body=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/header-reboot-dispatch.ps1'))
+          foreach($exit in @(0,5)){
+            $base=Join-Path $env:RUNNER_TEMP ('reboot-receipt-'+$exit)
+            $folder=Join-Path $base 'DomainConsoleCSharp/00000000-0000-0000-0000-000000000026'
+            New-Item $folder -ItemType Directory -Force|Out-Null
+            $stub="function shutdown.exe { `$global:LASTEXITCODE="+$exit+" };`$env:ProgramData='"+$base.Replace("'","''")+"';"
+            $script=Join-Path $base 'receipt.ps1';[IO.File]::WriteAllText($script,$stub+$body,(New-Object Text.UTF8Encoding($true)))
+            & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script
+            if($LASTEXITCODE -ne $exit){throw 'Dispatch exit code lost'}
+            $receipt=Get-Content (Join-Path $folder 'reboot-plan.json') -Raw -Encoding UTF8|ConvertFrom-Json
+            if($receipt.DispatchExitCode -ne $exit -or !$receipt.DispatchUtc){throw 'Missing dispatch receipt'}
+          }
+          $global:LASTEXITCODE=0
+          Write-Output 'Dispatch acceptance and rejection persisted; shutdown was stubbed.'
       - name: Verify read-only reboot state probe
         shell: powershell
         run: |
