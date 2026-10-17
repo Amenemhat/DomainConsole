@@ -18,7 +18,7 @@ ConvertTo-Json -InputObject @($rows) -Depth 5 -Compress
 """;
  public static string ForcedServiceScript(ServiceProcessCandidate candidate)=>"$expected="+PowerShellBridge.Literal(JsonSerializer.Serialize(candidate))+"|ConvertFrom-Json;"+ForceServiceBody;
  public const string ForceServiceBody="""
-$ErrorActionPreference='Stop';$allowed=@('UsoSvc','wuauserv','bits','cryptsvc')
+$ErrorActionPreference='Stop';Add-Type -AssemblyName System.ServiceProcess;$allowed=@('UsoSvc','wuauserv','bits','cryptsvc')
 if($expected.Pid -le 4 -or !$expected.CreatedUtc -or @($expected.Services).Count -eq 0){throw 'Нет подтверждённого адресата'}
 Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices; public static class DcCriticalService { [DllImport("kernel32.dll",SetLastError=true)] public static extern bool IsProcessCritical(IntPtr process,out bool critical); }'
 $p=Get-Process -Id $expected.Pid -ErrorAction Stop
