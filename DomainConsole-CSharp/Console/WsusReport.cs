@@ -1,6 +1,7 @@
 using System.Text.Json;
 namespace DomainConsole;
 public sealed class WsusReport {
+ public int? ClientSearchCount31 {get;set;}public string ClientSearchUtc31 {get;set;}="";
  public int? NeededCount {get;set;}public int ApprovedUnknownCount {get;set;}public int ApprovedDownloadedCount {get;set;}public int ApprovedFailedCount {get;set;}public bool RequiredComplete {get;set;}public string RequiredError {get;set;}="";
  public string TaskEndedUtc {get;set;}="";
  public List<WsusFailedUpdate> FailedUpdates {get;set;}=new();public string FailureSummary {get;set;}="";public string FailureContext {get;set;}="";public string FailureDetailsError {get;set;}="";public string FullDomainName {get;set;}="";public string LastReportedUtc {get;set;}="";public string LastSyncUtc {get;set;}="";public string LastSyncResult {get;set;}="";
@@ -21,6 +22,7 @@ public sealed class WsusReport {
  public string SyncExplanation=>LastSyncResult is "Failed" or "FailedWithErrors"?"Последний поиск клиента с WSUS завершился неудачей. Это сохранённый результат, не проверка текущей доступности. Код причины в LastSyncResult отсутствует. Выполните новый поиск; при повторении соберите клиентский журнал вокруг времени сбоя.":"";
  public string Format(string server,string started){
   var lines=new List<string>{"## Требуется клиенту",NeededCount.HasValue?(DateTimeOffset.TryParse(LastReportedUtc,out var reportTime31)&&DateTimeOffset.UtcNow-reportTime31<TimeSpan.FromDays(1)?"К установке: ":"По сохранённому отчёту к установке: ")+NeededCount+(RequiredComplete?" — одобрены для этого клиента":" или больше — применимость части обновлений неизвестна"):"К установке: — · количество пока не определено"};
+  if(ClientSearchCount31.HasValue)lines.Add("Последний успешный поиск на клиенте: найдено "+ClientSearchCount31+" · "+(DateTimeOffset.TryParse(ClientSearchUtc31,out var clientAt31)?clientAt31.ToLocalTime().ToString("dd.MM HH:mm"):"время неизвестно")+". Это отдельный источник, не счётчик одобрений WSUS.");
   if(NeededCount.HasValue)lines.Add("Из них скачано: "+ApprovedDownloadedCount+"; с неудачей последней попытки: "+ApprovedFailedCount);
   if(InstalledPendingRebootCount>0)lines.Add("Ожидают перезагрузки: "+InstalledPendingRebootCount);
   if(ApprovedUnknownCount>0)lines.Add("Одобрены, применимость не определена: "+ApprovedUnknownCount);
