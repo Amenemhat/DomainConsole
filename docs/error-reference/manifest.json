@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-18",
+  "counts": {
+    "hresult_values": 4302,
+    "win32_values": 2745,
+    "russian_cards": 146,
+    "technical_only": 4156
+  },
+  "sha256": {
+    "sdk-symbols.json": "c2a66fdbe06a6dc900f73f08a9c48514643342493ae2dbfa553fb566a3688ecd",
+    "win32-symbols.json": "5b59255124827aa51863ab26f8b8f5cada5d9b3dae8ca5cbe0054927c5bfc4b8",
+    "cards.tsv": "060a346d714d768e4ef74757f4b73915b9407d3ad1ddda7ac8ba121e689489f5",
+    "catalog.json": "b618375c213dceea48f843c999584252870a2cfa3acbffe92ee037e5437d1607",
+    "REFERENCE.ru.md": "a9c52990637b871498f0bd818a2e5fbfb575606b642574b1d223d54d37efae97"
+  }
+}
