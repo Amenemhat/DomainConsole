@@ -5,6 +5,7 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  void VerifyDevelopment30(){
+  var wait=new ReportWait30{Id="report-job",Until=DateTimeOffset.UtcNow.AddMinutes(2),Next=DateTimeOffset.UtcNow};var restoredWait=Store.Clone(wait);if(restoredWait.Id!=wait.Id||restoredWait.Until!=wait.Until)throw new Exception("Pending report receipt was lost on restart");
   const string before="2026-10-16T03:38:46Z",boot="2026-10-17T20:37:36Z",oldAt="2026-10-17T20:19:47Z",now="2026-10-17T21:15:46Z";
   var old=new RebootSnapshot{BootUtc=before,Required=true,CollectedUtc=oldAt};var fresh=new RebootSnapshot{BootUtc=boot,Required=null,CollectedUtc=now,Error="WUA: 0x80070005"};RebootSnapshotPolicy.Merge(old,fresh);if(fresh.PreservedRequired.HasValue||!RebootSnapshotPolicy.NewBoot(old,fresh))throw new Exception("Prior boot reboot evidence survived a new boot");
   var same=new RebootSnapshot{BootUtc=before,Required=null,CollectedUtc=now};RebootSnapshotPolicy.Merge(old,same);if(same.PreservedRequired!=true)throw new Exception("Same-boot partial read discarded valid evidence");
