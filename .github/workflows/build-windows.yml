@@ -224,7 +224,7 @@ jobs:
         run: |
           $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           $check = @'
-          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1','header-reboot.ps1','reboot-state.ps1','cache-cleanup-30.ps1','reboot-system-30.ps1')){
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1','header-reboot.ps1','reboot-state.ps1','cache-cleanup-30.ps1','reboot-system-30.ps1','automatic-queue-recovery.ps1')){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
             if($errors.Count){throw ($errors|Out-String)}
@@ -434,6 +434,45 @@ jobs:
             if(!(Get-ChildItem (Split-Path $download) -Filter 'Download.DomainConsoleBackup_*')){throw 'Backup missing'}
             if(@('UsoSvc','wuauserv','bits','cryptsvc'|Where-Object {$states[$_] -ne 'Running'}).Count){throw 'Not all update services were started'}
           } finally {$env:windir=$oldWindir}
+      - name: Verify automatic queue recovery without touching real services
+        shell: pwsh
+        run: |
+          $base=Join-Path $env:RUNNER_TEMP 'DomainConsole-auto-queue'
+          $template=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/automatic-queue-recovery.ps1'))
+          $template=$template.Replace('(New-Object -ComObject Microsoft.Update.Installer).IsBusy','$fixtureBusy')
+          $prefix=@'
+          $ErrorActionPreference='Stop'
+          $env:windir=$env:DOMAINCONSOLE_AUTO_QUEUE_FIXTURE
+          $states=@{UsoSvc='Running';wuauserv='Running';bits='Running';cryptsvc='Running'}
+          $fixtureBusy=$env:DOMAINCONSOLE_AUTO_QUEUE_CASE -eq 'busy'
+          function Get-ItemProperty {param($Path,$ErrorAction) [pscustomobject]@{WUServer='http://wsus.invalid:8530';WUStatusServer='http://wsus.invalid:8530';UseWUServer=1;SusClientId='fixture'}}
+          function Get-CimInstance {param($ClassName,$Filter) if($ClassName -eq 'Win32_OperatingSystem'){[pscustomobject]@{Caption='fixture';BuildNumber='1'}}else{[pscustomobject]@{IPAddress=@('192.0.2.30')}}}
+          function Get-Service {param($Name,$ErrorAction) foreach($n in @($Name)){$obj=[pscustomobject]@{Name=$n;Status=$states[$n]};$obj|Add-Member ScriptMethod WaitForStatus {param($status,$timeout)};$obj}}
+          function Stop-Service {param($Name,$ErrorAction) Set-Content (Join-Path $env:windir 'stopped.txt') 'mock';$states[$Name]='Stopped'}
+          function Start-Service {param($Name,$ErrorAction) $states[$Name]='Running'}
+          '@
+          foreach($case in @('old','recent','busy')){
+            $fixture=Join-Path $base $case
+            foreach($folder in @('EventCache','EventCache.v2','Download','DataStore')){New-Item (Join-Path $fixture ('SoftwareDistribution/'+$folder)) -ItemType Directory -Force|Out-Null;Set-Content (Join-Path $fixture ('SoftwareDistribution/'+$folder+'/keep.bin')) 'fixture'}
+            foreach($folder in @('EventCache','EventCache.v2')){(Get-Item (Join-Path $fixture ('SoftwareDistribution/'+$folder+'/keep.bin'))).CreationTimeUtc=if($case -eq 'recent'){[DateTime]::UtcNow}else{[DateTime]::UtcNow.AddDays(-3)}}
+            $script=Join-Path $base ($case+'.ps1')
+            $suffix="`n"+'$states|ConvertTo-Json|Set-Content (Join-Path $env:windir ''states.json'')'
+            [IO.File]::WriteAllText($script,$prefix+"`n"+$template+$suffix,(New-Object Text.UTF8Encoding($true)))
+            $env:DOMAINCONSOLE_AUTO_QUEUE_FIXTURE=$fixture;$env:DOMAINCONSOLE_AUTO_QUEUE_CASE=$case
+            & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -File $script
+            $exit=$LASTEXITCODE
+            if($case -eq 'old'){
+              if($exit -ne 0 -or (Test-Path (Join-Path $fixture 'SoftwareDistribution/EventCache.v2'))){throw 'Eligible old queue was not cleared'}
+              $restored=Get-Content (Join-Path $fixture 'states.json') -Raw|ConvertFrom-Json
+              if(@($restored.PSObject.Properties|Where-Object Value -ne 'Running').Count){throw 'Not all mock services restored'}
+            }elseif($case -eq 'recent'){
+              if($exit -ne 0 -or (Test-Path (Join-Path $fixture 'stopped.txt')) -or !(Test-Path (Join-Path $fixture 'SoftwareDistribution/EventCache.v2/keep.bin'))){throw 'Recent queue was modified'}
+            }else{
+              if($exit -eq 0 -or (Test-Path (Join-Path $fixture 'stopped.txt')) -or !(Test-Path (Join-Path $fixture 'SoftwareDistribution/EventCache.v2/keep.bin'))){throw 'Busy installer did not prevent cleanup'}
+            }
+            foreach($folder in @('Download','DataStore')){if(!(Test-Path (Join-Path $fixture ('SoftwareDistribution/'+$folder+'/keep.bin')))){throw 'Auto recovery touched unrelated cache'}}
+          }
+          $global:LASTEXITCODE=0
       - name: Verify report queue recovery
         shell: pwsh
         run: |
