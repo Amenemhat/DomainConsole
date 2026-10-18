@@ -49,7 +49,7 @@ namespace DomainConsole.Agent {
   }
   static int PowerShell(string code,string prefix,int diagnosticTimeout=0){
    var file=FilePath(prefix+".command.txt");File.WriteAllText(file,code,new UTF8Encoding(true));
-   var loader="$dcAllowUpdateConflict="+(Job!=null&&Job.AllowUpdateConflict?"$true":"$false")+";[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false);$OutputEncoding=[Console]::OutputEncoding;$ProgressPreference='SilentlyContinue';$ErrorActionPreference='Stop';$global:LASTEXITCODE=$null;try{& ([ScriptBlock]::Create([IO.File]::ReadAllText('"+file.Replace("'","''")+"',[Text.Encoding]::UTF8)));if($null -ne $LASTEXITCODE){[IO.File]::WriteAllText('"+FilePath(prefix+".native.json").Replace("'","''")+"',[string]$LASTEXITCODE)}}catch{[IO.File]::WriteAllText('"+FilePath(prefix+".failure.txt").Replace("'","''")+"',$_.Exception.Message);[Console]::Error.WriteLine($_.Exception.Message);[Console]::Error.WriteLine('Target: '+[string]$_.TargetObject);[Console]::Error.WriteLine($_.InvocationInfo.PositionMessage);exit 1}";
+   var loader="$dcAllowUpdateConflict="+(Job!=null&&Job.AllowUpdateConflict?"$true":"$false")+";[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false);$OutputEncoding=[Console]::OutputEncoding;$ProgressPreference='SilentlyContinue';$ErrorActionPreference='Stop';$global:LASTEXITCODE=$null;try{& ([ScriptBlock]::Create([IO.File]::ReadAllText('"+file.Replace("'","''")+"',[Text.Encoding]::UTF8)));if($null -ne $LASTEXITCODE){[IO.File]::WriteAllText('"+FilePath(prefix+".native.json").Replace("'","''")+"',[string]$LASTEXITCODE)}}catch{[IO.File]::WriteAllText('"+FilePath(prefix+".failure.txt").Replace("'","''")+"',$_.Exception.Message);[Console]::Error.WriteLine($_.Exception.Message);[Console]::Error.WriteLine('Target: '+[string]$_.TargetObject);[Console]::Error.WriteLine('Exception: '+$_.Exception.GetType().FullName+'; HRESULT: 0x'+$_.Exception.HResult.ToString('X8'));[Console]::Error.WriteLine('ErrorId: '+$_.FullyQualifiedErrorId);if($_.Exception.InnerException){[Console]::Error.WriteLine($_.Exception.InnerException.ToString())};[Console]::Error.WriteLine('Stack: '+$_.ScriptStackTrace);[Console]::Error.WriteLine($_.InvocationInfo.PositionMessage);exit 1}";
    var exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),@"WindowsPowerShell\v1.0\powershell.exe");
    return Run(exe,"-NoLogo -NoProfile -NonInteractive -EncodedCommand "+Convert.ToBase64String(Encoding.Unicode.GetBytes(loader)),prefix,diagnosticTimeout);
   }
@@ -136,6 +136,7 @@ namespace DomainConsole.Agent {
    if(args.Length==1&&args[0]=="emit-encoding-fixture"){EmitEncodingFixture();return 0;}
    if(args.Length==2&&args[0]=="update-smoke")return UpdateSmoke(args[1]);
    if(args.Length==2&&args[0]=="cleanup-smoke")return ClientCleanup.Smoke(args[1]);
+   if(args.Length==2&&args[0]=="cache-delete")return CacheCleanup31.Delete(args[1]);
    if(args.Length==2&&args[0]=="cleanup")return ClientCleanup.Run(args[1]);
    if(args.Length==2&&args[0]=="diagnostic-smoke")return DiagnosticSmoke(args[1]);
    if(args.Length==2&&args[0]=="output-smoke")return VerifyOutput(args[1]);
@@ -205,4 +206,5 @@ namespace DomainConsole.Agent {
   }
  }
 }
+
 

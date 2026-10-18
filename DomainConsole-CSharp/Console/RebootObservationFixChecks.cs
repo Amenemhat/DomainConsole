@@ -11,7 +11,7 @@ public partial class MainWindow {
   var row=Computers.Last();var prior=rebootWatches.GetValueOrDefault(row.Host);try{
    var job=new RemoteJob{Name="Перезагрузка текущего компьютера"};rebootWatches[row.Host]=watch;watch.JobId=job.Id;watch.Done=false;
    RegisterRebootPlan(job,row,new(){RebootPlan=new(){RequestedUtc=watch.RequestedUtc,DueUtc=watch.ExpectedUtc.ToString("o"),DispatchUtc=now.ToString("o"),DispatchExitCode=5,DispatchError="Access denied"},ClientUtc=now.ToString("o")});
-   if(!watch.Done||!PostRebootText(row.Host).Contains("Access denied"))throw new Exception("Dispatch failure still waits");
+   if(!watch.Done||PostRebootText(row.Host).Length!=0)throw new Exception("Dispatch failure still waits");
    watch.Done=false;RegisterRebootPlan(job,row,new(){RebootPlan=new(){Cancelled=true}});if(!watch.Done||!watch.Phase.Contains("отменена"))throw new Exception("Cancelled plan still waits");
   }finally{if(prior==null)rebootWatches.Remove(row.Host);else rebootWatches[row.Host]=prior;Store.Write("reboot-watches.json",rebootWatches);}
   var code=HeaderRebootCode(0,"Dispatch fixture",false).Replace("{{REBOOT_JOB}}","00000000-0000-0000-0000-000000000026");
@@ -19,3 +19,4 @@ public partial class MainWindow {
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"header-reboot-dispatch.ps1"),code,new UTF8Encoding(true));
  }
 }
+

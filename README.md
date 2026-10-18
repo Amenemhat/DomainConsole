@@ -1,10 +1,16 @@
+## Версия 0.31
+
+Общее автообслуживание WSUS (включено по умолчанию), новая шапка и история событий, читаемый отчёт WSUS со счётчиком одобренных обновлений. Встроены 4302 технических значения HRESULT и 146 русских диагностических карточек. Полный сброс кэша изолирует старый каталог и отдельно учитывает его отложенное удаление.
+
+Перезагрузка только с отдельным разрешением. Произвольные команды не запускают обслуживание. Сохраняйте каталог Data при обновлении. Подробности: [0.31](docs/releases/0.31.md).
+
 # DomainConsole
 
 Настольная консоль администрирования Windows-компьютеров домена: команды CMD и PowerShell, обслуживание системы и работа с клиентами WSUS из одного окна.
 
 **Текущая версия: 0.30.** Нативный интерфейс C# / WPF; переносимый пакет Windows x64.
 
-[Скачать 0.30](https://github.com/Amenemhat/DomainConsole/releases/download/v0.30/DomainConsole-0.30-Windows-x64.zip) · [Releases](https://github.com/Amenemhat/DomainConsole/releases) · [План работ / Issues](https://github.com/Amenemhat/DomainConsole/issues) · [Изменения 0.30](docs/releases/0.30.md)
+[Скачать 0.30](https://github.com/Amenemhat/DomainConsole/releases/download/v0.31/DomainConsole-0.31-Windows-x64.zip) · [Releases](https://github.com/Amenemhat/DomainConsole/releases) · [План работ / Issues](https://github.com/Amenemhat/DomainConsole/issues) · [Изменения 0.30](docs/releases/0.30.md)
 
 Готовые пакеты публикуются в Releases вместе с SHA-256 и описанием изменений. Компилировать приложение для использования не требуется.
 
@@ -134,3 +140,4 @@
 ## Сценарии обслуживания 0.30
 
 Подробное поведение описано в [описании обслуживания](docs/maintenance-development.md) и [изменениях 0.30](docs/releases/0.30.md). Замечания фиксируются в Issues; следующий выпуск — по отдельной команде владельца.
+

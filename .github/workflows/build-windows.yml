@@ -679,6 +679,30 @@ jobs:
           $null=& ([ScriptBlock]::Create($add))
           if($script:writes -ne 1 -or $script:entries.Contains('*')){throw 'Duplicate write or wildcard added'}
           Write-Output 'Exact IP trust preflight and preservation verified with mocked WSMan only.'
+      - name: Verify effective approval count and isolated cache reset
+        shell: pwsh
+        run: |
+          $folder=Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
+          Add-Type 'namespace Microsoft.UpdateServices.Administration { [System.Flags] public enum ApprovedStates {LatestRevisionApproved=1} [System.Flags] public enum UpdateApprovalActions {Install=1} [System.Flags] public enum UpdateInstallationStates {NotInstalled=1,Downloaded=2,Failed=4,Unknown=8} public class UpdateScope {public ApprovedStates ApprovedStates;public UpdateApprovalActions UpdateApprovalActions;public UpdateInstallationStates IncludedInstallationStates;} }'
+          . (Join-Path $folder 'required-updates31.ps1')
+          $target=[pscustomobject]@{}
+          $target|Add-Member ScriptMethod GetUpdateInstallationInfoPerUpdate {param($scope)
+            if($scope.ApprovedStates -ne 'LatestRevisionApproved' -or $scope.UpdateApprovalActions -ne 'Install'){throw 'Approval scope missing'}
+            @([pscustomobject]@{UpdateId='a';UpdateApprovalAction='Install';UpdateInstallationState='NotInstalled'},[pscustomobject]@{UpdateId='a';UpdateApprovalAction='Install';UpdateInstallationState='NotInstalled'},[pscustomobject]@{UpdateId='b';UpdateApprovalAction='Install';UpdateInstallationState='Downloaded'},[pscustomobject]@{UpdateId='c';UpdateApprovalAction='Install';UpdateInstallationState='Failed'},[pscustomobject]@{UpdateId='d';UpdateApprovalAction='Uninstall';UpdateInstallationState='NotInstalled'},[pscustomobject]@{UpdateId='e';UpdateApprovalAction='Install';UpdateInstallationState='Unknown'})
+          }
+          $result=Read-RequiredUpdates31 $target
+          if($result.NeededCount -ne 3 -or $result.ApprovedDownloadedCount -ne 1 -or $result.ApprovedFailedCount -ne 1 -or $result.ApprovedUnknownCount -ne 1 -or $result.RequiredComplete){throw ('Incorrect count: '+($result|ConvertTo-Json))}
+          $check=@'
+          $fixture=Join-Path $env:TEMP ('dc-cache31-'+[Guid]::NewGuid().ToString('N'));$original=$env:windir;$env:windir=$fixture
+          $body=[IO.File]::ReadAllText((Join-Path $env:TEMP 'cache-full31.ps1')).Replace('(New-Object -ComObject Microsoft.Update.Installer).IsBusy','$false')
+          function Get-Service($Name){$s=[pscustomobject]@{Status='Running'};$s|Add-Member ScriptMethod WaitForStatus {param($a,$b)};return $s}
+          function Stop-Service($Name){}
+          function Start-Service($Name){}
+          function Start-ScheduledTask($TaskName){}
+          try{New-Item (Join-Path $fixture 'SoftwareDistribution/Download') -ItemType Directory -Force|Out-Null;Set-Content (Join-Path $fixture 'SoftwareDistribution/Download/payload.bin') 'fixture';& ([ScriptBlock]::Create($body));if(!(Test-Path (Join-Path $fixture 'SoftwareDistribution'))){throw 'Fresh root missing'};$old=@(Get-ChildItem $fixture -Directory -Filter 'SoftwareDistribution.DomainConsolePendingDelete_*');if($old.Count -ne 1 -or !(Test-Path (Join-Path $old[0].FullName 'Download/payload.bin'))){throw 'Old cache not isolated'};$rejected=$false;try{& ([ScriptBlock]::Create($body))}catch{$rejected=$true};if(!$rejected){throw 'Repeated reset accumulates folders'}}finally{$env:windir=$original;Remove-Item $fixture -Recurse -Force -ErrorAction SilentlyContinue}
+          '@
+          & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
+          if($LASTEXITCODE -ne 0){throw 'Full cache isolation fixture failed'}
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:
@@ -692,5 +716,6 @@ jobs:
           name: DomainConsole-UI-review
           path: ${{ runner.temp }}/DomainConsole-smoke/ui-*.png
           if-no-files-found: warn
+
 
 

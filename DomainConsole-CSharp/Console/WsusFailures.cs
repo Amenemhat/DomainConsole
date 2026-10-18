@@ -34,7 +34,7 @@ public static class WsusFailurePresentation {
   string text=LocalDateConverter.Format(item.Date)+" · ревизия "+item.Revision+" · событие "+item.EventId+" · "+item.Type+" · состояние: "+item.Status;
   bool missing=string.IsNullOrWhiteSpace(item.Message)||item.Message.Contains("ReportingEvent.",StringComparison.OrdinalIgnoreCase)||item.Message.StartsWith("Описание события недоступно");
   text+="\n"+(missing?"Описание события WSUS не расшифровано; исходные данные: "+item.Message:item.Message);
-  if(item.IsError&&item.ErrorCode.HasValue&&item.ErrorCode!=0){int code=unchecked((int)item.ErrorCode.Value);text+="\nКод события WSUS: "+ExecutionDiagnosis.Code(code)+" · "+ExecutionDiagnosis.Explain(code)+(recommend?"\nРекомендуется по этому событию: "+ExecutionDiagnosis.Recommend(code):"");}
+  if(item.IsError&&item.ErrorCode.HasValue&&item.ErrorCode!=0){int code=unchecked((int)item.ErrorCode.Value);text+="\nКод события WSUS: "+ExecutionDiagnosis.Code(code)+" · "+ExecutionDiagnosis.Explain(code)+("");}
   else if(item.IsError||missing)text+="\nКод причины не получен. Номер события не является HRESULT.";
   return text;
  }
@@ -55,7 +55,7 @@ public static class WsusFailurePresentation {
    if(latest.ResultCode==1||unchecked((uint)latest.HResult)==0x80242014)lines.Add("Результат истории ещё не окончательный; проверьте необходимость перезагрузки. Не считать эту запись новой ошибкой текущего задания.");
   }
   if(!events.Any(e=>e.IsError&&e.ErrorCode.HasValue&&e.ErrorCode!=0)&&(failed==null||failed.HResult==0))lines.Add("Код соответствующего сбоя не получен. Сбор WindowsUpdate / BITS и журнала пакета поможет уточнить причину; установка автоматически не запускается.");
-  if(failed!=null&&failed.HResult!=0&&!reboot&&latest==failed&&latest.ResultCode is 3 or 4 or 5)lines.Add("Рекомендация по неудачной записи истории: "+ExecutionDiagnosis.Recommend(failed.HResult));
+  
   lines.Add("История и события описывают отдельные попытки. Их совпадение с текущим заданием не установлено.");
   return string.Join("\n",lines);
  }
@@ -79,9 +79,10 @@ public partial class MainWindow {
    if(!reportCache.TryGetValue(row.Host,out var cached)||!ReferenceEquals(cached.Report,report)||cached.Server!=server||server!=OverviewServer)return;
    report.FailureContext=string.Join("\n\n",lines);
    report.FailureSummary=string.Join("\n",report.FailedUpdates.Select(u=>"KB "+u.KB+": сохранённая неудача WSUS; события и коды см. в разделе «Сведения WSUS и клиентская история»."))+(RebootReason(row).Length>0?"\nКлиент подтверждает необходимость перезагрузки. Это приоритетное действие; данные WSUS показаны отдельно от клиентского флага.":"");
-   wsusFailureDetails[row.Host]="## Сведения WSUS и клиентская история\n"+report.FailureContext;
+   wsusFailureDetails[row.Host]="## Технические подробности · WSUS и история\n"+report.FailureContext;
    serverReports[row.Host]=report.Format(server,cached.Started);Store.Write("wsus-report-cache.json",reportCache);
    if(IsCurrent(row))ShowCurrent();
   }finally{failureReading.Remove(row.Host);}
  }
 }
+
