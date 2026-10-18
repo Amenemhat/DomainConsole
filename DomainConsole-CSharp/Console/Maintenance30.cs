@@ -10,7 +10,7 @@ public partial class MainWindow {
  readonly Dictionary<string,string> observedReturns=new(Store.Read("observed-return-scans.json",new Dictionary<string,string>()),StringComparer.OrdinalIgnoreCase);
  bool advancingMaintenance;
  static bool ActiveTarget(TargetRecord t)=>t.Status is "Queued" or "Sending" or "Submitted" or "Running" or "SubmissionUnknown";
- static bool TerminalSuccess(TargetRecord t)=>t.Status is "Completed" or "VerifiedAfterReboot" or "AwaitingReboot" or "RebootScheduled";
+ static bool TerminalSuccess(TargetRecord t)=>t.Status is "Completed" or "VerifiedAfterReboot" or "AwaitingReboot" or "RebootScheduled" or "RebootObserved";
  void SaveMaintenance()=>Store.Write("maintenance-plans.json",maintenancePlans);
  void BeginMaintenance(RemoteJob job){foreach(var t in job.Targets){maintenancePlans[t.Host]=new(){Host=t.Host,Identity=t.ConnectionIdentity,JobId=job.Id,Install=true,Phase="Выполняется полное обслуживание",Cycles=1};}SaveMaintenance();}
  // A positive indication from the previous boot is history, never a fresh request to restart again.

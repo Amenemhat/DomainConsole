@@ -18,8 +18,7 @@ public partial class MainWindow {
  void ApplyClientSnapshot(string host,RebootSnapshot next){
   rebootSnapshots.TryGetValue(host,out var old);if(old!=null&&DateTimeOffset.TryParse(old.CollectedUtc,out var prior)&&DateTimeOffset.TryParse(next.CollectedUtc,out var collected)&&collected<prior)return;RebootSnapshotPolicy.Merge(old,next);if(old!=null&&next.UptimeSeconds==null&&RebootSnapshotPolicy.SameBoot(old,next)){next.UptimeSeconds=old.UptimeSeconds;next.UptimeReceivedUtc=old.UptimeReceivedUtc;next.UptimeCollectedUtc=old.UptimeCollectedUtc.Length>0?old.UptimeCollectedUtc:old.CollectedUtc;}
   if(next.UptimeSeconds.HasValue&&next.UptimeReceivedUtc.Length==0)next.UptimeReceivedUtc=DateTime.UtcNow.ToString("o");
-  rebootSnapshots[host]=next;Store.Write("reboot-snapshots.json",rebootSnapshots);RecordStatusDiagnostic(host,next);
-  ObserveUnplannedReturn(host,old,next);
+  rebootSnapshots[host]=next;Store.Write("reboot-snapshots.json",rebootSnapshots);RecordStatusDiagnostic(host,next);ObserveUnplannedReturn(host,old,next);ReconcileRebootHistory(host,next);
  }
  public static string Age(TimeSpan value)=>value<TimeSpan.Zero?"время некорректно":value.TotalMinutes<1?"менее минуты":value.TotalDays>=1?(int)value.TotalDays+" д "+value.Hours+" ч":value.TotalHours>=1?(int)value.TotalHours+" ч "+value.Minutes+" мин":(int)value.TotalMinutes+" мин";
  string UptimeText(string host){if(!rebootSnapshots.TryGetValue(host,out var s)||!s.UptimeSeconds.HasValue||s.UptimeSeconds<0)return "Аптайм не получен";bool fresh=ConnectionFresh(host)&&DateTimeOffset.TryParse(s.UptimeReceivedUtc,out var received)&&DateTimeOffset.UtcNow>=received&&DateTimeOffset.UtcNow-received<TimeSpan.FromSeconds(90);var age=TimeSpan.FromSeconds(s.UptimeSeconds.Value);return "Работает: "+Age(age)+(fresh?"":" (снимок)");}
