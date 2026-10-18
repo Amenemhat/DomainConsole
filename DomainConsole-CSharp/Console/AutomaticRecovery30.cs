@@ -1,0 +1,57 @@
+using DomainConsole.Shared;
+using System.Text.Json;
+namespace DomainConsole;
+public sealed class ReportRecovery30 {
+ public TargetRecord Target {get;set;}=new();public string TriggerId {get;set;}="";public string JobId {get;set;}="";public string PolicySource {get;set;}="";public string ReportingSource {get;set;}="";public string Server {get;set;}="";public string ReportUtc {get;set;}="";public string CreatedUtc {get;set;}=DateTime.UtcNow.ToString("o");public string Phase {get;set;}="Ожидается восстановление отчётности";public string Detail {get;set;}="";public bool Done {get;set;}public DateTimeOffset Next {get;set;}
+}
+public static class ReportRecoveryPolicy30 {
+ public static bool Backlog(ClientReportProbe client,int hours,DateTimeOffset now){
+  if(client.QueueError.Length>0||!DateTimeOffset.TryParse(client.CollectedUtc,out var collected)||collected>now.AddMinutes(5)||now-collected>TimeSpan.FromMinutes(5)||client.UseWUServer!=1)return false;
+  if(!Uri.TryCreate(client.WUServer,UriKind.Absolute,out var source)||source.Scheme is not ("http" or "https")||!Uri.TryCreate(client.WUStatusServer,UriKind.Absolute,out var reporting)||reporting.Scheme is not ("http" or "https"))return false;
+  if(client.Queues.Count!=2||!client.Queues.Select(q=>q.Name).ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(new[]{"EventCache","EventCache.v2"})||client.Queues.Any(q=>q.Files<0||q.Bytes<0))return false;
+  return client.Queues.Any(q=>q.Files>0&&DateTimeOffset.TryParse(q.OldestUtc,out var at)&&at.Year>2000&&at<=now&&now-at>=TimeSpan.FromHours(hours));
+ }
+ public static bool Recommended(ClientReportProbe client,WsusReport report,int hours,DateTimeOffset now)=>DateTimeOffset.TryParse(report.LastReportedUtc,out var last)&&last.Year>2000&&last<=now&&now-last>=TimeSpan.FromHours(hours)&&Backlog(client,hours,now);
+ public static bool NewEpisode(ReportRecovery30? prior,string reportUtc,DateTimeOffset now)=>prior==null||prior.Done&&DateTimeOffset.TryParse(prior.CreatedUtc,out var created)&&now-created>=TimeSpan.FromDays(1)&&DateTimeOffset.TryParse(reportUtc,out var report)&&report>created;
+}
+public partial class MainWindow {
+ readonly Dictionary<string,ReportRecovery30> reportRecoveries=new(Store.Read("automatic-report-recovery.json",new Dictionary<string,ReportRecovery30>()),StringComparer.OrdinalIgnoreCase);
+ bool advancingReportRecovery;
+ bool AutomaticReportRecoveryEnabled=>Store.Read("automatic-report-recovery-enabled.json",true);
+ void SaveReportRecoveries()=>Store.Write("automatic-report-recovery.json",reportRecoveries);
+ RemoteJob? RecoveryTrigger(ComputerRow row)=>History.FirstOrDefault(j=>IsWsusJob(j)&&j.Targets.Any(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)));
+ bool CanTriggerReportRecovery(RemoteJob? job,string host){var target=job?.Targets.FirstOrDefault(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase));return job!=null&&job.Steps.Any(s=>s.Kind is "Updates" or "UpdateScan")&&!job.Steps.Any(s=>s.Kind is "CacheCleanup" or "ReportRecovery")&&!reportRecoveries.Values.Any(p=>p.JobId==job.Id)&&target!=null&&(TerminalSuccess(target)||target.Status is "Failed" or "CompletedWithErrors")&&target.State?.ReportRequested==true&&target.State.Ended.Length>0;}
+ void ScheduleReportRecovery(ComputerRow row,WsusReport report,ClientReportProbe client){
+  if(!AutomaticReportRecoveryEnabled||row.Target.AdDisabled||!ReportRecoveryPolicy30.Recommended(client,report,ReportAgeHours(),DateTimeOffset.UtcNow))return;
+  var trigger=RecoveryTrigger(row);if(!CanTriggerReportRecovery(trigger,row.Host))return;
+  if(!ReportRecoveryPolicy30.NewEpisode(reportRecoveries.GetValueOrDefault(row.Host),report.LastReportedUtc,DateTimeOffset.UtcNow))return;
+  reportRecoveries[row.Host]=new(){Target=ConnectionStore.Capture(row.Target),TriggerId=trigger!.Id,ReportUtc=report.LastReportedUtc,Server=OverviewServer,PolicySource=client.WUServer,ReportingSource=client.WUStatusServer};SaveReportRecoveries();
+ }
+ async Task AdvanceReportRecovery(Func<TargetRecord,Task<WsusReport>>? reportProbe=null,Func<TargetRecord,Task<ClientReportProbe>>? queueProbe=null,Func<TargetRecord,Task<LiveUpdateActivity>>? activityProbe=null,bool dispatch=true){
+  if(advancingReportRecovery||closing)return;advancingReportRecovery=true;
+  reportProbe??=async _=>{var settings=ReadWsus();return JsonSerializer.Deserialize<WsusReport>(await remote.Wsus(settings.Host,settings.Port,settings.Ssl,ConnectionStore.WsusName(_.Host)),Store.Options)??throw new Exception("Пустой отчёт WSUS");};queueProbe??=remote.ReadReportQueue;activityProbe??=remote.LiveUpdates;
+  try{foreach(var entry in reportRecoveries.Where(e=>!e.Value.Done&&e.Value.Next<=DateTimeOffset.UtcNow).Take(1).ToList()){
+   var host=entry.Key;var p=entry.Value;p.Next=DateTimeOffset.UtcNow.AddMinutes(1);
+   var existing=History.FirstOrDefault(j=>j.Id==p.JobId);if(existing!=null){var result=existing.Targets.FirstOrDefault(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase));if(result!=null&&ActiveTarget(result)){p.Phase="Восстановление отчётности выполняется";continue;}p.Done=true;p.Phase=result!=null&&TerminalSuccess(result)?"Восстановление отчётности выполнено":"Требуется действие";p.Detail=result!=null&&TerminalSuccess(result)?"Очередь обработана, поиск и запрос отчёта завершены. Приём отчёта проверяется отдельно на WSUS.":"Автоматический повтор не выполняется. Проверьте результат задания восстановления.";continue;}
+   if(!AutomaticReportRecoveryEnabled){p.Done=true;p.Phase="Автоматическое восстановление отключено";continue;}
+   var row=Computers.FirstOrDefault(r=>r.Host.Equals(host,StringComparison.OrdinalIgnoreCase));if(row==null||row.Target.AdDisabled||!CurrentEndpoint(p.Target)||!CurrentIdentity(p.Target)||p.Server!=OverviewServer){p.Done=true;p.Phase="Требуется действие";p.Detail="Изменились цель, её доступность в AD или настройки WSUS; автоматическая очистка отменена.";continue;}
+   if(!DateTimeOffset.TryParse(p.CreatedUtc,out var created)||DateTimeOffset.UtcNow-created>TimeSpan.FromHours(2)){p.Done=true;p.Phase="Требуется действие";p.Detail="Восстановление не удалось безопасно начать за 2 часа. Проверьте активные операции и выполните вручную при необходимости.";continue;}
+   if(History.Any(j=>IsWsusJob(j)&&j.Targets.Any(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)))){p.Detail="Ожидается завершение других заданий WSUS; установка не прерывается.";continue;}
+   try{
+    var report=await reportProbe(p.Target);var client=await queueProbe(p.Target);if(!ReportRecoveryPolicy30.Recommended(client,report,ReportAgeHours(),DateTimeOffset.UtcNow)){p.Done=true;p.Phase="Автоматическая очистка не требуется";p.Detail="Повторная проверка не подтвердила старый отчёт и накопившуюся старую очередь одновременно. Данные клиента не изменялись.";continue;}
+    if(!client.WUServer.TrimEnd('/').Equals(p.PolicySource.TrimEnd('/'),StringComparison.OrdinalIgnoreCase)||!client.WUStatusServer.TrimEnd('/').Equals(p.ReportingSource.TrimEnd('/'),StringComparison.OrdinalIgnoreCase)){p.Done=true;p.Phase="Требуется действие";p.Detail="Политика источника или адрес отчётности изменились; автоматическая очистка отменена.";continue;}
+    if(RebootReason(row).Length>0||HeaderRebootJob(row)!=null){p.Detail="Сначала требуется запланированная/подтверждённая перезагрузка; очередь пока не изменяется.";continue;}
+    var live=await activityProbe(p.Target);if(live.InstallerBusy||live.InstallationEvidence.Length>0||live.Limitation.Length>0||live.Jobs.Count>0||live.Downloads.Any(d=>d.State is "Transferring" or "Connecting")){p.Detail="Клиент занят либо готовность не подтверждена; повторная проверка через минуту.";continue;}
+    if(closing||!AutomaticReportRecoveryEnabled||!CurrentEndpoint(p.Target)||!CurrentIdentity(p.Target)||p.Server!=OverviewServer||History.Any(j=>IsWsusJob(j)&&j.Targets.Any(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t))))continue;
+    QueueReportRecovery(p);
+   }catch(Exception ex){p.Detail="Повторная диагностика пока недоступна: "+ShortConnectionError(ex.Message)+". Очистка не запускалась.";}
+  }}finally{SaveReportRecoveries();advancingReportRecovery=false;RefreshAttentionButton();if(ComputerGrid.SelectedItem is ComputerRow r&&reportRecoveries.ContainsKey(r.Host))ShowCurrent();if(dispatch)await SendQueue();}
+ }
+ void QueueReportRecovery(ReportRecovery30 p){if(p.JobId.Length==0){p.JobId=Guid.NewGuid().ToString();SaveReportRecoveries();}var job=History.FirstOrDefault(j=>j.Id==p.JobId);
+  if(job==null){var target=Store.Clone(p.Target);target.Status="Queued";target.State=null;target.Output="";job=new(){Id=p.JobId,Name="Автоматическое восстановление отчётности",OutputChannel="WSUS",ExclusiveMaintenance=true,ContinueOnError=false,Targets=new(){target},Steps=new(){new(){Name="Проверка и очистка старой очереди отчётности",Kind="CacheCleanup",Code=AutomaticQueueRecoveryCode(ReportAgeHours(),p.PolicySource,p.ReportingSource)},new(){Name="WSUS · поиск и запрос отчёта после восстановления",Kind="UpdateScan"}}};History.Insert(0,job);Save();}
+  p.Phase="Восстановление отчётности поставлено в очередь";p.Detail="Одна автоматическая попытка; без установки обновлений и перезагрузки.";SaveReportRecoveries();foreach(var target in job.Targets.Where(t=>t.Status=="Queued"&&t.State==null))if(!queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host==target.Host))queue.Enqueue((job,target));
+ }
+ public static string AutomaticQueueRecoveryCode(int hours,string source="",string reporting="")=>"$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';$dcQueue=& {\n"+RemoteService.ReportQueueScript+"\n};$dcQueue=$dcQueue|ConvertFrom-Json -ErrorAction Stop;if($dcQueue.QueueError -or @($dcQueue.Queues).Count -ne 2){throw 'Повторная проверка очереди неполная; автоматическая очистка отменена.'};if($dcQueue.UseWUServer -ne 1){throw 'Политика WSUS больше не включена; автоматическая очистка отменена.'};"+(source.Length>0?"if(([string]$dcQueue.WUServer).TrimEnd('/') -ine "+PowerShellBridge.Literal(source.TrimEnd('/'))+"){throw 'Источник WSUS изменился; очистка отменена.'};":"")+(reporting.Length>0?"if(([string]$dcQueue.WUStatusServer).TrimEnd('/') -ine "+PowerShellBridge.Literal(reporting.TrimEnd('/'))+"){throw 'Адрес отчётности изменился; очистка отменена.'};":"")+"$dcOld=@($dcQueue.Queues|Where-Object {$_.Files -gt 0 -and $_.OldestUtc -and ([DateTime]::UtcNow-([DateTime]$_.OldestUtc).ToUniversalTime()).TotalHours -ge "+Math.Clamp(hours,1,720)+"});if(!$dcOld.Count){'Старая очередь больше не подтверждается; очистка пропущена.';exit 0};"+CacheScripts.Build("Queue",false,false);
+ void RestoreReportRecoveryQueues(){foreach(var p in reportRecoveries.Values.Where(p=>!p.Done&&p.JobId.Length>0)){var job=History.FirstOrDefault(j=>j.Id==p.JobId);if(job==null)continue;foreach(var t in job.Targets.Where(t=>t.Status=="Queued"&&t.State==null))if(!queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host==t.Host))queue.Enqueue((job,t));}}
+ string ReportRecoveryText(string host)=>reportRecoveries.TryGetValue(host,out var p)?"\n\n## Автоматическое восстановление отчётности\n"+p.Phase+(p.Detail.Length>0?"\n"+p.Detail:""):"";
+}
