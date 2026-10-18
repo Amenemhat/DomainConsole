@@ -23,7 +23,7 @@ public partial class MainWindow {
   observedReturns[host]=next.BootUtc;Store.Write("observed-return-scans.json",observedReturns);
   maintenancePlans[host]=new(){Host=host,Identity=ConnectionStore.Capture(new TargetRecord{Host=host}).ConnectionIdentity,BootUtc=next.BootUtc,Phase="После перезагрузки: ожидание готовности",ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800)),Next=DateTimeOffset.UtcNow};SaveMaintenance();
  }
- async Task AdvanceMaintenance(){if(advancingMaintenance||closing)return;advancingMaintenance=true;try{
+ async Task AdvanceMaintenance(Func<ComputerRow,Task<RebootSnapshot?>>? statusProbe=null,Func<TargetRecord,Task<LiveUpdateActivity>>? activityProbe=null,bool dispatch=true){if(advancingMaintenance||closing)return;statusProbe??=r=>ReadClientStatus(r,force:true);activityProbe??=remote.LiveUpdates;advancingMaintenance=true;try{
   foreach(var p in maintenancePlans.Values.Where(p=>!p.Done&&p.Next<=DateTimeOffset.UtcNow).Take(3).ToList()){
    p.Next=DateTimeOffset.UtcNow.AddMinutes(1);var row=Computers.FirstOrDefault(r=>r.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase));
    if(row==null||row.Target.AdDisabled){p.Done=true;p.Phase="Требуется действие";p.Detail=row==null?"Компьютер отсутствует в рабочем списке":"Учётная запись отключена в AD";continue;}
@@ -33,14 +33,15 @@ public partial class MainWindow {
    if(target!=null&&ActiveTarget(target)){p.Phase="Выполняется обслуживание";continue;}
    if(target!=null&&!TerminalSuccess(target)){p.Done=true;p.Phase=target.Status=="Cancelled"?"Обслуживание остановлено":"Требуется действие";p.Detail="Автоматическое продолжение прекращено: "+ComputerRow.StatusText(target.Status)+". См. результат задания.";continue;}
    if(p.Phase=="Ожидается перезагрузка"){
-    var snapshot=await ReadClientStatus(row,force:true);if(snapshot==null){p.Detail="Клиент пока не ответил; повторный опрос запланирован";continue;}
+    var snapshot=await statusProbe(row);if(snapshot==null){p.Detail="Клиент пока не ответил; повторный опрос запланирован";continue;}
     if(!RebootSnapshotPolicy.NewBoot(new(){BootUtc=p.BootUtc},snapshot)){p.Detail="Перезагрузите компьютер в согласованное время; продолжение сохранено";continue;}
     p.BootUtc=snapshot.BootUtc;p.Phase="После перезагрузки: ожидание готовности";p.ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));p.Detail="";continue;
    }
    if(DateTimeOffset.UtcNow<p.ReadyAfter)continue;
    // Current operation may have completed with a reboot requirement. Observe once and wait for a new boot.
    if(target!=null&&p.Phase!="После перезагрузки: ожидание готовности"){
-    var snapshot=await ReadClientStatus(row,force:true);if(snapshot==null){p.Detail="Не удалось обновить статус клиента; будет повторный опрос";continue;}
+    var snapshot=await statusProbe(row);if(snapshot==null){p.Detail="Не удалось обновить статус клиента; будет повторный опрос";continue;}
+    if(DateTimeOffset.TryParse(snapshot.BootUtc,out var completedBoot)&&DateTimeOffset.TryParse(target.State?.Ended,out var completedAt)&&completedBoot>completedAt&&p.BootUtc!=snapshot.BootUtc){p.BootUtc=snapshot.BootUtc;p.Phase="После перезагрузки: ожидание готовности";p.ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));p.Detail="";continue;}
     if(snapshot.Required==true){
      p.Phase="Ожидается перезагрузка";p.BootUtc=snapshot.BootUtc;p.Detail="Перезагрузите в согласованное время. После возврата обслуживание продолжится автоматически.";continue;
     }
@@ -49,21 +50,21 @@ public partial class MainWindow {
    }
    if(History.Any(j=>IsWsusJob(j)&&j.Targets.Any(t=>t.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)))){p.Detail="Ожидается завершение другого задания WSUS";continue;}
    if(p.Install&&p.Phase=="После перезагрузки: ожидание готовности"){
-    var fresh=await ReadClientStatus(row,force:true);if(fresh==null){p.Detail="Ожидается свежий снимок клиента";continue;}
+    var fresh=await statusProbe(row);if(fresh==null){p.Detail="Ожидается свежий снимок клиента";continue;}
     if(fresh.Required!=false){p.Phase=fresh.Required==true?"Ожидается перезагрузка":"Требуется действие";p.Done=fresh.Required==null;p.BootUtc=fresh.BootUtc;p.Detail=fresh.Required==true?"После загрузки подтверждено новое требование перезагрузки; источники в журнале":"Не удалось уточнить флаги; установка автоматически не продолжается";continue;}
    }
    if(p.Cycles>=3){p.Done=true;p.Phase="Требуется действие";p.Detail="Достигнут предел: 3 цикла. Проверьте оставшиеся обновления; автоматический повтор остановлен.";continue;}
-   try{var live=await remote.LiveUpdates(captured);if(live.InstallerBusy||live.InstallationEvidence.Length>0||live.Limitation.Length>0){p.Detail="Клиент занят или готовность не подтверждена; повторный опрос запланирован";continue;}}
+   try{var live=await activityProbe(captured);if(live.InstallerBusy||live.InstallationEvidence.Length>0||live.Limitation.Length>0){p.Detail="Клиент занят или готовность не подтверждена; повторный опрос запланирован";continue;}}
    catch(Exception ex){p.Detail="Проверка готовности не удалась: "+ShortConnectionError(ex.Message);continue;}
    if(closing||p.Done)continue;QueueMaintenanceJob(p,captured);
   }
- }finally{SaveMaintenance();advancingMaintenance=false;RefreshAttentionButton();await SendQueue();}}
+ }finally{SaveMaintenance();advancingMaintenance=false;RefreshAttentionButton();if(ComputerGrid.SelectedItem is ComputerRow selected&&maintenancePlans.ContainsKey(selected.Host))ShowCurrent();if(dispatch)await SendQueue();}}
  void QueueMaintenanceJob(MaintenancePlan p,TargetRecord captured){
   // Persist the id before creating history/queue: recovery reuses the same job, never repeats deployment with a new id.
   if(p.NextJobId.Length==0){p.NextJobId=Guid.NewGuid().ToString();SaveMaintenance();}
   var job=History.FirstOrDefault(j=>j.Id==p.NextJobId);
   if(job==null){var t=Store.Clone(captured);t.Status="Queued";t.State=null;t.Output="";job=new(){Id=p.NextJobId,Name=p.Install?"Полное обслуживание · продолжение":"После перезагрузки · поиск и отчёт",OutputChannel="WSUS",Steps=new(){new(){Kind=p.Install?"Updates":"UpdateScan",Name=p.Install?"WSUS · установка и запрос отчёта":"WSUS · проверка и запрос отчёта"}},Targets=new(){t}};History.Insert(0,job);Save();}
-  p.JobId=job.Id;p.Cycles++;p.NextJobId="";p.ReadyAfter=default;p.Phase="Выполняется обслуживание";p.Detail="";SaveMaintenance();
+  if(p.JobId!=job.Id)p.Cycles++;p.JobId=job.Id;p.NextJobId="";p.ReadyAfter=default;p.Phase="Выполняется обслуживание";p.Detail="";SaveMaintenance();
   foreach(var t in job.Targets.Where(t=>t.Status=="Queued"&&t.State==null))if(!queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host==t.Host))queue.Enqueue((job,t));
  }
  void RestoreMaintenanceQueues(){foreach(var p in maintenancePlans.Values.Where(p=>!p.Done)){
