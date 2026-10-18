@@ -1,0 +1,14 @@
+[
+  {
+    "name": "sdk",
+    "sha": "0f012441d654d3bb7de898fdc664b5fcad52bdcc"
+  },
+  {
+    "name": "win32docs",
+    "sha": "ca8274decead49403d70ceeed4af8d4ca74eaf11"
+  },
+  {
+    "name": "supportdocs",
+    "sha": "2bc340377700b726eecb79f9dcca71dfa8d6a78e"
+  }
+]

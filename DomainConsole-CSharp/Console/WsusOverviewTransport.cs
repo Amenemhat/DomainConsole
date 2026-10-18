@@ -15,7 +15,7 @@ public sealed partial class RemoteService {
   var replies=JsonSerializer.Deserialize<List<OverviewReply>>(json,Store.Options)??throw new Exception("Пустой ответ обзора WSUS");return hosts.Select(h=>{if(names[h].Length==0)return new OverviewReply{Host=h,Error="Имя клиента ещё не подтверждено для WSUS"};var found=replies.FirstOrDefault(r=>r.Host.Equals(names[h],StringComparison.OrdinalIgnoreCase));if(found==null)return new OverviewReply{Host=h,Error="Нет ответа WSUS для клиента"};var copy=Store.Clone(found);copy.Host=h;return copy;}).ToList();
  }
  public static string OverviewScript(WsusSettings settings,List<string> hosts)=>
-  "$wanted=@("+string.Join(",",hosts.Select(PowerShellBridge.Literal))+");$port="+settings.Port+";$ssl="+(settings.Ssl?"$true":"$false")+";"+OverviewBody;
+  "$wanted=@("+string.Join(",",hosts.Select(PowerShellBridge.Literal))+");$port="+settings.Port+";$ssl="+(settings.Ssl?"$true":"$false")+";"+RequiredUpdatesScript31+OverviewBody;
  public const string OverviewBody="""
 [void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration')
 $s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($env:COMPUTERNAME,$ssl,$port)
@@ -28,7 +28,8 @@ $rows=@(foreach($hostName in $wanted){
   if($targets.Count -gt 1){throw 'Неоднозначная идентичность клиента в WSUS'}
   if($targets.Count -eq 1){
    $t=$targets[0];$reply.Found=$true;$summary=$t.GetUpdateInstallationSummary()
-   $reply.Report=@{FullDomainName=$t.FullDomainName;LastReportedUtc=$t.LastReportedStatusTime.ToUniversalTime().ToString('o');LastSyncUtc=$t.LastSyncTime.ToUniversalTime().ToString('o');LastSyncResult=[string]$t.LastSyncResult;UnknownCount=$summary.UnknownCount;NotApplicableCount=$summary.NotApplicableCount;NotInstalledCount=$summary.NotInstalledCount;DownloadedCount=$summary.DownloadedCount;InstalledCount=$summary.InstalledCount;InstalledPendingRebootCount=$summary.InstalledPendingRebootCount;FailedCount=$summary.FailedCount}
+   $need31=Read-RequiredUpdates31 $t
+   $reply.Report=@{NeededCount=$need31.NeededCount;ApprovedUnknownCount=$need31.ApprovedUnknownCount;ApprovedDownloadedCount=$need31.ApprovedDownloadedCount;ApprovedFailedCount=$need31.ApprovedFailedCount;RequiredComplete=$need31.RequiredComplete;RequiredError=$need31.RequiredError;FullDomainName=$t.FullDomainName;LastReportedUtc=$t.LastReportedStatusTime.ToUniversalTime().ToString('o');LastSyncUtc=$t.LastSyncTime.ToUniversalTime().ToString('o');LastSyncResult=[string]$t.LastSyncResult;UnknownCount=$summary.UnknownCount;NotApplicableCount=$summary.NotApplicableCount;NotInstalledCount=$summary.NotInstalledCount;DownloadedCount=$summary.DownloadedCount;InstalledCount=$summary.InstalledCount;InstalledPendingRebootCount=$summary.InstalledPendingRebootCount;FailedCount=$summary.FailedCount}
   }
  }catch{$reply.Error=$_.Exception.Message}
  $reply
@@ -36,3 +37,4 @@ $rows=@(foreach($hostName in $wanted){
 ConvertTo-Json -InputObject @($rows) -Depth 6 -Compress
 """;
 }
+
