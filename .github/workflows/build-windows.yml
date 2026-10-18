@@ -683,6 +683,7 @@ jobs:
         shell: pwsh
         run: |
           $folder=Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
+          $env:TEMP=$folder; $env:TMP=$folder
           Add-Type 'namespace Microsoft.UpdateServices.Administration { [System.Flags] public enum ApprovedStates {LatestRevisionApproved=1} [System.Flags] public enum UpdateApprovalActions {Install=1} [System.Flags] public enum UpdateInstallationStates {NotInstalled=1,Downloaded=2,Failed=4,Unknown=8} public class UpdateScope {public ApprovedStates ApprovedStates;public UpdateApprovalActions UpdateApprovalActions;public UpdateInstallationStates IncludedInstallationStates;} }'
           . (Join-Path $folder 'required-updates31.ps1')
           $target=[pscustomobject]@{}
