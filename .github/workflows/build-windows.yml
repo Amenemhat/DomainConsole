@@ -224,7 +224,7 @@ jobs:
         run: |
           $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           $check = @'
-          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1','header-reboot.ps1','reboot-state.ps1')){
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1','header-reboot.ps1','reboot-state.ps1','cache-cleanup-30.ps1','reboot-system-30.ps1')){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
             if($errors.Count){throw ($errors|Out-String)}
@@ -415,7 +415,7 @@ jobs:
           $text=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/cache-cleanup.ps1'))
           $text=$text.Replace('(New-Object -ComObject Microsoft.Update.Installer).IsBusy','$fixtureBusy')
           $oldWindir=$env:windir;$env:windir=$fixture
-          $states=@{wuauserv='Running';bits='Running';cryptsvc='Stopped'};$fixtureBusy=$false;$failStop=$false
+          $states=@{UsoSvc='Stopped';wuauserv='Running';bits='Running';cryptsvc='Stopped'};$fixtureBusy=$false;$failStop=$false
           function Get-Service($Name){$obj=[pscustomobject]@{Status=$states[$Name]};$obj|Add-Member ScriptMethod WaitForStatus {param($status,$timeout)};return $obj}
           function Stop-Service($Name){if($failStop -and $Name -eq 'bits'){throw 'fixture stop failure'};$states[$Name]='Stopped'}
           function Start-Service($Name){$states[$Name]='Running'}
@@ -432,7 +432,7 @@ jobs:
             & ([ScriptBlock]::Create($text.Replace('$backup=$false','$backup=$true')))
             if(Test-Path $download){throw 'Backup mode did not move cache'}
             if(!(Get-ChildItem (Split-Path $download) -Filter 'Download.DomainConsoleBackup_*')){throw 'Backup missing'}
-            if($states.wuauserv -ne 'Running' -or $states.bits -ne 'Running'){throw 'Service restoration failed'}
+            if(@('UsoSvc','wuauserv','bits','cryptsvc'|Where-Object {$states[$_] -ne 'Running'}).Count){throw 'Not all update services were started'}
           } finally {$env:windir=$oldWindir}
       - name: Verify report queue recovery
         shell: pwsh

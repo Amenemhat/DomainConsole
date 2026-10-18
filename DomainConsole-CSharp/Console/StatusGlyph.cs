@@ -14,6 +14,7 @@ public sealed class StatusGlyph:FrameworkElement {
  "Connected"=>"M 5,6 L 5,2 M 13,6 L 13,2 M 3,6 L 15,6 L 15,9 Q 15,13 9,13 Q 3,13 3,9 Z M 9,13 L 9,17",
  "Unreachable"=>"M 2,6 L 6,6 L 6,12 L 2,12 M 16,6 L 12,6 L 12,12 L 16,12 M 2,16 L 16,2",
  "Access"=>"M 4,8 L 14,8 L 14,16 L 4,16 Z M 6,8 L 6,5 A 3,3 0 0 1 12,5 L 12,8",
+ "AdDisabled"=>"M 2,3 L 16,3 L 16,13 L 2,13 Z M 6,16 L 12,16 M 9,13 L 9,16 M 1,17 L 17,1",
  "NoWsus"=>"M 9,2 A 7,7 0 1 1 8.99,2 M 4,14 L 14,4",
  _=>"M 5,5 C 5,0 15,0 13,7 L 9,10 L 9,12 M 9,15 L 9,16"};
  protected override void OnRender(DrawingContext drawing){base.OnRender(drawing);drawing.DrawRectangle(Brushes.Transparent,null,new Rect(RenderSize));var pen=new Pen(Tint,2){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};drawing.DrawGeometry(null,pen,Geometry.Parse(Shape(Kind)));}
