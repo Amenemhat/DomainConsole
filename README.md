@@ -8,13 +8,13 @@
 
 Настольная консоль администрирования Windows-компьютеров домена: команды CMD и PowerShell, обслуживание системы и работа с клиентами WSUS из одного окна.
 
-**Текущая версия: 0.30.** Нативный интерфейс C# / WPF; переносимый пакет Windows x64.
+**Текущая версия: 0.31.** Нативный интерфейс C# / WPF; переносимый пакет Windows x64.
 
-[Скачать 0.30](https://github.com/Amenemhat/DomainConsole/releases/download/v0.31/DomainConsole-0.31-Windows-x64.zip) · [Releases](https://github.com/Amenemhat/DomainConsole/releases) · [План работ / Issues](https://github.com/Amenemhat/DomainConsole/issues) · [Изменения 0.30](docs/releases/0.30.md)
+[Скачать 0.31](https://github.com/Amenemhat/DomainConsole/releases/download/v0.31/DomainConsole-0.31-Windows-x64.zip) · [Releases](https://github.com/Amenemhat/DomainConsole/releases) · [План работ / Issues](https://github.com/Amenemhat/DomainConsole/issues) · [Изменения 0.31](docs/releases/0.31.md)
 
 Готовые пакеты публикуются в Releases вместе с SHA-256 и описанием изменений. Компилировать приложение для использования не требуется.
 
-## Что умеет версия 0.30
+## Что умеет версия 0.31
 
 ### Компьютеры и удалённые задания
 
