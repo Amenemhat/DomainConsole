@@ -1,0 +1,28 @@
+using System.IO;
+using System.Text;
+using System.Text.Json;
+using DomainConsole.Shared;
+namespace DomainConsole;
+public partial class MainWindow {
+ void VerifyDevelopment30(){
+  const string before="2026-10-16T03:38:46Z",boot="2026-10-17T20:37:36Z",oldAt="2026-10-17T20:19:47Z",now="2026-10-17T21:15:46Z";
+  var old=new RebootSnapshot{BootUtc=before,Required=true,CollectedUtc=oldAt};var fresh=new RebootSnapshot{BootUtc=boot,Required=null,CollectedUtc=now,Error="WUA: 0x80070005"};RebootSnapshotPolicy.Merge(old,fresh);if(fresh.PreservedRequired.HasValue||!RebootSnapshotPolicy.NewBoot(old,fresh))throw new Exception("Prior boot reboot evidence survived a new boot");
+  var same=new RebootSnapshot{BootUtc=before,Required=null,CollectedUtc=now};RebootSnapshotPolicy.Merge(old,same);if(same.PreservedRequired!=true)throw new Exception("Same-boot partial read discarded valid evidence");
+  var clear=new RebootSnapshot{BootUtc=before,Required=false,CollectedUtc=now,PreservedRequired=true,PreservedUtc=oldAt};RebootSnapshotPolicy.Merge(old,clear);if(clear.PreservedRequired.HasValue||clear.Required!=false)throw new Exception("Fresh negative probe did not clear cached positive");
+  var unknownBoot=new RebootSnapshot{CollectedUtc=now};RebootSnapshotPolicy.Merge(old,unknownBoot);if(unknownBoot.PreservedRequired.HasValue)throw new Exception("Missing boot identity treated as same boot");
+  var row=Computers.Last();var proof=rebootSnapshots.GetValueOrDefault(row.Host);var cached=reportCache.GetValueOrDefault(row.Host);var diagnostic=statusDiagnostics.GetValueOrDefault(row.Host);var limitation=statusLimitations.GetValueOrDefault(row.Host);var plan=maintenancePlans.GetValueOrDefault(row.Host);var queueBefore=queue.ToList();var jobsBefore=History.ToList();var returns=new Dictionary<string,string>(observedReturns,StringComparer.OrdinalIgnoreCase);bool disabled=row.Target.AdDisabled;
+  try{
+   reportCache.Remove(row.Host);rebootSnapshots[row.Host]=new(){BootUtc=boot,Required=null,PreservedRequired=true,PreservedUtc=oldAt,CollectedUtc=now};if(RebootReason(row).Length>0)throw new Exception("Legacy poisoned snapshot is still a current reboot request");
+   RecordStatusDiagnostic(row.Host,fresh);RecordStatusDiagnostic(row.Host,fresh);if(statusDiagnostics.Count(d=>d.Key==row.Host)!=1||StatusDiagnosticText(row.Host).Split("WUA: 0x80070005").Length!=2)throw new Exception("Duplicate status error details");statusLimitations[row.Host]=fresh.Error;if(LinkHint(row).Contains("WUA")||LinkHint(row).Contains("80070005"))throw new Exception("WUA diagnostic leaks into network tooltip");RecordStatusDiagnostic(row.Host,new(){CollectedUtc=now});if(!statusDiagnostics[row.Host].Resolved)throw new Exception("Successful probe did not resolve warning");
+   if(!DirectoryReader.IsDisabled("4098")||DirectoryReader.IsDisabled("4096")||DirectoryReader.IsDisabled(""))throw new Exception("AD account disable flag incorrect");row.Target.AdDisabled=true;if(OverviewStatus(row).Kind!="AdDisabled"||TargetConfirmation.ResolveTargets(row,new[]{row},true).Count!=0||TargetConfirmation.ResolveTargets(row,new[]{row},false).Count!=1)throw new Exception("AD disabled bulk/manual semantics incorrect");row.Target.AdDisabled=false;
+   var pendingId=Guid.NewGuid().ToString();var p=new MaintenancePlan{Host=row.Host,Install=true,NextJobId=pendingId};maintenancePlans[row.Host]=p;QueueMaintenanceJob(p,new(){Host=row.Host});var first=History.Single(j=>j.Id==pendingId);if(first.AutoReboot||first.Steps.Single().Kind!="Updates"||p.JobId!=pendingId)throw new Exception("Full service missing install or silently enables reboot");
+   // Crash window: history committed, plan still points at the pending id. Reuse, do not add/deploy twice.
+   p.NextJobId=pendingId;QueueMaintenanceJob(p,new(){Host=row.Host});RestoreMaintenanceQueues();if(History.Count(j=>j.Id==pendingId)!=1||queue.Count(q=>q.Job.Id==pendingId)!=1)throw new Exception("Restart created duplicate continuation");
+   var round=JsonSerializer.Deserialize<MaintenancePlan>(JsonSerializer.Serialize(p,Store.Options),Store.Options)!;if(round.JobId!=pendingId||!round.Install)throw new Exception("Maintenance restart lost authorization/job identity");
+   var scan=new MaintenancePlan{Host=row.Host};QueueMaintenanceJob(scan,new(){Host=row.Host});if(History.First(j=>j.Id==scan.JobId).Steps.Single().Kind!="UpdateScan")throw new Exception("Ordinary return scan installs updates");
+  }finally{row.Target.AdDisabled=disabled;History.Clear();foreach(var j in jobsBefore)History.Add(j);queue.Clear();foreach(var q in queueBefore)queue.Enqueue(q);if(proof==null)rebootSnapshots.Remove(row.Host);else rebootSnapshots[row.Host]=proof;if(cached!=null)reportCache[row.Host]=cached;if(diagnostic==null)statusDiagnostics.Remove(row.Host);else statusDiagnostics[row.Host]=diagnostic;if(limitation==null)statusLimitations.Remove(row.Host);else statusLimitations[row.Host]=limitation;if(plan==null)maintenancePlans.Remove(row.Host);else maintenancePlans[row.Host]=plan;observedReturns.Clear();foreach(var entry in returns)observedReturns[entry.Key]=entry.Value;Save();SaveMaintenance();Store.Write("reboot-snapshots.json",rebootSnapshots);Store.Write("status-diagnostics.json",statusDiagnostics);}
+  // Actual PowerShell parsing is exercised by the Windows workflow; cleanup execution uses disposable fixture paths/services.
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"cache-cleanup-30.ps1"),CacheScripts.Build("Download",false,false),new UTF8Encoding(true));
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"reboot-system-30.ps1"),RemoteService.LiveProbeWrapper(RemoteService.RebootStateScript),new UTF8Encoding(true));
+ }
+}
