@@ -17,8 +17,8 @@ public sealed class StatusDiagnostic {public string SinceUtc {get;set;}="";publi
 public partial class MainWindow {
  readonly Dictionary<string,StatusDiagnostic> statusDiagnostics=new(Store.Read("status-diagnostics.json",new Dictionary<string,StatusDiagnostic>()),StringComparer.OrdinalIgnoreCase);
  void RecordStatusDiagnostic(string host,RebootSnapshot snapshot){
-  if(snapshot.Error.Length>0){if(!statusDiagnostics.TryGetValue(host,out var entry)||entry.Error!=snapshot.Error||entry.Resolved){entry=new(){SinceUtc=snapshot.CollectedUtc,Error=snapshot.Error};statusDiagnostics[host]=entry;}entry.LastUtc=snapshot.CollectedUtc;entry.Resolved=false;}
-  else if(statusDiagnostics.TryGetValue(host,out var entry)&&!entry.Resolved){entry.Resolved=true;entry.LastUtc=snapshot.CollectedUtc;}
+  if(snapshot.Error.Length>0){Event31(host,"diagnostic",snapshot.Error,StatusErrorSummary(snapshot.Error),"Warning",snapshot.Error);if(!statusDiagnostics.TryGetValue(host,out var entry)||entry.Error!=snapshot.Error||entry.Resolved){entry=new(){SinceUtc=snapshot.CollectedUtc,Error=snapshot.Error};statusDiagnostics[host]=entry;}entry.LastUtc=snapshot.CollectedUtc;entry.Resolved=false;}
+  else if(statusDiagnostics.TryGetValue(host,out var entry)&&!entry.Resolved){entry.Resolved=true;entry.LastUtc=snapshot.CollectedUtc;Event31(host,"diagnostic","resolved","Проверка статуса восстановлена","Success");}
   Store.Write("status-diagnostics.json",statusDiagnostics);
  }
  public static string StatusErrorSummary(string error){if(error.Contains("80070005",StringComparison.OrdinalIgnoreCase)||error.Contains("отказано в доступе",StringComparison.OrdinalIgnoreCase))return "Не удалось полностью проверить необходимость перезагрузки: 0x80070005 — отказано в доступе.";var code=Regex.Match(error,@"(?i)(?:0x)?8[0-9a-f]{7}").Value;return "Проверка необходимости перезагрузки неполная"+(code.Length>0?" · "+code:"")+". Подробности в техническом разделе.";}
