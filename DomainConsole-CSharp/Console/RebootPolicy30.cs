@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 namespace DomainConsole;
 public static class RebootSnapshotPolicy {
  public static bool NewBoot(RebootSnapshot? old,RebootSnapshot next)=>old!=null&&DateTimeOffset.TryParse(old.BootUtc,out var before)&&DateTimeOffset.TryParse(next.BootUtc,out var after)&&after>before;
+ public static bool SupersedesPositive(RebootSnapshot? old,RebootSnapshot next){var stamp=old?.Required==true?old.CollectedUtc:old?.PreservedRequired==true?old.PreservedUtc:"";return DateTimeOffset.TryParse(stamp,out var at)&&DateTimeOffset.TryParse(next.BootUtc,out var boot)&&boot>at;}
  public static bool SameBoot(RebootSnapshot? old,RebootSnapshot next)=>old!=null&&DateTimeOffset.TryParse(old.BootUtc,out var before)&&DateTimeOffset.TryParse(next.BootUtc,out var after)&&after==before;
  public static bool EvidenceAfterBoot(string evidence,string boot)=>DateTimeOffset.TryParse(evidence,out var at)&&DateTimeOffset.TryParse(boot,out var start)&&at>=start;
  public static void Merge(RebootSnapshot? old,RebootSnapshot next){

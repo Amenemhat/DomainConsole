@@ -16,13 +16,12 @@ public partial class MainWindow {
  void BeginMaintenance(RemoteJob job){foreach(var t in job.Targets){maintenancePlans[t.Host]=new(){Host=t.Host,Identity=t.ConnectionIdentity,JobId=job.Id,Install=true,Phase="Выполняется полное обслуживание",Cycles=1};}SaveMaintenance();}
  // A positive indication from the previous boot is history, never a fresh request to restart again.
  void ObserveUnplannedReturn(string host,RebootSnapshot? old,RebootSnapshot next){
-  if(!RebootSnapshotPolicy.NewBoot(old,next))return;
+  if(!RebootSnapshotPolicy.NewBoot(old,next)&&!RebootSnapshotPolicy.SupersedesPositive(old,next))return;
   bool previous=old!.Required==true||old.PreservedRequired==true||History.SelectMany(j=>j.Targets).Any(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&t.State?.RebootRequired==true&&DateTimeOffset.TryParse(t.State.Ended,out var ended)&&DateTimeOffset.TryParse(old.BootUtc,out var prior)&&DateTimeOffset.TryParse(next.BootUtc,out var boot)&&ended>=prior&&ended<boot);
   if(!previous||observedReturns.GetValueOrDefault(host)==next.BootUtc)return;
   if(rebootWatches.TryGetValue(host,out var watch)&&!watch.Done)return;
   if(maintenancePlans.TryGetValue(host,out var active)&&!active.Done)return;
-  observedReturns[host]=next.BootUtc;Store.Write("observed-return-scans.json",observedReturns);
-  maintenancePlans[host]=new(){Host=host,Identity=ConnectionStore.Capture(new TargetRecord{Host=host}).ConnectionIdentity,BootUtc=next.BootUtc,Phase="После перезагрузки: ожидание готовности",ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800)),Next=DateTimeOffset.UtcNow};SaveMaintenance();
+  maintenancePlans[host]=new(){Host=host,Identity=ConnectionStore.Capture(new TargetRecord{Host=host}).ConnectionIdentity,BootUtc=next.BootUtc,Phase="После перезагрузки: ожидание готовности",ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800)),Next=DateTimeOffset.UtcNow};SaveMaintenance();observedReturns[host]=next.BootUtc;Store.Write("observed-return-scans.json",observedReturns);
  }
  async Task AdvanceMaintenance(Func<ComputerRow,Task<RebootSnapshot?>>? statusProbe=null,Func<TargetRecord,Task<LiveUpdateActivity>>? activityProbe=null,bool dispatch=true){if(advancingMaintenance||closing)return;statusProbe??=r=>ReadClientStatus(r,force:true);activityProbe??=remote.LiveUpdates;advancingMaintenance=true;try{
   foreach(var p in maintenancePlans.Values.Where(p=>!p.Done&&p.Next<=DateTimeOffset.UtcNow).Take(3).ToList()){
