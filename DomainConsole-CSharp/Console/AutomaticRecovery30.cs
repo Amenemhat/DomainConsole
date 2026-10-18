@@ -25,7 +25,7 @@ public partial class MainWindow {
   if(!AutomaticReportRecoveryEnabled||row.Target.AdDisabled||!ReportRecoveryPolicy30.Recommended(client,report,ReportAgeHours(),DateTimeOffset.UtcNow))return;
   var trigger=RecoveryTrigger(row);if(!CanTriggerReportRecovery(trigger,row.Host))return;
   if(!ReportRecoveryPolicy30.NewEpisode(reportRecoveries.GetValueOrDefault(row.Host),report.LastReportedUtc,DateTimeOffset.UtcNow))return;
-  var captured=ConnectionStore.Capture(row.Target);captured.State=null;captured.Output="";captured.Status="Queued";reportRecoveries[row.Host]=new(){Target=captured,TriggerId=trigger!.Id,ReportUtc=report.LastReportedUtc,Server=OverviewServer,PolicySource=client.WUServer,ReportingSource=client.WUStatusServer};SaveReportRecoveries();
+  var captured=ConnectionStore.Capture(row.Target);captured.State=null;captured.Output="";captured.Status="Queued";reportRecoveries[row.Host]=new(){Target=captured,TriggerId=trigger!.Id,ReportUtc=report.LastReportedUtc,Server=OverviewServer,PolicySource=client.WUServer,ReportingSource=client.WUStatusServer,Next=reportWaiting.TryGetValue(row.Host,out var waiting)?waiting.Until:DateTimeOffset.UtcNow,Detail="Ожидание свежего отчёта WSUS перед повторной диагностикой и возможной очисткой."};SaveReportRecoveries();
  }
  async Task AdvanceReportRecovery(Func<TargetRecord,Task<WsusReport>>? reportProbe=null,Func<TargetRecord,Task<ClientReportProbe>>? queueProbe=null,Func<TargetRecord,Task<LiveUpdateActivity>>? activityProbe=null,bool dispatch=true){
   if(advancingReportRecovery||closing)return;advancingReportRecovery=true;
