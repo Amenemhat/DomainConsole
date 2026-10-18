@@ -59,7 +59,7 @@ public partial class MainWindow {
    catch(Exception ex){p.Detail="Проверка готовности не удалась: "+ShortConnectionError(ex.Message);continue;}
    if(closing||p.Done)continue;QueueMaintenanceJob(p,captured);
   }
- }finally{SaveMaintenance();advancingMaintenance=false;RefreshAttentionButton();if(ComputerGrid.SelectedItem is ComputerRow selected&&maintenancePlans.ContainsKey(selected.Host))ShowCurrent();if(dispatch)await SendQueue();}}
+ }finally{foreach(var entry in maintenancePlans.Values)Event31(entry.Host,"maintenance",entry.Phase+"|"+entry.Detail,entry.Phase,entry.Phase=="Требуется действие"?"Warning":"Info",entry.Detail);SaveMaintenance();advancingMaintenance=false;RefreshAttentionButton();if(ComputerGrid.SelectedItem is ComputerRow selected&&maintenancePlans.ContainsKey(selected.Host))ShowCurrent();if(dispatch)await SendQueue();}}
  void QueueMaintenanceJob(MaintenancePlan p,TargetRecord captured){
   // Persist the id before creating history/queue: recovery reuses the same job, never repeats deployment with a new id.
   if(p.NextJobId.Length==0){p.NextJobId=Guid.NewGuid().ToString();SaveMaintenance();}
