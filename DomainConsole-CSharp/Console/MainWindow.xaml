@@ -66,7 +66,7 @@
             <Expander.Header>
               <DockPanel LastChildFill="True">
                 <Button Content="↻" Click="LoadDomain_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource TextPrimary}" ToolTip="Загрузить компьютеры и подразделения из AD. Сохранённая история заданий остаётся доступной." Style="{StaticResource IconButton}" DockPanel.Dock="Right" Margin="4,0,0,0" />
-                <TextBlock Text="Дерево AD" VerticalAlignment="Center" />
+                <TextBlock x:Name="TreeLabel32" Text="Дерево AD" VerticalAlignment="Center" />
               </DockPanel>
             </Expander.Header>
             <TreeView x:Name="OuTree" SelectedItemChanged="OuTree_Changed" Background="Transparent" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" HorizontalContentAlignment="Stretch">

@@ -317,13 +317,13 @@
         </Setter.Value>
       </Setter>
     </Style>
-    <Style x:Key="DisclosureHeader" TargetType="ToggleButton">
+    <Style x:Key="DisclosureHeader" TargetType="ToggleButton"><Setter Property="Background" Value="Transparent"/>
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="ToggleButton">
-            <Border x:Name="Hit" Background="Transparent" Padding="2,3" MinHeight="24">
+            <Border x:Name="Hit" Background="{TemplateBinding Background}" Padding="2,3" MinHeight="24">
               <DockPanel>
                 <Grid DockPanel.Dock="Left" Width="22" Height="20" Background="Transparent">
                   <Path x:Name="Chevron" Data="M 0,0 L 4,4 L 0,8" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5" Width="6" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
@@ -351,14 +351,14 @@
         </Setter.Value>
       </Setter>
     </Style>
-    <Style TargetType="Expander">
+    <Style TargetType="Expander"><Setter Property="Background" Value="Transparent"/>
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Expander">
             <DockPanel>
-              <ToggleButton DockPanel.Dock="Top" Style="{StaticResource DisclosureHeader}" Foreground="{TemplateBinding Foreground}" Content="{TemplateBinding Header}" IsChecked="{Binding IsExpanded,RelativeSource={RelativeSource TemplatedParent},Mode=TwoWay}" />
+              <ToggleButton DockPanel.Dock="Top" Style="{StaticResource DisclosureHeader}" Background="{TemplateBinding Background}" Foreground="{TemplateBinding Foreground}" Content="{TemplateBinding Header}" IsChecked="{Binding IsExpanded,RelativeSource={RelativeSource TemplatedParent},Mode=TwoWay}" />
               <Border x:Name="Body" Visibility="Collapsed">
                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
               </Border>
