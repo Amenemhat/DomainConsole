@@ -7,7 +7,7 @@ public static class RebootSnapshotPolicy {
  public static bool EvidenceAfterBoot(string evidence,string boot)=>DateTimeOffset.TryParse(evidence,out var at)&&DateTimeOffset.TryParse(boot,out var start)&&at>=start;
  public static void Merge(RebootSnapshot? old,RebootSnapshot next){
   next.PreservedRequired=null;next.PreservedUtc="";
-  if(next.Required==null&&SameBoot(old,next)){
+  if(next.Required==null&&SameBoot(old,next)&&!(old!.Sources.Count>0&&old.Sources.All(x=>x.StartsWith("PendingFileRenameOperations")))){
    var stamp=old!.Required.HasValue?old.CollectedUtc:old.PreservedUtc;
    if(EvidenceAfterBoot(stamp,next.BootUtc)){next.PreservedRequired=old.Required??old.PreservedRequired;next.PreservedUtc=stamp;}
   }

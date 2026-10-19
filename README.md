@@ -1,4 +1,6 @@
-## Версия 0.31
+## Версия 0.32
+
+Компактный интерфейс с палитрами Серый / Графит / Лиловый, горизонтальными вкладками, цельной панелью связи и встроенной историей событий. Исправлено сохранение событий и открытие журналов. Общие отложенные файловые операции отделены от подтверждённых требований перезагрузки Windows Update / CBS.
 
 Общее автообслуживание WSUS (включено по умолчанию), новая шапка и история событий, читаемый отчёт WSUS со счётчиком одобренных обновлений. Встроены 4302 технических значения HRESULT и 146 русских диагностических карточек. Полный сброс кэша изолирует старый каталог и отдельно учитывает его отложенное удаление.
 
@@ -8,9 +10,9 @@
 
 Настольная консоль администрирования Windows-компьютеров домена: команды CMD и PowerShell, обслуживание системы и работа с клиентами WSUS из одного окна.
 
-**Текущая версия: 0.31.** Нативный интерфейс C# / WPF; переносимый пакет Windows x64.
+**Текущая версия: 0.32.** Нативный интерфейс C# / WPF; переносимый пакет Windows x64.
 
-[Скачать 0.31](https://github.com/Amenemhat/DomainConsole/releases/download/v0.31/DomainConsole-0.31-Windows-x64.zip) · [Releases](https://github.com/Amenemhat/DomainConsole/releases) · [План работ / Issues](https://github.com/Amenemhat/DomainConsole/issues) · [Изменения 0.31](docs/releases/0.31.md)
+[Скачать 0.32](https://github.com/Amenemhat/DomainConsole/releases/download/v0.32/DomainConsole-0.32-Windows-x64.zip) · [Releases](https://github.com/Amenemhat/DomainConsole/releases) · [План работ / Issues](https://github.com/Amenemhat/DomainConsole/issues) · [Изменения 0.32](docs/releases/0.32.md)
 
 Готовые пакеты публикуются в Releases вместе с SHA-256 и описанием изменений. Компилировать приложение для использования не требуется.
 
