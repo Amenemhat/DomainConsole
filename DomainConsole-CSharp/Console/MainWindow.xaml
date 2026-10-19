@@ -113,15 +113,18 @@
       <Border Background="{DynamicResource PanelSurface}" BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="6" Padding="8,5" Margin="0,0,0,6" x:Name="CompactHeader32">
         <StackPanel>
           <DockPanel>
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-              <CheckBox x:Name="AutoServiceToggle" Content="Авто" Checked="AutoService_Changed" Unchecked="AutoService_Changed" HorizontalAlignment="Left" ToolTip="Поиск → установка найденного → отчёт. После согласованной перезагрузки — продолжение. Выключено: одна операция. Произвольные команды не запускают обслуживание." Style="{StaticResource AutoSwitch}" Margin="6,0" />
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+              <RadioButton x:Name="CommandsNavigation33" Content="Команды" Tag="Commands" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
+              <RadioButton x:Name="HistoryNavigation33" Content="История" Tag="History" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
+              <RadioButton x:Name="WsusNavigation33" Content="WSUS" Tag="Wsus" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
+              <CheckBox x:Name="AutoServiceToggle" Content="Авто" Checked="AutoService_Changed" Unchecked="AutoService_Changed" HorizontalAlignment="Left" ToolTip="Поиск → установка найденного → отчёт. После согласованной перезагрузки — продолжение. Выключено: одна операция. Произвольные команды не запускают обслуживание." Style="{StaticResource AutoSwitch}" Margin="6,0" VerticalAlignment="Center" />
               <Button Content="⚙" Style="{StaticResource IconButton}" Click="WsusSettings_Click" ToolTip="Настройки программы" />
             </StackPanel>
             <WrapPanel Orientation="Horizontal">
               <TextBlock x:Name="CurrentComputer" FontSize="17" FontWeight="SemiBold" Text="Выберите компьютер" VerticalAlignment="Center" Margin="0,0,8,0" />
-              <Border Background="{DynamicResource StatusSurface}" CornerRadius="5" Padding="2,0" x:Name="ConnectionPanel32">
+              <Border Background="{DynamicResource StatusSurface}" CornerRadius="5" Padding="2,0" x:Name="ConnectionPanel32" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal">
-                  <Button x:Name="HeaderLink" Click="HeaderLink_Click" Padding="4,3" ToolTip="Проверить связь" Margin="0" Style="{StaticResource GhostButton}">
+                  <Button x:Name="HeaderLink" Click="HeaderLink_Click" Padding="4,3" ToolTip="Проверить связь" Margin="0" Style="{StaticResource GhostButton}" MinHeight="30">
                     <Button.ContextMenu>
                       <ContextMenu>
                         <MenuItem Header="Адрес и учётная запись…" Click="HeaderAddress_Click" />
@@ -130,11 +133,11 @@
                     </Button.ContextMenu>
                     <StackPanel Orientation="Horizontal">
                       <local:StatusGlyph x:Name="HeaderLinkGlyph" />
-                      <TextBlock x:Name="HeaderLinkText" Margin="5,0" VerticalAlignment="Center" />
+                      <TextBlock x:Name="HeaderLinkText" Margin="5,0" VerticalAlignment="Center" FontSize="12" />
                     </StackPanel>
                   </Button>
-                  <TextBlock x:Name="HeaderTimes31" Margin="5,5" Foreground="{DynamicResource TextMuted}" FontSize="11" />
-                  <TextBlock x:Name="HeaderUpdateCount31" Margin="5,5" FontWeight="SemiBold" FontSize="11" />
+                  <TextBlock x:Name="HeaderTimes31" Margin="5,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                  <TextBlock x:Name="HeaderUpdateCount31" Margin="5,0" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
                   <Button x:Name="HeaderReboot" Content="⟳ Перезагрузить…" Click="HeaderReboot_Click" Style="{StaticResource GhostIconButton}" Margin="1,0" />
                   <Button x:Name="HeaderAbortReboot" Content="×" Click="HeaderAbortReboot_Click" Visibility="Collapsed" Style="{StaticResource GhostIconButton}" Margin="1,0" ToolTip="Отменить назначенную перезагрузку" />
                   <Button x:Name="PostRebootInfo" Visibility="Collapsed" Content="⋯" Click="PostRebootInfo_Click" ToolTip="Состояние наблюдения и прекращение автоматического продолжения" Style="{StaticResource GhostIconButton}" Margin="1,0" />
@@ -209,6 +212,11 @@
       </Border>
       <DataGrid x:Name="ComputerGrid" Visibility="Collapsed" ItemsSource="{Binding Computers}" SelectionChanged="Computer_Changed" />
       <TabControl x:Name="MainTabs" Grid.Row="1" BorderThickness="0" Background="{DynamicResource AppSurface}" TabStripPlacement="Top" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" SelectionChanged="Tabs_Changed">
+        <TabControl.Template>
+          <ControlTemplate TargetType="TabControl">
+            <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+          </ControlTemplate>
+        </TabControl.Template>
         <TabItem x:Name="CommandsTab" Header="Команды">
           <Grid Margin="10">
             <Grid.ColumnDefinitions>
@@ -229,8 +237,8 @@
                   </ComboBox>
                   <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Команда" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <CheckBox x:Name="MicrosoftBox" Content="Источник MU" Margin="0,2,10,2" ToolTip="Меняет два параметра Windows Update только на время задания, затем возвращает их исходные значения. Kerio и другие сетевые блокировки не снимает. Если выключено, действуют политики клиента и параметры введённой команды." />
-                    <CheckBox x:Name="TouchesUpdatesBox" Content="Затрагивает WU" Margin="0,2,10,2" ToolTip="Включите для своих скриптов обслуживания обновлений. Появится проверка активности с выбором действия; настройка сохраняется вместе с командой." />
+                    <CheckBox x:Name="MicrosoftBox" Content="Источник MU" ToolTip="Меняет два параметра Windows Update только на время задания, затем возвращает их исходные значения. Kerio и другие сетевые блокировки не снимает. Если выключено, действуют политики клиента и параметры введённой команды." Style="{StaticResource CommandOption33}" />
+                    <CheckBox x:Name="TouchesUpdatesBox" Content="Затрагивает WU" ToolTip="Включите для своих скриптов обслуживания обновлений. Появится проверка активности с выбором действия; настройка сохраняется вместе с командой." Style="{StaticResource CommandOption33}" />
                   </StackPanel>
                 </DockPanel>
                 <TextBox x:Name="Editor" Margin="0" Text="hostname" TextChanged="Editor_Changed" PreviewKeyDown="Editor_KeyDown" LostKeyboardFocus="Editor_LostFocus" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" />
