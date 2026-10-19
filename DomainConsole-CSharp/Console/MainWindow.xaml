@@ -152,9 +152,9 @@
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock x:Name="CurrentStage" TextWrapping="NoWrap" Margin="0,1" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" />
-            <TextBlock x:Name="HeaderNext31" TextWrapping="NoWrap" Foreground="#1D4ED8" Margin="0,2" Grid.Column="1" MaxWidth="280" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" />
+            <TextBlock x:Name="HeaderNext31" TextWrapping="NoWrap" Foreground="{DynamicResource InfoText}" Margin="0,2" Grid.Column="1" MaxWidth="280" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" />
           </Grid>
-          <ProgressBar x:Name="CurrentProgress" Height="2" Maximum="100" Foreground="#2563EB" />
+          <ProgressBar x:Name="CurrentProgress" Height="2" Maximum="100" Foreground="{DynamicResource InfoText}" />
           <ItemsControl x:Name="HeaderRecent31" Margin="0">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
