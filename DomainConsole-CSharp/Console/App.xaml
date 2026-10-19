@@ -105,7 +105,7 @@
             <ControlTemplate.Triggers>
               <Trigger Property="IsSelected" Value="True">
                 <Setter TargetName="Nav" Property="Background" Value="{DynamicResource SelectionSurface}" />
-                <Setter TargetName="NavLabel" Property="TextElement.Foreground" Value="{DynamicResource Accent}" />
+                <Setter TargetName="NavLabel" Property="TextElement.Foreground" Value="{DynamicResource InfoText}" />
                 <Setter TargetName="NavLabel" Property="TextElement.FontWeight" Value="SemiBold" />
               </Trigger>
               <Trigger Property="IsMouseOver" Value="True">
