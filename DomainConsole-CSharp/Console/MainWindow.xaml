@@ -22,8 +22,8 @@
             <TextBox x:Name="SearchBox" TextChanged="Search_Changed" ToolTip="Поиск по имени, ОС или адресу; плюс добавляет IP" Margin="0" Height="30" />
           </DockPanel>
           <DockPanel>
-            <Button x:Name="OverviewRefresh" Content="↻" Click="OverviewRefresh_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource PanelSurface}" ToolTip="Прочитать данные WSUS и опросить клиентов: связь, флаги перезагрузки и аптайм. Поиск/установка не запускаются. Повторное нажатие останавливает обзор." Style="{StaticResource IconButton}" DockPanel.Dock="Right" Margin="4,0,0,0" />
-            <Button x:Name="StatusFilterButton" Content="Статусы: все" Click="StatusFilter_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource PanelSurface}" ToolTip="Несколько статусов со счётчиками; фильтр, отметка галочками и добавление в работу — отдельные действия. Счётчики учитывают поиск и выбранную область." Margin="0" Padding="6,4" />
+            <Button x:Name="OverviewRefresh" Content="↻" Click="OverviewRefresh_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource TextPrimary}" ToolTip="Прочитать данные WSUS и опросить клиентов: связь, флаги перезагрузки и аптайм. Поиск/установка не запускаются. Повторное нажатие останавливает обзор." Style="{StaticResource IconButton}" DockPanel.Dock="Right" Margin="4,0,0,0" />
+            <Button x:Name="StatusFilterButton" Content="Статусы: все" Click="StatusFilter_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource TextPrimary}" ToolTip="Несколько статусов со счётчиками; фильтр, отметка галочками и добавление в работу — отдельные действия. Счётчики учитывают поиск и выбранную область." Margin="0" Padding="6,4" />
           </DockPanel>
           <TextBlock x:Name="OverviewProgress" Foreground="{DynamicResource TextMuted}" FontSize="11" TextWrapping="NoWrap" Margin="4,2,0,5" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" />
         </StackPanel>
@@ -34,7 +34,7 @@
             <RowDefinition Height="6" />
             <RowDefinition x:Name="TreeRow" Height="0.62*" />
           </Grid.RowDefinitions>
-          <Expander x:Name="RecentGroup" Header="Последние в работе" Foreground="{DynamicResource PanelSurface}" IsExpanded="True" Expanded="NavigationGroup_Changed" Collapsed="NavigationGroup_Changed" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+          <Expander x:Name="RecentGroup" Header="Последние в работе" Foreground="{DynamicResource TextPrimary}" IsExpanded="True" Expanded="NavigationGroup_Changed" Collapsed="NavigationGroup_Changed" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <ListBox x:Name="RecentList" ItemsSource="{Binding RecentComputers}" SelectionChanged="Recent_Changed" PreviewMouseLeftButtonDown="Recent_PreviewMouseDown" Background="Transparent" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
               <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
@@ -62,10 +62,10 @@
             </ListBox>
           </Expander>
           <GridSplitter x:Name="NavigationSplitter" Grid.Row="1" Height="6" HorizontalAlignment="Stretch" Background="{DynamicResource SidebarSurface}" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" DragCompleted="NavigationSplit_Changed" />
-          <Expander x:Name="TreeGroup" Grid.Row="2" Foreground="{DynamicResource PanelSurface}" IsExpanded="True" Expanded="NavigationGroup_Changed" Collapsed="NavigationGroup_Changed" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+          <Expander x:Name="TreeGroup" Grid.Row="2" Foreground="{DynamicResource TextPrimary}" IsExpanded="True" Expanded="NavigationGroup_Changed" Collapsed="NavigationGroup_Changed" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <Expander.Header>
               <DockPanel LastChildFill="True">
-                <Button Content="↻" Click="LoadDomain_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource PanelSurface}" ToolTip="Загрузить компьютеры и подразделения из AD. Сохранённая история заданий остаётся доступной." Style="{StaticResource IconButton}" DockPanel.Dock="Right" Margin="4,0,0,0" />
+                <Button Content="↻" Click="LoadDomain_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource TextPrimary}" ToolTip="Загрузить компьютеры и подразделения из AD. Сохранённая история заданий остаётся доступной." Style="{StaticResource IconButton}" DockPanel.Dock="Right" Margin="4,0,0,0" />
                 <TextBlock Text="Дерево AD" VerticalAlignment="Center" />
               </DockPanel>
             </Expander.Header>
