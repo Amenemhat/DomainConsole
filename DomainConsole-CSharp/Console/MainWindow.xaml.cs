@@ -123,7 +123,7 @@ public partial class MainWindow:Window {
   foreach(var item in recentSamples)item.SetActivity(false,null,"Завершено",false);RecentGroup.IsExpanded=false;
   var watchHost=Current().Host;var savedWatch=rebootWatches.GetValueOrDefault(watchHost);try{var overdue=new RebootWatch{Confirmed=true,ExpectedUtc=DateTimeOffset.UtcNow.AddMinutes(-30),RequestedUtc=DateTimeOffset.UtcNow.AddMinutes(-31).ToString("o"),BeforeBootUtc=DateTimeOffset.UtcNow.AddDays(-2).ToString("o"),DispatchUtc=DateTimeOffset.UtcNow.AddMinutes(-30).ToString("o"),DispatchExitCode=0};ObserveWatchBoot(overdue,new(){BootUtc=overdue.BeforeBootUtc,Required=true},DateTimeOffset.UtcNow);rebootWatches[watchHost]=overdue;UpdateWsusStage();Capture("reboot-overdue");}finally{if(savedWatch==null)rebootWatches.Remove(watchHost);else rebootWatches[watchHost]=savedWatch;UpdateWsusStage();}
   MainTabs.SelectedItem=HistoryTab;UpdateLayout();if(HistoryGrid.Columns[0].ActualWidth<145)throw new Exception("History date/time column was squeezed");Capture("history");MainTabs.SelectedItem=CommandsTab;
-  VerifyRelease32();History.Remove(command);History.Remove(update);if(!restart){History.Add(command);History.Add(update);}Save();
+  VerifyRelease32();History.Remove(command);History.Remove(update);if(!restart){History.Add(command);History.Add(update);}Save();File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"ui-smoke-ready.txt"),"ok");
  }
  static string CommandTitle(string code){var line=code.Replace("\r","").Split('\n').FirstOrDefault(t=>!string.IsNullOrWhiteSpace(t))?.Trim()??"Команда";return line.Length>70?line[..67]+"…":line;}
  static string EntryKey(LibraryEntry entry)=>entry.MicrosoftSource+"|"+string.Join("\u001f",entry.Steps.Select(t=>t.Kind+":"+t.Code.Replace("\r\n","\n").Trim()));
