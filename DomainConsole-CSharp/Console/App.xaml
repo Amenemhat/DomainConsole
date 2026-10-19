@@ -452,21 +452,21 @@
     <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Margin" Value="0" />
+      <Setter Property="BorderThickness" Value="0" />
       <Style.Triggers>
         <Trigger Property="IsMouseOver" Value="True">
           <Setter Property="Background" Value="{DynamicResource HoverSurface}" />
         </Trigger>
       </Style.Triggers>
-      <Setter Property="BorderThickness" Value="0" />
     </Style>
     <Style x:Key="GhostIconButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
       <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
       <Style.Triggers>
         <Trigger Property="IsMouseOver" Value="True">
           <Setter Property="Background" Value="{DynamicResource HoverSurface}" />
         </Trigger>
       </Style.Triggers>
-      <Setter Property="BorderThickness" Value="0" />
     </Style>
     <Style TargetType="TabControl">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
