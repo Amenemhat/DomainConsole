@@ -362,7 +362,7 @@
           <DockPanel Margin="10">
             <ScrollViewer DockPanel.Dock="Right" Width="192" Margin="10,0,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
               <StackPanel Width="182">
-                <TextBlock x:Name="WsusHeader" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <TextBlock x:Name="WsusHeader" Visibility="Collapsed" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,8" />
                 <TextBlock Text="Обновления" FontWeight="SemiBold" Margin="0,4,0,4" />
                 <Button Click="WsusScan_Click" ToolTip="Найти применимые обновления и запросить отчёт. При включённом автообслуживании найденные обновления затем устанавливаются.">
                   <TextBlock Text="Проверить обновления" TextWrapping="Wrap" TextAlignment="Center" />
