@@ -1,7 +1,7 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:local="clr-namespace:DomainConsole" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="DomainConsole.MainWindow" Title="DomainConsole" Icon="Assets/DomainConsole.ico" Width="1480" Height="940" MinWidth="1000" MinHeight="640" Background="{DynamicResource AppSurface}" FontFamily="Segoe UI" FontSize="13" Foreground="{DynamicResource TextPrimary}">
   <Window.Resources>
     <local:LocalDateConverter x:Key="LocalDate" />
-    <Style x:Key="HistoryCell" TargetType="TextBlock">
+    <Style x:Key="HistoryCell" TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
       <Setter Property="Margin" Value="8,0" />
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -19,7 +19,7 @@
         <StackPanel DockPanel.Dock="Top">
           <DockPanel Margin="0,0,0,5">
             <Button DockPanel.Dock="Right" Content="＋" Width="32" Click="AddAddress_Click" ToolTip="Добавить компьютер по IP или указать VPN-адрес существующему клиенту" Style="{StaticResource IconButton}" Margin="4,0,0,0" />
-            <TextBox x:Name="SearchBox" TextChanged="Search_Changed" ToolTip="Поиск по имени, ОС или адресу; плюс добавляет IP" Margin="0" Height="30" />
+            <Grid><TextBox x:Name="SearchBox" TextChanged="Search_Changed" ToolTip="Поиск по имени, ОС или адресу; плюс добавляет IP" Margin="0" Height="30"/><TextBlock Text="Поиск имени или IP" Margin="7,0" VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" IsHitTestVisible="False"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text,ElementName=SearchBox}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></Grid>
           </DockPanel>
           <DockPanel>
             <Button x:Name="OverviewRefresh" Content="↻" Click="OverviewRefresh_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource TextPrimary}" ToolTip="Прочитать данные WSUS и опросить клиентов: связь, флаги перезагрузки и аптайм. Поиск/установка не запускаются. Повторное нажатие останавливает обзор." Style="{StaticResource IconButton}" DockPanel.Dock="Right" Margin="4,0,0,0" />
