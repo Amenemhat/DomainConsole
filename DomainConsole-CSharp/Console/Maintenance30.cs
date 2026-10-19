@@ -35,7 +35,7 @@ public partial class MainWindow {
    if(target!=null&&!TerminalSuccess(target)){if(target.Status is "ConnectionFailed" or "Unavailable" or "AccessDenied" or "SubmissionUnknown"){p.Detail="Связь/передача не подтверждена; требуется проверка результата, повторный запуск не выполняется";continue;}p.Done=true;p.Phase=target.Status=="Cancelled"?"Обслуживание остановлено":"Требуется действие";p.Detail="Автоматическое продолжение прекращено: "+ComputerRow.StatusText(target.Status)+". См. результат задания.";continue;}
    if(p.Phase=="Ожидается перезагрузка"){
     var snapshot=await statusProbe(row);if(snapshot==null){p.Detail="Клиент пока не ответил; повторный опрос запланирован";continue;}
-    if(!RebootSnapshotPolicy.NewBoot(new(){BootUtc=p.BootUtc},snapshot)){p.Detail="Перезагрузите компьютер в согласованное время; продолжение сохранено";continue;}
+    if(!RebootSnapshotPolicy.NewBoot(new(){BootUtc=p.BootUtc},snapshot)){if(snapshot.Required==false&&(!rebootWatches.TryGetValue(p.Host,out var scheduledWatch32)||scheduledWatch32.Done)&&HeaderRebootJob(row)==null){p.Phase="Флаги перезагрузки сняты";p.Detail="Свежий опрос не подтвердил требование перезагрузки; обслуживание продолжается";p.Next=DateTimeOffset.UtcNow;}else p.Detail="Перезагрузите компьютер в согласованное время; продолжение сохранено";continue;}
     p.BootUtc=snapshot.BootUtc;p.Phase="После перезагрузки: ожидание готовности";p.ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));p.Detail="";continue;
    }
    if(DateTimeOffset.UtcNow<p.ReadyAfter)continue;
