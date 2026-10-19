@@ -34,8 +34,11 @@ jobs:
           $env:TMP = $env:TEMP
           New-Item $env:TEMP -ItemType Directory -Force | Out-Null
           function Test-Window {
+            Remove-Item Publish/ui-smoke-ready.txt -Force -ErrorAction SilentlyContinue
             $p = Start-Process ./Publish/DomainConsole.exe -PassThru
-            Start-Sleep -Seconds 5
+            $until = [DateTime]::UtcNow.AddSeconds(90)
+            while (!(Test-Path Publish/ui-smoke-ready.txt) -and !$p.HasExited -and [DateTime]::UtcNow -lt $until) { Start-Sleep -Milliseconds 200; $p.Refresh() }
+            if (!$p.HasExited -and !(Test-Path Publish/ui-smoke-ready.txt)) { Stop-Process -Id $p.Id; throw 'UI assertions did not finish within 90 seconds' }
             $p.Refresh()
             if ($p.HasExited) { if (Test-Path Publish/smoke-error.txt) { Get-Content Publish/smoke-error.txt }; throw "Application exited during startup: $($p.ExitCode)" }
             if ($p.MainWindowHandle -eq 0) { Stop-Process -Id $p.Id; throw "Application window was not created" }
@@ -47,6 +50,7 @@ jobs:
           Test-Window
           $env:DOMAINCONSOLE_EXPECT_HISTORY = '1'
           Test-Window
+          Remove-Item Publish/ui-smoke-ready.txt -Force
           Remove-Item Publish/Data -Recurse -Force
           Write-Output "History persisted, opened without network, and survived AD list refresh."
       - name: Verify local SYSTEM execution and logs

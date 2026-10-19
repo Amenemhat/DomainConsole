@@ -5,8 +5,8 @@ public partial class MainWindow {
  async Task ObserveCurrentReboot(){if(readingReboot||closing||DateTimeOffset.UtcNow<nextRebootRead||ComputerGrid.SelectedItem is not ComputerRow row)return;nextRebootRead=DateTimeOffset.UtcNow.AddMinutes(1);readingReboot=true;try{await ReadClientStatus(row);if(!closing){RefreshOutcomes();if(IsCurrent(row))ShowCurrent();}}finally{readingReboot=false;}}
 
  async Task ObserveRebootAfterJob(ComputerRow row,RemoteJob? job,PollResult data){var state=data.State;if(!CurrentIdentity(row.Target))return;if(state==null||IsCurrentExecution(state.Status)||state.Ended.Length==0)return;
-  if(state.RebootEvidence==null&&wsusChecked.Add((job?.Id??row.JobId)+row.Host+"reboot")){try{var observed=await remote.ReadRebootState(row.Target);state.RebootEvidence=new(){Required=observed.Required,CollectedUtc=observed.CollectedUtc,Sources=observed.Sources,Error=observed.Error};}catch(Exception ex){state.RebootEvidence=new(){CollectedUtc=DateTime.UtcNow.ToString("o"),Error=ShortConnectionError(ex.Message)};}}
-  if(state.RebootEvidence!=null&&(!rebootSnapshots.TryGetValue(row.Host,out var old)||string.CompareOrdinal(state.RebootEvidence.CollectedUtc,old.CollectedUtc)>0)){var e=state.RebootEvidence;ApplyClientSnapshot(row.Host,new(){Required=e.Required,CollectedUtc=e.CollectedUtc,Sources=e.Sources,Error=e.Error,BootUtc=data.BootUtc.Length>0?data.BootUtc:old?.BootUtc??"",ClientUtc=data.ClientUtc});}
+  if((state.RebootEvidence==null||QueueOnly32(state.RebootEvidence.Sources))&&wsusChecked.Add((job?.Id??row.JobId)+row.Host+"reboot")){try{var observed=await remote.ReadRebootState(row.Target);state.RebootEvidence=new(){Required=observed.Required,CollectedUtc=observed.CollectedUtc,Sources=observed.Sources,PendingFileOperations=observed.PendingFileOperations,ProbeVersion=observed.ProbeVersion,Error=observed.Error};ReconcileRebootState(state,observed);}catch(Exception ex){state.RebootEvidence=new(){CollectedUtc=DateTime.UtcNow.ToString("o"),Error=ShortConnectionError(ex.Message)};}}
+  if(state.RebootEvidence!=null&&(!rebootSnapshots.TryGetValue(row.Host,out var old)||string.CompareOrdinal(state.RebootEvidence.CollectedUtc,old.CollectedUtc)>0)){var e=state.RebootEvidence;ApplyClientSnapshot(row.Host,new(){Required=e.Required,CollectedUtc=e.CollectedUtc,Sources=e.Sources,PendingFileOperations=e.PendingFileOperations,ProbeVersion=e.ProbeVersion,Error=e.Error,BootUtc=data.BootUtc.Length>0?data.BootUtc:old?.BootUtc??"",ClientUtc=data.ClientUtc});}
 
  }
  static void ReconcileRebootState(RemoteState state,RebootSnapshot snapshot){
@@ -17,7 +17,7 @@ public partial class MainWindow {
   // New positive flags are a fresh requirement and must not be cleared by observing a boot alone.
   if(snapshot.Required==true)return;
   state.Status=returned?(snapshot.Required==false?"VerifiedAfterReboot":"RebootObserved"):"Completed";
-  state.RebootRequired=false;state.Updated=snapshot.CollectedUtc;state.RebootEvidence=new(){Required=snapshot.Required,CollectedUtc=snapshot.CollectedUtc,Sources=snapshot.Sources,Error=snapshot.Error};
+  state.RebootRequired=false;state.Updated=snapshot.CollectedUtc;state.RebootEvidence=new(){Required=snapshot.Required,CollectedUtc=snapshot.CollectedUtc,Sources=snapshot.Sources,PendingFileOperations=snapshot.PendingFileOperations,ProbeVersion=snapshot.ProbeVersion,Error=snapshot.Error};
  }
  void ReconcileRebootHistory(string host,RebootSnapshot snapshot){bool changed=false;foreach(var target in History.SelectMany(j=>j.Targets).Where(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&CurrentIdentity(t)&&t.State!=null)){
   var before=target.State!.Status;ReconcileRebootState(target.State,snapshot);if(target.State.Status!=before){target.Status=target.State.Status;changed=true;}
@@ -25,3 +25,4 @@ public partial class MainWindow {
  void ApplyPostBootResult(ComputerRow row,PollResult data){if(data.State!=null&&rebootSnapshots.TryGetValue(row.Host,out var snapshot))ReconcileRebootState(data.State,snapshot);}
  string ReportDisplayStatus(string host){if(Computers.FirstOrDefault(r=>r.Host.Equals(host,StringComparison.OrdinalIgnoreCase)) is ComputerRow row&&RebootReason(row).Length>0)return "Reboot";return reportSeverity.GetValueOrDefault(host,"Unknown");}
 }
+
