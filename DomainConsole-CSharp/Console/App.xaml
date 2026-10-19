@@ -54,7 +54,7 @@
       <Setter Property="Background" Value="{DynamicResource PanelSurface}" />
       <Setter Property="Margin" Value="0,0,4,4" />
     </Style>
-    <Style TargetType="CheckBox">
+    <Style TargetType="CheckBox"><Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
       <Setter Property="Margin" Value="0,5,12,9" />
     </Style>
     <Style TargetType="DataGrid">
@@ -424,7 +424,8 @@
     <Style TargetType="TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     </Style>
-    <Style TargetType="Label">
+    <Style TargetType="RadioButton"><Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/></Style>
+<Style TargetType="Label">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     </Style>
   </Application.Resources>
