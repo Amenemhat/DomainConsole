@@ -1,7 +1,8 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:local="clr-namespace:DomainConsole" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="DomainConsole.MainWindow" Title="DomainConsole" Icon="Assets/DomainConsole.ico" Width="1480" Height="940" MinWidth="1000" MinHeight="640" Background="{DynamicResource AppSurface}" FontFamily="Segoe UI" FontSize="13" Foreground="{DynamicResource TextPrimary}">
   <Window.Resources>
     <local:LocalDateConverter x:Key="LocalDate" />
-    <Style x:Key="HistoryCell" TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    <Style x:Key="HistoryCell" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
       <Setter Property="Margin" Value="8,0" />
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -19,7 +20,21 @@
         <StackPanel DockPanel.Dock="Top">
           <DockPanel Margin="0,0,0,5">
             <Button DockPanel.Dock="Right" Content="＋" Width="32" Click="AddAddress_Click" ToolTip="Добавить компьютер по IP или указать VPN-адрес существующему клиенту" Style="{StaticResource IconButton}" Margin="4,0,0,0" />
-            <Grid><TextBox x:Name="SearchBox" TextChanged="Search_Changed" ToolTip="Поиск по имени, ОС или адресу; плюс добавляет IP" Margin="0" Height="30"/><TextBlock Text="Поиск имени или IP" Margin="7,0" VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" IsHitTestVisible="False"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text,ElementName=SearchBox}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></Grid>
+            <Grid>
+              <TextBox x:Name="SearchBox" TextChanged="Search_Changed" ToolTip="Поиск по имени, ОС или адресу; плюс добавляет IP" Margin="0" Height="30" />
+              <TextBlock Text="Поиск имени или IP" Margin="7,0" VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" IsHitTestVisible="False">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Text,ElementName=SearchBox}" Value="">
+                        <Setter Property="Visibility" Value="Visible" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+            </Grid>
           </DockPanel>
           <DockPanel>
             <Button x:Name="OverviewRefresh" Content="↻" Click="OverviewRefresh_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource TextPrimary}" ToolTip="Прочитать данные WSUS и опросить клиентов: связь, флаги перезагрузки и аптайм. Поиск/установка не запускаются. Повторное нажатие останавливает обзор." Style="{StaticResource IconButton}" DockPanel.Dock="Right" Margin="4,0,0,0" />
@@ -61,7 +76,15 @@
               </ListBox.ItemTemplate>
             </ListBox>
           </Expander>
-          <GridSplitter x:Name="NavigationSplitter" Grid.Row="1" Height="6" HorizontalAlignment="Stretch" Background="{DynamicResource SidebarSurface}" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" DragCompleted="NavigationSplit_Changed" />
+          <GridSplitter x:Name="NavigationSplitter" Grid.Row="1" Height="6" HorizontalAlignment="Stretch" Background="{DynamicResource Outline}" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" DragCompleted="NavigationSplit_Changed" ToolTip="Перетащите, чтобы изменить высоту списков" Margin="0">
+            <GridSplitter.Template>
+              <ControlTemplate TargetType="GridSplitter">
+                <Border Background="{TemplateBinding Background}">
+                  <Border Background="{DynamicResource TextMuted}" Width="36" Height="2" CornerRadius="1" />
+                </Border>
+              </ControlTemplate>
+            </GridSplitter.Template>
+          </GridSplitter>
           <Expander x:Name="TreeGroup" Grid.Row="2" Foreground="{DynamicResource TextPrimary}" IsExpanded="True" Expanded="NavigationGroup_Changed" Collapsed="NavigationGroup_Changed" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <Expander.Header>
               <DockPanel LastChildFill="True">
@@ -98,7 +121,7 @@
               <TextBlock x:Name="CurrentComputer" FontSize="17" FontWeight="SemiBold" Text="Выберите компьютер" VerticalAlignment="Center" Margin="0,0,8,0" />
               <Border Background="{DynamicResource StatusSurface}" CornerRadius="5" Padding="2,0" x:Name="ConnectionPanel32">
                 <StackPanel Orientation="Horizontal">
-                  <Button x:Name="HeaderLink" Click="HeaderLink_Click" Padding="4,3" ToolTip="Проверить связь" Margin="0">
+                  <Button x:Name="HeaderLink" Click="HeaderLink_Click" Padding="4,3" ToolTip="Проверить связь" Margin="0" Style="{StaticResource GhostButton}">
                     <Button.ContextMenu>
                       <ContextMenu>
                         <MenuItem Header="Адрес и учётная запись…" Click="HeaderAddress_Click" />
@@ -112,9 +135,9 @@
                   </Button>
                   <TextBlock x:Name="HeaderTimes31" Margin="5,5" Foreground="{DynamicResource TextMuted}" FontSize="11" />
                   <TextBlock x:Name="HeaderUpdateCount31" Margin="5,5" FontWeight="SemiBold" FontSize="11" />
-                  <Button x:Name="HeaderReboot" Content="⟳ Перезагрузить…" Click="HeaderReboot_Click" Style="{StaticResource IconButton}" Margin="1,0" />
-                  <Button x:Name="HeaderAbortReboot" Content="×" Click="HeaderAbortReboot_Click" Visibility="Collapsed" Style="{StaticResource IconButton}" Margin="1,0" ToolTip="Отменить назначенную перезагрузку" />
-                  <Button x:Name="PostRebootInfo" Visibility="Collapsed" Content="⋯" Click="PostRebootInfo_Click" ToolTip="Состояние наблюдения и прекращение автоматического продолжения" Style="{StaticResource IconButton}" Margin="1,0" />
+                  <Button x:Name="HeaderReboot" Content="⟳ Перезагрузить…" Click="HeaderReboot_Click" Style="{StaticResource GhostIconButton}" Margin="1,0" />
+                  <Button x:Name="HeaderAbortReboot" Content="×" Click="HeaderAbortReboot_Click" Visibility="Collapsed" Style="{StaticResource GhostIconButton}" Margin="1,0" ToolTip="Отменить назначенную перезагрузку" />
+                  <Button x:Name="PostRebootInfo" Visibility="Collapsed" Content="⋯" Click="PostRebootInfo_Click" ToolTip="Состояние наблюдения и прекращение автоматического продолжения" Style="{StaticResource GhostIconButton}" Margin="1,0" />
                 </StackPanel>
               </Border>
             </WrapPanel>
@@ -132,19 +155,19 @@
             <TextBlock x:Name="HeaderNext31" TextWrapping="NoWrap" Foreground="#1D4ED8" Margin="0,2" Grid.Column="1" MaxWidth="280" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" />
           </Grid>
           <ProgressBar x:Name="CurrentProgress" Height="2" Maximum="100" Foreground="#2563EB" />
+          <ItemsControl x:Name="HeaderRecent31" Margin="0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Display}" Foreground="{Binding Brush}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text}" TextWrapping="Wrap" MaxHeight="36" LineHeight="16" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
           <Grid Margin="0,3,0,0">
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="2*" />
+              <ColumnDefinition Width="1*" />
             </Grid.ColumnDefinitions>
             <StackPanel Margin="0,0,6,0">
-              <ItemsControl x:Name="HeaderRecent31" Margin="0">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <TextBlock Text="{Binding Display}" Foreground="{Binding Brush}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text}" />
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
               <Button x:Name="HeaderEventHistory31" Content="История событий" Click="EventHistory_Click" HorizontalAlignment="Left" FontSize="11" Padding="5,2" Visibility="Collapsed" />
               <Expander x:Name="EventHistoryGroup32" Header="История событий" Expanded="EventHistory32_Changed" Collapsed="EventHistory32_Changed">
                 <DockPanel>
@@ -156,7 +179,10 @@
                   <ListBox x:Name="EventList32" MaxHeight="145" SelectionMode="Extended" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemTemplate>
                       <DataTemplate>
-                        <Expander Header="{Binding Display}" Foreground="{Binding Brush}" ToolTip="{Binding Text}">
+                        <Expander Foreground="{Binding Brush}" ToolTip="{Binding Text}">
+                          <Expander.Header>
+                            <TextBlock Text="{Binding Display}" Foreground="{Binding Brush}" TextWrapping="Wrap" />
+                          </Expander.Header>
                           <TextBox Text="{Binding Details}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="100" VerticalScrollBarVisibility="Auto" />
                         </Expander>
                       </DataTemplate>
@@ -167,7 +193,7 @@
             </StackPanel>
             <Expander x:Name="BackgroundGroup" Margin="0" IsExpanded="False" Visibility="Collapsed" Grid.Column="1">
               <Expander.Header>
-                <TextBlock x:Name="BackgroundSummary" TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" />
+                <TextBlock x:Name="BackgroundSummary" TextWrapping="NoWrap" Foreground="{DynamicResource TextMuted}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" />
               </Expander.Header>
               <StackPanel MaxHeight="175">
                 <TextBlock x:Name="BackgroundRelation" TextWrapping="Wrap" Margin="0,3" />
@@ -392,14 +418,11 @@
                 <RowDefinition Height="6" />
                 <RowDefinition Height="2*" MinHeight="80" />
               </Grid.RowDefinitions>
-              <TextBlock Text="Журнал клиента" Margin="0,0,0,6" FontWeight="SemiBold" />
-              <local:LogViewer Grid.Row="1" x:Name="WsusOutput" Margin="0" />
+              <local:LogViewer Grid.Row="1" x:Name="WsusOutput" Margin="0" Caption="Журнал клиента" />
               <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="{DynamicResource Outline}" />
               <DockPanel Grid.Row="3">
-                <TextBlock x:Name="WsusReportTitle" DockPanel.Dock="Top" Text="Данные сервера WSUS о выбранном ПК" Margin="0,6" FontWeight="SemiBold" />
-                <Border Background="{DynamicResource ReportSurface}" BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="6" Padding="5" Grid.Row="3">
-                  <local:LogViewer x:Name="WsusServerOutput" Margin="0" FontFamily="Consolas" />
-                </Border>
+                <TextBlock x:Name="WsusReportTitle" DockPanel.Dock="Top" Text="Данные сервера WSUS о выбранном ПК" Margin="0,6" FontWeight="SemiBold" Visibility="Collapsed" />
+                <local:LogViewer x:Name="WsusServerOutput" Margin="0" FontFamily="Consolas" Caption="Отчёт WSUS" />
               </DockPanel>
             </Grid>
           </DockPanel>

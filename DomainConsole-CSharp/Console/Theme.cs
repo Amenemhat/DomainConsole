@@ -8,11 +8,8 @@ public static class Theme {
  public static Brush Brush(string key)=>(Brush)Application.Current.FindResource(key);
  public static Brush Tone(string tone)=>Brush(tone switch {"Success"=>"SuccessText","Warning"=>"WarningText","Error"=>"ErrorText","Info"=>"InfoText",_=>"TextPrimary"});
  public static void Apply(int index,bool save=true){Current=Math.Clamp(index,0,2);
-  var keys=new[]{"AppSurface","PanelSurface","SidebarSurface","EditorSurface","ReportSurface","StatusSurface","TextPrimary","TextMuted","Outline","SelectionSurface","SectionSurface","ScrollTrack","ScrollThumb","SuccessText","WarningText","ErrorText","InfoText","Accent"};
-  string[][] values={
-   new[]{"#E8EBEF","#EDF0F3","#DFE4EA","#F4F6F8","#EAF0F2","#E0E7ED","#293340","#596879","#C8D0DA","#C4D8EA","#DCE5EE","#E9EDF1","#B0BAC6","#247348","#986000","#B53D3D","#356D9B","#436987"},
-   new[]{"#24282F","#2B3038","#20242A","#303640","#2D343B","#343C47","#D5DBE3","#A8B3C2","#46505E","#354E67","#394452","#2D333B","#535F6D","#9BCB9F","#E2B56F","#F39A96","#9CBFE3","#517DA5"},
-   new[]{"#EAE7EF","#F0EDF4","#E3DDEB","#F7F4F9","#EDE8F3","#E4DCEC","#3C3449","#6B607B","#CFC4DA","#D9C8E7","#E5DDEC","#EFEAF4","#BAADC8","#2E7657","#946100","#AC3E50","#70518F","#80609B"}};
+  var keys=new[]{"AppSurface","PanelSurface","SidebarSurface","EditorSurface","ReportSurface","StatusSurface","TextPrimary","TextMuted","Outline","SelectionSurface","SectionSurface","ScrollTrack","ScrollThumb","SuccessText","WarningText","ErrorText","InfoText","Accent","ActiveSurface","HeaderSurface","ButtonSurface","HoverSurface"};
+  string[][] values={new[]{"#E3E8EE","#F0F3F6","#D5DDE6","#FAFBFD","#F1F6FB","#DFE9F3","#172B3D","#465C70","#9DAEC0","#C9E1F5","#D3E1EE","#DFE6EE","#899CB1","#087B3B","#A95500","#BA3038","#155BC2","#38688F","#D6E6F4","#E4EDF5","#D8E3EE","#D2E1F0"},new[]{"#20262E","#2C3540","#18212B","#29333E","#293643","#293D4C","#F0F4F8","#BBC8D5","#63768A","#314E69","#3C4D60","#28333E","#63788D","#64E695","#FFC06B","#FF929B","#70B7FF","#477FAE","#354D62","#344151","#364758","#40586D"},new[]{"#E8E2ED","#F2EDF6","#DDD2E7","#FCF9FE","#F4EEF9","#E7DDEF","#30213F","#665176","#B39CC6","#DAC5EE","#DDCDEB","#E8DFEF","#AC97BD","#087B4A","#AA5A04","#B82F53","#225DC5","#80609B","#E6D9F2","#E9DEF2","#E3D7ED","#DACCE6"}};
   for(int i=0;i<keys.Length;i++)Application.Current.Resources[keys[i]]=new SolidColorBrush((Color)ColorConverter.ConvertFromString(values[Current][i]));
   // Native popup/edit controls must use the palette too.
   foreach(var key in new[]{SystemColors.WindowBrushKey,SystemColors.ControlBrushKey})Application.Current.Resources[key]=Brush("PanelSurface");
