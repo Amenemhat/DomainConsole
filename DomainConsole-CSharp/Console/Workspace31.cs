@@ -36,7 +36,7 @@ public partial class MainWindow {
  void RestoreAutoMaintenance31(){if(!AutoServiceEnabled)return;foreach(var entry in rebootWatches.Where(x=>x.Value.Done&&x.Value.Scan&&x.Value.FollowupId.Length>0)){if(maintenancePlans.ContainsKey(entry.Key))continue;var job=History.FirstOrDefault(j=>j.Id==entry.Value.FollowupId);var target=job?.Targets.FirstOrDefault(t=>t.Host.Equals(entry.Key,StringComparison.OrdinalIgnoreCase));if(target?.State?.UpdatesRemaining>0&&target.Status=="Completed"&&DateTimeOffset.TryParse(target.State.Ended,out var ended)&&DateTimeOffset.UtcNow-ended<TimeSpan.FromDays(2)&&History.FirstOrDefault(j=>IsWsusJob(j)&&j.Targets.Any(t=>t.Host.Equals(entry.Key,StringComparison.OrdinalIgnoreCase)))?.Id==job!.Id)BeginMaintenance(job);}}
  void RefreshHeader31(ComputerRow row){
   RefreshRebootHeader();
-  CurrentDetails.Text=row.OS;CurrentDetails.ToolTip=row.Host+ConnectionStore.Description(row.Host);
+  CurrentDetails.Text=row.OS;CurrentDetails.ToolTip=row.OS+"\n"+row.Host+ConnectionStore.Description(row.Host);
   HeaderLinkGlyph.Kind=LinkKind(row.Host);HeaderLinkGlyph.Tint=LinkKind(row.Host)=="Connected"?Theme.Tone("Success"):LinkKind(row.Host)=="Access"?Theme.Tone("Warning"):Theme.Brush("TextMuted");
   HeaderLinkText.Text=LinkKind(row.Host) switch {"Connected"=>"Связь есть","SavedConnected"=>"Был доступен","Access"=>"Нет доступа","Unreachable"=>"Нет ответа",_=>"Связь не проверена"};HeaderLink.ToolTip=LinkHint(row);
   HeaderTimes31.Text=(clientConnections.TryGetValue(row.Host,out var link)&&link.LastSuccess!=default?"Ответ: "+Age(DateTimeOffset.UtcNow-link.LastSuccess)+" назад  ·  ":"")+UptimeText(row.Host);HeaderTimes31.ToolTip=UptimeHint(row.Host);
@@ -58,8 +58,8 @@ public partial class MainWindow {
  void RefreshEventHistory32(string host){
   var all=AllEvents32(host);EventHistoryGroup32.Header="История событий · "+all.Count;
   var items=all.Where(x=>EventErrors32.IsChecked!=true||x.Kind is "Error" or "Warning").ToList();
-  var key=host+EventErrors32.IsChecked+string.Join("|",items.Select(x=>EventKey32(x)+"|"+x.Repeats));if(key==historyEventsKey32)return;
-  bool reset=historyReset35||historyHost35!=host;var viewer=Visual33<ScrollViewer>(EventList32).FirstOrDefault();
+  var key=host+EventErrors32.IsChecked+string.Join("|",items.Select(x=>EventKey32(x)+"|"+x.Repeats));bool reset=historyReset35||historyHost35!=host;if(key==historyEventsKey32&&!reset)return;
+ var viewer=Visual33<ScrollViewer>(EventList32).FirstOrDefault();
   if(!reset&&viewer?.VerticalOffset>1){historyPending35=items;var previous=EventList32.Items.Cast<ClientEvent31>().Select(EventKey32).ToHashSet();int count=items.Count(x=>!previous.Contains(EventKey32(x)));NewEvents35.Content=count>0?"Новых событий: "+count+" ↑":"События обновлены ↑";NewEvents35.Visibility=Visibility.Visible;return;}
   historyEventsKey32=key;historyHost35=host;historyReset35=false;historyPending35=null;NewEvents35.Visibility=Visibility.Collapsed;EventList32.ItemsSource=items;
   Dispatcher.BeginInvoke(new Action(()=>Visual33<ScrollViewer>(EventList32).FirstOrDefault()?.ScrollToTop()),System.Windows.Threading.DispatcherPriority.Loaded);

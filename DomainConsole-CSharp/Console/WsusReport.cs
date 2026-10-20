@@ -29,7 +29,7 @@ public sealed class WsusReport {
   if(InstalledPendingRebootCount>0)lines.Add("Ожидают перезагрузки: "+InstalledPendingRebootCount);
   if(ApprovedUnknownCount>0)lines.Add("Одобрены, применимость не определена: "+ApprovedUnknownCount);
   if(RequiredError.Length>0)lines.Add("Подсчёт неполный: "+MainWindow.ConnectionBrief31(RequiredError));
-  if(ClientSearchCount31.HasValue)lines.Add("Поиск на клиенте: найдено "+ClientSearchCount31+" · "+Date(ClientSearchUtc31)+". Отдельный источник; одобрения WSUS не подсчитывает.");
+  if(ClientSearchCount31.HasValue)lines.Add("Последний успешный поиск на клиенте: найдено "+ClientSearchCount31+" · "+Date(ClientSearchUtc31)+". Отдельный источник; одобрения WSUS не подсчитывает.");
   lines.Add("## Технические сведения · источник и актуальность");lines.Add("Сервер WSUS: "+server);lines.Add("Клиент: "+FullDomainName);lines.Add("Получено: "+DateTimeOffset.Now.ToString("dd.MM.yyyy HH:mm:ss zzz"));lines.Add(Freshness(started));
   if(SyncExplanation.Length>0)lines.Add(SyncExplanation);
   if(FailedCount>0){lines.Add("## Сохранённые неудачи WSUS");foreach(var f in FailedUpdates){var code=f.Events.Where(e=>e.IsError&&e.ErrorCode.HasValue&&e.ErrorCode!=0).OrderByDescending(e=>e.Date).FirstOrDefault();lines.Add("KB "+f.KB+(code==null?" · код причины не получен":" · "+DomainConsole.Shared.ExecutionDiagnosis.Code(unchecked((int)code.ErrorCode!.Value))+" · "+DomainConsole.Shared.ExecutionDiagnosis.Explain(unchecked((int)code.ErrorCode.Value))));}if(FailedUpdates.Count==0)lines.Add("В сводке: "+FailedCount+". Подробности не получены.");}
