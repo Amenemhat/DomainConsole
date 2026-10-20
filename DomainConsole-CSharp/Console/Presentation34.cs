@@ -8,7 +8,7 @@ public partial class MainWindow {
  public static void NormalizeLegacyShells34(IEnumerable<CommandStep> steps){foreach(var step in steps)if(string.Equals(step.Kind,"PS",StringComparison.OrdinalIgnoreCase))step.Kind="PowerShell";}
  public static void NormalizeCommandKinds34(IEnumerable<CommandStep> steps){foreach(var step in steps){if(string.Equals(step.Kind,"PS",StringComparison.OrdinalIgnoreCase))step.Kind="PowerShell";if(!new[]{"CMD","PowerShell","Updates","UpdateScan","Diagnostics","CacheCleanup","CacheResidueCleanup","ReportRecovery","ClientDiagnostics","DeliveryDiagnostics"}.Contains(step.Kind))throw new InvalidOperationException("Неподдерживаемый тип команды: «"+step.Kind+"». Выберите CMD или PowerShell; сценарий не отправлен.");}}
  public static string StageText34(ComputerRow row,RemoteState? state,bool active,bool fresh){
-  if(!active)return row.Status+(row.Stage.Length>0?" · "+row.Stage:"")+(state?.Error.Length>0?"\n"+ShortConnectionError(state.Error):"");
+  if(!active)return TerminalText35(row,state);
   if(row.Target.Status=="Sending")return "Передача задания на клиент";
   if(row.Target.Status=="SubmissionUnknown")return "Передача не подтверждена; проверяется результат без повторного запуска";
   if(state==null)return "Задание передано; ожидается результат";
@@ -23,9 +23,11 @@ public partial class MainWindow {
  void IdentityHeader34_SizeChanged(object sender,SizeChangedEventArgs e)=>ArrangeIdentity34();
  void ArrangeIdentity34(){
   if(IdentityHeader34==null||HeaderActions34==null||IdentityHeader34.ActualWidth<=0)return;
-  double width=IdentityHeader34.ActualWidth;CurrentComputer.MaxWidth=Math.Max(80,width-HeaderActions34.ActualWidth-12);ConnectionPanel32.MaxWidth=width;
-  var panel=(WrapPanel)ConnectionPanel32.Child;double natural=ConnectionPanel32.Padding.Left+ConnectionPanel32.Padding.Right;foreach(FrameworkElement child in panel.Children)if(child.Visibility!=Visibility.Collapsed){child.Measure(new Size(double.PositiveInfinity,double.PositiveInfinity));natural+=child.DesiredSize.Width;}
-  bool inline=natural+CurrentComputer.DesiredSize.Width+HeaderActions34.ActualWidth+12<=width;Grid.SetRow(ConnectionPanel32,inline?0:1);Grid.SetColumn(ConnectionPanel32,inline?1:0);Grid.SetColumnSpan(ConnectionPanel32,inline?1:3);
+  double width=IdentityHeader34.ActualWidth;HeaderActions34.Measure(new Size(double.PositiveInfinity,double.PositiveInfinity));
+  double available=width-HeaderActions34.DesiredSize.Width-8;bool inline=available>=680;
+  Grid.SetRow(ConnectionPanel32,inline?0:1);Grid.SetColumn(ConnectionPanel32,0);Grid.SetColumnSpan(ConnectionPanel32,inline?2:3);
+  ConnectionPanel32.MaxWidth=inline?available:width;CurrentComputer.MaxWidth=Math.Max(100,Math.Min(310,ConnectionPanel32.MaxWidth-160));
+
  }
  void RefreshServiceBadge34(ComputerRow row){
   string text="",details="";if(maintenancePlans.TryGetValue(row.Host,out var p)&&!p.Done){details=p.Phase+(p.Detail.Length>0?" · "+p.Detail:"");text=p.Phase.Contains("перезагруз",StringComparison.OrdinalIgnoreCase)?"Ждёт перезагрузки":p.Detail.Contains("Связь",StringComparison.OrdinalIgnoreCase)||p.Phase.Contains("связ",StringComparison.OrdinalIgnoreCase)?"Ждёт связи":p.Phase.Contains("готовност",StringComparison.OrdinalIgnoreCase)?"Ждёт готовности":"Обслуживание";}
