@@ -191,7 +191,7 @@
                       <DataTemplate>
                         <Expander Foreground="{Binding Brush}" ToolTip="{Binding Text}">
                           <Expander.Header>
-                            <TextBox Text="{Binding Display}" Foreground="{Binding Brush}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" Padding="0" />
+                            <TextBox Text="{Binding Display,Mode=OneWay}" Foreground="{Binding Brush}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" Padding="0" />
                           </Expander.Header>
                           <TextBox Text="{Binding Details}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="100" VerticalScrollBarVisibility="Auto" />
                         </Expander>
