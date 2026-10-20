@@ -423,6 +423,7 @@ jobs:
           function Get-Service($Name){$obj=[pscustomobject]@{Status=$states[$Name]};$obj|Add-Member ScriptMethod WaitForStatus {param($status,$timeout)};return $obj}
           function Stop-Service($Name){if($failStop -and $Name -eq 'bits'){throw 'fixture stop failure'};$states[$Name]='Stopped'}
           function Start-Service($Name){$states[$Name]='Running'}
+          function Start-ScheduledTask($TaskName){}
           try {
             $download=Join-Path $fixture 'SoftwareDistribution/Download';New-Item $download -ItemType Directory -Force|Out-Null
             Set-Content (Join-Path $download 'sample.bin') 'fixture'
@@ -698,16 +699,51 @@ jobs:
           $result=Read-RequiredUpdates31 $target
           if($result.NeededCount -ne 3 -or $result.ApprovedDownloadedCount -ne 1 -or $result.ApprovedFailedCount -ne 1 -or $result.ApprovedUnknownCount -ne 1 -or $result.RequiredComplete){throw ('Incorrect count: '+($result|ConvertTo-Json))}
           $check=@'
-          $fixture=Join-Path $env:TEMP ('dc-cache31-'+[Guid]::NewGuid().ToString('N'));$original=$env:windir;$env:windir=$fixture
+          $fixture=Join-Path $env:TEMP ('dc-cache31-'+[Guid]::NewGuid().ToString('N'));$original=$env:windir;$originalData=$env:ProgramData;$env:windir=$fixture;$env:ProgramData=Join-Path $fixture 'ProgramData'
           $body=[IO.File]::ReadAllText((Join-Path $env:TEMP 'cache-full31.ps1')).Replace('(New-Object -ComObject Microsoft.Update.Installer).IsBusy','$false')
           function Get-Service($Name){$s=[pscustomobject]@{Status='Running'};$s|Add-Member ScriptMethod WaitForStatus {param($a,$b)};return $s}
           function Stop-Service($Name){}
           function Start-Service($Name){}
           function Start-ScheduledTask($TaskName){}
-          try{New-Item (Join-Path $fixture 'SoftwareDistribution/Download') -ItemType Directory -Force|Out-Null;Set-Content (Join-Path $fixture 'SoftwareDistribution/Download/payload.bin') 'fixture';& ([ScriptBlock]::Create($body));if(!(Test-Path (Join-Path $fixture 'SoftwareDistribution'))){throw 'Fresh root missing'};$old=@(Get-ChildItem $fixture -Directory -Filter 'SoftwareDistribution.DomainConsolePendingDelete_*');if($old.Count -ne 1 -or !(Test-Path (Join-Path $old[0].FullName 'Download/payload.bin'))){throw 'Old cache not isolated'};$rejected=$false;try{& ([ScriptBlock]::Create($body))}catch{$rejected=$true};if(!$rejected){throw 'Repeated reset accumulates folders'}}finally{$env:windir=$original;Remove-Item $fixture -Recurse -Force -ErrorAction SilentlyContinue}
+          try{New-Item (Join-Path $fixture 'SoftwareDistribution/Download') -ItemType Directory -Force|Out-Null;Set-Content (Join-Path $fixture 'SoftwareDistribution/Download/payload.bin') 'fixture';& ([ScriptBlock]::Create($body));if(!(Test-Path (Join-Path $fixture 'SoftwareDistribution'))){throw 'Fresh root missing'};$old=@(Get-ChildItem $fixture -Directory -Filter 'SoftwareDistribution.DomainConsolePendingDelete_*');if($old.Count -ne 1 -or !(Test-Path (Join-Path $old[0].FullName 'Download/payload.bin'))){throw 'Old cache not isolated'};& ([ScriptBlock]::Create($body));$old=@(Get-ChildItem $fixture -Directory -Filter 'SoftwareDistribution.DomainConsolePendingDelete_*');if($old.Count -ne 2){throw 'Repeated reset did not isolate a unique cache'};$registered=@(Get-Content (Join-Path $env:ProgramData 'DomainConsoleCSharp/pending-cache-cleanup.jsonl'));if($registered.Count -ne 2){throw 'Detached caches not registered immediately'}}finally{$env:windir=$original;$env:ProgramData=$originalData;Remove-Item $fixture -Recurse -Force -ErrorAction SilentlyContinue}
           '@
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
           if($LASTEXITCODE -ne 0){throw 'Full cache isolation fixture failed'}
+      - name: Verify long-path old cache cleanup and link isolation
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe cache-smoke34 (Join-Path $env:RUNNER_TEMP 'DomainConsole-cache34')
+          if($LASTEXITCODE -ne 0){throw 'Long-path cache cleanup fixture failed'}
+      - name: Verify bounded polling and malformed snapshot recovery
+        shell: pwsh
+        run: |
+          $env:TEMP=Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
+          $check=@'
+          $p=Join-Path $env:TEMP ('poll34-'+[Guid]::NewGuid().ToString('N'));New-Item $p -ItemType Directory|Out-Null
+          $dcJobId34=[Guid]::NewGuid().ToString();$includeOutput34=$true
+          $body=[IO.File]::ReadAllText((Join-Path $env:TEMP 'poll34.ps1'))
+          function Get-ScheduledTask($TaskName){return $null}
+          function Get-CimInstance($ClassName,$Filter){if($ClassName -eq 'Win32_OperatingSystem'){[pscustomobject]@{LastBootUpTime=[DateTime]::Now.AddHours(-1)}}}
+          try {
+           $status=Join-Path $p 'status.json';[IO.File]::WriteAllText($status,'.');$rejected=$false
+           try{& ([ScriptBlock]::Create($body))}catch{$rejected=$_.Exception.Message.Contains('DC_DATA_ERROR|status.json|')}
+           if(!$rejected){throw 'Malformed status not classified as data failure'}
+           [IO.File]::WriteAllText($status,(@{Id=$dcJobId34;Status='Running';Ended=''}|ConvertTo-Json))
+           [IO.File]::WriteAllText((Join-Path $p 'step-1.out'),('X'*200000))
+           $result=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
+           if($result.State.Status -ne 'Running' -or $result.Files.Count -ne 1 -or $result.Files[0].Body.Length -gt 65536){throw 'Recovery or bounded log output failed'}
+           $includeOutput34=$false;$result=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
+           if($result.Files.Count -ne 0){throw 'Background poll needlessly reads full output'}
+           [IO.File]::WriteAllText((Join-Path $p 'step-1.updates.json'),'.')
+           $result=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
+           if($result.State.Status -ne 'Running' -or !$result.Output.Contains('DC_DATA_ERROR|step-1.updates.json|')){throw 'Optional snapshot failure erased primary status'}
+           [IO.File]::WriteAllText($status,(@{Id='wrong';Status='Completed'}|ConvertTo-Json));$rejected=$false
+           try{& ([ScriptBlock]::Create($body))}catch{$rejected=$_.Exception.Message.Contains('DC_DATA_ERROR|status.json|')}
+           if(!$rejected){throw 'Snapshot from wrong job accepted'}
+          }finally{Remove-Item $p -Recurse -Force}
+          '@
+          & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
+          if($LASTEXITCODE -ne 0){throw 'Polling snapshot fixture failed'}
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:

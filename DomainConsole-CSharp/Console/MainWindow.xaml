@@ -61,7 +61,7 @@
                 <DataTemplate>
                   <Grid Margin="0">
                     <Border Background="{Binding ActivityBrush}" CornerRadius="4" />
-                    <ProgressBar x:Name="RecentActivityFill" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0" Opacity="0.18" IsHitTestVisible="False" Focusable="False" Maximum="100" Value="{Binding WorkProgress,Mode=OneWay}" IsIndeterminate="{Binding WorkBusy}" Visibility="{Binding ActivityVisibility}" Foreground="#38BDF8" Background="Transparent" />
+                    <ProgressBar x:Name="RecentActivityFill" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0" Opacity="0.42" IsHitTestVisible="False" Focusable="False" Maximum="100" Value="{Binding WorkProgress,Mode=OneWay}" IsIndeterminate="{Binding WorkBusy}" Visibility="{Binding ActivityVisibility}" Foreground="{DynamicResource InfoText}" Background="Transparent" />
                     <DockPanel Margin="2,1">
                       <local:StatusGlyph DockPanel.Dock="Right" Kind="{Binding LinkKind}" Tint="{Binding LinkBrush}" ToolTip="{Binding LinkHint}" Margin="5,0,0,0" />
                       <local:StatusGlyph DockPanel.Dock="Right" Kind="{Binding Outcome}" Tint="{Binding OutcomeBrush}" ToolTip="{Binding OutcomeHint}" Margin="6,0,0,0" />
@@ -112,18 +112,19 @@
       </Grid.RowDefinitions>
       <Border Background="{DynamicResource PanelSurface}" BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="6" Padding="8,5" Margin="0,0,0,6" x:Name="CompactHeader32">
         <StackPanel>
-          <DockPanel>
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+          <Grid x:Name="IdentityHeader34" SizeChanged="IdentityHeader34_SizeChanged">
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel x:Name="HeaderActions34" Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center">
               <RadioButton x:Name="CommandsNavigation33" Content="Команды" Tag="Commands" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
               <RadioButton x:Name="HistoryNavigation33" Content="История" Tag="History" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
               <RadioButton x:Name="WsusNavigation33" Content="WSUS" Tag="Wsus" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
               <CheckBox x:Name="AutoServiceToggle" Content="Авто" Checked="AutoService_Changed" Unchecked="AutoService_Changed" HorizontalAlignment="Left" ToolTip="Поиск → установка найденного → отчёт. После согласованной перезагрузки — продолжение. Выключено: одна операция. Произвольные команды не запускают обслуживание." Style="{StaticResource AutoSwitch}" Margin="6,0" VerticalAlignment="Center" />
-              <Button Content="⚙" Style="{StaticResource IconButton}" Click="WsusSettings_Click" ToolTip="Настройки программы" />
+              <Button x:Name="SettingsButton34" Content="⚙" Style="{StaticResource GhostIconButton}" Click="WsusSettings_Click" ToolTip="Настройки программы" />
             </StackPanel>
-            <WrapPanel Orientation="Horizontal">
-              <TextBlock x:Name="CurrentComputer" FontSize="17" FontWeight="SemiBold" Text="Выберите компьютер" VerticalAlignment="Center" Margin="0,0,8,0" />
-              <Border Background="{DynamicResource StatusSurface}" CornerRadius="5" Padding="2,0" x:Name="ConnectionPanel32" VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal">
+              <TextBlock x:Name="CurrentComputer" Grid.Column="0" TextTrimming="CharacterEllipsis" FontSize="17" FontWeight="SemiBold" Text="Выберите компьютер" VerticalAlignment="Center" Margin="0,0,8,0" />
+              <Border Background="{DynamicResource StatusSurface}" CornerRadius="5" Padding="2,0" x:Name="ConnectionPanel32" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <WrapPanel Orientation="Horizontal">
                   <Button x:Name="HeaderLink" Click="HeaderLink_Click" Padding="4,3" ToolTip="Проверить связь" Margin="0" Style="{StaticResource GhostButton}" MinHeight="30">
                     <Button.ContextMenu>
                       <ContextMenu>
@@ -136,15 +137,15 @@
                       <TextBlock x:Name="HeaderLinkText" Margin="5,0" VerticalAlignment="Center" FontSize="12" />
                     </StackPanel>
                   </Button>
-                  <TextBlock x:Name="HeaderTimes31" Margin="5,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                  <TextBlock x:Name="HeaderTimes31" MaxWidth="230" TextTrimming="CharacterEllipsis" Margin="5,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
                   <TextBlock x:Name="HeaderUpdateCount31" Margin="5,0" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
-                  <Button x:Name="HeaderReboot" Content="⟳ Перезагрузить…" Click="HeaderReboot_Click" Style="{StaticResource GhostIconButton}" Margin="1,0" />
+                  <TextBlock x:Name="HeaderNext31" TextWrapping="NoWrap" Foreground="{DynamicResource InfoText}" Margin="6,0" MaxWidth="165" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" FontSize="11" VerticalAlignment="Center" />
+          <Button x:Name="HeaderReboot" Content="⟳ Перезагрузить…" Click="HeaderReboot_Click" Style="{StaticResource GhostIconButton}" Margin="1,0" />
                   <Button x:Name="HeaderAbortReboot" Content="×" Click="HeaderAbortReboot_Click" Visibility="Collapsed" Style="{StaticResource GhostIconButton}" Margin="1,0" ToolTip="Отменить назначенную перезагрузку" />
                   <Button x:Name="PostRebootInfo" Visibility="Collapsed" Content="⋯" Click="PostRebootInfo_Click" ToolTip="Состояние наблюдения и прекращение автоматического продолжения" Style="{StaticResource GhostIconButton}" Margin="1,0" />
-                </StackPanel>
+                </WrapPanel>
               </Border>
-            </WrapPanel>
-          </DockPanel>
+          </Grid>
           <DockPanel Margin="0,3,0,2">
             <TextBlock x:Name="HeaderWsusStatus" Foreground="{DynamicResource TextMuted}" TextWrapping="NoWrap" DockPanel.Dock="Right" Margin="8,0,0,0" TextTrimming="CharacterEllipsis" />
             <TextBlock x:Name="CurrentDetails" Foreground="{DynamicResource TextMuted}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
@@ -154,9 +155,8 @@
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock x:Name="CurrentStage" TextWrapping="NoWrap" Margin="0,1" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" />
-            <TextBlock x:Name="HeaderNext31" TextWrapping="NoWrap" Foreground="{DynamicResource InfoText}" Margin="0,2" Grid.Column="1" MaxWidth="280" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" />
-          </Grid>
+            <TextBlock x:Name="CurrentStage" TextWrapping="Wrap" Margin="0,1" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" />
+            </Grid>
           <ProgressBar x:Name="CurrentProgress" Height="2" Maximum="100" Foreground="{DynamicResource InfoText}" />
           <ItemsControl x:Name="HeaderRecent31" Margin="0">
             <ItemsControl.ItemTemplate>
@@ -231,9 +231,9 @@
               </Grid.RowDefinitions>
               <DockPanel>
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                  <ComboBox x:Name="KindBox" SelectionChanged="ShellMode_Changed" SelectedIndex="0" Width="100" DockPanel.Dock="Right" Margin="6,0,0,0">
+                  <ComboBox x:Name="KindBox" SelectionChanged="ShellMode_Changed" SelectedIndex="0" Width="125" DockPanel.Dock="Right" Margin="6,0,0,0">
                     <ComboBoxItem Content="CMD" />
-                    <ComboBoxItem Content="PS" />
+                    <ComboBoxItem Content="PowerShell" />
                   </ComboBox>
                   <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Команда" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
