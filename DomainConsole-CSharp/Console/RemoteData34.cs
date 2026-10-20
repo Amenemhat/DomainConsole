@@ -17,10 +17,13 @@ function Read-DcJson34([string]$file){
  }catch{if($attempt -eq 2){throw ('DC_DATA_ERROR|'+(Split-Path $file -Leaf)+'|'+$_.Exception.Message)};Start-Sleep -Milliseconds 150}finally{if($reader){$reader.Dispose()}}}
 }
 $state=Read-DcJson34 (Join-Path $p 'status.json');if($state -and [string]$state.Id -ne $dcJobId34){throw 'DC_DATA_ERROR|status.json|Идентификатор снимка не совпадает с заданием'}
+function Read-DcTail34([string]$file,[int]$limit){
+ $stream=$null;try{$stream=New-Object IO.FileStream($file,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete));$count=[int][Math]::Min($stream.Length,$limit);$null=$stream.Seek(-$count,[IO.SeekOrigin]::End);$buffer=New-Object byte[] $count;$read=0;while($read -lt $count){$part=$stream.Read($buffer,$read,$count-$read);if($part -le 0){break};$read+=$part};$text=[Text.Encoding]::UTF8.GetString($buffer,0,$read).TrimStart([char]0xFEFF);return [string]::Join([Environment]::NewLine,@($text -split '\r?\n'|Select-Object -Last 80))}finally{if($stream){$stream.Dispose()}}
+}
 $text='';$files=@();$remaining=65536
 if($includeOutput34 -or ($state -and $state.Ended)){
  foreach($file in @(Get-ChildItem -LiteralPath $p -File -ErrorAction SilentlyContinue|Where-Object {$_.Name -match '\.(log|out|err)$'}|Sort-Object LastWriteTimeUtc -Descending|Select-Object -First 16)){
-  if($remaining -le 0){break};$body=[string]::Join([Environment]::NewLine,@(Get-Content -LiteralPath $file.FullName -Tail 80 -Encoding UTF8 -ErrorAction SilentlyContinue));if($body.Length -gt $remaining){$body=$body.Substring($body.Length-$remaining)};$remaining-=$body.Length;$files+=@{Name=$file.Name;Body=$body};$text+=('--- '+$file.Name+' ---'+[Environment]::NewLine+$body+[Environment]::NewLine)
+  if($remaining -le 0){break};try{$body=Read-DcTail34 $file.FullName $remaining}catch{$warnings+=('Не удалось прочитать '+$file.Name+': '+$_.Exception.Message);continue};if($body.Length -gt $remaining){$body=$body.Substring($body.Length-$remaining)};$remaining-=$body.Length;$files+=@{Name=$file.Name;Body=$body};$text+=('--- '+$file.Name+' ---'+[Environment]::NewLine+$body+[Environment]::NewLine)
  }
  if($remaining -le 0){$text+='Краткий опрос ограничен 64 КБ. Полные исходные журналы доступны кнопкой «Журналы».'}
 }
