@@ -278,6 +278,22 @@
         </Trigger>
       </Style.Triggers>
     </Style>
+    <Style TargetType="ScrollViewer">
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ScrollViewer">
+            <Grid Background="{TemplateBinding Background}">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+              <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Margin="{TemplateBinding Padding}" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" CanContentScroll="{TemplateBinding CanContentScroll}" />
+              <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Orientation="Vertical" Maximum="{TemplateBinding ScrollableHeight}" ViewportSize="{TemplateBinding ViewportHeight}" Value="{Binding VerticalOffset,RelativeSource={RelativeSource TemplatedParent},Mode=OneWay}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" />
+              <ScrollBar x:Name="PART_HorizontalScrollBar" Grid.Row="1" Orientation="Horizontal" Maximum="{TemplateBinding ScrollableWidth}" ViewportSize="{TemplateBinding ViewportWidth}" Value="{Binding HorizontalOffset,RelativeSource={RelativeSource TemplatedParent},Mode=OneWay}" Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" />
+              <Border x:Name="ScrollCorner34" Grid.Row="1" Grid.Column="1" Background="Transparent" />
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
     <Style TargetType="Window">
       <Setter Property="Background" Value="{DynamicResource AppSurface}" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
