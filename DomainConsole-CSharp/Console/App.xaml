@@ -236,7 +236,7 @@
         </Setter.Value>
       </Setter>
     </Style>
-    <SolidColorBrush x:Key="ScrollTrack" Color="#E1E7EF" />
+    <SolidColorBrush x:Key="ScrollTrack" Color="Transparent" />
     <SolidColorBrush x:Key="ScrollThumb" Color="#7D91A8" />
     <Style TargetType="ScrollBar">
       <Setter Property="Background" Value="{DynamicResource ScrollTrack}" />
