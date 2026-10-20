@@ -6,7 +6,7 @@
     <SolidColorBrush x:Key="ActiveSurface" Color="#DFEAF7" />
     <SolidColorBrush x:Key="InfoText" Color="#0048B5" />
     <SolidColorBrush x:Key="ErrorText" Color="#AA1730" />
-    <SolidColorBrush x:Key="WarningText" Color="#874000" />
+    <SolidColorBrush x:Key="WarningText" Color="#675400" />
     <SolidColorBrush x:Key="SuccessText" Color="#006329" />
     <SolidColorBrush x:Key="SectionSurface" Color="#DEE8F4" />
     <SolidColorBrush x:Key="Outline" Color="#8B9FB6" />

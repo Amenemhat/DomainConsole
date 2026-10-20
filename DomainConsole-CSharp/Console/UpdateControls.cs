@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
- async void CacheCleanup_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{var dialog=new CacheChoice(this);if(dialog.ShowDialog()!=true)return;MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Name="Очистка кэша: "+dialog.Mode+(dialog.Backup?" · резервная копия":""),Kind="CacheCleanup",Code=CacheScripts.Build(dialog.Mode,dialog.Backup,dialog.Catroot)},new(){Name="WSUS · поиск после очистки кэша",Kind="UpdateScan"}},"WSUS");});
+ async void CacheCleanup_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{var dialog=new CacheChoice(this);if(dialog.ShowDialog()!=true)return;if(dialog.OldOnly){await Submit(new(){new(){Name="Удаление старых временных кэшей",Kind="CacheResidueCleanup"}},"Commands");return;}MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Name="Очистка кэша: "+dialog.Mode+(dialog.Backup?" · резервная копия":""),Kind="CacheCleanup",Code=CacheScripts.Build(dialog.Mode,dialog.Backup,dialog.Catroot)},new(){Name="WSUS · поиск после очистки кэша",Kind="UpdateScan"}},"WSUS");});
  async void WaitingDiagnostics_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Name="Диагностика долгого выполнения",Kind="PowerShell",Code=DownloadDiagnosticScript}},"Commands");});
  public const string DownloadDiagnosticScript="""
 $ProgressPreference='SilentlyContinue'
@@ -23,3 +23,4 @@ $p=Join-Path $env:windir 'debug\mrt.log';if(Test-Path $p){Get-Content $p -Tail 3
  static bool Maintenance(List<CommandStep> steps,bool microsoft)=>NeedsUpdateCheck(steps,microsoft);
  async void Recommendation_Click(object sender,RoutedEventArgs e){var r=ActiveRow();string action=r.Target.State?.RecommendationAction??"";if(action=="Memory")MemoryDiagnostics_Click(sender,e);else if(action=="Download")CacheCleanup_Click(sender,e);else if(action=="Defender")Defender_Click(sender,e);else if(action=="Queue")RecoverReport_Click(sender,e);else WaitingDiagnostics_Click(sender,e);}
 }
+
