@@ -20,6 +20,13 @@ public partial class MainWindow {
   if(state.ActivityMessage.Length>0)detail+="\n"+state.ActivityMessage;if(state.StopMessage.Length>0)detail+="\n"+state.StopMessage;
   return stage+(detail.Length>0?"\n"+detail:"");
  }
+ void IdentityHeader34_SizeChanged(object sender,SizeChangedEventArgs e)=>ArrangeIdentity34();
+ void ArrangeIdentity34(){
+  if(IdentityHeader34==null||HeaderActions34==null||IdentityHeader34.ActualWidth<=0)return;
+  double width=IdentityHeader34.ActualWidth;CurrentComputer.MaxWidth=Math.Max(80,width-HeaderActions34.ActualWidth-12);ConnectionPanel32.MaxWidth=width;
+  var panel=(WrapPanel)ConnectionPanel32.Child;double natural=ConnectionPanel32.Padding.Left+ConnectionPanel32.Padding.Right;foreach(FrameworkElement child in panel.Children)if(child.Visibility!=Visibility.Collapsed){child.Measure(new Size(double.PositiveInfinity,double.PositiveInfinity));natural+=child.DesiredSize.Width;}
+  bool inline=natural+CurrentComputer.DesiredSize.Width+HeaderActions34.ActualWidth+12<=width;Grid.SetRow(ConnectionPanel32,inline?0:1);Grid.SetColumn(ConnectionPanel32,inline?1:0);Grid.SetColumnSpan(ConnectionPanel32,inline?1:3);
+ }
  void RefreshServiceBadge34(ComputerRow row){
   string text="",details="";if(maintenancePlans.TryGetValue(row.Host,out var p)&&!p.Done){details=p.Phase+(p.Detail.Length>0?" · "+p.Detail:"");text=p.Phase.Contains("перезагруз",StringComparison.OrdinalIgnoreCase)?"Ждёт перезагрузки":p.Detail.Contains("Связь",StringComparison.OrdinalIgnoreCase)||p.Phase.Contains("связ",StringComparison.OrdinalIgnoreCase)?"Ждёт связи":p.Phase.Contains("готовност",StringComparison.OrdinalIgnoreCase)?"Ждёт готовности":"Обслуживание";}
   else if(p!=null&&p.Phase=="Требуется действие"){text="Требуется действие";details=p.Detail;}
