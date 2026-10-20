@@ -19,7 +19,7 @@
       <DockPanel Margin="8">
         <StackPanel DockPanel.Dock="Top">
           <DockPanel Margin="0,0,0,5">
-            <Button DockPanel.Dock="Right" Content="＋" Width="32" Click="AddAddress_Click" ToolTip="Добавить компьютер по IP или указать VPN-адрес существующему клиенту" Style="{StaticResource IconButton}" Margin="4,0,0,0" />
+            <Button DockPanel.Dock="Right" local:UiIcon32.Icon="add" Width="32" Click="AddAddress_Click" ToolTip="Добавить компьютер по IP или указать VPN-адрес существующему клиенту" Style="{StaticResource IconButton}" Margin="4,0,0,0" />
             <Grid>
               <TextBox x:Name="SearchBox" TextChanged="Search_Changed" ToolTip="Поиск по имени, ОС или адресу; плюс добавляет IP" Margin="0" Height="30" />
               <TextBlock Text="Поиск имени или IP" Margin="7,0" VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" IsHitTestVisible="False">
@@ -37,7 +37,7 @@
             </Grid>
           </DockPanel>
           <DockPanel>
-            <Button x:Name="OverviewRefresh" Content="↻" Click="OverviewRefresh_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource TextPrimary}" ToolTip="Прочитать данные WSUS и опросить клиентов: связь, флаги перезагрузки и аптайм. Поиск/установка не запускаются. Повторное нажатие останавливает обзор." Style="{StaticResource IconButton}" DockPanel.Dock="Right" Margin="4,0,0,0" />
+            <Button x:Name="OverviewRefresh" local:UiIcon32.Icon="refresh" Click="OverviewRefresh_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource TextPrimary}" ToolTip="Прочитать данные WSUS и опросить клиентов: связь, флаги перезагрузки и аптайм. Поиск/установка не запускаются. Повторное нажатие останавливает обзор." Style="{StaticResource IconButton}" DockPanel.Dock="Right" Margin="4,0,0,0" />
             <Button x:Name="StatusFilterButton" Content="Статусы: все" Click="StatusFilter_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource TextPrimary}" ToolTip="Несколько статусов со счётчиками; фильтр, отметка галочками и добавление в работу — отдельные действия. Счётчики учитывают поиск и выбранную область." Margin="0" Padding="6,4" />
           </DockPanel>
           <TextBlock x:Name="OverviewProgress" Foreground="{DynamicResource TextMuted}" FontSize="11" TextWrapping="NoWrap" Margin="4,2,0,5" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" />
@@ -88,7 +88,7 @@
           <Expander x:Name="TreeGroup" Grid.Row="2" Foreground="{DynamicResource TextPrimary}" IsExpanded="True" Expanded="NavigationGroup_Changed" Collapsed="NavigationGroup_Changed" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <Expander.Header>
               <DockPanel LastChildFill="True">
-                <Button Content="↻" Click="LoadDomain_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource TextPrimary}" ToolTip="Загрузить компьютеры и подразделения из AD. Сохранённая история заданий остаётся доступной." Style="{StaticResource IconButton}" DockPanel.Dock="Right" Margin="4,0,0,0" />
+                <Button local:UiIcon32.Icon="refresh" Click="LoadDomain_Click" Background="{DynamicResource SidebarSurface}" Foreground="{DynamicResource TextPrimary}" ToolTip="Загрузить компьютеры и подразделения из AD. Сохранённая история заданий остаётся доступной." Style="{StaticResource IconButton}" DockPanel.Dock="Right" Margin="4,0,0,0" />
                 <TextBlock x:Name="TreeLabel32" Text="Дерево AD" VerticalAlignment="Center" />
               </DockPanel>
             </Expander.Header>
@@ -120,7 +120,7 @@
               <RadioButton x:Name="HistoryNavigation33" Content="История" Tag="History" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
               <RadioButton x:Name="WsusNavigation33" Content="WSUS" Tag="Wsus" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
               <CheckBox x:Name="AutoServiceToggle" Content="Авто" Checked="AutoService_Changed" Unchecked="AutoService_Changed" HorizontalAlignment="Left" ToolTip="Поиск → установка найденного → отчёт. После согласованной перезагрузки — продолжение. Выключено: одна операция. Произвольные команды не запускают обслуживание." Style="{StaticResource AutoSwitch}" Margin="6,0" VerticalAlignment="Center" />
-              <Button x:Name="SettingsButton34" Content="⚙" Style="{StaticResource GhostIconButton}" Click="WsusSettings_Click" ToolTip="Настройки программы" />
+              <Button x:Name="SettingsButton34" local:UiIcon32.Icon="settings" Style="{StaticResource GhostIconButton}" Click="WsusSettings_Click" ToolTip="Настройки программы" />
             </StackPanel>
               <TextBlock x:Name="CurrentComputer" Grid.Column="0" TextTrimming="CharacterEllipsis" FontSize="17" FontWeight="SemiBold" Text="Выберите компьютер" VerticalAlignment="Center" Margin="0,0,8,0" />
               <Border Background="{DynamicResource StatusSurface}" CornerRadius="5" Padding="2,0" x:Name="ConnectionPanel32" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center">
@@ -140,9 +140,9 @@
                   <TextBlock x:Name="HeaderTimes31" MaxWidth="230" TextTrimming="CharacterEllipsis" Margin="5,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
                   <TextBlock x:Name="HeaderUpdateCount31" Margin="5,0" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
                   <TextBlock x:Name="HeaderNext31" TextWrapping="NoWrap" Foreground="{DynamicResource InfoText}" Margin="6,0" MaxWidth="165" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" FontSize="11" VerticalAlignment="Center" />
-          <Button x:Name="HeaderReboot" Content="⟳ Перезагрузить…" Click="HeaderReboot_Click" Style="{StaticResource GhostIconButton}" Margin="1,0" />
-                  <Button x:Name="HeaderAbortReboot" Content="×" Click="HeaderAbortReboot_Click" Visibility="Collapsed" Style="{StaticResource GhostIconButton}" Margin="1,0" ToolTip="Отменить назначенную перезагрузку" />
-                  <Button x:Name="PostRebootInfo" Visibility="Collapsed" Content="⋯" Click="PostRebootInfo_Click" ToolTip="Состояние наблюдения и прекращение автоматического продолжения" Style="{StaticResource GhostIconButton}" Margin="1,0" />
+          <Button x:Name="HeaderReboot" Foreground="{DynamicResource InfoText}" local:UiIcon32.Icon="reboot" Click="HeaderReboot_Click" Style="{StaticResource GhostIconButton}" Margin="1,0" />
+                  <Button x:Name="HeaderAbortReboot" AutomationProperties.Name="Отменить назначенную перезагрузку" Foreground="{DynamicResource ErrorText}" local:UiIcon32.Icon="close" Click="HeaderAbortReboot_Click" Visibility="Collapsed" Style="{StaticResource GhostIconButton}" Margin="1,0" ToolTip="Отменить назначенную перезагрузку" />
+                  <Button x:Name="PostRebootInfo" Visibility="Collapsed" local:UiIcon32.Icon="more" Click="PostRebootInfo_Click" ToolTip="Состояние наблюдения и прекращение автоматического продолжения" Style="{StaticResource GhostIconButton}" Margin="1,0" />
                 </WrapPanel>
               </Border>
           </Grid>
@@ -266,8 +266,8 @@
                     <Button Content="Применить правку шага" Click="EditStep_Click" ToolTip="Заменить выбранный шаг текущим текстом редактора." />
                     <ListBox x:Name="StepList" Height="110" ItemsSource="{Binding Steps}" DisplayMemberPath="Name" SelectionChanged="Step_Changed" />
                     <WrapPanel>
-                      <Button Content="↑" Click="Up_Click" ToolTip="Переместить выбранный шаг раньше в порядке выполнения." />
-                      <Button Content="↓" Click="Down_Click" ToolTip="Переместить выбранный шаг позже в порядке выполнения." />
+                      <Button Style="{StaticResource IconButton}" local:UiIcon32.Icon="up" Click="Up_Click" ToolTip="Переместить выбранный шаг раньше в порядке выполнения." />
+                      <Button Style="{StaticResource IconButton}" local:UiIcon32.Icon="down" Click="Down_Click" ToolTip="Переместить выбранный шаг позже в порядке выполнения." />
                       <Button Content="Удалить" Click="RemoveStep_Click" ToolTip="Удалить выбранный шаг из набора. Сохранённые задания не меняются." />
                     </WrapPanel>
                     <Button Content="Выполнить набор шагов" Click="Run_Click" Style="{StaticResource Primary}" ToolTip="Выполнить набор шагов сверху вниз. Цели выбираются в подтверждении." />
@@ -511,7 +511,7 @@
     </Grid>
     <Border x:Name="Toast" Grid.ColumnSpan="3" Panel.ZIndex="100" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Top" MaxWidth="540" Background="#E8EFF7" BorderBrush="#A2B5CB" BorderThickness="1" CornerRadius="5" Margin="12,85,20,0" Padding="10">
       <DockPanel>
-        <Button DockPanel.Dock="Right" Content="×" Click="DismissToast_Click" ToolTip="Закрыть уведомление" />
+        <Button DockPanel.Dock="Right" Style="{StaticResource GhostIconButton}" local:UiIcon32.Icon="close" Click="DismissToast_Click" ToolTip="Закрыть уведомление" />
         <TextBlock x:Name="ToastText" TextWrapping="Wrap" VerticalAlignment="Center" />
       </DockPanel>
     </Border>
