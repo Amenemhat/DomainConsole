@@ -117,14 +117,17 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <StackPanel x:Name="HeaderActions34" Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center">
               <RadioButton x:Name="CommandsNavigation33" Content="Команды" Tag="Commands" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
-              <RadioButton x:Name="HistoryNavigation33" Content="История" Tag="History" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
               <RadioButton x:Name="WsusNavigation33" Content="WSUS" Tag="Wsus" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
+              <RadioButton x:Name="HistoryNavigation33" Content="История" Tag="History" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
               <CheckBox x:Name="AutoServiceToggle" Content="Авто" Checked="AutoService_Changed" Unchecked="AutoService_Changed" HorizontalAlignment="Left" ToolTip="Поиск → установка найденного → отчёт. После согласованной перезагрузки — продолжение. Выключено: одна операция. Произвольные команды не запускают обслуживание." Style="{StaticResource AutoSwitch}" Margin="6,0" VerticalAlignment="Center" />
               <Button x:Name="SettingsButton34" local:UiIcon32.Icon="settings" Style="{StaticResource GhostIconButton}" Click="WsusSettings_Click" ToolTip="Настройки программы" />
             </StackPanel>
-              <TextBlock x:Name="CurrentComputer" Grid.Column="0" TextTrimming="CharacterEllipsis" FontSize="17" FontWeight="SemiBold" Text="Выберите компьютер" VerticalAlignment="Center" Margin="0,0,8,0" />
-              <Border Background="{DynamicResource StatusSurface}" CornerRadius="5" Padding="2,0" x:Name="ConnectionPanel32" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center">
-                <WrapPanel Orientation="Horizontal">
+              <Border Background="{DynamicResource StatusSurface}" BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="5" Padding="4,2" x:Name="ConnectionPanel32" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="0,0,6,0">
+                <StackPanel>
+                  <WrapPanel x:Name="ClientActions35" Orientation="Horizontal">
+                    <Button x:Name="NameCopy35" Click="CopyComputer35_Click" Style="{StaticResource GhostButton}" Padding="4,3" Margin="0" ToolTip="Копировать имя компьютера" MinHeight="30">
+                      <TextBlock x:Name="CurrentComputer" TextTrimming="CharacterEllipsis" FontSize="17" FontWeight="SemiBold" Text="Выберите компьютер" VerticalAlignment="Center" />
+                    </Button>
                   <Button x:Name="HeaderLink" Click="HeaderLink_Click" Padding="4,3" ToolTip="Проверить связь" Margin="0" Style="{StaticResource GhostButton}" MinHeight="30">
                     <Button.ContextMenu>
                       <ContextMenu>
@@ -137,19 +140,22 @@
                       <TextBlock x:Name="HeaderLinkText" Margin="5,0" VerticalAlignment="Center" FontSize="12" />
                     </StackPanel>
                   </Button>
-                  <TextBlock x:Name="HeaderTimes31" MaxWidth="230" TextTrimming="CharacterEllipsis" Margin="5,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
-                  <TextBlock x:Name="HeaderUpdateCount31" Margin="5,0" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
-                  <TextBlock x:Name="HeaderNext31" TextWrapping="NoWrap" Foreground="{DynamicResource InfoText}" Margin="6,0" MaxWidth="165" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" FontSize="11" VerticalAlignment="Center" />
           <Button x:Name="HeaderReboot" Foreground="{DynamicResource InfoText}" local:UiIcon32.Icon="reboot" Click="HeaderReboot_Click" Style="{StaticResource GhostIconButton}" Margin="1,0" />
                   <Button x:Name="HeaderAbortReboot" AutomationProperties.Name="Отменить назначенную перезагрузку" Foreground="{DynamicResource ErrorText}" local:UiIcon32.Icon="close" Click="HeaderAbortReboot_Click" Visibility="Collapsed" Style="{StaticResource GhostIconButton}" Margin="1,0" ToolTip="Отменить назначенную перезагрузку" />
                   <Button x:Name="PostRebootInfo" Visibility="Collapsed" local:UiIcon32.Icon="more" Click="PostRebootInfo_Click" ToolTip="Состояние наблюдения и прекращение автоматического продолжения" Style="{StaticResource GhostIconButton}" Margin="1,0" />
-                </WrapPanel>
+                    <TextBlock x:Name="HeaderUpdateCount31" Margin="7,0" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" />
+                    <TextBlock x:Name="HeaderReport35" Margin="7,0" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                  </WrapPanel>
+                  <WrapPanel Orientation="Horizontal" Margin="4,1,0,0">
+                    <TextBlock x:Name="CurrentDetails" Foreground="{DynamicResource TextMuted}" MaxWidth="250" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <TextBlock x:Name="HeaderTimes31" Margin="9,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock x:Name="HeaderContact35" Margin="0,0,8,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock x:Name="HeaderNext31" Foreground="{DynamicResource InfoText}" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock x:Name="HeaderWsusStatus" Visibility="Collapsed" />
+                  </WrapPanel>
+                </StackPanel>
               </Border>
           </Grid>
-          <DockPanel Margin="0,3,0,2">
-            <TextBlock x:Name="HeaderWsusStatus" Foreground="{DynamicResource TextMuted}" TextWrapping="NoWrap" DockPanel.Dock="Right" Margin="8,0,0,0" TextTrimming="CharacterEllipsis" />
-            <TextBlock x:Name="CurrentDetails" Foreground="{DynamicResource TextMuted}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-          </DockPanel>
           <Grid>
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" />
@@ -176,15 +182,16 @@
                 <DockPanel>
                   <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
                     <CheckBox x:Name="EventErrors32" Content="Ошибки и предупреждения" Margin="4,3" Checked="EventFilter32_Changed" Unchecked="EventFilter32_Changed" />
-                    <Button Content="Копировать" Click="CopyEvents32_Click" Padding="5,2" />
+                    <Button Content="Копировать" Click="CopyEvents32_Click" Padding="5,2" ToolTip="Выделенные события; без выделения — вся история с учётом фильтра" />
+                    <Button x:Name="NewEvents35" Content="К новым ↑" Click="NewEvents35_Click" Padding="5,2" Visibility="Collapsed" />
                   </StackPanel>
                   <TextBlock x:Name="EventStorageError32" DockPanel.Dock="Bottom" TextWrapping="Wrap" Visibility="Collapsed" Foreground="{DynamicResource WarningText}" />
-                  <ListBox x:Name="EventList32" MaxHeight="145" SelectionMode="Extended" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  <ListBox x:Name="EventList32" MaxHeight="145" SelectionMode="Extended" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.ScrollChanged="EventScroll35_Changed" PreviewKeyDown="EventCopy35_KeyDown">
                     <ListBox.ItemTemplate>
                       <DataTemplate>
                         <Expander Foreground="{Binding Brush}" ToolTip="{Binding Text}">
                           <Expander.Header>
-                            <TextBlock Text="{Binding Display}" Foreground="{Binding Brush}" TextWrapping="Wrap" />
+                            <TextBox Text="{Binding Display}" Foreground="{Binding Brush}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" Padding="0" />
                           </Expander.Header>
                           <TextBox Text="{Binding Details}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="100" VerticalScrollBarVisibility="Auto" />
                         </Expander>

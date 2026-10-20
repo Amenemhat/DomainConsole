@@ -12,8 +12,10 @@ public partial class MainWindow {
   CurrentComputer.Text=row.Name;CurrentDetails.Text=row.OS+" · "+row.Host+ConnectionStore.Description(row.Host)+" · "+ConnectionDescription(row.Host)+" · "+UptimeText(row.Host);CurrentDetails.ToolTip=UptimeHint(row.Host);
   int count=History.SelectMany(j=>j.Targets).Count(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)&&(t.Status is "Queued" or "Sending" or "SubmissionUnknown" or "Submitted" or "Running"));if(count>0)CurrentDetails.Text+=" · активных заданий: "+count;
   CurrentStage.Text=StageText34(row,state,active,fresh);if(readFailures34.TryGetValue(row.Host+"|результат задания",out var readFailure))CurrentStage.Text+="\nСтатус не обновлён · повтор после "+readFailure.Next.ToLocalTime().ToString("HH:mm:ss");
-  if(terminal&&state!=null){if(DateTimeOffset.TryParse(state.Ended,out var ended))CurrentStage.Text+=" · завершено "+ended.ToLocalTime().ToString("dd.MM HH:mm");if(state.RebootRequired&&RebootReason(selected).Length>0)CurrentStage.Text+=" · нужна перезагрузка";}
-  bool failed=row.Target.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired";CurrentStage.Foreground=failed?Theme.Tone("Error"):rebootWatches.TryGetValue(row.Host,out var rebootWatch)&&rebootWatch.Overdue?Theme.Tone("Warning"):Theme.Brush("TextPrimary");CurrentStage.ToolTip=CurrentStage.Text;
+  bool reboot35=!active&&RebootReason(selected).Length>0;
+  if(reboot35)CurrentStage.Text="Нужна перезагрузка"+(row.Target.Status is "Failed" or "CompletedWithErrors"?" · неудачная попытка сохранена в журнале":"");
+  bool failed=row.Target.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired";CurrentStage.Foreground=reboot35?Theme.Tone("Warning"):failed?Theme.Tone("Error"):Theme.Brush("TextPrimary");CurrentStage.ToolTip=CurrentStage.Text;
+
   if(RebootReason(selected).Length>0)RecommendationButton.Visibility=Visibility.Collapsed;
   CurrentProgress.Visibility=active?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=active&&(fresh||deploying.Contains(row.JobId+row.Host))&&state?.Progress==null;CurrentProgress.Value=state?.Progress??0;WsusProgress.IsIndeterminate=CurrentProgress.IsIndeterminate;WsusStage.Text=CurrentStage.Text;
   RecommendationButton.Visibility=RecommendationRelevant(state,row.Target.Status)&&RebootReason(selected).Length==0?Visibility.Visible:Visibility.Collapsed;RecommendationButton.Background=Brushes.Moccasin;RecommendationButton.Foreground=Brushes.DarkRed;RecommendationButton.ToolTip=state?.Recommendation;
