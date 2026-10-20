@@ -5,7 +5,8 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  public static string ShellKind34(int index)=>index switch {0=>"CMD",1=>"PowerShell",_=>throw new InvalidOperationException("Выберите CMD или PowerShell.")};
- public static void NormalizeCommandKinds34(IEnumerable<CommandStep> steps){foreach(var step in steps){if(step.Kind.Equals("PS",StringComparison.OrdinalIgnoreCase))step.Kind="PowerShell";if(!new[]{"CMD","PowerShell","Updates","UpdateScan","Diagnostics","CacheCleanup","CacheResidueCleanup","ReportRecovery","ClientDiagnostics","DeliveryDiagnostics"}.Contains(step.Kind))throw new InvalidOperationException("Неподдерживаемый тип команды: «"+step.Kind+"». Выберите CMD или PowerShell; сценарий не отправлен.");}}
+ public static void NormalizeLegacyShells34(IEnumerable<CommandStep> steps){foreach(var step in steps)if(string.Equals(step.Kind,"PS",StringComparison.OrdinalIgnoreCase))step.Kind="PowerShell";}
+ public static void NormalizeCommandKinds34(IEnumerable<CommandStep> steps){foreach(var step in steps){if(string.Equals(step.Kind,"PS",StringComparison.OrdinalIgnoreCase))step.Kind="PowerShell";if(!new[]{"CMD","PowerShell","Updates","UpdateScan","Diagnostics","CacheCleanup","CacheResidueCleanup","ReportRecovery","ClientDiagnostics","DeliveryDiagnostics"}.Contains(step.Kind))throw new InvalidOperationException("Неподдерживаемый тип команды: «"+step.Kind+"». Выберите CMD или PowerShell; сценарий не отправлен.");}}
  public static string StageText34(ComputerRow row,RemoteState? state,bool active,bool fresh){
   if(!active)return row.Status+(row.Stage.Length>0?" · "+row.Stage:"")+(state?.Error.Length>0?"\n"+ShortConnectionError(state.Error):"");
   if(row.Target.Status=="Sending")return "Передача задания на клиент";
@@ -26,6 +27,6 @@ public partial class MainWindow {
   HeaderNext31.Text=text;HeaderNext31.ToolTip=details;HeaderNext31.Visibility=text.Length>0?Visibility.Visible:Visibility.Collapsed;
  }
  static List<ClientEvent31> CompactEvents34(IEnumerable<ClientEvent31> source){
-  var result=new List<ClientEvent31>();foreach(var group in source.GroupBy(e=>(e.Kind is "Error" or "Warning")?e.Kind+"|"+e.Text+"|"+e.Details:Guid.NewGuid().ToString())){var events=group.OrderByDescending(x=>x.At).ToList();var last=events[0];if(events.Count==1){result.Add(last);continue;}result.Add(new(){At=last.At,FirstAt=events.Last().At,Kind=last.Kind,Text=last.Text,Details=last.Details,Repeats=events.Sum(e=>e.Repeats)});}return result.OrderByDescending(e=>e.At).ToList();
+  var result=new List<ClientEvent31>();foreach(var group in source.GroupBy(e=>(e.Kind is "Error" or "Warning")?e.Kind+"|"+e.Text+"|"+e.Details:Guid.NewGuid().ToString())){var events=group.OrderByDescending(x=>x.At).ToList();var last=events[0];if(events.Count==1){result.Add(last);continue;}result.Add(new(){At=last.At,FirstAt=events.Select(e=>e.FirstAt.Length>0?e.FirstAt:e.At).Min()??last.At,Kind=last.Kind,Text=last.Text,Details=last.Details,Repeats=events.Sum(e=>e.Repeats)});}return result.OrderByDescending(e=>e.At).ToList();
  }
 }

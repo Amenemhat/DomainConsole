@@ -423,6 +423,7 @@ jobs:
           function Get-Service($Name){$obj=[pscustomobject]@{Status=$states[$Name]};$obj|Add-Member ScriptMethod WaitForStatus {param($status,$timeout)};return $obj}
           function Stop-Service($Name){if($failStop -and $Name -eq 'bits'){throw 'fixture stop failure'};$states[$Name]='Stopped'}
           function Start-Service($Name){$states[$Name]='Running'}
+          function Start-ScheduledTask($TaskName){}
           try {
             $download=Join-Path $fixture 'SoftwareDistribution/Download';New-Item $download -ItemType Directory -Force|Out-Null
             Set-Content (Join-Path $download 'sample.bin') 'fixture'
