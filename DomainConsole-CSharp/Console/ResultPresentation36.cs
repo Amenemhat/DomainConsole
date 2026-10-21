@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 namespace DomainConsole;
 public static class ResultPresentation36 {
  public static string Short(string value,int max=180)=>value.Length>max?value[..max]+"…":value;
- public static string BriefFailure(string body){var lines=body.Split('\n',StringSplitOptions.RemoveEmptyEntries);var code=lines.FirstOrDefault(x=>Regex.IsMatch(x,@"(?i)0x[89a-f][0-9a-f]{7}"))??lines.FirstOrDefault(x=>!x.StartsWith("Возможные")&&!x.StartsWith("Первое действие"))??"Причина не получена";code=Regex.Replace(code,@"(?i)^.*?(0x[89a-f][0-9a-f]{7})\)?\s*·?\s*(?:[A-Z][A-Z0-9_]+:\s*)?","$1 · ");return Short(code);}
+ public static string BriefFailure(string body){var lines=body.Split('\n',StringSplitOptions.RemoveEmptyEntries);var code=lines.FirstOrDefault(x=>Regex.IsMatch(x,@"(?i)0x[89a-f][0-9a-f]{7}"))??lines.FirstOrDefault(x=>x.StartsWith("Ошибка:")&&!x.Contains("см. карточку"))??lines.FirstOrDefault(x=>!x.StartsWith("Возможные")&&!x.StartsWith("Первое действие")&&!x.StartsWith("Компьютер:")&&!x.StartsWith("Состояние:")&&!x.StartsWith("Начало:")&&!x.StartsWith("Завершение:"))??"Причина не получена";code=Regex.Replace(code,@"(?i)^.*?(0x[89a-f][0-9a-f]{7})\)?\s*·?\s*(?:[A-Z][A-Z0-9_]+:\s*)?","$1 · ");return Short(code);}
  public static string Format(string text){
   if(!text.Contains("## Итог задания")&&!text.Contains("## Сведения о задании"))return text;
   var sections=LogViewer.Sections(text);if(sections.Any(s=>s.Title=="Главное"))return text;
@@ -17,7 +17,8 @@ public static class ResultPresentation36 {
   if(reboot.Body!=null&&!needs)main.Add(reboot.Body.Contains("Флаги перезагрузки Windows Update / CBS отсутствуют")?"По проверке после операции флаги перезагрузки Windows Update / CBS отсутствуют.":"Проверка перезагрузки: "+Short(reboot.Body.Split('\n')[0]));
   var next=failure.Body?.Split('\n').FirstOrDefault(x=>x.StartsWith("Первое действие:"));if(failed&&!needs&&next!=null)main.Add(next.Replace("Первое действие:","Далее:"));
   var final=new List<string>{"## Главное\n"+string.Join("\n",main)};
-  foreach(var s in sections){if(s.Title=="Итог задания")continue;string title=s.Title;if(title=="Обслуживание клиента"&&!failed)title="Предыдущее обслуживание · состояние отдельного плана";if(title=="Этапы выполнения")title="Технические подробности · этапы выполнения";if(title=="Результаты команд")title="Технические подробности · результаты команд";string body=Regex.Replace(s.Body,@"(?m)^Ошибка: см\. карточку причины ниже\s*$","");if(body.Trim().Length>0)final.Add("## "+title+"\n"+body);}
+  foreach(var s in sections){if(s.Title=="Итог задания")continue;string title=s.Title;if(title=="Обслуживание клиента"&&!failed)title="Предыдущее обслуживание · состояние отдельного плана";if(title=="Этапы выполнения")title="Технические подробности · этапы выполнения";if(title=="Результаты команд")title="Технические подробности · результаты команд";string body=Regex.Replace(s.Body,@"(?m)^Ошибка: см\. карточку причины ниже\s*$","");if(title=="Вывод команды"&&command.Contains("служб",StringComparison.OrdinalIgnoreCase)){body=string.Join("\n",body.Split('\n').Where(line=>!main.Contains(line)&&!line.Contains("Возобновление загрузки необходимо проверить отдельно")));title="Технические подробности · вывод операции";}
+   if(body.Trim().Length>0)final.Add("## "+title+"\n"+body);}
   final.Add("## Сведения о задании\n"+Regex.Replace(info.Body,@"(?m)^Ошибка: см\. карточку причины ниже\s*$",failed?"Причина: "+BriefFailure(failure.Body??info.Body):""));return string.Join("\n\n",final);
  }
 }

@@ -4,7 +4,7 @@ namespace DomainConsole;
 public partial class MainWindow {
  public static readonly (string Group,string Label,string Hint,string Key)[] ServiceActions36={
   ("Диагностика","Клиент WSUS","Политики, службы, прокси и события Windows Update","client"),
-  ("Диагностика","Windows Update · очереди","Уникальные проверки прежнего помощника: BITS, политики и очереди","wizard"),
+  ("Диагностика","Windows Update · очереди","BITS, политики и очереди Windows Update","wizard"),
   ("Диагностика","Память и подкачка","RAM, подкачка, лимит памяти и события нехватки ресурсов","memory"),
   ("Диагностика","Загрузка и установка","Процессы и события параллельно с активной операцией","waiting"),
   ("Диагностика","Доставка отчёта","Запрос отправки отчёта и диагностика клиента/IIS","delivery"),

@@ -384,12 +384,12 @@
                 <Button Click="FullMaintenance_Click" ToolTip="Поиск, скачивание и установка. После подтверждённой перезагрузки продолжает обслуживание; до 3 циклов. Самостоятельно компьютер не перезагружает.">
                   <TextBlock Text="Обслуживание…" TextWrapping="Wrap" TextAlignment="Center" />
                 </Button>
-                <Button Margin="0,10,0,2" x:Name="AttentionButton" Content="Требуют внимания · 0" Click="Attention_Click" ToolTip="Клиенты, ожидающие перезагрузки или решения по сценарию обслуживания." />
                 <Button x:Name="WsusStopButton" Content="Остановить…" Click="Cancel_Click" Background="#B94A48" Foreground="White" ToolTip="Запросить отмену WUA либо остановку после текущего обновления. Запрос не означает мгновенного завершения установщика." />
                 <Button Click="Wsus_Click" ToolTip="Прочитать данные текущего компьютера или всех отмеченных целей с сервера WSUS. Область выбирается в подтверждении.">
                   <TextBlock Text="Отчёт WSUS" TextWrapping="Wrap" TextAlignment="Center" />
                 </Button>
-                <Button x:Name="ServiceTools36" Content="Диагностика и восстановление…" Click="ServiceTools36_Click" Margin="0,10,0,0" Padding="7,6"><Button.ToolTip>Все проверки клиента и действия восстановления</Button.ToolTip></Button>
+                <Button Margin="0,10,0,2" x:Name="AttentionButton" Content="Требуют внимания · 0" Click="Attention_Click" ToolTip="Клиенты, ожидающие перезагрузки или решения по сценарию обслуживания." />
+                <Button x:Name="ServiceTools36" Click="ServiceTools36_Click" Margin="0,10,0,0" Padding="7,6"><Button.ToolTip>Все проверки клиента и действия восстановления</Button.ToolTip><TextBlock Text="Диагностика и восстановление…" TextWrapping="Wrap" TextAlignment="Center" /></Button>
                 <Expander x:Name="WsusDiagnosticsGroup" Visibility="Collapsed" />
                 <TextBlock x:Name="WsusStage" Visibility="Collapsed" />
                 <ProgressBar x:Name="WsusProgress" Visibility="Collapsed" />

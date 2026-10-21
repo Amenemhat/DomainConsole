@@ -10,7 +10,7 @@ public sealed class ClientEvent31 {
  [System.Text.Json.Serialization.JsonIgnore] public List<ClientEvent31> Occurrences36 {get;set;}=new();
  public string Operation36 {get;set;}="";
  [System.Text.Json.Serialization.JsonIgnore] public bool Selected36 {get;set;}
- [System.Text.Json.Serialization.JsonIgnore] public string OccurrenceText36=>string.Join(Environment.NewLine,Occurrences36.Select(e=>Display36.Date(e.At,true)+" · "+e.Text+(e.Details.Length>0?"\n"+e.Details:"")));
+ [System.Text.Json.Serialization.JsonIgnore] public string OccurrenceText36=>Repeats<=1?"":string.Join(Environment.NewLine,Occurrences36.Select(e=>Display36.Date(e.At,true)+" · "+e.Text));
  public int Repeats {get;set;}=1;public string FirstAt {get;set;}="";public string At {get;set;}=DateTime.UtcNow.ToString("o");public string Kind {get;set;}="Info";public string Text {get;set;}="";public string Details {get;set;}="";
  [System.Text.Json.Serialization.JsonIgnore] public string Display=>Display36.Date(At)+"  "+Text+(Repeats>1?" · повторов: "+Repeats+" · с "+Display36.Date(FirstAt):"");
  [System.Text.Json.Serialization.JsonIgnore] public Brush Brush=>Theme.Tone(Kind);
@@ -24,7 +24,7 @@ public partial class MainWindow {
  static string EventFolder31(string host)=>Path.Combine(Store.Root,"Events",Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(host.ToUpperInvariant()))));
  void Event31(string host,string category,string signature,string text,string kind="Info",string details="",string at=""){
   var key=host.ToUpperInvariant()+"|"+category;if(eventSignatures31.GetValueOrDefault(key)==signature)return;eventSignatures31[key]=signature;
-  var entry=new ClientEvent31{Operation36=category,Kind=kind,Text=text,Details=details==text?"":details,At=DateTimeOffset.TryParse(at,out var observed)?observed.ToUniversalTime().ToString("o"):DateTime.UtcNow.ToString("o")};if(!recentEvents31.TryGetValue(host,out var list)){list=SafeEvents32(host,3);recentEvents31[host]=list;}list.Add(entry);list=CompactEvents34(list);recentEvents31[host]=list;list.Sort((a,b)=>string.CompareOrdinal(b.At,a.At));if(list.Count>3)list.RemoveRange(3,list.Count-3);
+  var entry=new ClientEvent31{Operation36=category,Kind=kind,Text=text,Details=details==text?"":details,At=DateTimeOffset.TryParse(at,out var observed)?observed.ToUniversalTime().ToString("o"):DateTime.UtcNow.ToString("o")};if(!recentEvents31.TryGetValue(host,out var list)){list=SafeEvents32(host,3);recentEvents31[host]=list;}list=CompactEvents34(SafeEvents32(host,500).Concat(memoryEvents32.GetValueOrDefault(host)??new()).Append(entry));recentEvents31[host]=list;list.Sort((a,b)=>string.CompareOrdinal(b.At,a.At));if(list.Count>3)list.RemoveRange(3,list.Count-3);
   if(!memoryEvents32.TryGetValue(host,out var memory)){memory=new();memoryEvents32[host]=memory;}memory.Insert(0,entry);if(memory.Count>500)memory.RemoveRange(500,memory.Count-500);
   if(!pendingEvents32.TryGetValue(host,out var pending)){pending=new();pendingEvents32[host]=pending;}pending.Add(entry);
   try{var folder=EventFolder31(host);Directory.CreateDirectory(folder);foreach(var item in pending){var day=DateTimeOffset.Parse(item.At).ToLocalTime().ToString("yyyy-MM-dd");File.AppendAllText(Path.Combine(folder,day+".jsonl"),JsonSerializer.Serialize(item)+Environment.NewLine);}pending.Clear();eventWriteErrors32.Remove(host);var cutoff=DateTime.Now.AddDays(-Math.Clamp(Store.Read("event-days31.json",30),1,365));foreach(var file in Directory.GetFiles(folder,"*.jsonl"))if(DateTime.TryParseExact(Path.GetFileNameWithoutExtension(file),"yyyy-MM-dd",null,System.Globalization.DateTimeStyles.None,out var day)&&day<cutoff.Date)File.Delete(file);Store.Write("event-signatures31.json",eventSignatures31);}catch(Exception ex){eventWriteErrors32[host]="Не удалось сохранить историю событий: "+ex.Message;}
@@ -57,7 +57,7 @@ public partial class MainWindow {
  string headerEventsKey32="",headerEventsHost32="",historyEventsKey32="";
  List<ClientEvent31> SafeEvents32(string host,int limit){try{return ReadEvents31(host,limit);}catch(Exception ex){eventWriteErrors32[host]="История с диска недоступна: "+ex.Message;return new();}}
  static string EventKey32(ClientEvent31 item)=>item.At+"|"+item.Kind+"|"+item.Text+"|"+item.Details;
- List<ClientEvent31> AllEvents32(string host)=>CompactEvents34(SafeEvents32(host,10000).Concat(memoryEvents32.GetValueOrDefault(host)??new()).Concat(recentEvents31.GetValueOrDefault(host)??new()).DistinctBy(EventKey32));
+ List<ClientEvent31> AllEvents32(string host)=>CompactEvents34(SafeEvents32(host,10000).Concat(memoryEvents32.GetValueOrDefault(host)??new()).Concat(recentEvents31.GetValueOrDefault(host)??new()).DistinctBy(e=>EventKey32(e)+"|"+e.Operation36));
  static string EventGroupKey36(ClientEvent31 e)=>e.Kind+"|"+e.Operation36+"|"+e.Text+"|"+e.Details;
  bool historyReset35=true;string historyHost35="";List<ClientEvent31>? historyPending35;
  void RefreshEventHistory32(string host){
@@ -68,7 +68,7 @@ public partial class MainWindow {
   var key=host+EventErrors32.IsChecked+string.Join("|",items.Select(x=>EventKey32(x)+"|"+x.Repeats));bool reset=historyReset35||historyHost35!=host;if(key==historyEventsKey32&&!reset)return;
  var viewer=Visual33<ScrollViewer>(EventList32).FirstOrDefault();
   if(!reset&&viewer?.VerticalOffset>1){historyPending35=items;var previous=EventList32.Items.Cast<ClientEvent31>().Select(EventKey32).ToHashSet();int count=items.Count(x=>!previous.Contains(EventKey32(x)));NewEvents35.Content=count>0?"Новых событий: "+count+" ↑":"События обновлены ↑";NewEvents35.Visibility=Visibility.Visible;return;}
-  historyEventsKey32=key;historyHost35=host;historyReset35=false;historyPending35=null;NewEvents35.Visibility=Visibility.Collapsed;EventList32.ItemsSource=items;
+  historyEventsKey32=key;historyHost35=host;historyReset35=false;historyPending35=null;NewEvents35.Visibility=Visibility.Collapsed;EventList32.ItemsSource=items;EventSelection36_Changed(this,new RoutedEventArgs());
   Dispatcher.BeginInvoke(new Action(()=>Visual33<ScrollViewer>(EventList32).FirstOrDefault()?.ScrollToTop()),System.Windows.Threading.DispatcherPriority.Loaded);
  }
  void NewEvents35_Click(object sender,RoutedEventArgs e){historyReset35=true;if(ComputerGrid.SelectedItem is ComputerRow row)RefreshEventHistory32(row.Host);}
