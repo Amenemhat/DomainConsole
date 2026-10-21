@@ -14,7 +14,7 @@
 
 **Текущая версия: 0.36.** Нативный интерфейс C# / WPF; переносимый пакет Windows x64.
 
-[Скачать 0.33](https://github.com/Amenemhat/DomainConsole/releases/download/v0.33/DomainConsole-0.33-Windows-x64.zip) · [Releases](https://github.com/Amenemhat/DomainConsole/releases) · [План работ / Issues](https://github.com/Amenemhat/DomainConsole/issues) · [Изменения 0.33](docs/releases/0.33.md)
+[Скачать 0.36](https://github.com/Amenemhat/DomainConsole/releases/download/v0.36/DomainConsole-0.36-Windows-x64.zip) · [Releases](https://github.com/Amenemhat/DomainConsole/releases) · [План работ / Issues](https://github.com/Amenemhat/DomainConsole/issues) · [Изменения 0.36](docs/releases/0.36.md)
 
 Готовые пакеты публикуются в Releases вместе с SHA-256 и описанием изменений. Компилировать приложение для использования не требуется.
 
