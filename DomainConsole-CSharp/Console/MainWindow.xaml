@@ -115,7 +115,7 @@
           <Grid x:Name="IdentityHeader34" SizeChanged="IdentityHeader34_SizeChanged">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <StackPanel x:Name="HeaderActions34" Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center">
+            <StackPanel x:Name="HeaderActions34" Background="{DynamicResource HeaderSurface}" Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center">
               <RadioButton x:Name="CommandsNavigation33" Content="Команды" Tag="Commands" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
               <RadioButton x:Name="WsusNavigation33" Content="WSUS" Tag="Wsus" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
               <RadioButton x:Name="HistoryNavigation33" Content="История" Tag="History" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" />
@@ -144,6 +144,7 @@
                   <Button x:Name="HeaderAbortReboot" AutomationProperties.Name="Отменить назначенную перезагрузку" Foreground="{DynamicResource ErrorText}" local:UiIcon32.Icon="close" Click="HeaderAbortReboot_Click" Visibility="Collapsed" Style="{StaticResource GhostIconButton}" Margin="1,0" ToolTip="Отменить назначенную перезагрузку" />
                   <Button x:Name="PostRebootInfo" Visibility="Collapsed" local:UiIcon32.Icon="more" Click="PostRebootInfo_Click" ToolTip="Состояние наблюдения и прекращение автоматического продолжения" Style="{StaticResource GhostIconButton}" Margin="1,0" />
                     <TextBlock x:Name="HeaderUpdateCount31" Margin="7,0" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" />
+                    <Button x:Name="HeaderErrors36" Content="Ошибок WSUS" Foreground="{DynamicResource ErrorText}" FontWeight="Bold" Click="HeaderErrors36_Click" Visibility="Collapsed" Style="{StaticResource GhostButton}" Margin="3,0" />
                     <TextBlock x:Name="HeaderReport35" Margin="7,0" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
                   </WrapPanel>
                   <WrapPanel Orientation="Horizontal" Margin="4,1,0,0">
@@ -180,21 +181,24 @@
               <Button x:Name="HeaderEventHistory31" Content="История событий" Click="EventHistory_Click" HorizontalAlignment="Left" FontSize="11" Padding="5,2" Visibility="Collapsed" />
               <Expander x:Name="EventHistoryGroup32" Header="История событий" Expanded="EventHistory32_Changed" Collapsed="EventHistory32_Changed">
                 <DockPanel>
-                  <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                  <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal">
                     <CheckBox x:Name="EventErrors32" Content="Ошибки и предупреждения" Margin="4,3" Checked="EventFilter32_Changed" Unchecked="EventFilter32_Changed" />
-                    <Button Content="Копировать" Click="CopyEvents32_Click" Padding="5,2" ToolTip="Выделенные события; без выделения — вся история с учётом фильтра" />
+                    <Button x:Name="EventCopyOne36" Content="Запись" Click="CopyEventOne36_Click" IsEnabled="False" Padding="5,2" ToolTip="Копировать текущую запись с подробностями" />
+                    <Button x:Name="EventCopySelected36" Content="Выбранные (0)" Click="CopyEventSelected36_Click" IsEnabled="False" Padding="5,2" ToolTip="Копировать отмеченные события" />
+                    <Button Content="Все" Click="CopyEventAll36_Click" Padding="5,2" ToolTip="Копировать всю историю с учётом фильтра и подробностями" />
                     <Button x:Name="NewEvents35" Content="К новым ↑" Click="NewEvents35_Click" Padding="5,2" Visibility="Collapsed" />
-                  </StackPanel>
+                  </WrapPanel>
                   <TextBlock x:Name="EventStorageError32" DockPanel.Dock="Bottom" TextWrapping="Wrap" Visibility="Collapsed" Foreground="{DynamicResource WarningText}" />
-                  <ListBox x:Name="EventList32" MaxHeight="145" SelectionMode="Extended" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.ScrollChanged="EventScroll35_Changed" PreviewKeyDown="EventCopy35_KeyDown">
+                  <ListBox x:Name="EventList32" PreviewMouseLeftButtonDown="EventSelect36_Mouse" SelectionChanged="EventCurrent36_Changed" MaxHeight="145" SelectionMode="Extended" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.ScrollChanged="EventScroll35_Changed" PreviewKeyDown="EventCopy35_KeyDown">
                     <ListBox.ItemTemplate>
                       <DataTemplate>
-                        <Expander Foreground="{Binding Brush}" ToolTip="{Binding Text}">
-                          <Expander.Header>
-                            <TextBox Text="{Binding Display,Mode=OneWay}" Foreground="{Binding Brush}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" Padding="0" />
-                          </Expander.Header>
-                          <TextBox Text="{Binding Details}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="100" VerticalScrollBarVisibility="Auto" />
-                        </Expander>
+                        <DockPanel LastChildFill="True">
+                          <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Selected36,Mode=TwoWay}" Checked="EventSelection36_Changed" Unchecked="EventSelection36_Changed" Margin="2,3,5,0" VerticalAlignment="Top" />
+                          <Expander Foreground="{Binding Brush}">
+                            <Expander.Header><TextBlock Text="{Binding Display}" Foreground="{Binding Brush}" TextWrapping="Wrap" /></Expander.Header>
+                            <StackPanel><TextBox Text="{Binding Details,Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="100" VerticalScrollBarVisibility="Auto" /><TextBox Text="{Binding OccurrenceText36,Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="110" VerticalScrollBarVisibility="Auto" /></StackPanel>
+                          </Expander>
+                        </DockPanel>
                       </DataTemplate>
                     </ListBox.ItemTemplate>
                   </ListBox>
@@ -367,65 +371,30 @@
         </TabItem>
         <TabItem x:Name="WsusTab" Header="WSUS">
           <DockPanel Margin="10">
-            <ScrollViewer DockPanel.Dock="Right" Width="192" Margin="10,0,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-              <StackPanel Width="182">
+            <Border DockPanel.Dock="Right" Width="182" Margin="10,0,0,0">
+              <StackPanel>
                 <TextBlock x:Name="WsusHeader" Visibility="Collapsed" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,8" />
                 <TextBlock Text="Обновления" FontWeight="SemiBold" Margin="0,4,0,4" />
                 <Button Click="WsusScan_Click" ToolTip="Найти применимые обновления и запросить отчёт. При включённом автообслуживании найденные обновления затем устанавливаются.">
-                  <TextBlock Text="Проверить обновления" TextWrapping="Wrap" TextAlignment="Center" />
+                  <TextBlock Text="Проверить" TextWrapping="Wrap" TextAlignment="Center" />
                 </Button>
                 <Button Click="WsusInstall_Click" ToolTip="Скачать и установить применимые одобренные обновления WSUS, затем запросить отчёт. Цели выбираются в подтверждении.">
-                  <TextBlock Text="Установить обновления" TextWrapping="Wrap" TextAlignment="Center" />
+                  <TextBlock Text="Установить" TextWrapping="Wrap" TextAlignment="Center" />
                 </Button>
                 <Button Click="FullMaintenance_Click" ToolTip="Поиск, скачивание и установка. После подтверждённой перезагрузки продолжает обслуживание; до 3 циклов. Самостоятельно компьютер не перезагружает.">
-                  <TextBlock Text="Полное обслуживание…" TextWrapping="Wrap" TextAlignment="Center" />
+                  <TextBlock Text="Обслуживание…" TextWrapping="Wrap" TextAlignment="Center" />
                 </Button>
-                <Button x:Name="AttentionButton" Content="Требуют внимания · 0" Click="Attention_Click" ToolTip="Клиенты, ожидающие перезагрузки или решения по сценарию обслуживания." />
+                <Button Margin="0,10,0,2" x:Name="AttentionButton" Content="Требуют внимания · 0" Click="Attention_Click" ToolTip="Клиенты, ожидающие перезагрузки или решения по сценарию обслуживания." />
                 <Button x:Name="WsusStopButton" Content="Остановить…" Click="Cancel_Click" Background="#B94A48" Foreground="White" ToolTip="Запросить отмену WUA либо остановку после текущего обновления. Запрос не означает мгновенного завершения установщика." />
                 <Button Click="Wsus_Click" ToolTip="Прочитать данные текущего компьютера или всех отмеченных целей с сервера WSUS. Область выбирается в подтверждении.">
-                  <TextBlock Text="Прочитать отчёт сервера" TextWrapping="Wrap" TextAlignment="Center" />
+                  <TextBlock Text="Отчёт WSUS" TextWrapping="Wrap" TextAlignment="Center" />
                 </Button>
-                <Expander x:Name="WsusDiagnosticsGroup" IsExpanded="True" Expanded="DiagnosticGroup_Changed" Collapsed="DiagnosticGroup_Changed" Margin="0,10,0,0">
-                  <Expander.Header>
-                    <TextBlock Text="Диагностика и восстановление" TextWrapping="Wrap" Width="145" />
-                  </Expander.Header>
-                  <StackPanel>
-                    <TextBlock Text="Проверки" FontWeight="SemiBold" Margin="0,6,0,4" />
-                    <Button Click="MemoryDiagnostics_Click" ToolTip="Прочитать RAM, подкачку, лимит выделенной памяти и события нехватки ресурсов; настройки не меняются.">
-                      <TextBlock Text="Проверить память и подкачку" TextWrapping="Wrap" TextAlignment="Center" />
-                    </Button>
-                    <Button Click="WsusDiagnostics_Click" ToolTip="Запустить диагностику политик, служб, прокси и событий Windows Update на целях из подтверждения; сбор WindowsUpdate.log ограничен пятью минутами.">
-                      <TextBlock Text="Проверить клиент" TextWrapping="Wrap" TextAlignment="Center" />
-                    </Button>
-                    <Button Click="WaitingDiagnostics_Click" ToolTip="Прочитать процессы и события параллельно с активным WSUS. Установку не останавливает.">
-                      <TextBlock Text="Проверить загрузку и установку" TextWrapping="Wrap" TextAlignment="Center" />
-                    </Button>
-                    <Button Click="DeliveryDiagnostics_Click" ToolTip="Запросить отправку отчёта без поиска и установки обновлений; собрать данные клиента и IIS сервера WSUS за один интервал. Цели выбираются в подтверждении.">
-                      <TextBlock Text="Проверить отправку отчёта" TextWrapping="Wrap" TextAlignment="Center" />
-                    </Button>
-                    <TextBlock Text="Восстановление" FontWeight="SemiBold" Margin="0,10,0,4" />
-                    <Button Click="UpdateWizard_Click" ToolTip="Диагностика служб, BITS, политик и очередей; выбор восстановления вручную.">
-                      <TextBlock Text="Проверить и восстановить…" TextWrapping="Wrap" TextAlignment="Center" />
-                    </Button>
-                    <Button Click="RecoverReport_Click" ToolTip="Очистить очередь неотправленных событий; затем проверить обновления и запросить отчёт. Требуется подтверждение целей.">
-                      <TextBlock Text="Восстановить отправку отчёта…" TextWrapping="Wrap" TextAlignment="Center" />
-                    </Button>
-                    <Button Click="Defender_Click" ToolTip="Диагностика службы, платформы и сбоев Defender; откат или сброс платформы доступны с подтверждением после завершения обновлений.">
-                      <TextBlock Text="Проверить и восстановить Defender…" TextWrapping="Wrap" TextAlignment="Center" />
-                    </Button>
-                    <Button Click="RestartServices_Click" ToolTip="Выбрать UsoSvc, Windows Update, BITS или cryptsvc; кэш не очищается.">
-                      <TextBlock Text="Перезапустить службы…" TextWrapping="Wrap" TextAlignment="Center" />
-                    </Button>
-                    <Button Content="Зависшие службы…" Click="ForceServices_Click" ToolTip="Проверить PID зависших служб и отдельно подтвердить принудительный перезапуск только текущего ПК" />
-                    <Button Click="CacheCleanup_Click" ToolTip="Выбрать очистку Download, очереди или всей SoftwareDistribution; резервная копия необязательна.">
-                      <TextBlock Text="Очистить кэш…" TextWrapping="Wrap" TextAlignment="Center" />
-                    </Button>
-                  </StackPanel>
-                </Expander>
+                <Button x:Name="ServiceTools36" Content="Диагностика и восстановление…" Click="ServiceTools36_Click" Margin="0,10,0,0" Padding="7,6"><Button.ToolTip>Все проверки клиента и действия восстановления</Button.ToolTip></Button>
+                <Expander x:Name="WsusDiagnosticsGroup" Visibility="Collapsed" />
                 <TextBlock x:Name="WsusStage" Visibility="Collapsed" />
                 <ProgressBar x:Name="WsusProgress" Visibility="Collapsed" />
               </StackPanel>
-            </ScrollViewer>
+            </Border>
             <Grid>
               <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />

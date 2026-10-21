@@ -8,7 +8,7 @@ public partial class MainWindow {
   if(state==null)return row.Status;
   if(Failed35(row.Target.Status)){
    var card=LogViewer.Sections(row.Target.Output).FirstOrDefault(x=>x.Title.StartsWith("Причина сбоя"));var lines=(card.Body??"").Split('\n',StringSplitOptions.RemoveEmptyEntries).Where(x=>!x.StartsWith("Возможные причины:")&&!x.StartsWith("Сначала перезагрузите")&&!x.StartsWith("Сообщение операции:")).Take(3).ToList();
-   if(lines.Count>0)return "Ошибка · "+string.Join("\n",lines.Select(x=>x.Length>220?x[..220]+"…":x));
+   if(lines.Count>0){var kb=Regex.Match(string.Join(" ",lines),@"(?i)KB\s*\d+").Value;return "Ошибка"+(kb.Length>0?" · "+kb:"")+"\n"+ResultPresentation36.BriefFailure(card.Body??"");}
    var code=Regex.Match(state.Error,@"(?i)0x[89a-f][0-9a-f]{7}");var result=state.Results.LastOrDefault(x=>x.ExitCode!=0);var cause=code.Success?code.Value+" · "+ExecutionDiagnosis.Explain(unchecked((int)Convert.ToUInt32(code.Value[2..],16))):ShortConnectionError(state.Error);
    return ComputerRow.StatusText(row.Target.Status)+(result!=null?" · "+result.Name:"")+(cause.Length>0?"\n"+(cause.Length>260?cause[..260]+"…":cause):"");
   }
