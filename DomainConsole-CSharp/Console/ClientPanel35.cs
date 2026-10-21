@@ -1,3 +1,4 @@
+using DomainConsole.Shared;
 using System.Windows;
 namespace DomainConsole;
 public partial class MainWindow {
