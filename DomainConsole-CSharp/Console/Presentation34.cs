@@ -18,6 +18,7 @@ public partial class MainWindow {
   else detail=(percent.Length>0?percent+" · ":"")+duration;
   if(!fresh)detail="Последний снимок · "+detail+" · ожидается обновление статуса";
   if(state.ActivityMessage.Length>0)detail+="\n"+state.ActivityMessage;if(state.StopMessage.Length>0)detail+="\n"+state.StopMessage;
+  var kb36=Regex.Match(stage,@"(?i)KB\s*\d+");if(kb36.Success)stage=stage.Split('·')[0].Trim()+" · "+kb36.Value.ToUpperInvariant();
   return stage+(detail.Length>0?"\n"+detail:"");
  }
  void IdentityHeader34_SizeChanged(object sender,SizeChangedEventArgs e)=>ArrangeIdentity34();
@@ -36,6 +37,7 @@ public partial class MainWindow {
   HeaderNext31.Text=text;HeaderNext31.ToolTip=details;HeaderNext31.Visibility=text.Length>0?Visibility.Visible:Visibility.Collapsed;
  }
  static List<ClientEvent31> CompactEvents34(IEnumerable<ClientEvent31> source){
-  var result=new List<ClientEvent31>();foreach(var group in source.GroupBy(e=>(e.Kind is "Error" or "Warning")?e.Kind+"|"+e.Text+"|"+e.Details:Guid.NewGuid().ToString())){var events=group.OrderByDescending(x=>x.At).ToList();var last=events[0];if(events.Count==1){result.Add(last);continue;}result.Add(new(){At=last.At,FirstAt=events.Select(e=>e.FirstAt.Length>0?e.FirstAt:e.At).Min()??last.At,Kind=last.Kind,Text=last.Text,Details=last.Details,Repeats=events.Sum(e=>e.Repeats)});}return result.OrderByDescending(e=>e.At).ToList();
+  var raw=source.SelectMany(e=>e.Occurrences36.Count>0?e.Occurrences36:new List<ClientEvent31>{e}).DistinctBy(e=>e.At+"|"+e.Kind+"|"+e.Text+"|"+e.Details+"|"+e.Operation36);
+  return raw.GroupBy(e=>e.Kind+"|"+e.Operation36+"|"+e.Text+"|"+e.Details).Select(g=>{var events=g.OrderByDescending(e=>e.At).ToList();var last=events[0];return new ClientEvent31{At=last.At,FirstAt=events.Select(e=>e.FirstAt.Length>0?e.FirstAt:e.At).Min()??last.At,Kind=last.Kind,Operation36=last.Operation36,Text=last.Text,Details=last.Details,Repeats=events.Sum(e=>e.Repeats),Occurrences36=events};}).OrderByDescending(e=>e.At).ToList();
  }
 }

@@ -80,7 +80,7 @@ $probe|ConvertTo-Json -Depth 5|Set-Content (Join-Path $dcFolder 'delivery-client
 'Клиент: '+$probe.Computer+'; ОС: '+$probe.Os+'; сборка: '+$probe.Build
 'Источник: '+$probe.WUServer+'; адрес отчётности: '+$probe.WUStatusServer+'; UseWUServer: '+$probe.UseWUServer
 'IP: '+($ips -join ', ')+'; SusClientId: '+$probe.SusClientId
-foreach($q in $probe.Queues){'Очередь '+$q.Name+': файлов '+$q.Files+'; байт '+$q.Bytes;if($q.Files){'Старейшее событие: '+([DateTime]::Parse($q.OldestUtc).ToLocalTime().ToString('dd.MM.yyyy HH:mm:ss zzz'))}}
+foreach($q in $probe.Queues){'Очередь '+$q.Name+': файлов '+$q.Files+'; байт '+$q.Bytes;if($q.Files){'Старейшее событие: '+([DateTime]::Parse($q.OldestUtc).ToLocalTime().ToString('dd.MM.yyyy HH:mm:ss'))}}
 if($probe.QueueError){'Ограничения сбора очереди: '+$probe.QueueError}
 $reportPath=Join-Path $env:windir 'SoftwareDistribution\ReportingEvents.log';if(Test-Path $reportPath){'## Технический журнал · локальные события отчётности';$recentEvents=@(Get-Content $reportPath -Encoding UTF8 -Tail 200 | Where-Object {$parts=$_ -split '\t';$at=[DateTimeOffset]::MinValue;$parts.Length -gt 1 -and [DateTimeOffset]::TryParse($parts[1],[ref]$at) -and $at.UtcDateTime -ge [DateTime]::UtcNow.AddHours(-1)});if($recentEvents.Count){$recentEvents}else{'За последний час локальных событий отчётности нет.'}}
 '## Технический журнал · события Windows Update';
@@ -160,3 +160,4 @@ $result|ConvertTo-Json -Depth 10 -Compress
 public sealed partial class RemoteService {
  public async Task<ServerReportEvidence> DeliveryServer(WsusSettings settings,ClientReportProbe probe,string started,int lookback=15){using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(90));var code="$lookback="+Math.Clamp(lookback,0,1440)+";$clientId="+PowerShellBridge.Literal(probe.SusClientId)+";$port="+settings.Port+";$ssl="+(settings.Ssl?"$true":"$false")+";$computer="+PowerShellBridge.Literal(probe.Computer)+";$sinceText="+PowerShellBridge.Literal(string.IsNullOrEmpty(started)?DateTime.UtcNow.AddHours(-1).ToString("o"):started)+";$ips=@("+string.Join(",",probe.IPs.Select(PowerShellBridge.Literal))+");"+DeliveryScripts.Server;return JsonSerializer.Deserialize<ServerReportEvidence>(await PowerShellBridge.Execute(Invoke(settings.Host,code),timeout.Token),Store.Options)??throw new Exception("Пустой ответ диагностики сервера.");}
 }
+
