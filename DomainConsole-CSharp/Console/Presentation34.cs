@@ -18,6 +18,7 @@ public partial class MainWindow {
   else detail=(percent.Length>0?percent+" · ":"")+duration;
   if(!fresh)detail="Последний снимок · "+detail+" · ожидается обновление статуса";
   if(state.ActivityMessage.Length>0)detail+="\n"+state.ActivityMessage;if(state.StopMessage.Length>0)detail+="\n"+state.StopMessage;
+  var kb36=Regex.Match(stage,@"(?i)KB\s*\d+");if(kb36.Success)stage=stage.Split('·')[0].Trim()+" · "+kb36.Value.ToUpperInvariant();
   return stage+(detail.Length>0?"\n"+detail:"");
  }
  void IdentityHeader34_SizeChanged(object sender,SizeChangedEventArgs e)=>ArrangeIdentity34();
