@@ -64,7 +64,7 @@
                     <ProgressBar x:Name="RecentActivityFill" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0" Opacity="0.42" IsHitTestVisible="False" Focusable="False" Maximum="100" Value="{Binding WorkProgress,Mode=OneWay}" IsIndeterminate="{Binding WorkBusy}" Visibility="{Binding ActivityVisibility}" Foreground="{Binding ProgressBrush37}" Background="Transparent" />
                     <DockPanel Margin="2,1">
                       <local:StatusGlyph DockPanel.Dock="Right" Kind="{Binding LinkKind}" Tint="{Binding LinkBrush}" ToolTip="{Binding LinkHint}" Margin="5,0,0,0" />
-                      <TextBlock DockPanel.Dock="Right" Text="{Binding NeededText37}" Visibility="{Binding NeededVisibility37}" Foreground="{Binding NeededBrush37}" ToolTip="{Binding NeededHint37}" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0" />
+                      <Button DockPanel.Dock="Right" Tag="Needed37" Click="Needed37_Click" Content="{Binding NeededText37}" Visibility="{Binding NeededVisibility37}" Foreground="{Binding NeededBrush37}" ToolTip="{Binding NeededHint37}" Style="{StaticResource GhostButton}" FontWeight="Bold" MinWidth="0" MinHeight="0" Height="20" Padding="3,0" VerticalAlignment="Center" Margin="5,0,0,0" />
                       <local:StatusGlyph DockPanel.Dock="Right" Kind="{Binding Outcome}" Tint="{Binding OutcomeBrush}" ToolTip="{Binding OutcomeHint}" Margin="6,0,0,0" />
                       <CheckBox DockPanel.Dock="Left" Click="RecentCheck_Click" IsChecked="{Binding Selected,Mode=TwoWay}" Margin="0,0,7,0" ToolTip="Галочка выбирает цель; Shift — видимый диапазон. Имя открывает результат, Ctrl по имени переключает галочку." />
                       <StackPanel>
