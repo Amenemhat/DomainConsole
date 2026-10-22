@@ -145,7 +145,7 @@ namespace DomainConsole.Agent {
    if(args.Length==2&&args[0]=="output-smoke")return VerifyOutput(args[1]);
    if(args.Length!=2)return 2;Folder=Path.GetFullPath(args[1]);if(!Directory.Exists(Folder))return 2;
    try{Job=Json.Deserialize<RemoteJob>(File.ReadAllText(FilePath("job.json")));Guid parsed;if(!Guid.TryParse(Job.Id,out parsed))throw new Exception("Invalid job ID");
-    if(args[0]=="reserve38"){Admission38();return 0;}if(args[0]=="reserve37"){ReserveControl37();return 0;}if(args[0]=="release37"){Console.WriteLine(ReleaseControl37()?"released37":"busy37");return 0;}if(args[0]=="claim37"){ClaimControl37();return 0;}
+    if(args[0]=="claim38"){Admission38(true);return 0;}if(args[0]=="reserve38"){Admission38();return 0;}if(args[0]=="reserve37"){ReserveControl37();return 0;}if(args[0]=="release37"){Console.WriteLine(ReleaseControl37()?"released37":"busy37");return 0;}if(args[0]=="claim37"){ClaimControl37();return 0;}
     if(args[0]=="restore"||args[0]=="verify"){
      if(File.Exists(FilePath("status.json")))State=Json.Deserialize<RemoteState>(File.ReadAllText(FilePath("status.json")));else State=new RemoteState{Id=Job.Id};
     if(args[0]=="restore")Restore();else Verify();return 0;

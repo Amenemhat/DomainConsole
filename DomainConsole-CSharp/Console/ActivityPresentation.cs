@@ -31,6 +31,7 @@ public partial class MainWindow {
   }
   var pieces38=CurrentStage.Text.Split(new[]{'\n'},2);CurrentStage.Text=pieces38[0];OperationDetail38.Text=pieces38.Length>1?pieces38[1]:"";OperationDetail38.Visibility=OperationDetail38.Text.Length>0?Visibility.Visible:Visibility.Collapsed;
   OperationGlyph38.Kind=active?"Working":failed?"Warning":reboot35?"Reboot":"Success";OperationGlyph38.Tint=CurrentStage.Foreground;
+  RunEditorButton.Visibility=CommandTools38.Visibility=MainTabs.SelectedItem==CommandsTab?Visibility.Visible:Visibility.Collapsed;
   RefreshHeader31(selected);
  }
 }

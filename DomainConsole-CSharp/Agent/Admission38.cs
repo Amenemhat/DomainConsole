@@ -4,8 +4,8 @@ using System.Text;
 using System.Linq;
 namespace DomainConsole.Agent {
  internal static partial class Program {
-  static void Admission38(){
-   try{ReserveControl37();WriteJson("admission38.json",new{Allowed=true,ReasonCode="accepted",Message="",ActiveJobId="",PlanId=Job.PlanId37});}
+  static void Admission38(bool claim=false){
+   try{if(claim)ClaimControl37();else ReserveControl37();WriteJson("admission38.json",new{Allowed=true,ReasonCode="accepted",Message="",ActiveJobId="",PlanId=Job.PlanId37});}
    catch(Exception ex){
     string code=ex is TimeoutException?"control_busy":"control_unknown";string message="Допуск нового запуска не подтверждён. Текущее задание продолжает наблюдаться.";string active="",plan="";
     try{var record=ReadControl37();plan=record.PlanId;active=record.JobIds.LastOrDefault(id=>!JobFinished37(id))??record.LastJobId;
