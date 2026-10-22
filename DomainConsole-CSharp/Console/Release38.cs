@@ -10,7 +10,7 @@ public partial class MainWindow {
  double eventsHeight38=Math.Clamp(Store.Read("events-height38.json",150d),65,300);
  void EventsResize38(object sender,System.Windows.Controls.Primitives.DragDeltaEventArgs e){eventsHeight38=Math.Clamp(EventsRow38.ActualHeight+e.VerticalChange,65,Math.Max(65,ActualHeight*0.35));EventsRow38.Height=new GridLength(eventsHeight38);Store.Write("events-height38.json",eventsHeight38);}
  ComputerRow OperationRow38(ComputerRow selected){
-  var active=History.FirstOrDefault(j=>j.Targets.Any(t=>t.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)&&IsCurrentExecution(t.Status)));
+  var active=History.FirstOrDefault(j=>IsWsusJob(j)==(MainTabs.SelectedItem==WsusTab)&&j.Targets.Any(t=>t.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)&&IsCurrentExecution(t.Status)));
   if(active!=null)return new(active.Targets.First(t=>t.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)),active.Id);
   return ExecutionRow(selected,MainTabs.SelectedItem==WsusTab);
  }
