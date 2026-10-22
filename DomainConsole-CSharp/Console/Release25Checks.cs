@@ -17,7 +17,7 @@ public partial class MainWindow {
    overviewErrors[row.Host]="Server timeout";if(OverviewStatus(row).Kind!="Stale"||!OverviewStatus(row).Hint.Contains("Server timeout"))throw new Exception("Failed WSUS read replaced saved health");overviewErrors.Remove(row.Host);
    reportCache[row.Host].Found=false;if(OverviewStatus(row).Kind!="NoWsus")throw new Exception("Missing WSUS identity not distinguished");
    clientConnections[row.Host]=new(){Error="Access is denied",LastAttempt=DateTimeOffset.UtcNow};if(LinkKind(row.Host)!="Access"||!StatusTags(row).Contains("NoWsus"))throw new Exception("Access denied confused with offline or server absence");
-   clientConnections[row.Host].Error="WinRM timeout";if(LinkKind(row.Host)!="Unreachable")throw new Exception("Unreachable has no dedicated state");clientConnections.Remove(row.Host);
+   clientConnections[row.Host].Error="WinRM timeout";clientConnections[row.Host].Lost38=true;if(LinkKind(row.Host)!="Unreachable")throw new Exception("Unreachable has no dedicated state");clientConnections.Remove(row.Host);
    reportCache[row.Host].Found=true;
    evidenceJob=new(){OutputChannel="WSUS",Targets=new(){new(){Host=row.Host,Name=row.Name,Status="Failed",State=new(){Status="Failed",Ended=DateTimeOffset.UtcNow.ToString("o")}}}};History.Insert(0,evidenceJob);
    if(OverviewStatus(row).Kind!="Error")throw new Exception("Fresh query of old server report hides newer task failure");History.Remove(evidenceJob);

@@ -27,7 +27,7 @@ namespace DomainConsole.Agent {
    var exe=typeof(Program).Assembly.Location;using(var px=Process.Start(new ProcessStartInfo(exe,"reserve37 \""+xp+"\""){UseShellExecute=false,CreateNoWindow=true,RedirectStandardError=true,RedirectStandardOutput=true}))using(var py=Process.Start(new ProcessStartInfo(exe,"reserve37 \""+yp+"\""){UseShellExecute=false,CreateNoWindow=true,RedirectStandardError=true,RedirectStandardOutput=true})){
     var ex=px.StandardError.ReadToEndAsync();var ey=py.StandardError.ReadToEndAsync();if(!px.WaitForExit(20000)||!py.WaitForExit(20000))throw new Exception("Admission race did not finish");if((px.ExitCode==0)==(py.ExitCode==0))throw new Exception("Concurrent consoles did not elect a single owner");
    }
-   Console.WriteLine("Client-wide ownership, foreign force rejection, diagnostics, plan gaps, stale continuations and cross-process admission race verified.");return 0;
+   AdmissionSmoke38(Path.Combine(root,"admission38"));Console.WriteLine("Client-wide ownership, foreign force rejection, diagnostics, plan gaps, stale continuations and cross-process admission race verified.");return 0;
   }
   static void SearchTimeoutSmoke37(){
    Stage("Поиск · fixture");State.Recommendation="old installer advice";var fake=new FakeOperation();searchDeadline37=DateTime.UtcNow.AddMilliseconds(500);var task=Task.Run(()=>WaitUpdate(fake,"Поиск"));Thread.Sleep(2300);

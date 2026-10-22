@@ -16,17 +16,17 @@ public partial class MainWindow {
   string detail="";bool download=stage.StartsWith("Скачивание",StringComparison.OrdinalIgnoreCase),install=stage.StartsWith("Установка",StringComparison.OrdinalIgnoreCase);
   if(download||install){detail=(download?"Скачано":"Установлено")+(percent.Length>0?" "+percent:"")+(duration.Length>0?" за "+duration:"");if(state.TransferText.Length>0)detail+=" · "+Regex.Replace(state.TransferText,@"^Скачано\s*","").Replace(" (последний замер)","");}
   else detail=(percent.Length>0?percent+" · ":"")+duration;
+  if(state.UpdateTotal38>0&&install)detail="Установлено: "+state.InstalledCount38+" из "+state.UpdateTotal38+(percent.Length>0?" · текущее: "+percent:"")+(duration.Length>0?" · прошло "+duration:"");else if(state.UpdateTotal38>0&&download)detail="Обновление "+state.UpdateIndex38+" из "+state.UpdateTotal38+" · "+detail;
   if(!fresh)detail="Последний снимок · "+detail+" · ожидается обновление статуса";
   if(state.ActivityMessage.Length>0)detail+="\n"+state.ActivityMessage;if(state.StopMessage.Length>0)detail+="\n"+state.StopMessage;
   return stage+(detail.Length>0?"\n"+detail:"");
  }
  void IdentityHeader34_SizeChanged(object sender,SizeChangedEventArgs e)=>ArrangeIdentity34();
  void ArrangeIdentity34(){
-  if(IdentityHeader34==null||HeaderActions34==null||IdentityHeader34.ActualWidth<=0)return;
-  double width=IdentityHeader34.ActualWidth;HeaderActions34.Measure(new Size(double.PositiveInfinity,double.PositiveInfinity));
-  double available=width-HeaderActions34.DesiredSize.Width-8;bool inline=available>=680;
-  Grid.SetRow(ConnectionPanel32,inline?0:1);Grid.SetColumn(ConnectionPanel32,0);Grid.SetColumnSpan(ConnectionPanel32,inline?2:3);
-  ConnectionPanel32.MaxWidth=inline?available:width;CurrentComputer.MaxWidth=Math.Max(100,Math.Min(310,ConnectionPanel32.MaxWidth-160));
+  if(IdentityHeader34==null||IdentityHeader34.ActualWidth<=0)return;
+  EventsRow38.MinHeight=EventHistoryGroup32.IsExpanded&&EventList32.Items.Count>0?65:0;EventsSplitter38.Visibility=EventHistoryGroup32.IsExpanded&&EventList32.Items.Count>0?Visibility.Visible:Visibility.Collapsed;
+  EventsRow38.Height=EventHistoryGroup32.IsExpanded&&EventList32.Items.Count>0?new GridLength(Math.Min(ActualHeight<750?85:300,eventsHeight38)):GridLength.Auto;
+  CurrentComputer.MaxWidth=Math.Max(120,Math.Min(260,IdentityHeader34.ActualWidth*0.3));
 
  }
  void RefreshServiceBadge34(ComputerRow row){
