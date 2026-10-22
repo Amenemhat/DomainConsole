@@ -562,10 +562,10 @@
       <Setter Property="FontSize" Value="13"/><Setter Property="Background" Value="{DynamicResource ButtonSurface}"/>
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
         <Border x:Name="Surface38" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="5" Padding="{TemplateBinding Padding}">
-          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"><ContentPresenter.Content><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <ContentControl x:Name="ActionGlyph38" Content="{Binding Path=(local:ActionIcon38.Visual),RelativeSource={RelativeSource TemplatedParent}}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
             <TextBlock Grid.Column="1" Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center"/>
-          </Grid>
+          </Grid></ContentPresenter.Content></ContentPresenter>
         </Border><ControlTemplate.Triggers>
           <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface38" Property="Background" Value="{DynamicResource HoverSurface}"/></Trigger>
           <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface38" Property="Opacity" Value="0.45"/></Trigger>

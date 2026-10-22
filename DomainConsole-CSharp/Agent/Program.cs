@@ -92,10 +92,10 @@ namespace DomainConsole.Agent {
    dynamic search=session.CreateUpdateSearcher();search.ServerSelection=1;search.Online=true;
    dynamic result=SearchWithRetry(search);if((int)result.ResultCode!=2)throw new Exception("Search ResultCode: "+result.ResultCode);
    var details=new List<object>();int failures=0;int total=(int)result.Updates.Count;
-   State.UpdatesRemaining=total;Log("Поиск завершён. Применимых обновлений: "+total);Save();
+   State.UpdateTotal38=total;State.InstalledCount38=0;State.UpdatesRemaining=total;Log("Поиск завершён. Применимых обновлений: "+total);Save();
    if(Cancelled()){WriteJson(prefix+".updates.json",details);return 0;}if(scanOnly){for(int n=0;n<total;n++){dynamic u=result.Updates.Item(n);details.Add(new{Title=(string)u.Title,Downloaded=(bool)u.IsDownloaded});}WriteJson(prefix+".updates.json",details);return Report();}
    for(int i=0;i<total;i++){
-    if(Cancelled())break;dynamic update=result.Updates.Item(i);
+    if(Cancelled())break;State.UpdateIndex38=i+1;dynamic update=result.Updates.Item(i);
     if((bool)update.InstallationBehavior.CanRequestUserInput){Log("Skipped interactive update: "+update.Title);continue;}
     if(!(bool)update.EulaAccepted)update.AcceptEula();dynamic one=Com("Microsoft.Update.UpdateColl");one.Add(update);
     Stage("Скачивание · "+(string)update.Title);State.Progress=total==0?100:100*i/total;Save();
@@ -103,7 +103,7 @@ namespace DomainConsole.Agent {
     dynamic downloadItem=downloaded.GetUpdateResult(0);if((int)downloadItem.ResultCode!=2||(int)downloadItem.HResult!=0){failures++;int hr=(int)downloadItem.HResult;if(hr==0)hr=(int)downloaded.HResult;string failure="Не скачано: "+(string)update.Title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+"; ResultCode="+downloadItem.ResultCode+". "+ExecutionDiagnosis.Explain(hr);Log(failure);if(string.IsNullOrEmpty(State.Error))State.Error=failure;ApplyRecommendation(failure);details.Add(new{Title=(string)update.Title,Download=(int)downloadItem.ResultCode,HResult=hr});WriteJson(prefix+".updates.json",details);Save();continue;}
     if(Cancelled()){details.Add(new{Title=(string)update.Title,Download=2,HResult=0});WriteJson(prefix+".updates.json",details);break;}Stage("Установка · "+(string)update.Title);dynamic installer=session.CreateUpdateInstaller();installer.Updates=one;installer.AllowSourcePrompts=false;
     dynamic installed=AsyncInstall(installer);dynamic item=installed.GetUpdateResult(0);int code=(int)item.ResultCode;
-    details.Add(new{Title=(string)update.Title,ResultCode=code,HResult=(int)item.HResult,RebootRequired=(bool)installed.RebootRequired});
+    if(code==2)State.InstalledCount38++;details.Add(new{Title=(string)update.Title,ResultCode=code,HResult=(int)item.HResult,RebootRequired=(bool)installed.RebootRequired});
     if(code!=2){failures++;int hr=(int)item.HResult;string installError="Не установлено: "+(string)update.Title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+". "+ExecutionDiagnosis.Explain(hr);Log(installError);if(string.IsNullOrEmpty(State.Error))State.Error=installError;ApplyRecommendation(installError);}State.RebootRequired=State.RebootRequired||(bool)installed.RebootRequired;
     State.UpdatesRemaining=total-i-1;WriteJson(prefix+".updates.json",details);if(State.RebootRequired)break;
    }
