@@ -442,27 +442,23 @@
       </Setter>
     </Style>
     <Style TargetType="Expander">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="Expander">
-            <DockPanel>
-              <ToggleButton DockPanel.Dock="Top" Style="{StaticResource DisclosureHeader}" Background="{TemplateBinding Background}" Foreground="{TemplateBinding Foreground}" Content="{TemplateBinding Header}" IsChecked="{Binding IsExpanded,RelativeSource={RelativeSource TemplatedParent},Mode=TwoWay}" />
-              <Border x:Name="Body" Visibility="Collapsed">
-                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-              </Border>
-            </DockPanel>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsExpanded" Value="True">
-                <Setter TargetName="Body" Property="Visibility" Value="Visible" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
+      <Setter Property="Background" Value="{DynamicResource PanelSurface}"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Expander">
+        <Border BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="5" Background="{TemplateBinding Background}"><DockPanel>
+          <ToggleButton DockPanel.Dock="Top" FontWeight="SemiBold" Style="{StaticResource DisclosureHeader}" Background="{DynamicResource HeaderSurface}" Foreground="{TemplateBinding Foreground}" Content="{TemplateBinding Header}" IsChecked="{Binding IsExpanded,RelativeSource={RelativeSource TemplatedParent},Mode=TwoWay}"/>
+          <Border x:Name="Body" Visibility="Collapsed" Padding="4"><ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/></Border>
+        </DockPanel></Border>
+        <ControlTemplate.Triggers><Trigger Property="IsExpanded" Value="True"><Setter TargetName="Body" Property="Visibility" Value="Visible"/></Trigger></ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
     </Style>
+    <Style x:Key="WorkspaceSplitter39" TargetType="GridSplitter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="GridSplitter"><Grid Background="Transparent"><Border x:Name="Grip" Width="36" Height="2" CornerRadius="1" Background="{DynamicResource Outline}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid><ControlTemplate.Triggers><Trigger Property="ResizeDirection" Value="Columns"><Setter TargetName="Grip" Property="Width" Value="2"/><Setter TargetName="Grip" Property="Height" Value="36"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style TargetType="GridSplitter" BasedOn="{StaticResource WorkspaceSplitter39}"/>
     <Style TargetType="RadioButton">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     </Style>
@@ -558,13 +554,14 @@
 
     <SolidColorBrush x:Key="ProgressFill38" Color="#009E48" />
     <Style x:Key="ActionButton38" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Width" Value="216"/><Setter Property="HorizontalAlignment" Value="Left"/>
       <Setter Property="MinHeight" Value="42"/><Setter Property="Margin" Value="0,0,0,7"/><Setter Property="Padding" Value="9,7"/>
       <Setter Property="FontSize" Value="13"/><Setter Property="Background" Value="{DynamicResource ButtonSurface}"/>
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
         <Border x:Name="Surface38" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="5" Padding="{TemplateBinding Padding}">
-          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"><ContentPresenter.Content><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"><ContentPresenter.Content><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <ContentControl x:Name="ActionGlyph38" Content="{Binding Path=(local:ActionIcon38.Visual),RelativeSource={RelativeSource TemplatedParent}}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-            <TextBlock Grid.Column="1" Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" TextWrapping="Wrap" TextAlignment="Left" FontWeight="SemiBold" Margin="7,0,0,0" VerticalAlignment="Center"/>
           </Grid></ContentPresenter.Content></ContentPresenter>
         </Border><ControlTemplate.Triggers>
           <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface38" Property="Background" Value="{DynamicResource HoverSurface}"/></Trigger>

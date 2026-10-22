@@ -67,7 +67,7 @@
                       <Button DockPanel.Dock="Right" Tag="Needed37" Click="Needed37_Click" Content="{Binding NeededText37}" Visibility="{Binding NeededVisibility37}" Foreground="{Binding NeededBrush37}" ToolTip="{Binding NeededHint37}" Style="{StaticResource GhostButton}" FontWeight="Bold" MinWidth="0" MinHeight="0" Height="20" Padding="3,0" VerticalAlignment="Center" Margin="5,0,0,0"/>
                       <local:StatusGlyph DockPanel.Dock="Right" Kind="{Binding Outcome}" Tint="{Binding OutcomeBrush}" ToolTip="{Binding OutcomeHint}" Margin="6,0,0,0"/>
                       <CheckBox DockPanel.Dock="Left" Click="RecentCheck_Click" IsChecked="{Binding Selected,Mode=TwoWay}" Margin="0,0,7,0" ToolTip="Галочка выбирает цель; Shift — видимый диапазон. Имя открывает результат, Ctrl по имени переключает галочку."/>
-                      <local:StatusGlyph Kind="{Binding DeviceKind38}" Tint="{Binding NameBrush}" DockPanel.Dock="Left" Margin="0,0,7,0"/><StackPanel>
+                      <local:StatusGlyph Kind="{Binding DeviceKind38}" Tint="{Binding DeviceBrush39}" DockPanel.Dock="Left" Margin="0,0,7,0"/><StackPanel>
                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" ToolTip="{Binding NameHint36}" Foreground="{Binding NameBrush}" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{Binding RecentHint}" FontSize="10" Foreground="{DynamicResource TextMuted}" TextTrimming="CharacterEllipsis"/>
                       </StackPanel>
@@ -77,15 +77,8 @@
               </ListBox.ItemTemplate>
             </ListBox>
           </Expander>
-          <GridSplitter x:Name="NavigationSplitter" Grid.Row="1" Height="6" HorizontalAlignment="Stretch" Background="{DynamicResource Outline}" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" DragCompleted="NavigationSplit_Changed" ToolTip="Перетащите, чтобы изменить высоту списков" Margin="0">
-            <GridSplitter.Template>
-              <ControlTemplate TargetType="GridSplitter">
-                <Border Background="{TemplateBinding Background}">
-                  <Border Background="{DynamicResource TextMuted}" Width="36" Height="2" CornerRadius="1"/>
-                </Border>
-              </ControlTemplate>
-            </GridSplitter.Template>
-          </GridSplitter>
+          <GridSplitter x:Name="NavigationSplitter" Grid.Row="1" Height="6" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" DragCompleted="NavigationSplit_Changed" ToolTip="Перетащите, чтобы изменить высоту списков" Margin="0" Style="{StaticResource WorkspaceSplitter39}">
+            </GridSplitter>
           <Expander x:Name="TreeGroup" Grid.Row="2" Foreground="{DynamicResource TextPrimary}" IsExpanded="True" Expanded="NavigationGroup_Changed" Collapsed="NavigationGroup_Changed" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <Expander.Header>
               <DockPanel LastChildFill="True">
@@ -104,7 +97,7 @@
         </Grid>
       </DockPanel>
     </Border>
-    <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource Outline}"/>
+    <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="Transparent" Style="{StaticResource WorkspaceSplitter39}"/>
     <Grid Grid.Column="2" Margin="8">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto"/>
@@ -115,10 +108,10 @@
                       <TextBlock x:Name="CurrentComputer" TextTrimming="CharacterEllipsis" FontSize="17" FontWeight="SemiBold" Text="Выберите компьютер" VerticalAlignment="Center"/>
                     </Button>
                   <TextBlock x:Name="CurrentDetails" Foreground="{DynamicResource TextMuted}" MaxWidth="240" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FontSize="11" Margin="4,0,0,0"/>
-                    </StackPanel><TextBlock x:Name="HeaderUpdateCount31" Margin="7,0" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
-                    <Button x:Name="HeaderErrors36" Content="Ошибок WSUS" Foreground="{DynamicResource ErrorText}" FontWeight="Bold" Click="HeaderErrors36_Click" Visibility="Collapsed" Style="{StaticResource GhostButton}" Margin="3,0"/>
-                    <TextBlock x:Name="HeaderReport35" Margin="7,0" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
-                  <Button x:Name="HeaderLink" Click="HeaderLink_Click" Padding="4,3" ToolTip="Проверить связь" Margin="0" Style="{StaticResource GhostButton}" MinHeight="30">
+                    </StackPanel><Border BorderBrush="{DynamicResource Outline}" BorderThickness="1,0,0,0" Padding="8,0,0,0" Margin="0,0,6,0"><Border.Style><Style TargetType="Border"><Style.Triggers><DataTrigger Binding="{Binding Visibility,ElementName=HeaderUpdateCount31}" Value="Collapsed"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock x:Name="HeaderUpdateCount31" Margin="7,0" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                    </Border><Button x:Name="HeaderErrors36" Content="Ошибок WSUS" Foreground="{DynamicResource ErrorText}" FontWeight="Bold" Click="HeaderErrors36_Click" Visibility="Collapsed" Style="{StaticResource GhostButton}" Margin="3,0"/>
+                    <Border BorderBrush="{DynamicResource Outline}" BorderThickness="1,0,0,0" Padding="8,0,0,0" Margin="0,0,6,0"><Border.Style><Style TargetType="Border"><Style.Triggers><DataTrigger Binding="{Binding Visibility,ElementName=HeaderReport35}" Value="Collapsed"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock x:Name="HeaderReport35" Margin="7,0" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                  </Border><Border BorderBrush="{DynamicResource Outline}" BorderThickness="1,0,0,0" Padding="8,0,0,0" Margin="0,0,6,0"><Border.Style><Style TargetType="Border"><Style.Triggers><DataTrigger Binding="{Binding Visibility,ElementName=HeaderLink}" Value="Collapsed"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style><Button x:Name="HeaderLink" Click="HeaderLink_Click" Padding="4,3" ToolTip="Проверить связь" Margin="0" Style="{StaticResource GhostButton}" MinHeight="30">
                     <Button.ContextMenu>
                       <ContextMenu>
                         <MenuItem Header="Принять управление клиентом…" Click="ClaimControl37_Click"/>
@@ -131,14 +124,14 @@
                       <TextBlock x:Name="HeaderLinkText" Margin="5,0" VerticalAlignment="Center" FontSize="12"/>
                     </StackPanel>
                   </Button>
-          <Button x:Name="HeaderReboot" Foreground="{DynamicResource InfoText}" local:UiIcon32.Icon="reboot" Click="HeaderReboot_Click" Style="{StaticResource GhostIconButton}" Margin="1,0"/>
+          </Border><Button x:Name="HeaderReboot" Foreground="{DynamicResource InfoText}" local:UiIcon32.Icon="reboot" Click="HeaderReboot_Click" Style="{StaticResource GhostIconButton}" Margin="1,0"/>
                   <Button x:Name="HeaderAbortReboot" AutomationProperties.Name="Отменить назначенную перезагрузку" Foreground="{DynamicResource ErrorText}" local:UiIcon32.Icon="close" Click="HeaderAbortReboot_Click" Visibility="Collapsed" Style="{StaticResource GhostIconButton}" Margin="1,0" ToolTip="Отменить назначенную перезагрузку"/>
                   <Button x:Name="PostRebootInfo" Visibility="Collapsed" local:UiIcon32.Icon="more" Click="PostRebootInfo_Click" ToolTip="Состояние наблюдения и прекращение автоматического продолжения" Style="{StaticResource GhostIconButton}" Margin="1,0"/>
-                    </WrapPanel></Border><WrapPanel Grid.Row="1" Margin="4,4,0,0"><TextBlock x:Name="HeaderUser37" Margin="0,0,9,0" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="HeaderTimes31" Margin="9,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="HeaderControl37" Margin="0,0,8,0" Foreground="{DynamicResource InfoText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="HeaderNext31" Foreground="{DynamicResource InfoText}" FontSize="12" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="HeaderContact35" Margin="0,0,8,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" Visibility="Collapsed"/>
+                    </WrapPanel></Border><WrapPanel Grid.Row="1" Margin="4,4,0,0"><TextBlock x:Name="HeaderUser37" Margin="0,0,9,0" Foreground="{DynamicResource TextPrimary}" FontWeight="Normal" VerticalAlignment="Center"/>
+                    <Border BorderBrush="{DynamicResource Outline}" BorderThickness="1,0,0,0" Padding="8,0,0,0" Margin="0,0,6,0"><Border.Style><Style TargetType="Border"><Style.Triggers><DataTrigger Binding="{Binding Visibility,ElementName=HeaderTimes31}" Value="Collapsed"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock x:Name="HeaderTimes31" Margin="9,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center"/>
+                    </Border><Border BorderBrush="{DynamicResource Outline}" BorderThickness="1,0,0,0" Padding="8,0,0,0" Margin="0,0,6,0"><Border.Style><Style TargetType="Border"><Style.Triggers><DataTrigger Binding="{Binding Visibility,ElementName=HeaderControl37}" Value="Collapsed"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock x:Name="HeaderControl37" Margin="0,0,8,0" Foreground="{DynamicResource InfoText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </Border><Border BorderBrush="{DynamicResource Outline}" BorderThickness="1,0,0,0" Padding="8,0,0,0" Margin="0,0,6,0"><Border.Style><Style TargetType="Border"><Style.Triggers><DataTrigger Binding="{Binding Visibility,ElementName=HeaderNext31}" Value="Collapsed"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock x:Name="HeaderNext31" Foreground="{DynamicResource InfoText}" FontSize="12" VerticalAlignment="Center"/>
+                    </Border><TextBlock x:Name="HeaderContact35" Margin="0,0,8,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" Visibility="Collapsed"/>
                     <TextBlock x:Name="HeaderWsusStatus" Visibility="Collapsed"/>
                   <ItemsControl x:Name="HeaderRecent31" Margin="0" Visibility="Collapsed">
             <ItemsControl.ItemTemplate>
@@ -149,40 +142,45 @@
           </ItemsControl>
           <Button x:Name="HeaderEventHistory31" Content="История событий" Click="EventHistory_Click" HorizontalAlignment="Left" FontSize="11" Padding="5,2" Visibility="Collapsed"/>
               </WrapPanel></Grid></Border><DataGrid x:Name="ComputerGrid" Visibility="Collapsed" ItemsSource="{Binding Computers}" SelectionChanged="Computer_Changed"/>
-      <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="350"/><ColumnDefinition Width="270"/></Grid.ColumnDefinitions><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition x:Name="EventsRow38" Height="150" MinHeight="65" MaxHeight="300"/><RowDefinition Height="5"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*" MinHeight="80"/></Grid.RowDefinitions><Border Background="{DynamicResource PanelSurface}" BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,7" x:Name="OperationCard38"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="35"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><local:StatusGlyph Kind="Working" Tint="{DynamicResource InfoText}" Width="27" Height="27" VerticalAlignment="Top" Margin="0,3,6,0" x:Name="OperationGlyph38"/><StackPanel Grid.Column="1"><TextBlock x:Name="CurrentStage" TextWrapping="Wrap" Margin="0" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource InfoText}"/>
-            <TextBlock FontSize="13" TextWrapping="Wrap" Margin="0,3,0,6" x:Name="OperationDetail38"/><ProgressBar x:Name="CurrentProgress" Height="9" Maximum="100" Foreground="{DynamicResource ProgressFill38}" Background="{DynamicResource SectionSurface}" Margin="0,1,0,1"/>
-          </StackPanel></Grid></Border><Expander x:Name="EventHistoryGroup32" Header="История событий" Expanded="EventHistory32_Changed" Collapsed="EventHistory32_Changed" Grid.Row="1" IsExpanded="True" Background="{DynamicResource SectionSurface}">
-                <DockPanel>
-                  <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal">
-                    <CheckBox x:Name="EventErrors32" Content="Ошибки и предупреждения" Margin="4,3" Checked="EventFilter32_Changed" Unchecked="EventFilter32_Changed"/>
-                    <Button x:Name="EventCopyOne36" Content="Запись" Click="CopyEventOne36_Click" IsEnabled="False" Padding="5,2" ToolTip="Копировать текущую запись с подробностями"/>
-                    <Button x:Name="EventCopySelected36" Content="Выбранные (0)" Click="CopyEventSelected36_Click" IsEnabled="False" Padding="5,2" ToolTip="Копировать отмеченные события"/>
-                    <Button Content="Все" Click="CopyEventAll36_Click" Padding="5,2" ToolTip="Копировать всю историю с учётом фильтра и подробностями"/>
-                    <Button x:Name="NewEvents35" Content="К новым ↑" Click="NewEvents35_Click" Padding="5,2" Visibility="Collapsed"/>
-                  </WrapPanel>
-                  <TextBlock x:Name="EventStorageError32" DockPanel.Dock="Bottom" TextWrapping="Wrap" Visibility="Collapsed" Foreground="{DynamicResource WarningText}"/>
-                  <ListBox x:Name="EventList32" SelectionChanged="EventCurrent36_Changed" SelectionMode="Extended" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.ScrollChanged="EventScroll35_Changed" PreviewKeyDown="EventCopy35_KeyDown" HorizontalContentAlignment="Stretch" ScrollViewer.CanContentScroll="True" VirtualizingPanel.ScrollUnit="Pixel" VirtualizingPanel.IsVirtualizing="True">
-                    <ListBox.ItemTemplate><DataTemplate><Grid Margin="2,3,6,3"><Grid.ColumnDefinitions><ColumnDefinition Width="90"/><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Time38}" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Top"/><Border Grid.Column="1" VerticalAlignment="Top" Height="20" Margin="0,0,5,0"><local:StatusGlyph Kind="{Binding Glyph38}" Tint="{Binding Brush}"/></Border><TextBlock Grid.Column="2" Text="{Binding Body38}" Foreground="{Binding Brush}" TextWrapping="Wrap"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox>
-                </DockPanel>
-              </Expander>
-            <Thumb x:Name="EventsSplitter38" Grid.Row="2" Height="5" HorizontalAlignment="Stretch" Cursor="SizeNS" DragDelta="EventsResize38" Background="Transparent" ToolTip="Изменить высоту истории событий"><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="{TemplateBinding Background}"><Border Width="36" Height="2" Background="{DynamicResource Outline}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border></ControlTemplate></Thumb.Template></Thumb><Expander x:Name="BackgroundGroup" Margin="0,3,0,5" IsExpanded="False" Visibility="Collapsed" Grid.Column="0" Grid.Row="3">
-              <Expander.Header>
-                <TextBlock x:Name="BackgroundSummary" TextWrapping="NoWrap" Foreground="{DynamicResource TextMuted}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}"/>
-              </Expander.Header>
-              <StackPanel MaxHeight="175">
-                <TextBlock x:Name="BackgroundRelation" TextWrapping="Wrap" Margin="0,3"/>
-                <ProgressBar x:Name="BackgroundProgress" Height="4" Maximum="100" Visibility="Collapsed"/>
-                <TextBox x:Name="BackgroundDetails" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="145" VerticalScrollBarVisibility="Auto" Margin="0,4"/>
-                <Button x:Name="DownloadPriorityButton" Content="Скорость выбранной загрузки…" Click="DownloadPriority_Click" HorizontalAlignment="Left" Visibility="Collapsed" ToolTip="Выбрать конкретное задание BITS: повысить приоритет или вернуть исходный"/>
+      <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="350"/><ColumnDefinition Width="270"/></Grid.ColumnDefinitions><Border Grid.Column="1" Margin="10,0,0,0" Padding="7" Background="{DynamicResource PanelSurface}" BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="6"><DockPanel><StackPanel x:Name="HeaderActions34" Background="{DynamicResource HeaderSurface}" Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center" DockPanel.Dock="Top" Margin="0,0,0,10" HorizontalAlignment="Stretch">
+              <RadioButton x:Name="CommandsNavigation33" Content="Команды" Tag="Commands" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" Width="78" Padding="2,5" MinHeight="34" FontSize="13"/>
+              <RadioButton x:Name="WsusNavigation33" Content="WSUS" Tag="Wsus" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" Width="78" Padding="2,5" MinHeight="34" FontSize="13"/>
+              <RadioButton x:Name="HistoryNavigation33" Content="История" Tag="History" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" Width="78" Padding="2,5" MinHeight="34" FontSize="13"/>
               </StackPanel>
-            </Expander>
-          <StackPanel Grid.Row="4"><Button x:Name="RecommendationButton" Content="Рекомендуемое действие…" Click="Recommendation_Click" Visibility="Collapsed" HorizontalAlignment="Left"/>
-          <TextBlock x:Name="DiagnosticStage" TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" Visibility="Collapsed" Margin="0,2,0,3"/>
-        <TextBlock x:Name="WsusHeader" Visibility="Collapsed" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                <Expander x:Name="WsusDiagnosticsGroup" Visibility="Collapsed"/>
-                <TextBlock x:Name="WsusStage" Visibility="Collapsed"/>
-                <ProgressBar x:Name="WsusProgress" Visibility="Collapsed"/>
-              </StackPanel><TabControl x:Name="MainTabs" Grid.Row="5" BorderThickness="0" Background="{DynamicResource AppSurface}" TabStripPlacement="Top" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" SelectionChanged="Tabs_Changed">
+              <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0"><Button x:Name="SettingsButton34" local:UiIcon32.Icon="settings" Style="{StaticResource GhostIconButton}" Click="WsusSettings_Click" ToolTip="Настройки программы"/>
+            <CheckBox x:Name="AutoServiceToggle" Content="Авто" Checked="AutoService_Changed" Unchecked="AutoService_Changed" HorizontalAlignment="Left" ToolTip="Поиск → установка найденного → отчёт. После согласованной перезагрузки — продолжение. Выключено: одна операция. Произвольные команды не запускают обслуживание." Style="{StaticResource AutoSwitch}" Margin="6,0" VerticalAlignment="Center"/>
+              </StackPanel><Button Content="Вернуться к работе" Click="BackSettings39_Click" Style="{StaticResource ActionButton38}" x:Name="BackSettings39" local:ActionIcon38.Kind="up" DockPanel.Dock="Top"/><Button x:Name="RunEditorButton" Content="Выполнить в CMD" Style="{StaticResource ActionButton38}" Click="RunEditor_Click" ToolTip="Выполнить текст из редактора. В подтверждении выберите текущий ПК или все отмеченные цели." Margin="0,8,0,4" DockPanel.Dock="Top" local:ActionIcon38.Kind="run" local:ActionIcon38.Tone="InfoText"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0"><StackPanel><StackPanel x:Name="WsusActions39"><Button Click="WsusScan_Click" Style="{StaticResource ActionButton38}" ToolTip="Проверить обновления" local:ActionIcon38.Kind="refresh" Content="Проверить обновления" local:ActionIcon38.Tone="InfoText"/><Button Click="WsusInstall_Click" Style="{StaticResource ActionButton38}" ToolTip="Установить обновления" local:ActionIcon38.Kind="down" Content="Установить обновления" local:ActionIcon38.Tone="InfoText"/><Button Click="FullMaintenance_Click" Style="{StaticResource ActionButton38}" ToolTip="Обслуживание" local:ActionIcon38.Kind="tools" Content="Обслуживание" local:ActionIcon38.Tone="InfoText"/><Button Click="StopCurrent38_Click" Style="{StaticResource ActionButton38}" ToolTip="Остановить" x:Name="WsusStopButton" local:ActionIcon38.Kind="stop" Content="Остановить" local:ActionIcon38.Tone="ErrorText"/><Separator Margin="0,9,0,12" Background="{DynamicResource Outline}"/><Button Click="Wsus_Click" Style="{StaticResource ActionButton38}" ToolTip="Отчёт WSUS" local:ActionIcon38.Kind="report" Content="Отчёт WSUS" local:ActionIcon38.Tone="InfoText"/><Button Click="ServiceTools36_Click" Style="{StaticResource ActionButton38}" ToolTip="Диагностика и восстановление" x:Name="ServiceTools36" local:ActionIcon38.Kind="diagnostics" Content="Диагностика и восстановление" local:ActionIcon38.Tone="InfoText"/><Button Click="Attention_Click" Style="{StaticResource ActionButton38}" ToolTip="Требуют внимания" x:Name="AttentionButton" local:ActionIcon38.Kind="warning" Content="Требуют внимания" local:ActionIcon38.Tone="AttentionIcon39"/></StackPanel><StackPanel x:Name="CommandTools38"><Button x:Name="StopButton" Content="Остановить…" Click="Cancel_Click" ToolTip="Выбрать остановку сейчас или после текущей команды. Действует на просматриваемый ПК." Visibility="Visible" Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="stop" local:ActionIcon38.Tone="ErrorText"/>
+                <TextBlock Text="Сценарии" FontWeight="SemiBold" Margin="0,12,0,4"/>
+                <Button Content="Сохранённые / недавние ▾" Click="ShowSuggestions_Click" ToolTip="Выбрать сохранённую или ранее введённую команду. Выбор заполняет редактор, запуск выполняется отдельно." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="folder" local:ActionIcon38.Tone="InfoText"/>
+                <TextBlock Text="Диагностика" FontWeight="SemiBold" Margin="0,12,0,4"/>
+                <Button Content="Диагностика DISM / SFC" Click="ServicingDiagnostics_Click" ToolTip="Снять состояние процессов и журналы текущего ПК за интервал задания. Ничего не исправляет. Полный собранный TXT сохраняется в Data/Diagnostics." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="diagnostics" local:ActionIcon38.Tone="InfoText"/>
+                <Button Content="Открыть TXT / скрипт" Click="ImportText_Click" ToolTip="Открыть TXT, CMD, BAT или PS1 в редакторе. Файл не выполняется автоматически." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="folder" local:ActionIcon38.Tone="InfoText"/>
+                <Button Content="Сохранить результат в TXT" Click="SaveOutput_Click" ToolTip="Сохранить показанный результат команды текущего компьютера в TXT." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="save" local:ActionIcon38.Tone="InfoText"/>
+                    <Button Content="Добавить шаг" Click="AddStep_Click" ToolTip="Добавить текст редактора отдельным шагом в последовательность." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="add" local:ActionIcon38.Tone="InfoText"/>
+                    <Button Content="Добавить выделенное" Click="AddSelection_Click" ToolTip="Добавить только выделенный фрагмент редактора отдельным шагом." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="add" local:ActionIcon38.Tone="InfoText"/>
+                    <Button Content="Применить правку шага" Click="EditStep_Click" ToolTip="Заменить выбранный шаг текущим текстом редактора." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="edit" local:ActionIcon38.Tone="InfoText"/>
+                    <ListBox x:Name="StepList" Height="110" ItemsSource="{Binding Steps}" DisplayMemberPath="Name" SelectionChanged="Step_Changed"/>
+                    <StackPanel>
+                      <Button Style="{StaticResource ActionButton38}" Click="Up_Click" ToolTip="Переместить выбранный шаг раньше в порядке выполнения." Content="Шаг выше" local:ActionIcon38.Kind="up"/>
+                      <Button Style="{StaticResource ActionButton38}" Click="Down_Click" ToolTip="Переместить выбранный шаг позже в порядке выполнения." Content="Шаг ниже" local:ActionIcon38.Kind="down"/>
+                      <Button Content="Удалить" Click="RemoveStep_Click" ToolTip="Удалить выбранный шаг из набора. Сохранённые задания не меняются." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="clear" local:ActionIcon38.Tone="InfoText"/>
+                    </StackPanel>
+                    <Button Content="Выполнить набор шагов" Click="Run_Click" Style="{StaticResource ActionButton38}" ToolTip="Выполнить набор шагов сверху вниз. Цели выбираются в подтверждении." local:ActionIcon38.Kind="run" local:ActionIcon38.Tone="InfoText"/>
+                    <Button Content="Сохранить набор" Click="SaveLibrary_Click" ToolTip="Сохранить текущий набор шагов и параметры в библиотеку команд." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="save" local:ActionIcon38.Tone="InfoText"/>
+                    <Button Content="Импорт JSON" Click="ImportLibrary_Click" ToolTip="Добавить команды из JSON-библиотеки без автоматического выполнения." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="folder" local:ActionIcon38.Tone="InfoText"/>
+                    <Button Content="Экспорт JSON" Click="ExportLibrary_Click" ToolTip="Сохранить библиотеку команд в JSON для переноса или резервной копии." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="save" local:ActionIcon38.Tone="InfoText"/>
+                    <CheckBox x:Name="ContinueBox" Content="Продолжать после ошибки" ToolTip="Следующие шаги будут выполнены даже после ненулевого кода. Итог сохранит ошибки предыдущих шагов."/>
+                    <CheckBox x:Name="RebootBox" Content="Автоперезагрузка · 15 минут" ToolTip="Разрешить перезагрузку при необходимости после задания с предупреждением 15 минут. По умолчанию выключено."/>
+                    <Button Content="Отменить перезагрузку" Click="AbortReboot_Click" ToolTip="Отменить ожидающую перезагрузку на текущем компьютере." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="reboot" local:ActionIcon38.Tone="InfoText"/>
+                  <TextBlock Text="Подсказки появляются при вводе. Выбор подставляет команду; запуск — отдельной кнопкой." TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" Margin="0,10,0,0"/>
+              </StackPanel><StackPanel x:Name="HistoryActions39"><Button Content="Команды и параметры…" Click="HistoryDetails_Click" Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="settings" local:ActionIcon38.Tone="InfoText"/>
+              <Button Content="Открыть результат" Click="OpenHistory_Click" Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="report" local:ActionIcon38.Tone="InfoText"/>
+              <Button Content="Остановить / отменить…" Click="StopHistory_Click" Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="stop" local:ActionIcon38.Tone="ErrorText"/>
+              <Button Content="Продолжить очередь…" Click="Resume_Click" ToolTip="Продолжить локальную очередь исходного массового задания; цели показаны в подтверждении." Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="run" local:ActionIcon38.Tone="InfoText"/>
+              <Button Content="Повторить…" Click="Retry_Click" Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="refresh" local:ActionIcon38.Tone="InfoText"/>
+              <Button Content="Экспорт CSV" Click="ExportCsv_Click" Style="{StaticResource ActionButton38}" local:ActionIcon38.Kind="save" local:ActionIcon38.Tone="InfoText"/>
+            </StackPanel></StackPanel></ScrollViewer></DockPanel></Border><TabControl x:Name="MainTabs" Grid.Row="0" BorderThickness="0" Background="{DynamicResource AppSurface}" TabStripPlacement="Top" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" SelectionChanged="Tabs_Changed">
         <TabControl.Template>
           <ControlTemplate TargetType="TabControl">
             <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
@@ -214,7 +212,7 @@
                 </DockPanel>
                 <TextBox x:Name="Editor" Margin="0" Text="hostname" TextChanged="Editor_Changed" PreviewKeyDown="Editor_KeyDown" LostKeyboardFocus="Editor_LostFocus" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"/>
               </DockPanel>
-              <GridSplitter Grid.Row="1" Height="6" HorizontalAlignment="Stretch" Background="{DynamicResource Outline}" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" DragCompleted="CommandSplit_Changed" ToolTip="Изменить высоту редактора и результата"/>
+              <GridSplitter Grid.Row="1" Height="6" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" DragCompleted="CommandSplit_Changed" ToolTip="Изменить высоту редактора и результата" Style="{StaticResource WorkspaceSplitter39}"/>
               <DockPanel Grid.Row="2">
                 <TextBlock x:Name="OutputCaption" DockPanel.Dock="Top" Text="Результат команды · выбранный компьютер" FontWeight="SemiBold" Margin="0,6,0,6" Visibility="Collapsed"/>
                 <local:LogViewer x:Name="OutputBox" Margin="0" Caption="Вывод · CMD"/>
@@ -257,14 +255,6 @@
               </StackPanel>
               <CheckBox x:Name="HistoryCurrent" Content="Текущий компьютер" Checked="HistoryFilter_Changed" Unchecked="HistoryFilter_Changed" VerticalAlignment="Center" Margin="8,0"/>
             </WrapPanel>
-            <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-              <Button Content="Команды и параметры…" Click="HistoryDetails_Click"/>
-              <Button Content="Открыть результат" Click="OpenHistory_Click"/>
-              <Button Content="Остановить / отменить…" Click="StopHistory_Click"/>
-              <Button Content="Продолжить очередь…" Click="Resume_Click" ToolTip="Продолжить локальную очередь исходного массового задания; цели показаны в подтверждении."/>
-              <Button Content="Повторить…" Click="Retry_Click"/>
-              <Button Content="Экспорт CSV" Click="ExportCsv_Click"/>
-            </WrapPanel>
             <DataGrid x:Name="HistoryGrid" MouseDoubleClick="HistoryDetails_DoubleClick" SelectionChanged="History_Changed" ItemsSource="{Binding HistoryRows}" IsReadOnly="True" RowHeight="27" MinRowHeight="27" ColumnHeaderHeight="30" CanUserSortColumns="True" EnableRowVirtualization="True" EnableColumnVirtualization="True" ScrollViewer.HorizontalScrollBarVisibility="Auto">
               <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
@@ -297,7 +287,40 @@
           </DockPanel>
         </TabItem>
         <TabItem x:Name="WsusTab" Header="WSUS">
-          <DockPanel Margin="0,4,0,0">
+          <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition x:Name="EventsRow38" Height="150" MinHeight="65" MaxHeight="300"/><RowDefinition Height="5"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*" MinHeight="80"/></Grid.RowDefinitions><Border Background="{DynamicResource PanelSurface}" BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,7" x:Name="OperationCard38"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="35"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><local:StatusGlyph Kind="Working" Tint="{DynamicResource InfoText}" Width="27" Height="27" VerticalAlignment="Top" Margin="0,3,6,0" x:Name="OperationGlyph38"/><StackPanel Grid.Column="1"><TextBlock x:Name="CurrentStage" TextWrapping="Wrap" Margin="0" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource InfoText}"/>
+            <TextBlock FontSize="13" TextWrapping="Wrap" Margin="0,3,0,6" x:Name="OperationDetail38"/><ProgressBar x:Name="CurrentProgress" Height="9" Maximum="100" Foreground="{DynamicResource ProgressFill38}" Background="{DynamicResource SectionSurface}" Margin="0,1,0,1"/>
+          </StackPanel></Grid></Border><Expander x:Name="EventHistoryGroup32" Header="История событий" Expanded="EventHistory32_Changed" Collapsed="EventHistory32_Changed" Grid.Row="1" IsExpanded="True" Background="{DynamicResource SectionSurface}">
+                <DockPanel>
+                  <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                    <CheckBox x:Name="EventErrors32" Content="Ошибки и предупреждения" Margin="4,3" Checked="EventFilter32_Changed" Unchecked="EventFilter32_Changed"/>
+                    <Button x:Name="EventCopyOne36" Content="Запись" Click="CopyEventOne36_Click" IsEnabled="False" Padding="5,2" ToolTip="Копировать текущую запись с подробностями"/>
+                    <Button x:Name="EventCopySelected36" Content="Выбранные (0)" Click="CopyEventSelected36_Click" IsEnabled="False" Padding="5,2" ToolTip="Копировать отмеченные события"/>
+                    <Button Content="Все" Click="CopyEventAll36_Click" Padding="5,2" ToolTip="Копировать всю историю с учётом фильтра и подробностями"/>
+                    <Button x:Name="NewEvents35" Content="К новым ↑" Click="NewEvents35_Click" Padding="5,2" Visibility="Collapsed"/>
+                  </WrapPanel>
+                  <TextBlock x:Name="EventStorageError32" DockPanel.Dock="Bottom" TextWrapping="Wrap" Visibility="Collapsed" Foreground="{DynamicResource WarningText}"/>
+                  <ListBox x:Name="EventList32" SelectionChanged="EventCurrent36_Changed" SelectionMode="Extended" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.ScrollChanged="EventScroll35_Changed" PreviewKeyDown="EventCopy35_KeyDown" HorizontalContentAlignment="Stretch" ScrollViewer.CanContentScroll="True" VirtualizingPanel.ScrollUnit="Pixel" VirtualizingPanel.IsVirtualizing="True" FontSize="12">
+                    <ListBox.ItemTemplate><DataTemplate><Grid Margin="2,1,4,1"><Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition Width="23"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Time38}" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Top"/><Border Grid.Column="1" VerticalAlignment="Top" Height="20" Margin="0,0,5,0"><local:StatusGlyph Kind="{Binding Glyph38}" Tint="{Binding GlyphBrush39}"/></Border><TextBlock Grid.Column="2" Text="{Binding Body38}" Foreground="{Binding Brush}" TextWrapping="Wrap"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox>
+                </DockPanel>
+              </Expander>
+            <Thumb x:Name="EventsSplitter38" Grid.Row="2" Height="5" HorizontalAlignment="Stretch" Cursor="SizeNS" DragDelta="EventsResize38" Background="Transparent" ToolTip="Изменить высоту истории событий"><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="{TemplateBinding Background}"><Border Width="36" Height="2" Background="{DynamicResource Outline}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border></ControlTemplate></Thumb.Template></Thumb><Expander x:Name="BackgroundGroup" Margin="0,3,0,5" IsExpanded="False" Visibility="Collapsed" Grid.Column="0" Grid.Row="3">
+              <Expander.Header>
+                <TextBlock x:Name="BackgroundSummary" TextWrapping="NoWrap" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" Text="Фоновая активность клиента" FontWeight="SemiBold"/>
+              </Expander.Header>
+              <StackPanel MaxHeight="175">
+                <TextBlock x:Name="BackgroundRelation" TextWrapping="Wrap" Margin="0,3"/>
+                <ProgressBar x:Name="BackgroundProgress" Height="4" Maximum="100" Visibility="Collapsed"/>
+                <TextBox x:Name="BackgroundDetails" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="145" VerticalScrollBarVisibility="Auto" Margin="0,4"/>
+                <Button x:Name="DownloadPriorityButton" Content="Скорость выбранной загрузки…" Click="DownloadPriority_Click" HorizontalAlignment="Left" Visibility="Collapsed" ToolTip="Выбрать конкретное задание BITS: повысить приоритет или вернуть исходный"/>
+              </StackPanel>
+            </Expander>
+          <StackPanel Grid.Row="4"><Button x:Name="RecommendationButton" Content="Рекомендуемое действие…" Click="Recommendation_Click" Visibility="Collapsed" HorizontalAlignment="Left"/>
+          <TextBlock x:Name="DiagnosticStage" TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" Visibility="Collapsed" Margin="0,2,0,3"/>
+        <TextBlock x:Name="WsusHeader" Visibility="Collapsed" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <Expander x:Name="WsusDiagnosticsGroup" Visibility="Collapsed"/>
+                <TextBlock x:Name="WsusStage" Visibility="Collapsed"/>
+                <ProgressBar x:Name="WsusProgress" Visibility="Collapsed"/>
+              </StackPanel><DockPanel Margin="0,4,0,0" Grid.Row="5">
             <Grid>
               <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -306,33 +329,33 @@
                 <RowDefinition x:Name="WsusReportRow37" Height="2*" MinHeight="80"/>
               </Grid.RowDefinitions>
               <local:LogViewer Grid.Row="1" x:Name="WsusOutput" Margin="0" Caption="Журнал клиента"/>
-              <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="{DynamicResource Outline}"/>
+              <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="Transparent" Style="{StaticResource WorkspaceSplitter39}"/>
               <DockPanel Grid.Row="3">
                 <TextBlock x:Name="WsusReportTitle" DockPanel.Dock="Top" Text="Данные сервера WSUS о выбранном ПК" Margin="0,6" FontWeight="SemiBold" Visibility="Collapsed"/>
                 <local:LogViewer x:Name="WsusServerOutput" Margin="0" FontFamily="Consolas" Caption="Отчёт WSUS"/>
               </DockPanel>
             </Grid>
           </DockPanel>
-        </TabItem>
+        </Grid></TabItem>
         <TabItem x:Name="SettingsTab" Header="Настройки" Style="{StaticResource HiddenSettingsTab}">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <Border BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="5" Background="{DynamicResource PanelSurface}"><DockPanel><TextBlock Text="Настройки" FontSize="17" FontWeight="Bold" Margin="14,10" DockPanel.Dock="Top"/><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="24" MaxWidth="650" HorizontalAlignment="Left">
-              <CheckBox x:Name="AutoScrollSetting" Content="Автопрокрутка журналов" Checked="AutoScroll_Changed" Unchecked="AutoScroll_Changed" ToolTip="Следовать за последними записями в журналах команд и WSUS. Настройка сохраняется." Margin="0,0,0,16"/>
+              <CheckBox x:Name="AutoScrollSetting" Checked="AutoScroll_Changed" Unchecked="AutoScroll_Changed" ToolTip="Следовать за последними записями в журналах команд и WSUS. Настройка сохраняется." Margin="0,0,0,16"><TextBlock Text="Автопрокрутка журналов" TextWrapping="Wrap"/></CheckBox>
               <Button Content="Учётные данные подключения…" Click="ConnectionCredentials_Click" HorizontalAlignment="Left" ToolTip="Текущий вход Windows или одна защищённо сохранённая запись для разных клиентов"/>
               <TextBlock Text="Обзор статусов" FontSize="18" FontWeight="SemiBold"/>
-              <CheckBox x:Name="OverviewAutomatic" Content="Обновлять статусы всех ПК при открытии и периодически"/>
+              <CheckBox x:Name="OverviewAutomatic"><TextBlock Text="Обновлять статусы всех ПК при открытии и периодически" TextWrapping="Wrap"/></CheckBox>
               <TextBlock Text="Интервал в часах (1–168). Чтение WSUS и состояния клиентов: перезагрузка и аптайм. Настройки клиентов не меняются." TextWrapping="Wrap"/>
               <TextBox x:Name="OverviewHours" Text="24" Width="100" HorizontalAlignment="Left"/>
               <TextBlock Text="После перезагрузки: период опроса, сек (30–600)"/>
               <TextBox x:Name="RebootProbeSeconds"/>
               <TextBlock Text="Пауза готовности служб, сек (0–1800)"/>
               <TextBox x:Name="RebootSettleSeconds"/>
-              <CheckBox x:Name="PostRebootScan" Content="По умолчанию проверять обновления после назначенной перезагрузки" ToolTip="Продолжение определяется общим переключателем автообслуживания в шапке."/>
+              <CheckBox x:Name="PostRebootScan" ToolTip="Продолжение определяется общим переключателем автообслуживания в шапке."><TextBlock Text="По умолчанию проверять обновления после назначенной перезагрузки" TextWrapping="Wrap"/></CheckBox>
               <Button Content="Сохранить параметры после перезагрузки" Click="SavePostReboot_Click"/>
               <Button Content="Сохранить обзор статусов" Click="SaveOverview_Click" HorizontalAlignment="Left"/>
               <Separator Margin="0,16"/>
               <TextBlock Text="Связь и история событий" FontSize="18" FontWeight="SemiBold"/>
-              <CheckBox x:Name="LinkAutomatic31" Content="Постепенно перепроверять связь клиентов"/>
+              <CheckBox x:Name="LinkAutomatic31"><TextBlock Text="Постепенно перепроверять связь клиентов" TextWrapping="Wrap"/></CheckBox>
               <TextBlock Text="Интервал на клиент, минут (1–1440)"/>
               <TextBox x:Name="LinkInterval31" Width="100" HorizontalAlignment="Left"/>
               <TextBlock Text="Хранить события клиента, дней (1–365)"/>
@@ -357,7 +380,7 @@
               </ComboBox>
               <Button Content="Сохранить ожидание и палитру" Click="SaveOperationSettings_Click" HorizontalAlignment="Left"/>
               <Separator Margin="0,16"/>
-              <CheckBox x:Name="AutomaticDownloadRecovery" Content="Автоматически восстанавливать загрузку (одна попытка на ПК)" ToolTip="По умолчанию выключено. Только свежие данные без установки; перезапуск BITS, UsoSvc и wuauserv без очистки кэша."/>
+              <CheckBox x:Name="AutomaticDownloadRecovery" ToolTip="По умолчанию выключено. Только свежие данные без установки; перезапуск BITS, UsoSvc и wuauserv без очистки кэша."><TextBlock Text="Автоматически восстанавливать загрузку (одна попытка на ПК)" TextWrapping="Wrap"/></CheckBox>
               <TextBlock Text="Минут непрерывного наблюдения без движения (10–180)"/>
               <TextBox x:Name="DownloadWaitBox" Text="30" Width="100" HorizontalAlignment="Left"/>
               <Button Content="Сохранить восстановление загрузки" Click="SaveDownloadSettings_Click"/>
@@ -373,7 +396,7 @@
               <TextBox x:Name="WsusHost" Width="420" HorizontalAlignment="Left"/>
               <TextBlock Text="Порт WSUS API на сервере"/>
               <TextBox x:Name="WsusPort" Text="8530" Width="100" HorizontalAlignment="Left"/>
-              <CheckBox x:Name="WsusSsl" Content="WSUS API использует HTTPS"/>
+              <CheckBox x:Name="WsusSsl"><TextBlock Text="WSUS API использует HTTPS" TextWrapping="Wrap"/></CheckBox>
               <TextBlock Text="Источник обновлений клиента читается из его политик WUServer / UseWUServer. Эти настройки приложения не меняют политики клиента." TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" Margin="0,8,0,16"/>
               <Button Content="Сохранить настройки" Style="{StaticResource Primary}" Click="SaveWsus_Click" HorizontalAlignment="Left" ToolTip="Сохранить адрес и параметры административного подключения к серверу WSUS."/>
               <Separator Margin="0,16"/>
@@ -387,49 +410,9 @@
               <Button Content="Сохранить интервал диагностики" Click="SaveDiagnosticSettings_Click" HorizontalAlignment="Left" ToolTip="Сохранить интервал поиска предшествующих ошибок в диагностических журналах."/>
             </StackPanel>
           </ScrollViewer>
-        </TabItem>
+        </DockPanel></Border></TabItem>
       </TabControl>
-    </Grid><Border Grid.Column="1" Margin="10,0,0,0" Padding="7" Background="{DynamicResource PanelSurface}" BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="6"><DockPanel><StackPanel x:Name="HeaderActions34" Background="{DynamicResource HeaderSurface}" Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center" DockPanel.Dock="Top" Margin="0,0,0,10" HorizontalAlignment="Stretch">
-              <RadioButton x:Name="CommandsNavigation33" Content="Команды" Tag="Commands" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" Width="78" Padding="2,5" MinHeight="34" FontSize="13"/>
-              <RadioButton x:Name="WsusNavigation33" Content="WSUS" Tag="Wsus" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" Width="78" Padding="2,5" MinHeight="34" FontSize="13"/>
-              <RadioButton x:Name="HistoryNavigation33" Content="История" Tag="History" GroupName="HeaderViews33" Style="{StaticResource HeaderNavigation33}" Click="HeaderNavigation33_Click" Width="78" Padding="2,5" MinHeight="34" FontSize="13"/>
-              </StackPanel>
-              <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0"><Button x:Name="SettingsButton34" local:UiIcon32.Icon="settings" Style="{StaticResource GhostIconButton}" Click="WsusSettings_Click" ToolTip="Настройки программы"/>
-            <CheckBox x:Name="AutoServiceToggle" Content="Авто" Checked="AutoService_Changed" Unchecked="AutoService_Changed" HorizontalAlignment="Left" ToolTip="Поиск → установка найденного → отчёт. После согласованной перезагрузки — продолжение. Выключено: одна операция. Произвольные команды не запускают обслуживание." Style="{StaticResource AutoSwitch}" Margin="6,0" VerticalAlignment="Center"/>
-              </StackPanel><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0"><StackPanel><Button Click="WsusScan_Click" Style="{StaticResource ActionButton38}" ToolTip="Проверить обновления" local:ActionIcon38.Kind="refresh" Content="Проверить обновления" local:ActionIcon38.Tone="InfoText"/><Button Click="WsusInstall_Click" Style="{StaticResource ActionButton38}" ToolTip="Установить обновления" local:ActionIcon38.Kind="down" Content="Установить обновления" local:ActionIcon38.Tone="InfoText"/><Button Click="FullMaintenance_Click" Style="{StaticResource ActionButton38}" ToolTip="Обслуживание" local:ActionIcon38.Kind="tools" Content="Обслуживание" local:ActionIcon38.Tone="InfoText"/><Button Click="StopCurrent38_Click" Style="{StaticResource ActionButton38}" ToolTip="Остановить" x:Name="WsusStopButton" local:ActionIcon38.Kind="stop" Content="Остановить" local:ActionIcon38.Tone="ErrorText"/><Separator Margin="0,9,0,12" Background="{DynamicResource Outline}"/><Button Click="Wsus_Click" Style="{StaticResource ActionButton38}" ToolTip="Отчёт WSUS" local:ActionIcon38.Kind="report" Content="Отчёт WSUS" local:ActionIcon38.Tone="InfoText"/><Button Click="ServiceTools36_Click" Style="{StaticResource ActionButton38}" ToolTip="Диагностика и восстановление" x:Name="ServiceTools36" local:ActionIcon38.Kind="diagnostics" Content="Диагностика и восстановление" local:ActionIcon38.Tone="InfoText"/><Button Click="Attention_Click" Style="{StaticResource ActionButton38}" ToolTip="Требуют внимания" x:Name="AttentionButton" local:ActionIcon38.Kind="warning" Content="Требуют внимания" local:ActionIcon38.Tone="WarningText"/><Button x:Name="RunEditorButton" Content="Выполнить в CMD" Style="{StaticResource Primary}" Click="RunEditor_Click" ToolTip="Выполнить текст из редактора. В подтверждении выберите текущий ПК или все отмеченные цели." Margin="0,8,0,4"/>
-                <Expander x:Name="CommandTools38" Header="Команды и параметры" IsExpanded="False" Margin="0,10,0,0"><ScrollViewer Margin="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="220">
-              <StackPanel>
-                <Button x:Name="StopButton" Content="Остановить…" Click="Cancel_Click" Background="#DC2626" Foreground="White" ToolTip="Выбрать остановку сейчас или после текущей команды. Действует на просматриваемый ПК." Visibility="Collapsed"/>
-                <TextBlock Text="Сценарии" FontWeight="SemiBold" Margin="0,12,0,4"/>
-                <Button Content="Сохранённые / недавние ▾" Click="ShowSuggestions_Click" ToolTip="Выбрать сохранённую или ранее введённую команду. Выбор заполняет редактор, запуск выполняется отдельно."/>
-                <TextBlock Text="Диагностика" FontWeight="SemiBold" Margin="0,12,0,4"/>
-                <Button Content="Диагностика DISM / SFC" Click="ServicingDiagnostics_Click" ToolTip="Снять состояние процессов и журналы текущего ПК за интервал задания. Ничего не исправляет. Полный собранный TXT сохраняется в Data/Diagnostics."/>
-                <Button Content="Открыть TXT / скрипт" Click="ImportText_Click" ToolTip="Открыть TXT, CMD, BAT или PS1 в редакторе. Файл не выполняется автоматически."/>
-                <Expander x:Name="CommandOptions" Header="Шаги и параметры" Margin="0,4,0,0">
-                  <StackPanel Margin="0,8,0,0">
-                    <Button Content="Сохранить результат в TXT" Click="SaveOutput_Click" ToolTip="Сохранить показанный результат команды текущего компьютера в TXT."/>
-                    <Button Content="Добавить шаг" Click="AddStep_Click" ToolTip="Добавить текст редактора отдельным шагом в последовательность."/>
-                    <Button Content="Добавить выделенное" Click="AddSelection_Click" ToolTip="Добавить только выделенный фрагмент редактора отдельным шагом."/>
-                    <Button Content="Применить правку шага" Click="EditStep_Click" ToolTip="Заменить выбранный шаг текущим текстом редактора."/>
-                    <ListBox x:Name="StepList" Height="110" ItemsSource="{Binding Steps}" DisplayMemberPath="Name" SelectionChanged="Step_Changed"/>
-                    <WrapPanel>
-                      <Button Style="{StaticResource IconButton}" local:UiIcon32.Icon="up" Click="Up_Click" ToolTip="Переместить выбранный шаг раньше в порядке выполнения."/>
-                      <Button Style="{StaticResource IconButton}" local:UiIcon32.Icon="down" Click="Down_Click" ToolTip="Переместить выбранный шаг позже в порядке выполнения."/>
-                      <Button Content="Удалить" Click="RemoveStep_Click" ToolTip="Удалить выбранный шаг из набора. Сохранённые задания не меняются."/>
-                    </WrapPanel>
-                    <Button Content="Выполнить набор шагов" Click="Run_Click" Style="{StaticResource Primary}" ToolTip="Выполнить набор шагов сверху вниз. Цели выбираются в подтверждении."/>
-                    <Button Content="Сохранить набор" Click="SaveLibrary_Click" ToolTip="Сохранить текущий набор шагов и параметры в библиотеку команд."/>
-                    <Button Content="Импорт JSON" Click="ImportLibrary_Click" ToolTip="Добавить команды из JSON-библиотеки без автоматического выполнения."/>
-                    <Button Content="Экспорт JSON" Click="ExportLibrary_Click" ToolTip="Сохранить библиотеку команд в JSON для переноса или резервной копии."/>
-                    <CheckBox x:Name="ContinueBox" Content="Продолжать после ошибки" ToolTip="Следующие шаги будут выполнены даже после ненулевого кода. Итог сохранит ошибки предыдущих шагов."/>
-                    <CheckBox x:Name="RebootBox" Content="Автоперезагрузка · 15 минут" ToolTip="Разрешить перезагрузку при необходимости после задания с предупреждением 15 минут. По умолчанию выключено."/>
-                    <Button Content="Отменить перезагрузку" Click="AbortReboot_Click" ToolTip="Отменить ожидающую перезагрузку на текущем компьютере."/>
-                  </StackPanel>
-                </Expander>
-                <TextBlock Text="Подсказки появляются при вводе. Выбор подставляет команду; запуск — отдельной кнопкой." TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" Margin="0,10,0,0"/>
-              </StackPanel>
-            </ScrollViewer>
-            </Expander></StackPanel></ScrollViewer></DockPanel></Border></Grid></Grid>
+    </Grid></Grid>
     <Border x:Name="Toast" Grid.ColumnSpan="3" Panel.ZIndex="100" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Top" MaxWidth="540" Background="#E8EFF7" BorderBrush="#A2B5CB" BorderThickness="1" CornerRadius="5" Margin="12,85,20,0" Padding="10">
       <DockPanel>
         <Button DockPanel.Dock="Right" Style="{StaticResource GhostIconButton}" local:UiIcon32.Icon="close" Click="DismissToast_Click" ToolTip="Закрыть уведомление"/>

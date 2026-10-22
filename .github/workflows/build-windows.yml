@@ -45,7 +45,7 @@ jobs:
             Write-Output "Window created: $($p.MainWindowTitle)"
             $null = $p.CloseMainWindow()
             if (!$p.WaitForExit(10000)) { Stop-Process -Id $p.Id; throw "Application did not close normally" }
-            if ($p.ExitCode -ne 0) { throw "Application exited with code $($p.ExitCode)" }
+            if ($p.ExitCode -ne 0) { if (Test-Path Publish/smoke-error.txt) { Get-Content Publish/smoke-error.txt }; throw "Application exited with code $($p.ExitCode)" }
           }
           Test-Window
           $env:DOMAINCONSOLE_EXPECT_HISTORY = '1'
@@ -764,7 +764,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DomainConsole-UI-review
-          path: ${{ runner.temp }}/DomainConsole-smoke/ui-*.png
+          path: ${{ runner.temp }}/DomainConsole-smoke/ui-*
           if-no-files-found: warn
 
 

@@ -10,7 +10,7 @@ public partial class MainWindow {
 
  }
  static void ReconcileRebootState(RemoteState state,RebootSnapshot snapshot){
-  if(state.Status is not ("AwaitingReboot" or "RebootScheduled"))return;
+  if(state.Status is not ("AwaitingReboot" or "RebootScheduled" or "RebootObserved"))return;
   if(!DateTimeOffset.TryParse(snapshot.CollectedUtc,out var collected)||!DateTimeOffset.TryParse(state.Ended,out var ended)||collected<ended)return;
   bool returned=DateTimeOffset.TryParse(snapshot.BootUtc,out var boot)&&boot>ended;
   if(!returned&&snapshot.Required!=false)return;
