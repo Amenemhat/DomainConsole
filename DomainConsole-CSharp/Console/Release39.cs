@@ -14,7 +14,7 @@ public partial class MainWindow {
   WsusActions39.Visibility=wsus?Visibility.Visible:Visibility.Collapsed;RunEditorButton.Visibility=CommandTools38.Visibility=commands?Visibility.Visible:Visibility.Collapsed;HistoryActions39.Visibility=history?Visibility.Visible:Visibility.Collapsed;BackSettings39.Visibility=settings?Visibility.Visible:Visibility.Collapsed;if(!settings)returnTab39=MainTabs.SelectedItem;
  }
  void BackSettings39_Click(object sender,RoutedEventArgs e)=>MainTabs.SelectedItem=returnTab39??WsusTab;
- void SetUserHeader39(string label){int cut=label.LastIndexOf(" · ",StringComparison.Ordinal);string name=cut<0?label:label[..cut],time=cut<0?"":label[cut..];if(HeaderUser37.Tag as string==label)return;HeaderUser37.Tag=label;HeaderUser37.Inlines.Clear();HeaderUser37.Inlines.Add(new Run(name){FontWeight=FontWeights.Bold});HeaderUser37.Inlines.Add(new Run(time){FontWeight=FontWeights.Normal,Foreground=Theme.Brush("TextMuted")});}
+ void SetUserHeader39(string label){int cut=label.LastIndexOf(" · ",StringComparison.Ordinal);string name=cut<0?label:label[..cut],time=cut<0?"":label[cut..];string key=label+"|"+Theme.Current;if(HeaderUser37.Tag as string==key)return;HeaderUser37.Tag=key;HeaderUser37.Inlines.Clear();HeaderUser37.Inlines.Add(new Run(name){FontWeight=FontWeights.Bold});HeaderUser37.Inlines.Add(new Run(time){FontWeight=FontWeights.Normal,Foreground=Theme.Brush("TextMuted")});}
  void ApplyTerminalTone39(ComputerRow row,bool active,bool reboot,bool failed){
   if(active||reboot||failed)return;
   if(row.Target.Status=="RebootObserved"){

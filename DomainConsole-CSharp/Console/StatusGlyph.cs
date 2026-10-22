@@ -25,6 +25,6 @@ public sealed class StatusGlyph:FrameworkElement {
  "DisabledServer"=>Shape("Server")+" M 17,13 A 4,4 0 1 0 9,13 A 4,4 0 1 0 17,13 M 10,16 L 16,10",
  "NoWsus"=>"M 9,2 A 7,7 0 1 1 8.99,2 M 4,14 L 14,4",
  _=>"M 5,5 C 5,0 15,0 13,7 L 9,10 L 9,12 M 9,15 L 9,16"};
- protected override void OnRender(DrawingContext drawing){base.OnRender(drawing);drawing.DrawRectangle(Brushes.Transparent,null,new Rect(RenderSize));drawing.PushTransform(new TranslateTransform(1,1));var pen=new Pen(Tint,2.6){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};drawing.DrawGeometry(null,pen,Geometry.Parse(Shape(Kind)));drawing.Pop();}
+ protected override void OnRender(DrawingContext drawing){base.OnRender(drawing);drawing.DrawRectangle(Brushes.Transparent,null,new Rect(RenderSize));double scale=Math.Min(ActualWidth,ActualHeight)/20;drawing.PushTransform(new TranslateTransform((ActualWidth-20*scale)/2,(ActualHeight-20*scale)/2));drawing.PushTransform(new ScaleTransform(scale,scale));drawing.PushTransform(new TranslateTransform(1,1));var pen=new Pen(Tint,2.6){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};drawing.DrawGeometry(null,pen,Geometry.Parse(Shape(Kind)));drawing.Pop();drawing.Pop();drawing.Pop();}
 }
 
