@@ -61,7 +61,7 @@ public partial class MainWindow {
  string headerEventsKey32="",headerEventsHost32="",historyEventsKey32="";
  List<ClientEvent31> SafeEvents32(string host,int limit){if(!diskReadAt39.TryGetValue(host,out var at)||DateTimeOffset.UtcNow-at>TimeSpan.FromMinutes(1))_=LoadEvents39(host);return diskEvents39.GetValueOrDefault(host)?.Take(limit).ToList()??new();}
  static string EventKey32(ClientEvent31 item)=>item.At+"|"+item.Kind+"|"+item.Text+"|"+item.Details;
- List<ClientEvent31> AllEvents32(string host){SafeEvents32(host,10000);var disk=diskEvents39.GetValueOrDefault(host);var memory=memoryEvents32.GetValueOrDefault(host);var recent=recentEvents31.GetValueOrDefault(host);int count=memory?.Count??0;if(groupedEvents39.TryGetValue(host,out var old)&&ReferenceEquals(old.Disk,disk)&&ReferenceEquals(old.Memory,memory)&&ReferenceEquals(old.Recent,recent)&&old.Count==count)return old.Result;var result=CompactEvents34((disk??new()).Concat(memory??new()).Concat(recent??new()).DistinctBy(e=>EventKey32(e)+"|"+e.Operation36));groupedEvents39[host]=(disk,memory,recent,count,result);return result;}
+ List<ClientEvent31> AllEvents32(string host){if(!diskReadAt39.TryGetValue(host,out var read39)||DateTimeOffset.UtcNow-read39>TimeSpan.FromMinutes(1))_=LoadEvents39(host);var disk=diskEvents39.GetValueOrDefault(host);var memory=memoryEvents32.GetValueOrDefault(host);var recent=recentEvents31.GetValueOrDefault(host);int count=memory?.Count??0;if(groupedEvents39.TryGetValue(host,out var old)&&ReferenceEquals(old.Disk,disk)&&ReferenceEquals(old.Memory,memory)&&ReferenceEquals(old.Recent,recent)&&old.Count==count)return old.Result;var result=CompactEvents34((disk??new()).Concat(memory??new()).Concat(recent??new()).DistinctBy(e=>EventKey32(e)+"|"+e.Operation36));groupedEvents39[host]=(disk,memory,recent,count,result);return result;}
  static string EventGroupKey36(ClientEvent31 e)=>e.Kind+"|"+e.Operation36+"|"+e.Text+"|"+e.Details;
  bool historyReset35=true;string historyHost35="";List<ClientEvent31>? historyPending35;
  void RefreshEventHistory32(string host){
@@ -88,6 +88,7 @@ public partial class MainWindow {
  void EventCurrent36_Changed(object sender,SelectionChangedEventArgs e){EventSelection36_Changed(sender,e);if(EventCopyOne36!=null)EventCopyOne36.IsEnabled=EventList32.SelectedItem!=null;}
  void CopyEventOne36_Click(object sender,RoutedEventArgs e){if(EventList32.SelectedItem is ClientEvent31 item)Clipboard.SetText(EventCopyText36(new[]{item}));}
  void CopyEventSelected36_Click(object sender,RoutedEventArgs e){var items=EventList32.SelectedItems.Cast<ClientEvent31>().ToList();if(items.Count>0)Clipboard.SetText(EventCopyText36(items));}
- async void CopyEventAll36_Click(object sender,RoutedEventArgs e){if(ComputerGrid.SelectedItem is ComputerRow row){await LoadEvents39(row.Host);Clipboard.SetText(EventCopyText36(AllEvents32(row.Host).Where(x=>EventErrors32.IsChecked!=true||x.Kind is "Error" or "Warning")));}}
+ async void CopyEventAll36_Click(object sender,RoutedEventArgs e)=>await Guard(CopyAllEvents39);
+ async Task CopyAllEvents39(){if(ComputerGrid.SelectedItem is ComputerRow row){bool errors=EventErrors32.IsChecked==true;await LoadEvents39(row.Host);Clipboard.SetText(EventCopyText36(AllEvents32(row.Host).Where(x=>!errors||x.Kind is "Error" or "Warning")));}}
  void CopyEvents32_Click(object sender,RoutedEventArgs e){var selected=EventList32.SelectedItems.Cast<ClientEvent31>().ToList();if(selected.Count>0)Clipboard.SetText(EventCopyText36(selected));else CopyEventAll36_Click(sender,e);}
 }
