@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace DomainConsole.Shared {
  public class ControlRecord37 {public int Protocol {get;set;}=1;public string AgentPath37 {get;set;}="";public string OwnerId {get;set;}="";public string OwnerLabel {get;set;}="";public string PlanId {get;set;}="";public string LastJobId {get;set;}="";public string Operation {get;set;}="";public string StartedUtc {get;set;}="";public string UpdatedUtc {get;set;}="";public List<string> JobIds {get;set;}=new List<string>();}
  public class CommandStep { public bool TouchesUpdates {get;set;} public string Name {get;set;}="Новая команда"; public string Kind {get;set;}="CMD"; public string Code {get;set;}=""; }
- public class RemoteJob : System.ComponentModel.INotifyPropertyChanged {
+ public class RemoteJob : System.ComponentModel.INotifyPropertyChanged {public bool BeginPlan38 {get;set;}
   public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;public void RefreshSummary(){if(PropertyChanged!=null)PropertyChanged(this,new System.ComponentModel.PropertyChangedEventArgs("Summary"));}
   public string CommandPreview {get {var text=string.Join("; ",Steps.Select(s=>string.IsNullOrWhiteSpace(s.Code)?s.Name:Regex.Replace(s.Code,@"\s+"," ").Trim()));return text.Length>180?text.Substring(0,177)+"…":text;}}
   public string Summary {get {int running=Targets.Count(t=>t.Status=="Queued"||t.Status=="Sending"||t.Status=="SubmissionUnknown"||t.Status=="Submitted"||t.Status=="Running");int errors=Targets.Count(t=>t.Status=="Failed"||t.Status=="CompletedWithErrors"||t.Status=="InterventionRequired"||t.Status=="ConnectionFailed"||t.Status=="AccessDenied");return running>0?"Активно: "+running:errors>0?"Ошибок: "+errors:Targets.Count==0?"Нет целей":"Завершено: "+Targets.Count;}}

@@ -22,11 +22,9 @@ public partial class MainWindow {
  }
  void IdentityHeader34_SizeChanged(object sender,SizeChangedEventArgs e)=>ArrangeIdentity34();
  void ArrangeIdentity34(){
-  if(IdentityHeader34==null||HeaderActions34==null||IdentityHeader34.ActualWidth<=0)return;
-  double width=IdentityHeader34.ActualWidth;HeaderActions34.Measure(new Size(double.PositiveInfinity,double.PositiveInfinity));
-  double available=width-HeaderActions34.DesiredSize.Width-8;bool inline=available>=680;
-  Grid.SetRow(ConnectionPanel32,inline?0:1);Grid.SetColumn(ConnectionPanel32,0);Grid.SetColumnSpan(ConnectionPanel32,inline?2:3);
-  ConnectionPanel32.MaxWidth=inline?available:width;CurrentComputer.MaxWidth=Math.Max(100,Math.Min(310,ConnectionPanel32.MaxWidth-160));
+  if(IdentityHeader34==null||IdentityHeader34.ActualWidth<=0)return;
+  EventsRow38.Height=EventHistoryGroup32.IsExpanded?new GridLength(ActualHeight<750?85:150):GridLength.Auto;
+  CurrentComputer.MaxWidth=Math.Max(120,Math.Min(260,IdentityHeader34.ActualWidth*0.3));
 
  }
  void RefreshServiceBadge34(ComputerRow row){
