@@ -402,9 +402,9 @@
             <Grid>
               <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="3*" MinHeight="100" />
+                <RowDefinition x:Name="WsusJournalRow37" Height="3*" MinHeight="100" />
                 <RowDefinition Height="6" />
-                <RowDefinition Height="2*" MinHeight="80" />
+                <RowDefinition x:Name="WsusReportRow37" Height="2*" MinHeight="80" />
               </Grid.RowDefinitions>
               <local:LogViewer Grid.Row="1" x:Name="WsusOutput" Margin="0" Caption="Журнал клиента" />
               <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="{DynamicResource Outline}" />
