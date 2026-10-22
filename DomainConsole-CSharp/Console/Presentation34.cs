@@ -16,7 +16,7 @@ public partial class MainWindow {
   string detail="";bool download=stage.StartsWith("Скачивание",StringComparison.OrdinalIgnoreCase),install=stage.StartsWith("Установка",StringComparison.OrdinalIgnoreCase);
   if(download||install){detail=(download?"Скачано":"Установлено")+(percent.Length>0?" "+percent:"")+(duration.Length>0?" за "+duration:"");if(state.TransferText.Length>0)detail+=" · "+Regex.Replace(state.TransferText,@"^Скачано\s*","").Replace(" (последний замер)","");}
   else detail=(percent.Length>0?percent+" · ":"")+duration;
-  if(state.UpdateTotal38>0&&(download||install))detail="Обновление "+state.UpdateIndex38+" из "+state.UpdateTotal38+" · установлено: "+state.InstalledCount38+" · "+detail;
+  if(state.UpdateTotal38>0&&install)detail="Установлено: "+state.InstalledCount38+" из "+state.UpdateTotal38+(percent.Length>0?" · текущее: "+percent:"")+(duration.Length>0?" · прошло "+duration:"");else if(state.UpdateTotal38>0&&download)detail="Обновление "+state.UpdateIndex38+" из "+state.UpdateTotal38+" · "+detail;
   if(!fresh)detail="Последний снимок · "+detail+" · ожидается обновление статуса";
   if(state.ActivityMessage.Length>0)detail+="\n"+state.ActivityMessage;if(state.StopMessage.Length>0)detail+="\n"+state.StopMessage;
   return stage+(detail.Length>0?"\n"+detail:"");
