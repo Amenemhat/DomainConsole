@@ -15,7 +15,7 @@ public partial class MainWindow {
   if(!active&&rebootSnapshots.TryGetValue(row.Host,out var observed37)&&observed37.ExternalJobs37.Any(x=>x.Ended.Length==0)){var external=observed37.ExternalJobs37.LastOrDefault(x=>x.Ended.Length==0);CurrentStage.Text="Наблюдение · "+ControlText37(row.Host)+(external!=null?"\n"+external.Stage+(external.Progress.HasValue?" · "+external.Progress+"%":"")+"\nСнимок: "+Display36.Date(external.Updated,true):"\n"+observed37.Control37?.Operation);}
   bool reboot35=!active&&RebootReason(selected).Length>0;
   if(reboot35)CurrentStage.Text="Нужна перезагрузка"+(row.Target.Status is "Failed" or "CompletedWithErrors"?" · неудачная попытка сохранена в журнале":"");
-  bool failed=row.Target.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired";CurrentStage.Foreground=reboot35?Theme.Tone("Warning"):failed?Theme.Tone("Error"):Theme.Brush("TextPrimary");CurrentStage.ToolTip=state?.Stage.Length>0?state.Stage+"\n"+CurrentStage.Text:CurrentStage.Text;
+  bool failed=row.Target.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired";CurrentStage.Foreground=reboot35?Theme.Tone("Warning"):failed?Theme.Tone("Error"):active?Theme.Tone("Info"):Theme.Brush("TextPrimary");CurrentStage.ToolTip=state?.Stage.Length>0?state.Stage+"\n"+CurrentStage.Text:CurrentStage.Text;
 
   if(RebootReason(selected).Length>0)RecommendationButton.Visibility=Visibility.Collapsed;
   CurrentProgress.Visibility=active?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=active&&(fresh||deploying.Contains(row.JobId+row.Host))&&state?.Progress==null;CurrentProgress.Value=state?.Progress??0;WsusProgress.IsIndeterminate=CurrentProgress.IsIndeterminate;WsusStage.Text=CurrentStage.Text;

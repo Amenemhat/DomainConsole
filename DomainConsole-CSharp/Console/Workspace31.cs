@@ -11,7 +11,7 @@ public sealed class ClientEvent31 {
  public string Operation36 {get;set;}="";
  [System.Text.Json.Serialization.JsonIgnore] public bool Selected36 {get;set;}
  [System.Text.Json.Serialization.JsonIgnore] public string OccurrenceText36=>Repeats<=1?"":string.Join(Environment.NewLine,Occurrences36.Select(e=>Display36.Date(e.At,true)+" · "+e.Text));
- [System.Text.Json.Serialization.JsonIgnore] public string Time38=>Display36.Date(At);
+ [System.Text.Json.Serialization.JsonIgnore] public string Time38=>DateTimeOffset.TryParse(At,out var time)?time.ToLocalTime().Date==DateTime.Now.Date?time.ToLocalTime().ToString("HH:mm"):time.ToLocalTime().ToString("dd.MM HH:mm"):"—";
  [System.Text.Json.Serialization.JsonIgnore] public string Glyph38=>Kind switch {"Success"=>"Success","Warning"=>"Warning","Error"=>"Error",_=>"Info"};
  [System.Text.Json.Serialization.JsonIgnore] public string Body38=>Display36.Text(Text)+(Details.Length>0&&Details!=Text?"\n"+Display36.Text(Details):"")+(Repeats>1?" · повторов: "+Repeats+" · с "+Display36.Date(FirstAt):"");
  public int Repeats {get;set;}=1;public string FirstAt {get;set;}="";public string At {get;set;}=DateTime.UtcNow.ToString("o");public string Kind {get;set;}="Info";public string Text {get;set;}="";public string Details {get;set;}="";
