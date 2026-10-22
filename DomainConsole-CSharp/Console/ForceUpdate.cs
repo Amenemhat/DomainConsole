@@ -61,7 +61,7 @@ try{
   if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(Local(target))RequireLocalAdmin();
   using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(60));
   var body="$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') "+PowerShellBridge.Literal(id)+";"+ForceUpdateDiscovery+"\n$expected="+PowerShellBridge.Literal(JsonSerializer.Serialize(expected))+"|ConvertFrom-Json;"+ForceUpdateApply;
-  return await PowerShellBridge.Execute(Invoke(target,body),timeout.Token);
+  return await PowerShellBridge.Execute(Invoke(target,GuardControlScript37(body)),timeout.Token);
  }
 }
 public partial class MainWindow {
@@ -71,3 +71,4 @@ public partial class MainWindow {
   var result=await remote.ForceUpdate(row.Target,row.JobId,plan);Notify(result);MessageBox.Show(this,result,"Результат прерывания",MessageBoxButton.OK,MessageBoxImage.Information);
  }
 }
+

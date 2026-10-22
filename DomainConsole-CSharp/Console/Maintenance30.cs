@@ -4,7 +4,7 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed class AttentionRow30 {public string Host {get;set;}="";public string Text {get;set;}="";public Action Stop {get;set;}=()=>{};}
 public sealed class ReportWait30 {public string Id {get;set;}="";public DateTimeOffset Until {get;set;}public DateTimeOffset Next {get;set;}}
-public sealed class MaintenancePlan {
+public sealed class MaintenancePlan {public bool Released37 {get;set;}public string PlanId37 {get;set;}="";
  public string Host {get;set;}="";public string Identity {get;set;}="";public string JobId {get;set;}="";public string Phase {get;set;}="";public string BootUtc {get;set;}="";public string StartedUtc {get;set;}=DateTime.UtcNow.ToString("o");public string NextJobId {get;set;}="";public bool Install {get;set;}public bool Done {get;set;}public int Cycles {get;set;}public DateTimeOffset Next {get;set;}public DateTimeOffset ReadyAfter {get;set;}public string Detail {get;set;}="";
 }
 public partial class MainWindow {
@@ -14,7 +14,7 @@ public partial class MainWindow {
  static bool ActiveTarget(TargetRecord t)=>t.Status is "Queued" or "Sending" or "Submitted" or "Running" or "SubmissionUnknown";
  static bool TerminalSuccess(TargetRecord t)=>t.Status is "Completed" or "VerifiedAfterReboot" or "AwaitingReboot" or "RebootScheduled" or "RebootObserved";
  void SaveMaintenance()=>Store.Write("maintenance-plans.json",maintenancePlans);
- void BeginMaintenance(RemoteJob job){foreach(var t in job.Targets){maintenancePlans[t.Host]=new(){Host=t.Host,Identity=t.ConnectionIdentity,JobId=job.Id,Install=true,Phase="Выполняется полное обслуживание",Cycles=1};}SaveMaintenance();}
+ void BeginMaintenance(RemoteJob job){if(job.PlanId37.Length==0)job.PlanId37=job.Id;foreach(var t in job.Targets){maintenancePlans[t.Host]=new(){PlanId37=job.PlanId37,Host=t.Host,Identity=t.ConnectionIdentity,JobId=job.Id,Install=true,Phase="Выполняется полное обслуживание",Cycles=1};}SaveMaintenance();}
  // A positive indication from the previous boot is history, never a fresh request to restart again.
  void ObserveUnplannedReturn(string host,RebootSnapshot? old,RebootSnapshot next){
   if(!RebootSnapshotPolicy.NewBoot(old,next)&&!RebootSnapshotPolicy.SupersedesPositive(old,next))return;
@@ -28,6 +28,7 @@ public partial class MainWindow {
   foreach(var p in maintenancePlans.Values.Where(p=>!p.Done&&p.Next<=DateTimeOffset.UtcNow).Take(3).ToList()){
    p.Next=DateTimeOffset.UtcNow.AddMinutes(1);if(!AutoServiceEnabled&&p.Install){p.Done=true;p.Phase="Автоматическое продолжение выключено";continue;}var row=Computers.FirstOrDefault(r=>r.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase));
    if(row==null||row.Target.AdDisabled){p.Done=true;p.Phase="Требуется действие";p.Detail=row==null?"Компьютер отсутствует в рабочем списке":"Учётная запись отключена в AD";continue;}
+   if(ForeignControl37(p.Host)){p.Done=true;p.Phase="Требуется действие";p.Detail="Управление передано другой консоли; автоматическое продолжение прекращено";continue;}
    var captured=ConnectionStore.Capture(row.Target);if(captured.ConnectionIdentity!=p.Identity){p.Done=true;p.Phase="Требуется действие";p.Detail="Идентичность подключения изменилась; проверьте цель перед продолжением";continue;}
    if(DateTimeOffset.TryParse(p.StartedUtc,out var since)&&DateTimeOffset.UtcNow-since>TimeSpan.FromDays(2)){p.Done=true;p.Phase="Требуется действие";p.Detail="Срок автоматического продолжения истёк (2 суток)";continue;}
    var job=History.FirstOrDefault(j=>j.Id==p.JobId);var target=job?.Targets.FirstOrDefault(t=>t.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase));
@@ -59,12 +60,13 @@ public partial class MainWindow {
    catch(Exception ex){p.Detail="Проверка готовности не удалась: "+ShortConnectionError(ex.Message);continue;}
    if(closing||p.Done)continue;QueueMaintenanceJob(p,captured);
   }
- }finally{foreach(var entry in maintenancePlans.Values)Event31(entry.Host,"maintenance",entry.Phase+"|"+entry.Detail,entry.Phase,entry.Phase=="Требуется действие"?"Warning":"Info",entry.Detail);SaveMaintenance();advancingMaintenance=false;RefreshAttentionButton();if(ComputerGrid.SelectedItem is ComputerRow selected&&maintenancePlans.ContainsKey(selected.Host))ShowCurrent();if(dispatch)await SendQueue();}}
+ }finally{foreach(var entry in maintenancePlans.Values)Event31(entry.Host,"maintenance",entry.Phase+"|"+entry.Detail,entry.Phase,entry.Phase=="Требуется действие"?"Warning":"Info",entry.Detail);SaveMaintenance();advancingMaintenance=false;RefreshAttentionButton();if(ComputerGrid.SelectedItem is ComputerRow selected&&maintenancePlans.ContainsKey(selected.Host))ShowCurrent();if(dispatch){await ReleaseFinishedPlans37();await SendQueue();}}}
  void QueueMaintenanceJob(MaintenancePlan p,TargetRecord captured){
   // Persist the id before creating history/queue: recovery reuses the same job, never repeats deployment with a new id.
   if(p.NextJobId.Length==0){p.NextJobId=Guid.NewGuid().ToString();SaveMaintenance();}
+  if(p.PlanId37.Length==0)p.PlanId37=p.JobId.Length>0?p.JobId:p.NextJobId;
   var job=History.FirstOrDefault(j=>j.Id==p.NextJobId);
-  if(job==null){var t=Store.Clone(captured);t.Status="Queued";t.State=null;t.Output="";job=new(){AutomaticChild31=true,Id=p.NextJobId,Name=p.Install?"Полное обслуживание · продолжение":"После перезагрузки · поиск и отчёт",OutputChannel="WSUS",Steps=new(){new(){Kind=p.Install?"Updates":"UpdateScan",Name=p.Install?"WSUS · установка и запрос отчёта":"WSUS · проверка и запрос отчёта"}},Targets=new(){t}};History.Insert(0,job);Save();}
+  if(job==null){var t=Store.Clone(captured);t.Status="Queued";t.State=null;t.Output="";job=new(){PlanId37=p.PlanId37,SearchTimeoutMinutes37=Store.Read("search-minutes37.json",20),AutomaticChild31=true,Id=p.NextJobId,Name=p.Install?"Полное обслуживание · продолжение":"После перезагрузки · поиск и отчёт",OutputChannel="WSUS",Steps=new(){new(){Kind=p.Install?"Updates":"UpdateScan",Name=p.Install?"WSUS · установка и запрос отчёта":"WSUS · проверка и запрос отчёта"}},Targets=new(){t}};History.Insert(0,job);Save();}
   if(p.JobId!=job.Id)p.Cycles++;p.JobId=job.Id;p.NextJobId="";p.ReadyAfter=default;p.Phase="Выполняется обслуживание";p.Detail="";SaveMaintenance();
   foreach(var t in job.Targets.Where(t=>t.Status=="Queued"&&t.State==null))if(!queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host==t.Host))queue.Enqueue((job,t));
  }

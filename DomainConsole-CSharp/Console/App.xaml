@@ -66,8 +66,8 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="TextBox">
-            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-              <ScrollViewer x:Name="PART_ContentHost" />
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5">
+              <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Stretch" />
             </Border>
           </ControlTemplate>
         </Setter.Value>

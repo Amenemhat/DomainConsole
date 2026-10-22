@@ -6,6 +6,7 @@ public partial class MainWindow {
  async void CacheCleanup_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{var dialog=new CacheChoice(this);if(dialog.ShowDialog()!=true)return;if(dialog.OldOnly){await Submit(new(){new(){Name="Удаление старых временных кэшей",Kind="CacheResidueCleanup"}},"Commands");return;}MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Name="Очистка кэша: "+dialog.Mode+(dialog.Backup?" · резервная копия":""),Kind="CacheCleanup",Code=CacheScripts.Build(dialog.Mode,dialog.Backup,dialog.Catroot)},new(){Name="WSUS · поиск после очистки кэша",Kind="UpdateScan"}},"WSUS");});
  async void WaitingDiagnostics_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Name="Диагностика долгого выполнения",Kind="PowerShell",Code=DownloadDiagnosticScript}},"Commands");});
  public const string DownloadDiagnosticScript="""
+$dcReadOnly37=$true
 $ProgressPreference='SilentlyContinue'
 Get-Service bits,wuauserv,UsoSvc|Select-Object Name,Status,StartType|Format-Table -AutoSize
 try {Import-Module BitsTransfer -ErrorAction Stop;$jobs=@(Get-BitsTransfer -AllUsers -ErrorAction Stop|Where-Object {$_.DisplayName -eq 'WU Client Download'}|Select-Object -First 8)}catch{Write-Output ('Снимок BITS недоступен: '+$_.Exception.Message);$jobs=@()}
@@ -19,7 +20,7 @@ Get-CimInstance Win32_Process -Filter "Name='MRT.exe' OR Name='MsMpEng.exe' OR N
 Get-WinEvent -FilterHashtable @{LogName='System';Id=7031,7034;StartTime=(Get-Date).AddHours(-2)} -MaxEvents 10 -ErrorAction SilentlyContinue|Format-List TimeCreated,Message
 $p=Join-Path $env:windir 'debug\mrt.log';if(Test-Path $p){Get-Content $p -Tail 30}
 """;
- void SaveOperationSettings_Click(object sender,RoutedEventArgs e)=>Guard(()=>{if(!int.TryParse(StallMinutesBox.Text,out var minutes)||minutes<1||minutes>120)throw new Exception("Порог ожидания: 1–120 минут.");Store.Write("stall-minutes.json",minutes);Theme.Apply(ThemeBox.SelectedIndex);RefreshActivity();Notify("Настройки ожидания и палитры сохранены.");});
+ void SaveOperationSettings_Click(object sender,RoutedEventArgs e)=>Guard(()=>{if(!int.TryParse(StallMinutesBox.Text,out var minutes)||minutes<1||minutes>120)throw new Exception("Порог ожидания: 1–120 минут.");if(!int.TryParse(SearchMinutes37.Text,out var search)||search<1||search>120)throw new Exception("Срок поиска: 1–120 минут.");Store.Write("search-minutes37.json",search);Store.Write("stall-minutes.json",minutes);Theme.Apply(ThemeBox.SelectedIndex);RefreshActivity();Notify("Настройки ожидания и палитры сохранены.");});
  static bool Maintenance(List<CommandStep> steps,bool microsoft)=>NeedsUpdateCheck(steps,microsoft);
  async void Recommendation_Click(object sender,RoutedEventArgs e){var r=ActiveRow();string action=r.Target.State?.RecommendationAction??"";if(action=="Memory")MemoryDiagnostics_Click(sender,e);else if(action=="Download")CacheCleanup_Click(sender,e);else if(action=="Defender")Defender_Click(sender,e);else if(action=="Queue")RecoverReport_Click(sender,e);else WaitingDiagnostics_Click(sender,e);}
 }

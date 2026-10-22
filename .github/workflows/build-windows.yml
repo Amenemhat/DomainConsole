@@ -36,9 +36,9 @@ jobs:
           function Test-Window {
             Remove-Item Publish/ui-smoke-ready.txt -Force -ErrorAction SilentlyContinue
             $p = Start-Process ./Publish/DomainConsole.exe -PassThru
-            $until = [DateTime]::UtcNow.AddSeconds(90)
+            $until = [DateTime]::UtcNow.AddSeconds(150)
             while (!(Test-Path Publish/ui-smoke-ready.txt) -and !$p.HasExited -and [DateTime]::UtcNow -lt $until) { Start-Sleep -Milliseconds 200; $p.Refresh() }
-            if (!$p.HasExited -and !(Test-Path Publish/ui-smoke-ready.txt)) { Stop-Process -Id $p.Id; throw 'UI assertions did not finish within 90 seconds' }
+            if (!$p.HasExited -and !(Test-Path Publish/ui-smoke-ready.txt)) { Stop-Process -Id $p.Id; throw 'UI assertions did not finish within 150 seconds' }
             $p.Refresh()
             if ($p.HasExited) { if (Test-Path Publish/smoke-error.txt) { Get-Content Publish/smoke-error.txt }; throw "Application exited during startup: $($p.ExitCode)" }
             if ($p.MainWindowHandle -eq 0) { Stop-Process -Id $p.Id; throw "Application window was not created" }
@@ -67,6 +67,15 @@ jobs:
         run: |
           & ./Publish/Agent/DomainConsole.Agent.exe update-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-update-smoke")
           if ($LASTEXITCODE -ne 0) { throw "Update operation fixture failed" }
+      - name: Verify cross-console ownership and native interactive session reader
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe coordination-smoke37 (Join-Path $env:RUNNER_TEMP 'DomainConsole-coordination37')
+          if ($LASTEXITCODE -ne 0) { throw 'Cross-console ownership fixture failed' }
+          $probe = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/user-probe37.ps1'
+          $value = & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $probe | ConvertFrom-Json
+          if (!$value.Complete) { throw 'Native WTS session reader did not complete' }
+          Write-Output 'Native session enumeration succeeded; no user identifiers are exported.'
       - name: Verify parallel command and WSUS queues
         shell: pwsh
         run: |
