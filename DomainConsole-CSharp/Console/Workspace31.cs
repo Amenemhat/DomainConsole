@@ -89,6 +89,6 @@ public partial class MainWindow {
  void CopyEventOne36_Click(object sender,RoutedEventArgs e){if(EventList32.SelectedItem is ClientEvent31 item)Clipboard.SetText(EventCopyText36(new[]{item}));}
  void CopyEventSelected36_Click(object sender,RoutedEventArgs e){var items=EventList32.SelectedItems.Cast<ClientEvent31>().ToList();if(items.Count>0)Clipboard.SetText(EventCopyText36(items));}
  async void CopyEventAll36_Click(object sender,RoutedEventArgs e)=>await Guard(CopyAllEvents39);
- async Task CopyAllEvents39(){if(ComputerGrid.SelectedItem is ComputerRow row){bool errors=EventErrors32.IsChecked==true;await LoadEvents39(row.Host);Clipboard.SetText(EventCopyText36(AllEvents32(row.Host).Where(x=>!errors||x.Kind is "Error" or "Warning")));}}
+ async Task CopyAllEvents39(){if(ComputerGrid.SelectedItem is ComputerRow row){bool errors=EventErrors32.IsChecked==true;if(eventWrites39.TryGetValue(row.Host,out var write))await write;await LoadEvents39(row.Host);Clipboard.SetText(EventCopyText36(AllEvents32(row.Host).Where(x=>!errors||x.Kind is "Error" or "Warning")));}}
  void CopyEvents32_Click(object sender,RoutedEventArgs e){var selected=EventList32.SelectedItems.Cast<ClientEvent31>().ToList();if(selected.Count>0)Clipboard.SetText(EventCopyText36(selected));else CopyEventAll36_Click(sender,e);}
 }
