@@ -148,7 +148,6 @@ namespace DomainConsole.Agent {
     if(args[0]=="reserve37"){ReserveControl37();return 0;}if(args[0]=="release37"){Console.WriteLine(ReleaseControl37()?"released37":"busy37");return 0;}if(args[0]=="claim37"){ClaimControl37();return 0;}
     if(args[0]=="restore"||args[0]=="verify"){
      if(File.Exists(FilePath("status.json")))State=Json.Deserialize<RemoteState>(File.ReadAllText(FilePath("status.json")));else State=new RemoteState{Id=Job.Id};
-     if(args[0]=="reserve37"){ReserveControl37();return 0;}if(args[0]=="release37"){Console.WriteLine(ReleaseControl37()?"released37":"busy37");return 0;}if(args[0]=="claim37"){ClaimControl37();return 0;}
     if(args[0]=="restore")Restore();else Verify();return 0;
     }
     if(args[0]!="run")return 2;
