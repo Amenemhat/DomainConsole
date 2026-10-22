@@ -554,6 +554,7 @@
 
     <SolidColorBrush x:Key="ProgressFill38" Color="#009E48" />
     <Style x:Key="ActionButton38" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Width" Value="216"/><Setter Property="HorizontalAlignment" Value="Left"/>
       <Setter Property="MinHeight" Value="42"/><Setter Property="Margin" Value="0,0,0,7"/><Setter Property="Padding" Value="9,7"/>
       <Setter Property="FontSize" Value="13"/><Setter Property="Background" Value="{DynamicResource ButtonSurface}"/>
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
