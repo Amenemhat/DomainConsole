@@ -300,12 +300,12 @@
                   </WrapPanel>
                   <TextBlock x:Name="EventStorageError32" DockPanel.Dock="Bottom" TextWrapping="Wrap" Visibility="Collapsed" Foreground="{DynamicResource WarningText}"/>
                   <ListBox x:Name="EventList32" SelectionChanged="EventCurrent36_Changed" SelectionMode="Extended" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.ScrollChanged="EventScroll35_Changed" PreviewKeyDown="EventCopy35_KeyDown" HorizontalContentAlignment="Stretch" ScrollViewer.CanContentScroll="True" VirtualizingPanel.ScrollUnit="Pixel" VirtualizingPanel.IsVirtualizing="True" FontSize="12">
-                    <ListBox.ItemTemplate><DataTemplate><Grid Margin="2,1,4,1"><Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition Width="23"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Time38}" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Top"/><Border Grid.Column="1" VerticalAlignment="Top" Height="20" Margin="0,0,5,0"><local:StatusGlyph Kind="{Binding Glyph38}" Tint="{Binding Brush}"/></Border><TextBlock Grid.Column="2" Text="{Binding Body38}" Foreground="{Binding Brush}" TextWrapping="Wrap"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox>
+                    <ListBox.ItemTemplate><DataTemplate><Grid Margin="2,1,4,1"><Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition Width="23"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Time38}" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Top"/><Border Grid.Column="1" VerticalAlignment="Top" Height="20" Margin="0,0,5,0"><local:StatusGlyph Kind="{Binding Glyph38}" Tint="{Binding GlyphBrush39}"/></Border><TextBlock Grid.Column="2" Text="{Binding Body38}" Foreground="{Binding Brush}" TextWrapping="Wrap"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox>
                 </DockPanel>
               </Expander>
             <Thumb x:Name="EventsSplitter38" Grid.Row="2" Height="5" HorizontalAlignment="Stretch" Cursor="SizeNS" DragDelta="EventsResize38" Background="Transparent" ToolTip="Изменить высоту истории событий"><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="{TemplateBinding Background}"><Border Width="36" Height="2" Background="{DynamicResource Outline}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border></ControlTemplate></Thumb.Template></Thumb><Expander x:Name="BackgroundGroup" Margin="0,3,0,5" IsExpanded="False" Visibility="Collapsed" Grid.Column="0" Grid.Row="3">
               <Expander.Header>
-                <TextBlock x:Name="BackgroundSummary" TextWrapping="NoWrap" Foreground="{DynamicResource TextMuted}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" Text="Фоновая активность клиента"/>
+                <TextBlock x:Name="BackgroundSummary" TextWrapping="NoWrap" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" Text="Фоновая активность клиента" FontWeight="SemiBold"/>
               </Expander.Header>
               <StackPanel MaxHeight="175">
                 <TextBlock x:Name="BackgroundRelation" TextWrapping="Wrap" Margin="0,3"/>
@@ -338,24 +338,24 @@
           </DockPanel>
         </Grid></TabItem>
         <TabItem x:Name="SettingsTab" Header="Настройки" Style="{StaticResource HiddenSettingsTab}">
-          <Border BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="5" Background="{DynamicResource PanelSurface}"><DockPanel><TextBlock Text="Настройки" FontSize="17" FontWeight="Bold" Margin="14,10" DockPanel.Dock="Top"/><ScrollViewer VerticalScrollBarVisibility="Auto">
+          <Border BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="5" Background="{DynamicResource PanelSurface}"><DockPanel><TextBlock Text="Настройки" FontSize="17" FontWeight="Bold" Margin="14,10" DockPanel.Dock="Top"/><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="24" MaxWidth="650" HorizontalAlignment="Left">
-              <CheckBox x:Name="AutoScrollSetting" Content="Автопрокрутка журналов" Checked="AutoScroll_Changed" Unchecked="AutoScroll_Changed" ToolTip="Следовать за последними записями в журналах команд и WSUS. Настройка сохраняется." Margin="0,0,0,16"/>
+              <CheckBox x:Name="AutoScrollSetting" Checked="AutoScroll_Changed" Unchecked="AutoScroll_Changed" ToolTip="Следовать за последними записями в журналах команд и WSUS. Настройка сохраняется." Margin="0,0,0,16"><TextBlock Text="Автопрокрутка журналов" TextWrapping="Wrap"/></CheckBox>
               <Button Content="Учётные данные подключения…" Click="ConnectionCredentials_Click" HorizontalAlignment="Left" ToolTip="Текущий вход Windows или одна защищённо сохранённая запись для разных клиентов"/>
               <TextBlock Text="Обзор статусов" FontSize="18" FontWeight="SemiBold"/>
-              <CheckBox x:Name="OverviewAutomatic" Content="Обновлять статусы всех ПК при открытии и периодически"/>
+              <CheckBox x:Name="OverviewAutomatic"><TextBlock Text="Обновлять статусы всех ПК при открытии и периодически" TextWrapping="Wrap"/></CheckBox>
               <TextBlock Text="Интервал в часах (1–168). Чтение WSUS и состояния клиентов: перезагрузка и аптайм. Настройки клиентов не меняются." TextWrapping="Wrap"/>
               <TextBox x:Name="OverviewHours" Text="24" Width="100" HorizontalAlignment="Left"/>
               <TextBlock Text="После перезагрузки: период опроса, сек (30–600)"/>
               <TextBox x:Name="RebootProbeSeconds"/>
               <TextBlock Text="Пауза готовности служб, сек (0–1800)"/>
               <TextBox x:Name="RebootSettleSeconds"/>
-              <CheckBox x:Name="PostRebootScan" Content="По умолчанию проверять обновления после назначенной перезагрузки" ToolTip="Продолжение определяется общим переключателем автообслуживания в шапке."/>
+              <CheckBox x:Name="PostRebootScan" ToolTip="Продолжение определяется общим переключателем автообслуживания в шапке."><TextBlock Text="По умолчанию проверять обновления после назначенной перезагрузки" TextWrapping="Wrap"/></CheckBox>
               <Button Content="Сохранить параметры после перезагрузки" Click="SavePostReboot_Click"/>
               <Button Content="Сохранить обзор статусов" Click="SaveOverview_Click" HorizontalAlignment="Left"/>
               <Separator Margin="0,16"/>
               <TextBlock Text="Связь и история событий" FontSize="18" FontWeight="SemiBold"/>
-              <CheckBox x:Name="LinkAutomatic31" Content="Постепенно перепроверять связь клиентов"/>
+              <CheckBox x:Name="LinkAutomatic31"><TextBlock Text="Постепенно перепроверять связь клиентов" TextWrapping="Wrap"/></CheckBox>
               <TextBlock Text="Интервал на клиент, минут (1–1440)"/>
               <TextBox x:Name="LinkInterval31" Width="100" HorizontalAlignment="Left"/>
               <TextBlock Text="Хранить события клиента, дней (1–365)"/>
@@ -380,7 +380,7 @@
               </ComboBox>
               <Button Content="Сохранить ожидание и палитру" Click="SaveOperationSettings_Click" HorizontalAlignment="Left"/>
               <Separator Margin="0,16"/>
-              <CheckBox x:Name="AutomaticDownloadRecovery" Content="Автоматически восстанавливать загрузку (одна попытка на ПК)" ToolTip="По умолчанию выключено. Только свежие данные без установки; перезапуск BITS, UsoSvc и wuauserv без очистки кэша."/>
+              <CheckBox x:Name="AutomaticDownloadRecovery" ToolTip="По умолчанию выключено. Только свежие данные без установки; перезапуск BITS, UsoSvc и wuauserv без очистки кэша."><TextBlock Text="Автоматически восстанавливать загрузку (одна попытка на ПК)" TextWrapping="Wrap"/></CheckBox>
               <TextBlock Text="Минут непрерывного наблюдения без движения (10–180)"/>
               <TextBox x:Name="DownloadWaitBox" Text="30" Width="100" HorizontalAlignment="Left"/>
               <Button Content="Сохранить восстановление загрузки" Click="SaveDownloadSettings_Click"/>
@@ -396,7 +396,7 @@
               <TextBox x:Name="WsusHost" Width="420" HorizontalAlignment="Left"/>
               <TextBlock Text="Порт WSUS API на сервере"/>
               <TextBox x:Name="WsusPort" Text="8530" Width="100" HorizontalAlignment="Left"/>
-              <CheckBox x:Name="WsusSsl" Content="WSUS API использует HTTPS"/>
+              <CheckBox x:Name="WsusSsl"><TextBlock Text="WSUS API использует HTTPS" TextWrapping="Wrap"/></CheckBox>
               <TextBlock Text="Источник обновлений клиента читается из его политик WUServer / UseWUServer. Эти настройки приложения не меняют политики клиента." TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" Margin="0,8,0,16"/>
               <Button Content="Сохранить настройки" Style="{StaticResource Primary}" Click="SaveWsus_Click" HorizontalAlignment="Left" ToolTip="Сохранить адрес и параметры административного подключения к серверу WSUS."/>
               <Separator Margin="0,16"/>

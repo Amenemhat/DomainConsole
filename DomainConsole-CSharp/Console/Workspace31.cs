@@ -12,6 +12,7 @@ public sealed class ClientEvent31 {
  [System.Text.Json.Serialization.JsonIgnore] public bool Selected36 {get;set;}
  [System.Text.Json.Serialization.JsonIgnore] public string OccurrenceText36=>Repeats<=1?"":string.Join(Environment.NewLine,Occurrences36.Select(e=>Display36.Date(e.At,true)+" · "+e.Text));
  [System.Text.Json.Serialization.JsonIgnore] public string Time38=>DateTimeOffset.TryParse(At,out var time)?time.ToLocalTime().Date==DateTime.Now.Date?time.ToLocalTime().ToString("HH:mm"):time.ToLocalTime().ToString("dd.MM HH:mm"):"—";
+ [System.Text.Json.Serialization.JsonIgnore] public Brush GlyphBrush39=>Kind=="Warning"?Theme.Brush("AttentionIcon39"):Brush;
  [System.Text.Json.Serialization.JsonIgnore] public string Glyph38=>Kind switch {"Success"=>"Success","Warning"=>"Warning","Error"=>"Error",_=>"Info"};
  [System.Text.Json.Serialization.JsonIgnore] public string Body38=>Display36.Text(Text)+(Details.Length>0&&Details!=Text?"\n"+Display36.Text(Details):"")+(Repeats>1?" · повторов: "+Repeats+" · с "+Display36.Date(FirstAt):"");
  public int Repeats {get;set;}=1;public string FirstAt {get;set;}="";public string At {get;set;}=DateTime.UtcNow.ToString("o");public string Kind {get;set;}="Info";public string Text {get;set;}="";public string Details {get;set;}="";
@@ -47,7 +48,7 @@ public partial class MainWindow {
   CurrentDetails.Text=row.OS;CurrentDetails.ToolTip=row.OS+"\n"+row.Host+ConnectionStore.Description(row.Host);
   HeaderLinkGlyph.Kind=LinkKind(row.Host);HeaderLinkGlyph.Tint=LinkKind(row.Host)=="Connected"?Theme.Tone("Success"):LinkKind(row.Host) is "Access" or "Delayed"?Theme.Tone("Warning"):Theme.Brush("TextMuted");
   HeaderLinkText.Text=LinkKind(row.Host) switch {"Connected"=>"Связь есть","SavedConnected"=>"Был доступен","Delayed"=>"Ответ задерживается","Access"=>"Нет доступа","Unreachable"=>"Нет ответа",_=>"Связь не проверена"};HeaderLink.ToolTip=LinkHint(row);
-  HeaderTimes31.Text=(clientConnections.TryGetValue(row.Host,out var link)&&link.LastSuccess!=default?"Ответ: "+Age(DateTimeOffset.UtcNow-link.LastSuccess)+" назад  ·  ":"")+UptimeText(row.Host);HeaderTimes31.ToolTip=UptimeHint(row.Host);
+  HeaderTimes31.Text=(clientConnections.TryGetValue(row.Host,out var link)&&link.LastSuccess!=default?"Ответ: "+Age(DateTimeOffset.UtcNow-link.LastSuccess)+(DateTimeOffset.UtcNow-link.LastSuccess<TimeSpan.FromMinutes(1)?"  ·  ":" назад  ·  "):"")+UptimeText(row.Host);HeaderTimes31.ToolTip=UptimeHint(row.Host);
   RefreshClientReport35(row);
   HeaderUpdateCount31.Text=UpdateCountText31(row.Host);HeaderUpdateCount31.Foreground=UpdateCountBrush31(row.Host);
   var job=ChannelJob(row,MainTabs.SelectedItem==WsusTab);var t=job?.Targets.FirstOrDefault(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase));
