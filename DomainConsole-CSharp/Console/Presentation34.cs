@@ -23,7 +23,7 @@ public partial class MainWindow {
  void IdentityHeader34_SizeChanged(object sender,SizeChangedEventArgs e)=>ArrangeIdentity34();
  void ArrangeIdentity34(){
   if(IdentityHeader34==null||IdentityHeader34.ActualWidth<=0)return;
-  EventsRow38.Height=EventHistoryGroup32.IsExpanded?new GridLength(ActualHeight<750?85:150):GridLength.Auto;
+  EventsRow38.Height=EventHistoryGroup32.IsExpanded?new GridLength(Math.Min(ActualHeight<750?85:300,eventsHeight38)):GridLength.Auto;
   CurrentComputer.MaxWidth=Math.Max(120,Math.Min(260,IdentityHeader34.ActualWidth*0.3));
 
  }
