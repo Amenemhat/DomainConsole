@@ -63,7 +63,7 @@ public sealed partial class RemoteService {
  public async Task<PollResult> Poll(TargetRecord target,string id,bool includeOutput=true){await pollSlots34.WaitAsync();try{using var pollTimeout=new CancellationTokenSource(TimeSpan.FromSeconds(30));if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректный ID задания.");string prefix="$dcJobId34="+PowerShellBridge.Literal(id)+";$includeOutput34="+(includeOutput?"$true":"$false")+";$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') $dcJobId34;";try{var json=await PowerShellBridge.Execute(Invoke(target,prefix+PollScript34),pollTimeout.Token);return ParseData34<PollResult>(json,"результат задания");}catch(Exception ex) when(ex.Message.Contains("DC_DATA_ERROR",StringComparison.OrdinalIgnoreCase)||ex.Message.Contains("недопустимый примитив",StringComparison.OrdinalIgnoreCase)){throw new RemoteDataException("Чтение результата: "+ex.Message,ex);}}finally{pollSlots34.Release();}}
  public async Task<CancellationReply> Cancel(TargetRecord target,string id,string mode="after"){using var stopTimeout=new CancellationTokenSource(TimeSpan.FromSeconds(30));
   if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(mode is not ("after" or "now" or "force"))throw new ArgumentException("Некорректный режим остановки.");
-  var json=await PowerShellBridge.Execute(Invoke(target,CancellationScript(id,mode)),stopTimeout.Token);return JsonSerializer.Deserialize<CancellationReply>(json,Store.Options)??throw new Exception("Ответ отмены не получен");
+  var json=await PowerShellBridge.Execute(Invoke(target,GuardControlScript37(CancellationScript(id,mode))),stopTimeout.Token);return JsonSerializer.Deserialize<CancellationReply>(json,Store.Options)??throw new Exception("Ответ отмены не получен");
  }
  public static string CancellationScript(string id,string mode)=>"$id="+PowerShellBridge.Literal(id)+";$mode="+PowerShellBridge.Literal(mode)+";"+CancelScript;
  public const string CancelScript="""
@@ -103,7 +103,7 @@ Dc-Reply 'Запрос остановки передан; итог появит�
 """;
 
 
- public Task<string> AbortReboot(TargetRecord target)=>PowerShellBridge.Execute(Invoke(target,"$f=Join-Path $env:ProgramData 'DomainConsoleCSharp\\control37.json';if(Test-Path $f){$c=Get-Content $f -Raw -Encoding UTF8|ConvertFrom-Json;if($c.OwnerId -and $c.OwnerId -ne "+PowerShellBridge.Literal(ConsoleId37)+"){throw 'Управление принадлежит другой консоли; отмена перезагрузки не выполнялась'}};shutdown.exe /a;if($LASTEXITCODE -ne 0){throw ('shutdown exit '+$LASTEXITCODE)};'Перезагрузка отменена.'"));
+ public Task<string> AbortReboot(TargetRecord target)=>PowerShellBridge.Execute(Invoke(target,GuardControlScript37("shutdown.exe /a;if($LASTEXITCODE -ne 0){throw ('shutdown exit '+$LASTEXITCODE)};'Перезагрузка отменена.'")));
  static readonly System.Collections.Concurrent.ConcurrentDictionary<string,SemaphoreSlim> logLocks=new(StringComparer.OrdinalIgnoreCase);
  public async Task<string> Logs(TargetRecord target,string id,bool requireFinal=false){var gate=logLocks.GetOrAdd(target.Host+"|"+id,_=>new SemaphoreSlim(1,1));await gate.WaitAsync();try{return await LogsCore(target,id,requireFinal);}finally{gate.Release();}}
  async Task<string> LogsCore(TargetRecord target,string id,bool requireFinal=false){

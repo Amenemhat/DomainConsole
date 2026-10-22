@@ -7,7 +7,8 @@ public sealed partial class RemoteService {
  static readonly string installation37=Store.Read("console-id37.json","") is {Length:>0} saved?saved:NewConsole37();
  static string NewConsole37(){var id=Guid.NewGuid().ToString();Store.Write("console-id37.json",id);return id;}
  public static string ConsoleId37=>Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(installation37+"|"+Environment.MachineName+"|"+Environment.UserDomainName+"|"+Environment.UserName)));
- public static void StampConsole37(RemoteJob job){if(job.ConsoleId37.Length>0)return;job.ConsoleId37=ConsoleId37;job.ConsoleLabel37=Environment.MachineName;}
+ public static void StampConsole37(RemoteJob job){if(job.ConsoleId37.Length>0){if(job.ConsoleId37!=ConsoleId37)throw new InvalidOperationException("Задание создано другой консолью; доступен просмотр. Для нового запуска создайте отдельное задание.");return;}job.ConsoleId37=ConsoleId37;job.ConsoleLabel37=Environment.MachineName;}
+ public static string GuardControlScript37(string body)=>"$dcGate37=New-Object Threading.Mutex($false,'Global\\DomainConsoleCSharp.Coordination37');$dcOwns37=$false;try{try{$dcOwns37=$dcGate37.WaitOne(10000)}catch [Threading.AbandonedMutexException]{$dcOwns37=$true};if(!$dcOwns37){throw 'Проверка владельца занята; действие не выполнялось'};$dcControlFile37=Join-Path $env:ProgramData 'DomainConsoleCSharp\\control37.json';if(Test-Path -LiteralPath $dcControlFile37){$dcOwner37=Get-Content -LiteralPath $dcControlFile37 -Raw -Encoding UTF8 -ErrorAction Stop|ConvertFrom-Json -ErrorAction Stop;if($dcOwner37.OwnerId -and $dcOwner37.OwnerId -ne "+PowerShellBridge.Literal(ConsoleId37)+"){throw 'Управление принадлежит другой консоли; действие не выполнялось'}};\n"+body+"\n}finally{if($dcOwns37){$dcGate37.ReleaseMutex()};$dcGate37.Dispose()}";
  public async Task<bool> Control37(TargetRecord target,string operation,string plan=""){
   if(operation is not ("release37" or "claim37"))throw new ArgumentException("Unknown control operation");
   var request=new RemoteJob{PlanId37=plan};StampConsole37(request);var payload=JsonSerializer.Serialize(request,Store.Options);
@@ -16,7 +17,7 @@ public sealed partial class RemoteService {
   using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(30));var reply=await PowerShellBridge.Execute(Invoke(target,code),timeout.Token);return reply.Contains("released37",StringComparison.Ordinal);
  }
  public const string ControlProbe37="""
-$dcControl37=$null;$dcExternal37=@()
+$dcControl37=$null;$dcExternal37=@();$dcControlRead37=$false
 try{
  $controlFile=Join-Path $env:ProgramData 'DomainConsoleCSharp\control37.json'
  if(Test-Path -LiteralPath $controlFile){$dcControl37=Get-Content -LiteralPath $controlFile -Raw -Encoding UTF8 -ErrorAction Stop|ConvertFrom-Json -ErrorAction Stop
@@ -26,6 +27,7 @@ try{
    if(Test-Path -LiteralPath $stateFile){try{$st=Get-Content -LiteralPath $stateFile -Raw -Encoding UTF8 -ErrorAction Stop|ConvertFrom-Json -ErrorAction Stop;$dcExternal37+=@{Id=$jobId;Status=$st.Status;Stage=$st.Stage;Updated=$st.Updated;Ended=$st.Ended;Progress=$st.Progress;StopMessage=$st.StopMessage}}catch{}}
   }
  }
+ $dcControlRead37=$true
 }catch{}
 """;
 }
