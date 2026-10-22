@@ -63,8 +63,8 @@ public partial class MainWindow {
  }finally{foreach(var entry in maintenancePlans.Values)Event31(entry.Host,"maintenance",entry.Phase+"|"+entry.Detail,entry.Phase,entry.Phase=="Требуется действие"?"Warning":"Info",entry.Detail);SaveMaintenance();advancingMaintenance=false;RefreshAttentionButton();if(ComputerGrid.SelectedItem is ComputerRow selected&&maintenancePlans.ContainsKey(selected.Host))ShowCurrent();if(dispatch){await ReleaseFinishedPlans37();await SendQueue();}}}
  void QueueMaintenanceJob(MaintenancePlan p,TargetRecord captured){
   // Persist the id before creating history/queue: recovery reuses the same job, never repeats deployment with a new id.
-  if(p.PlanId37.Length==0)p.PlanId37=p.JobId.Length>0?p.JobId:Guid.NewGuid().ToString();
   if(p.NextJobId.Length==0){p.NextJobId=Guid.NewGuid().ToString();SaveMaintenance();}
+  if(p.PlanId37.Length==0)p.PlanId37=p.JobId.Length>0?p.JobId:p.NextJobId;
   var job=History.FirstOrDefault(j=>j.Id==p.NextJobId);
   if(job==null){var t=Store.Clone(captured);t.Status="Queued";t.State=null;t.Output="";job=new(){PlanId37=p.PlanId37,SearchTimeoutMinutes37=Store.Read("search-minutes37.json",20),AutomaticChild31=true,Id=p.NextJobId,Name=p.Install?"Полное обслуживание · продолжение":"После перезагрузки · поиск и отчёт",OutputChannel="WSUS",Steps=new(){new(){Kind=p.Install?"Updates":"UpdateScan",Name=p.Install?"WSUS · установка и запрос отчёта":"WSUS · проверка и запрос отчёта"}},Targets=new(){t}};History.Insert(0,job);Save();}
   if(p.JobId!=job.Id)p.Cycles++;p.JobId=job.Id;p.NextJobId="";p.ReadyAfter=default;p.Phase="Выполняется обслуживание";p.Detail="";SaveMaintenance();

@@ -18,7 +18,7 @@ public partial class MainWindow {
   var selected=candidates.FirstOrDefault(u=>u.Account.Equals(old?.Account,StringComparison.OrdinalIgnoreCase))??candidates.OrderByDescending(u=>u.Active).ThenBy(u=>u.Account,StringComparer.OrdinalIgnoreCase).FirstOrDefault();
   if(selected==null){if(old!=null){old.Current=false;old.ReceivedUtc=DateTime.UtcNow.ToString("o");Store.Write("client-users37.json",users37);}return;}
   bool same=old?.Account.Equals(selected.Account,StringComparison.OrdinalIgnoreCase)==true;
-  var name=userNames37.GetValueOrDefault(selected.Account);string display=name?.Name??(same?old!.Name:"");
+  var name=userNames37.GetValueOrDefault(selected.Account);string display=name?.Name.Length>0?name.Name:same?old!.Name:"";
   // An unresolved new account must not be attributed the previous person's name.
   users37[host]=new(){PreviousName37=old?.Name.Length>0?old.Name:old?.PreviousName37??"",PreviousSeen37=old?.Name.Length>0?old.SeenUtc:old?.PreviousSeen37??"",Account=selected.Account,Name=display,Current=true,SeenUtc=now,ReceivedUtc=DateTime.UtcNow.ToString("o")};Store.Write("client-users37.json",users37);
   if(name==null||!DateTimeOffset.TryParse(name.CheckedUtc,out var checkedAt)||DateTimeOffset.UtcNow-checkedAt>TimeSpan.FromHours(name.Name.Length>0?24:1))_=ResolveUser37(selected.Account);
@@ -36,7 +36,7 @@ public partial class MainWindow {
 }
 public sealed partial class RemoteService {
  public const string UserProbeScript37="""
-$dcUsers37=@();$dcUsersComplete37=$false
+$dcUsers37=@();$dcUsersComplete37=$false;$dcUserError37=''
 try{
  if(-not ('DcSessions37' -as [type])){Add-Type -TypeDefinition @'
 using System;using System.Runtime.InteropServices;using System.Collections.Generic;
@@ -50,6 +50,6 @@ public static class DcSessions37 {
 }
 '@}
  $dcUsers37=@([DcSessions37]::Read()|ForEach-Object {$parts=$_ -split '\|',2;@{Account=$parts[1];Active=($parts[0] -eq '1')}});$dcUsersComplete37=$true
-}catch{}
+}catch{$dcUserError37=$_.Exception.Message}
 """;
 }

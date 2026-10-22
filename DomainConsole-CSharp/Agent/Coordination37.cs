@@ -30,10 +30,11 @@ namespace DomainConsole.Agent {
   static void ReserveControl37(){if(ReadOnly37(Job))return;ControlGate37(()=>{
    var record=ReadControl37();if(record.Protocol!=1)throw new InvalidOperationException("Несовместимый протокол управления; обновите консоль.");if(record.JobIds.Contains(Job.Id)&&record.OwnerId==Job.ConsoleId37&&record.PlanId==Job.PlanId37)return true;
    bool idle=NoActiveJobs37(record);
+   if(Job.AutomaticChild31&&Job.PlanId37.Length>0&&Job.PlanId37!=Job.Id&&record.PlanId!=Job.PlanId37)throw new InvalidOperationException("DC_CONTROL_BUSY37|Прежний план больше не владеет клиентом; продолжение не запускалось.");
    // A plan remains owned across operations, lost connections and reboots.
    if(record.OwnerId.Length>0&&record.OwnerId!=Job.ConsoleId37&&(!idle||record.PlanId.Length>0))throw new InvalidOperationException("DC_CONTROL_BUSY37|Клиент обслуживается с «"+record.OwnerLabel+"». "+record.Operation+". Дождитесь завершения или явно передайте управление после проверки.");
    if(Job.ConsoleId37.Length==0&&record.OwnerId.Length>0)throw new InvalidOperationException("DC_CONTROL_BUSY37|Обновите консоль до 0.37: клиент использует согласованное управление.");
-   if(record.OwnerId==Job.ConsoleId37&&Job.PlanId37.Length>0&&record.PlanId!=Job.PlanId37&&(!idle||Job.AutomaticChild31))throw new InvalidOperationException("DC_CONTROL_BUSY37|Владелец плана изменился; автоматическое продолжение не запускалось.");
+   if(record.OwnerId==Job.ConsoleId37&&Job.PlanId37.Length>0&&record.PlanId!=Job.PlanId37&&(!idle||(Job.AutomaticChild31&&Job.PlanId37!=Job.Id)))throw new InvalidOperationException("DC_CONTROL_BUSY37|Владелец плана изменился; автоматическое продолжение не запускалось.");
    if(record.PlanId.Length>0&&Job.PlanId37.Length==0&&record.OwnerId!=Job.ConsoleId37)throw new InvalidOperationException("DC_CONTROL_BUSY37|План обслуживания принадлежит другой консоли.");
    if(idle)record.JobIds.Clear();record.AgentPath37=typeof(Program).Assembly.Location;record.OwnerId=Job.ConsoleId37;record.OwnerLabel=Job.ConsoleLabel37;
    if(Job.PlanId37.Length>0)record.PlanId=Job.PlanId37;record.LastJobId=Job.Id;record.Operation=Job.Name;record.UpdatedUtc=DateTime.UtcNow.ToString("o");if(record.StartedUtc.Length==0)record.StartedUtc=record.UpdatedUtc;
