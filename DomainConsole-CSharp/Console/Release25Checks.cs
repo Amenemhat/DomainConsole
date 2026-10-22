@@ -8,8 +8,8 @@ public partial class MainWindow {
   var row=Computers.Last();var savedCache=reportCache.GetValueOrDefault(row.Host);var savedConnection=clientConnections.GetValueOrDefault(row.Host);bool wasLive=liveReports.Contains(row.Host);var originalSelected=Computers.Select(r=>r.Selected).ToList();var originalRecentAnchor=recentAnchor;var originalTreeAnchor=treeAnchor;RemoteJob? evidenceJob=null;
   try {
    clientConnections.Remove(row.Host);overviewErrors.Remove(row.Host);
-   var report=new WsusReport{FullDomainName=row.Host,LastReportedUtc=DateTimeOffset.UtcNow.ToString("o"),LastSyncResult="Succeeded"};reportCache[row.Host]=new(){Report=report,Server=OverviewServer,ReceivedUtc=DateTimeOffset.UtcNow.ToString("o")};liveReports.Remove(row.Host);
-   if(OverviewStatus(row).Kind!="Stale")throw new Exception("Saved success must be blue until refreshed");liveReports.Add(row.Host);
+   var report=new WsusReport{NeededCount=0,RequiredComplete=true,FullDomainName=row.Host,LastReportedUtc=DateTimeOffset.UtcNow.ToString("o"),LastSyncResult="Succeeded"};reportCache[row.Host]=new(){Report=report,Server=OverviewServer,ReceivedUtc=DateTimeOffset.UtcNow.ToString("o")};liveReports.Remove(row.Host);
+   if(OverviewStatus(row).Kind!="Stale")throw new Exception("Saved report must be marked stale until refreshed");liveReports.Add(row.Host);
    if(OverviewStatus(row).Kind!="Success")throw new Exception("Fresh success is not green");
    report.LastSyncResult="Unknown";if(report.Severity("")!="Unknown")throw new Exception("Unknown sync result falsely marked failed");report.LastSyncResult="Succeeded";
    report.LastReportedUtc=DateTimeOffset.UtcNow.AddDays(-2).ToString("o");if(OverviewStatus(row).Kind!="Stale")throw new Exception("Old success incorrectly requests intervention");
@@ -36,3 +36,4 @@ public partial class MainWindow {
   }finally{if(evidenceJob!=null)History.Remove(evidenceJob);if(savedCache==null)reportCache.Remove(row.Host);else reportCache[row.Host]=savedCache;if(savedConnection==null)clientConnections.Remove(row.Host);else clientConnections[row.Host]=savedConnection;if(wasLive)liveReports.Add(row.Host);else liveReports.Remove(row.Host);overviewErrors.Remove(row.Host);statusFilter.Clear();for(int i=0;i<Computers.Count;i++)Computers[i].Selected=originalSelected[i];recentAnchor=originalRecentAnchor;treeAnchor=originalTreeAnchor;RefreshOutcomes();UpdateSelectionCount();}
  }
 }
+

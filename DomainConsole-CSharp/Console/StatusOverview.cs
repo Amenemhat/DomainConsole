@@ -20,7 +20,7 @@ public partial class MainWindow {
  CancellationTokenSource? overviewCancel;bool overviewRunning,overviewPaused;DateTimeOffset nextOverview=DateTimeOffset.UtcNow.AddSeconds(3);
  string treeAnchor="",recentAnchor="";string statusScope=Store.Read("status-scope.json","");
  static readonly (string Key,string Label)[] StatusCategories={
-  ("AdDisabled","Отключены в AD"),("Error","Ошибка установки / задания"),("SyncError","Последний поиск: ошибка"),("Warning","Требует внимания"),("Reboot","Нужна перезагрузка"),("Success","Успешно · свежие данные"),("Stale","Успешно · прежние данные"),("NoWsus","Нет в WSUS"),("Unreachable","Нет связи WinRM"),("Access","Нет доступа"),("Connected","Связь подтверждена"),("Unknown","Нет данных")};
+  ("AdDisabled","Отключены в AD"),("Error","Ошибка установки / задания"),("SyncError","Последний поиск: ошибка"),("Warning","Требует внимания"),("Reboot","Нужна перезагрузка"),("Success","Свежий отчёт · обновления не требуются"),("Needed","Есть необходимые обновления"),("Stale","Отчёт устарел"),("NoWsus","Нет в WSUS"),("Unreachable","Нет связи WinRM"),("Access","Нет доступа"),("Connected","Связь подтверждена"),("Unknown","Нет данных")};
  string OverviewServer=>WsusHost.Text.Trim()+":"+WsusPort.Text.Trim();
  bool CacheMatches(CachedWsusReport cached)=>cached.Server.Equals(OverviewServer,StringComparison.OrdinalIgnoreCase);
  OverviewResult OverviewStatus(ComputerRow row){
@@ -28,7 +28,7 @@ public partial class MainWindow {
   reportCache.TryGetValue(row.Host,out var cached);if(cached!=null&&!CacheMatches(cached))cached=null;
   var kind=cached==null?"Unknown":!cached.Found?"NoWsus":cached.Report.Severity("");
   if(kind=="Reboot"&&RebootReason(row).Length==0&&cached!=null){var copy=Store.Clone(cached.Report);copy.InstalledPendingRebootCount=0;kind=copy.Severity("");}
-  if(kind=="Success"&&(!liveReports.Contains(row.Host)||!DateTimeOffset.TryParse(cached!.ReceivedUtc,out var received)||DateTimeOffset.UtcNow-received>TimeSpan.FromHours(overviewSettings.Hours)))kind="Stale";
+  if((kind is "Success" or "Needed")&&(!liveReports.Contains(row.Host)||!DateTimeOffset.TryParse(cached!.ReceivedUtc,out var received)||DateTimeOffset.UtcNow-received>TimeSpan.FromHours(overviewSettings.Hours)))kind="Stale";
   var label=StatusCategories.FirstOrDefault(x=>x.Key==kind).Label??"Нет данных";
   string hint="WSUS: "+label;
   if(cached!=null){hint+="\nДанные сервера получены: "+LocalDateConverter.Format(cached.ReceivedUtc);if(cached.Found)hint+="\nПоследний отчёт клиента: "+LocalDateConverter.Format(cached.Report.LastReportedUtc);if(cached.Report.SyncExplanation.Length>0)hint+="\n"+cached.Report.SyncExplanation+"\nПоиск выполнен: "+LocalDateConverter.Format(cached.Report.LastSyncUtc);if(cached.Report.FailedCount>0)hint+="\nОшибок установки по данным сервера: "+cached.Report.FailedCount;}
@@ -47,7 +47,7 @@ public partial class MainWindow {
   return new(kind,(StatusCategories.FirstOrDefault(x=>x.Key==kind).Label??"Нет данных")+"\n"+hint);
  }
  static bool AccessError(string error)=>error.Contains("0x80070005",StringComparison.OrdinalIgnoreCase)||error.Contains("Access is denied",StringComparison.OrdinalIgnoreCase)||error.Contains("отказано в доступе",StringComparison.OrdinalIgnoreCase)||error.Contains("доступ запрещ",StringComparison.OrdinalIgnoreCase)||error.Contains("от имени администратора",StringComparison.OrdinalIgnoreCase);
- IEnumerable<string> StatusTags(ComputerRow row){if(row.Target.AdDisabled){yield return "AdDisabled";yield break;}var primary=OverviewStatus(row).Kind;yield return primary;if(reportCache.TryGetValue(row.Host,out var cache)&&CacheMatches(cache)){if(!cache.Found&&primary!="NoWsus")yield return "NoWsus";}if((HeaderRebootJob(row)!=null||RebootReason(row).Length>0)&&primary!="Reboot")yield return "Reboot";var link=LinkKind(row.Host);if(link is "Connected" or "Unreachable" or "Access"&&link!=primary)yield return link;}
+ IEnumerable<string> StatusTags(ComputerRow row){if(row.Target.AdDisabled)yield return "AdDisabled";var primary=OverviewStatus(row).Kind;yield return primary;if(reportCache.TryGetValue(row.Host,out var cache)&&CacheMatches(cache)){if(!cache.Found&&primary!="NoWsus")yield return "NoWsus";if(cache.Found&&cache.Report.NeededCount>0&&primary!="Needed")yield return "Needed";}if((HeaderRebootJob(row)!=null||RebootReason(row).Length>0)&&primary!="Reboot")yield return "Reboot";var link=LinkKind(row.Host);if(link is "Connected" or "Unreachable" or "Access"&&link!=primary)yield return link;}
  bool MatchesSearch(ComputerRow row)=>(row.Name+" "+row.Host+" "+row.OS+ConnectionStore.Description(row.Host)).Contains(SearchBox.Text,StringComparison.OrdinalIgnoreCase);
  bool MatchesScope(ComputerRow row)=>statusScope=="manual-connections"?row.OU=="Ручные подключения":string.IsNullOrEmpty(statusScope)||row.OU.Equals(statusScope,StringComparison.OrdinalIgnoreCase)||row.OU.EndsWith(","+statusScope,StringComparison.OrdinalIgnoreCase);
  bool MatchesNavigation(ComputerRow row)=>(overviewSettings.ShowDisabled||!row.Target.AdDisabled)&&MatchesSearch(row)&&MatchesScope(row)&&(statusFilter.Count==0||StatusTags(row).Any(statusFilter.Contains));

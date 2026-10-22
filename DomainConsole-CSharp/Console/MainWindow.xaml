@@ -21,7 +21,7 @@
           <DockPanel Margin="0,0,0,5">
             <Button DockPanel.Dock="Right" local:UiIcon32.Icon="add" Width="32" Click="AddAddress_Click" ToolTip="Добавить компьютер по IP или указать VPN-адрес существующему клиенту" Style="{StaticResource IconButton}" Margin="4,0,0,0" />
             <Grid>
-              <TextBox x:Name="SearchBox" TextChanged="Search_Changed" ToolTip="Поиск по имени, ОС или адресу; плюс добавляет IP" Margin="0" Height="30" />
+              <TextBox x:Name="SearchBox" TextChanged="Search_Changed" ToolTip="Поиск по имени, ОС или адресу; плюс добавляет IP" Margin="0" MinHeight="30" Padding="6,3" VerticalContentAlignment="Center" />
               <TextBlock Text="Поиск имени или IP" Margin="7,0" VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" IsHitTestVisible="False">
                 <TextBlock.Style>
                   <Style TargetType="TextBlock">
@@ -61,13 +61,14 @@
                 <DataTemplate>
                   <Grid Margin="0">
                     <Border Background="{Binding ActivityBrush}" CornerRadius="4" />
-                    <ProgressBar x:Name="RecentActivityFill" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0" Opacity="0.42" IsHitTestVisible="False" Focusable="False" Maximum="100" Value="{Binding WorkProgress,Mode=OneWay}" IsIndeterminate="{Binding WorkBusy}" Visibility="{Binding ActivityVisibility}" Foreground="{DynamicResource InfoText}" Background="Transparent" />
+                    <ProgressBar x:Name="RecentActivityFill" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0" Opacity="0.42" IsHitTestVisible="False" Focusable="False" Maximum="100" Value="{Binding WorkProgress,Mode=OneWay}" IsIndeterminate="{Binding WorkBusy}" Visibility="{Binding ActivityVisibility}" Foreground="{Binding ProgressBrush37}" Background="Transparent" />
                     <DockPanel Margin="2,1">
                       <local:StatusGlyph DockPanel.Dock="Right" Kind="{Binding LinkKind}" Tint="{Binding LinkBrush}" ToolTip="{Binding LinkHint}" Margin="5,0,0,0" />
+                      <TextBlock DockPanel.Dock="Right" Text="{Binding NeededText37}" Visibility="{Binding NeededVisibility37}" Foreground="{Binding NeededBrush37}" ToolTip="{Binding NeededHint37}" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0" />
                       <local:StatusGlyph DockPanel.Dock="Right" Kind="{Binding Outcome}" Tint="{Binding OutcomeBrush}" ToolTip="{Binding OutcomeHint}" Margin="6,0,0,0" />
                       <CheckBox DockPanel.Dock="Left" Click="RecentCheck_Click" IsChecked="{Binding Selected,Mode=TwoWay}" Margin="0,0,7,0" ToolTip="Галочка выбирает цель; Shift — видимый диапазон. Имя открывает результат, Ctrl по имени переключает галочку." />
                       <StackPanel>
-                        <TextBlock Text="{Binding Name}" Foreground="{Binding NameBrush}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" ToolTip="{Binding NameHint36}" Foreground="{Binding NameBrush}" TextTrimming="CharacterEllipsis" />
                         <TextBlock Text="{Binding RecentHint}" FontSize="10" Foreground="{DynamicResource TextMuted}" TextTrimming="CharacterEllipsis" />
                       </StackPanel>
                     </DockPanel>
@@ -131,6 +132,7 @@
                   <Button x:Name="HeaderLink" Click="HeaderLink_Click" Padding="4,3" ToolTip="Проверить связь" Margin="0" Style="{StaticResource GhostButton}" MinHeight="30">
                     <Button.ContextMenu>
                       <ContextMenu>
+                        <MenuItem Header="Принять управление клиентом…" Click="ClaimControl37_Click" />
                         <MenuItem Header="Адрес и учётная запись…" Click="HeaderAddress_Click" />
                         <MenuItem Header="Подробная проверка подключения…" Click="CheckConnection_Click" />
                       </ContextMenu>
@@ -148,9 +150,11 @@
                     <TextBlock x:Name="HeaderReport35" Margin="7,0" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
                   </WrapPanel>
                   <WrapPanel Orientation="Horizontal" Margin="4,1,0,0">
+                    <TextBlock x:Name="HeaderUser37" Margin="0,0,9,0" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold" VerticalAlignment="Center" />
                     <TextBlock x:Name="CurrentDetails" Foreground="{DynamicResource TextMuted}" MaxWidth="250" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                     <TextBlock x:Name="HeaderTimes31" Margin="9,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
                     <TextBlock x:Name="HeaderContact35" Margin="0,0,8,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock x:Name="HeaderControl37" Margin="0,0,8,0" Foreground="{DynamicResource InfoText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
                     <TextBlock x:Name="HeaderNext31" Foreground="{DynamicResource InfoText}" FontSize="12" VerticalAlignment="Center" />
                     <TextBlock x:Name="HeaderWsusStatus" Visibility="Collapsed" />
                   </WrapPanel>
@@ -301,7 +305,7 @@
                     <ListBox.ItemTemplate>
                       <DataTemplate>
                         <StackPanel ToolTip="{Binding Preview}" Margin="3">
-                          <TextBlock Text="{Binding Name}" Foreground="{Binding NameBrush}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" />
                           <TextBlock Text="{Binding Detail}" Foreground="{DynamicResource TextMuted}" FontSize="11" />
                         </StackPanel>
                       </DataTemplate>
@@ -443,6 +447,8 @@
               <Button Content="Сохранить параметры навигации" Click="SaveNavigation_Click" HorizontalAlignment="Left" ToolTip="Сохранить количество последних компьютеров и параллельность запусков." />
               <Separator Margin="0,16" />
               <TextBlock Text="Ожидание и оформление" FontWeight="SemiBold" />
+              <TextBlock Text="Общий срок поиска WSUS, минут (1–120); затем запрос отмены" />
+              <TextBox x:Name="SearchMinutes37" Text="20" Width="100" HorizontalAlignment="Left" />
               <TextBlock Text="Предупреждать после минут без изменения прогресса (1–120)" />
               <TextBox x:Name="StallMinutesBox" Text="10" Width="100" HorizontalAlignment="Left" />
               <ComboBox x:Name="ThemeBox" Width="240" HorizontalAlignment="Left" SelectedIndex="0">

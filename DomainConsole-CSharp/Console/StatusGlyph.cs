@@ -7,7 +7,8 @@ public sealed class StatusGlyph:FrameworkElement {
  public string Kind{get=>(string)GetValue(KindProperty);set=>SetValue(KindProperty,value);}public Brush Tint{get=>(Brush)GetValue(TintProperty);set=>SetValue(TintProperty,value);}
  public StatusGlyph(){Width=20;Height=20;VerticalAlignment=VerticalAlignment.Center;SnapsToDevicePixels=true;}
  public static string Shape(string kind)=>kind switch {
- "Success" or "Stale"=>"M 2,9 L 7,14 L 16,3",
+ "Success" or "Needed"=>"M 2,9 L 7,14 L 16,3",
+ "Stale"=>"M 9,1 A 8,8 0 1 1 8.99,1 M 9,4 L 9,9 L 13,11",
  "Error" or "SyncError"=>"M 3,3 L 15,15 M 15,3 L 3,15",
  "Reboot"=>"M 15,6 A 6,6 0 1 0 15,12 M 11,6 L 15,6 L 15,2",
  "Warning"=>"M 9,2 L 17,16 L 1,16 Z M 9,7 L 9,11 M 9,14 L 9,14.2",

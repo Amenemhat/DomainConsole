@@ -1,6 +1,8 @@
 using System.Text.Json;
 namespace DomainConsole;
+public sealed class WsusRequiredUpdate37 {public string Id {get;set;}="";public int Revision {get;set;}public string Title {get;set;}="";public string KB {get;set;}="";public string State {get;set;}="";}
 public sealed class WsusReport {
+ public List<WsusRequiredUpdate37> RequiredUpdates {get;set;}=new();public bool RequiredListComplete {get;set;}public string RequiredListError {get;set;}="";
  public int? ClientSearchCount31 {get;set;}public string ClientSearchUtc31 {get;set;}="";
  public int? NeededCount {get;set;}public int ApprovedUnknownCount {get;set;}public int ApprovedDownloadedCount {get;set;}public int ApprovedFailedCount {get;set;}public bool RequiredComplete {get;set;}public string RequiredError {get;set;}="";
  public string TaskEndedUtc {get;set;}="";
@@ -15,8 +17,8 @@ public sealed class WsusReport {
   if(InstalledPendingRebootCount>0)return "Reboot";
   if(LastSyncResult!="Succeeded")return "Unknown";
   if(!DateTimeOffset.TryParse(LastReportedUtc,out var at)||at.Year<2000)return "Unknown";
-  if(DateTimeOffset.UtcNow-at>TimeSpan.FromDays(1))return "Stale";
-  return "Success";
+  if(DateTimeOffset.UtcNow-at>TimeSpan.FromHours(ReportPresentation35.FreshHours))return "Stale";
+  return NeededCount>0?"Needed":NeededCount==0&&RequiredComplete?"Success":"Unknown";
  }
  public static string SyncLabel(string value)=>value switch {"Succeeded"=>"успешно", "Failed" or "FailedWithErrors"=>"неудача", "Canceled" or "Cancelled"=>"отменено", "NotPerformed"=>"не выполнялось",_=>"неизвестно ("+value+")"};
  public string SyncExplanation=>LastSyncResult is "Failed" or "FailedWithErrors"?"Последний поиск клиента с WSUS завершился неудачей. Это сохранённый результат, не проверка текущей доступности. Код причины в LastSyncResult отсутствует. Выполните новый поиск; при повторении соберите клиентский журнал вокруг времени сбоя.":"";
@@ -29,6 +31,15 @@ public sealed class WsusReport {
   if(InstalledPendingRebootCount>0)lines.Add("Требуют перезагрузки по отчёту WSUS: "+InstalledPendingRebootCount);
   if(NeededCount.HasValue)lines.Add("Из них скачано: "+ApprovedDownloadedCount+"; с неудачей последней попытки: "+ApprovedFailedCount);
 
+  if(NeededCount>0){
+   lines.Add("## Необходимые обновления · "+NeededCount);
+   var updates=RequiredUpdates.GroupBy(u=>u.Id,StringComparer.OrdinalIgnoreCase).Select(g=>g.OrderByDescending(u=>u.Revision).First()).ToList();
+   int number=0;foreach(var update in updates){string title=update.Title.Length>0?update.Title:"Название не получено";string kb=update.KB.Length>0?"KB"+update.KB.Replace("KB", "",StringComparison.OrdinalIgnoreCase):"";if(kb.Length>0&&!title.Contains(kb,StringComparison.OrdinalIgnoreCase))title=kb+" — "+title;lines.Add((++number)+". "+title+" · "+(update.State=="Downloaded"?"скачано":update.State=="Failed"?"ошибка последней попытки":"не скачано"));}
+   if(updates.Count==0)lines.Add("Список обновлений не получен");
+   else if(!RequiredListComplete||updates.Count!=NeededCount)lines.Add("Получено названий: "+updates.Count+" из "+NeededCount+" · список неполный");
+   if(!RequiredComplete)lines.Add("Применимость части одобренных обновлений пока не определена");
+   if(RequiredListError.Length>0)lines.Add("Ограничение списка: "+MainWindow.ConnectionBrief31(RequiredListError));
+  }
   if(ApprovedUnknownCount>0)lines.Add("Одобрены, применимость не определена: "+ApprovedUnknownCount);
   if(RequiredError.Length>0)lines.Add("Подсчёт неполный: "+MainWindow.ConnectionBrief31(RequiredError));
   if(ClientSearchCount31.HasValue)lines.Add("Последний успешный поиск на клиенте: найдено "+ClientSearchCount31+" · "+Date(ClientSearchUtc31)+". Отдельный источник; одобрения WSUS не подсчитывает.");

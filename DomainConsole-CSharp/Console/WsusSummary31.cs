@@ -3,7 +3,7 @@ namespace DomainConsole;
 public sealed partial class RemoteService {
  public const string RequiredUpdatesScript31="""
 function Read-RequiredUpdates31($target){
- $result=@{NeededCount=$null;ApprovedUnknownCount=0;ApprovedDownloadedCount=0;ApprovedFailedCount=0;RequiredComplete=$false;RequiredError=''}
+ $result=@{NeededCount=$null;ApprovedUnknownCount=0;ApprovedDownloadedCount=0;ApprovedFailedCount=0;RequiredComplete=$false;RequiredError='';RequiredUpdates=@();RequiredListComplete=$false;RequiredListError=''}
  try {
   $scope=New-Object Microsoft.UpdateServices.Administration.UpdateScope
   $scope.ApprovedStates=[Microsoft.UpdateServices.Administration.ApprovedStates]::LatestRevisionApproved
@@ -15,6 +15,14 @@ function Read-RequiredUpdates31($target){
   $result.NeededCount=$needed.Count;$result.ApprovedDownloadedCount=@($needed|Where-Object {[string]$_.UpdateInstallationState -eq 'Downloaded'}).Count
   $result.ApprovedFailedCount=@($needed|Where-Object {[string]$_.UpdateInstallationState -eq 'Failed'}).Count
   $result.RequiredComplete=$result.ApprovedUnknownCount -eq 0
+  $names=@();$nameErrors=@()
+  foreach($info in @($needed|Select-Object -First 200)){
+   try{$update=$info.GetUpdate();$names+=@{Id=[string]$info.UpdateId;Revision=[int]$update.Id.RevisionNumber;Title=[string]$update.Title;KB=($update.KnowledgebaseArticles -join ', ');State=[string]$info.UpdateInstallationState}}
+   catch{$nameErrors+=$_.Exception.Message}
+  }
+  $result.RequiredUpdates=@($names);$result.RequiredListComplete=($names.Count -eq $needed.Count)
+  if($nameErrors.Count){$result.RequiredListError='Часть названий недоступна: '+$nameErrors[0]}
+  if($needed.Count -gt 200){$result.RequiredListError='Показаны первые 200 обновлений'}
  }catch{$result.RequiredError=$_.Exception.Message}
  return $result
 }
