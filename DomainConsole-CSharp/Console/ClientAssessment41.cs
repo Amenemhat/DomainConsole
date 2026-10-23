@@ -11,26 +11,26 @@ public sealed record ClientAssessment41(string Kind,string Title,string Details)
 public static class ClientReadiness41 {
  public static string IPv4(string value){if(!IPAddress.TryParse(value,out var ip))return "";if(ip.IsIPv4MappedToIPv6)ip=ip.MapToIPv4();return ip.AddressFamily==AddressFamily.InterNetwork?ip.ToString():"";}
  public static ClientAssessment41 Evaluate(WsusReport? report,bool saved,bool found,RebootView40 reboot,RemoteState? state,bool active,bool searched,int? remaining,string searchAt,string error,DateTimeOffset now,int hours,string boot=""){
-  string dates=report==null?"":"Отчёт WSUS: "+Display36.Date(report.LastReportedUtc,true)+" · "+ReportPresentation35.AgeAt41(report.LastReportedUtc,now);
+  string dates=report==null?"":"Отчёт WSUS: "+Display36.Date(report.LastReportedUtc)+" · "+ReportPresentation35.AgeAt41(report.LastReportedUtc,now);
   ClientAssessment41 Result(string k,string title,string detail)=>new(k,title,detail+(dates.Length>0?"\n"+dates:""));
   if(active){string concern=report?.FailedCount>0?"Ошибок по отчёту WSUS: "+report.FailedCount:report!=null&&ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"?"Отчёт WSUS устарел":"";if(reboot.Fresh&&reboot.Required==true)concern+=(concern.Length>0?"\n":"")+"Требуется перезагрузка";return Result("Working",state?.Stage.Length>0?state.Stage:"Выполняется задание",concern);}
   if(state?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired" or "SubmissionUnknown")return Result("Error","Ошибка · "+MainWindow.ConnectionBrief31(state.Error.Length>0?state.Error:ComputerRow.StatusText(state.Status)),"Проверьте причину в журнале задания"+(reboot.Fresh&&reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
   if(report?.FailedCount>0)return Result("Error","Ошибок по отчёту WSUS: "+report.FailedCount,"Откройте причины в отчёте WSUS"+(reboot.Fresh&&reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
-  if(report?.LastSyncResult is "Failed" or "FailedWithErrors")return Result("SyncError","Последний поиск WSUS завершился с ошибкой","Поиск: "+Display36.Date(report.LastSyncUtc,true)+" · выполните диагностику связи с WSUS");
+  if(report?.LastSyncResult is "Failed" or "FailedWithErrors")return Result("SyncError","Последний поиск WSUS завершился с ошибкой","Поиск: "+Display36.Date(report.LastSyncUtc)+" · выполните диагностику связи с WSUS");
   if(reboot.Fresh&&reboot.Required==true)return Result("Reboot","Требуется перезагрузка",reboot.Details+(report==null?"\nОтчёт WSUS не получен":ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"?"\nОтчёт WSUS устарел":""));
   if(report==null)return Result("Unknown","Отчёт WSUS не получен","Прочитайте данные сервера WSUS");
   if(!found)return Result("NoWsus","Клиент не найден в WSUS","Проверьте регистрацию клиента");
   if(ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success")return Result("Stale","Отчёт WSUS устарел или время некорректно","Проверьте дату отчёта и доставку отчётности");
   if(report.NeededCount>0)return Result("Needed","К установке: "+(report.RequiredComplete?"":"≥ ")+report.NeededCount,"Одобрены и применимы · установите в согласованное время");
-  if(report.LastSyncResult!="Succeeded")return Result("Warning","Проверка неполная · результат поиска WSUS неизвестен","Последнее соединение: "+Display36.Date(report.LastSyncUtc,true));
+  if(report.LastSyncResult!="Succeeded")return Result("Warning","Проверка неполная · результат поиска WSUS неизвестен","Последнее соединение: "+Display36.Date(report.LastSyncUtc));
   if(error.Length>0)return Result("Warning","Проверка неполная · данные WSUS не обновлены","Показан сохранённый результат; повторите чтение отчёта");
   if(saved)return Result("Stale","Сохранённый снимок · текущая готовность не проверена","Прочитайте отчёт WSUS и состояние клиента");
   if(report.NeededCount!=0||!report.RequiredComplete||report.RequiredError.Length>0||report.ApprovedUnknownCount>0)return Result("Warning","Проверка неполная · применимость не уточнена","Требуется полный подсчёт одобренных обновлений");
   if(!reboot.Fresh||reboot.Required!=false)return Result("Warning","Проверка неполная · флаги перезагрузки не подтверждены","К установке по отчёту: 0 · проверьте флаги на клиенте\n"+reboot.Details);
   if(DateTimeOffset.TryParse(boot,out var b)&&DateTimeOffset.TryParse(report.LastReportedUtc,out var r)&&r<b)return Result("Warning","Проверка неполная · отчёт получен до загрузки Windows","Нужен отчёт после последней загрузки");
-  if(searched&&remaining>0)return Result("Warning","Данные клиента и WSUS расходятся","Последний поиск клиента: осталось "+remaining+" · "+Display36.Date(searchAt,true)+". Выполните новый поиск и отчёт");
+  if(searched&&remaining>0)return Result("Warning","Данные клиента и WSUS расходятся","Последний поиск клиента: осталось "+remaining+" · "+Display36.Date(searchAt)+". Выполните новый поиск и отчёт");
   if(!searched||remaining!=0||!DateTimeOffset.TryParse(searchAt,out var at)||now-at>TimeSpan.FromHours(hours)||at>now.AddMinutes(1)||DateTimeOffset.TryParse(boot,out var started)&&at<started)return Result("Warning","Проверка неполная · нет актуального поиска клиента","К установке по отчёту: 0 · выполните проверку обновлений");
-  return Result("Success","Проверено · необходимых обновлений нет","Отчёт WSUS свежий · перезагрузка не требуется\nПоиск клиента: "+Display36.Date(searchAt,true)+" · флаги: "+Display36.Date(reboot.Stamp,true));
+  return Result("Success","Проверено · необходимых обновлений нет","Отчёт WSUS свежий · перезагрузка не требуется\nПоиск клиента: "+Display36.Date(searchAt)+" · флаги: "+Display36.Date(reboot.Stamp));
  }
 }
 public partial class MainWindow {
@@ -56,7 +56,7 @@ public partial class MainWindow {
  }
  string CurrentReportText41(ComputerRow row){if(reportCache.TryGetValue(row.Host,out var c)&&CacheMatches(c)&&c.Found){c.Report.ReceivedUtc41=c.ReceivedUtc;return liveReports.Contains(row.Host)?c.Report.Format(c.Server,c.Started):CachedReportText(c);}return serverReports.GetValueOrDefault(row.Host,"Отчёт выбранного компьютера можно прочитать кнопкой «Отчёт WSUS».");}
  string reportMinute41="";
- void RefreshReportAge41(){if(ComputerGrid.SelectedItem is not ComputerRow row||MainTabs.SelectedItem!=WsusTab)return;string minute=DateTimeOffset.UtcNow.ToString("yyyyMMddHHmm")+"|"+row.Host;if(reportMinute41==minute)return;reportMinute41=minute;WsusServerOutput.Text=CurrentReportText41(row);}
+ void RefreshReportAge41(){if(ComputerGrid.SelectedItem is not ComputerRow row||MainTabs.SelectedItem!=WsusTab)return;var stamp=reportCache.GetValueOrDefault(row.Host)?.Report.LastReportedUtc??"";string minute=DateTime.Now.ToString("yyyyMMdd")+"|"+row.Host+"|"+stamp+"|"+ReportPresentation35.Age(stamp)+"|"+ReportPresentation35.Tone(stamp,DateTimeOffset.UtcNow,ReportPresentation35.FreshHours);if(reportMinute41==minute)return;reportMinute41=minute;WsusServerOutput.Text=CurrentReportText41(row);}
  async void ProbeTools41_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{
   var row=Current();var json=await remote.ProbeInventory41(row.Target);
   var window=new Window{Owner=this,Title="Остатки Probe · "+row.Name,Width=760,Height=490,WindowStartupLocation=WindowStartupLocation.CenterOwner};var panel=new DockPanel{Margin=new(12)};window.Content=panel;var buttons=new StackPanel{Orientation=Orientation.Horizontal};DockPanel.SetDock(buttons,Dock.Bottom);panel.Children.Add(buttons);
