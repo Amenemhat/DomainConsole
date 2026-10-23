@@ -5,11 +5,11 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease25(){
-  var row=Computers.Last();var savedCache=reportCache.GetValueOrDefault(row.Host);var savedConnection=clientConnections.GetValueOrDefault(row.Host);bool wasLive=liveReports.Contains(row.Host);var originalSelected=Computers.Select(r=>r.Selected).ToList();var originalRecentAnchor=recentAnchor;var originalTreeAnchor=treeAnchor;RemoteJob? evidenceJob=null;
+  var row=Computers.Last();var savedCache=reportCache.GetValueOrDefault(row.Host);var savedConnection=clientConnections.GetValueOrDefault(row.Host);bool wasLive=liveReports.Contains(row.Host);var originalSelected=Computers.Select(r=>r.Selected).ToList();var originalRecentAnchor=recentAnchor;var originalTreeAnchor=treeAnchor;RemoteJob? evidenceJob=null;var savedPlan41=maintenancePlans.GetValueOrDefault(row.Host);var savedRecovery41=reportRecoveries.GetValueOrDefault(row.Host);var savedActivity41=backgroundUpdates.GetValueOrDefault(row.Host);var savedJobs41=History.ToList();
   try {
-   clientConnections.Remove(row.Host);overviewErrors.Remove(row.Host);
+   clientConnections.Remove(row.Host);overviewErrors.Remove(row.Host);maintenancePlans.Remove(row.Host);reportRecoveries.Remove(row.Host);backgroundUpdates.Remove(row.Host);foreach(var existing41 in History.Where(j=>j.Targets.Any(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase))).ToList())History.Remove(existing41);
    var report=new WsusReport{NeededCount=0,RequiredComplete=true,FullDomainName=row.Host,LastReportedUtc=DateTimeOffset.UtcNow.ToString("o"),LastSyncResult="Succeeded"};reportCache[row.Host]=new(){Report=report,Server=OverviewServer,ReceivedUtc=DateTimeOffset.UtcNow.ToString("o")};liveReports.Remove(row.Host);
-   if(OverviewStatus(row).Kind!="Stale")throw new Exception("Saved report must be marked stale until refreshed");liveReports.Add(row.Host);
+   if(OverviewStatus(row).Kind!="Stale")throw new Exception("Saved report must be marked stale until refreshed: "+OverviewStatus(row).Kind+" · "+OverviewStatus(row).Hint);liveReports.Add(row.Host);
    if(OverviewStatus(row).Kind!="Warning")throw new Exception("Report alone must not prove full readiness without client checks");
    report.LastSyncResult="Unknown";if(report.Severity("")!="Unknown")throw new Exception("Unknown sync result falsely marked failed");report.LastSyncResult="Succeeded";
    report.LastReportedUtc=DateTimeOffset.UtcNow.AddDays(-2).ToString("o");if(OverviewStatus(row).Kind!="Stale")throw new Exception("Old success incorrectly requests intervention");
@@ -33,7 +33,7 @@ public partial class MainWindow {
    statusFilter.Add("NoWsus");statusFilter.Add("Stale");RefreshStatusCounts();var union=ScopedStatusRows();if(!union.Contains(row)||union.DistinctBy(r=>r.Host,StringComparer.OrdinalIgnoreCase).Count()!=union.Count)throw new Exception("Status union loses clients or duplicates them");
    if(!StatusFilterButton.Content.ToString()!.Contains("ПК:"))throw new Exception("Filter count missing");statusFilter.Clear();RefreshStatusCounts();
    File.WriteAllText(Path.Combine(Path.GetTempPath(),"wsus-overview.ps1"),RemoteService.OverviewScript(new(){Host="wsus.invalid",Port=8530},new(){"alpha.invalid","missing.invalid","alpha.other.invalid","broken.invalid","duplicate.invalid"}),new UTF8Encoding(true));
-  }finally{if(evidenceJob!=null)History.Remove(evidenceJob);if(savedCache==null)reportCache.Remove(row.Host);else reportCache[row.Host]=savedCache;if(savedConnection==null)clientConnections.Remove(row.Host);else clientConnections[row.Host]=savedConnection;if(wasLive)liveReports.Add(row.Host);else liveReports.Remove(row.Host);overviewErrors.Remove(row.Host);statusFilter.Clear();for(int i=0;i<Computers.Count;i++)Computers[i].Selected=originalSelected[i];recentAnchor=originalRecentAnchor;treeAnchor=originalTreeAnchor;RefreshOutcomes();UpdateSelectionCount();}
+  }finally{History.Clear();foreach(var savedJob41 in savedJobs41)History.Add(savedJob41);if(savedPlan41!=null)maintenancePlans[row.Host]=savedPlan41;if(savedRecovery41!=null)reportRecoveries[row.Host]=savedRecovery41;if(savedActivity41!=null)backgroundUpdates[row.Host]=savedActivity41;if(evidenceJob!=null)History.Remove(evidenceJob);if(savedCache==null)reportCache.Remove(row.Host);else reportCache[row.Host]=savedCache;if(savedConnection==null)clientConnections.Remove(row.Host);else clientConnections[row.Host]=savedConnection;if(wasLive)liveReports.Add(row.Host);else liveReports.Remove(row.Host);overviewErrors.Remove(row.Host);statusFilter.Clear();for(int i=0;i<Computers.Count;i++)Computers[i].Selected=originalSelected[i];recentAnchor=originalRecentAnchor;treeAnchor=originalTreeAnchor;RefreshOutcomes();UpdateSelectionCount();}
  }
 }
 
