@@ -75,12 +75,12 @@ public partial class MainWindow {
  }
  // The command result and the server's evidence answer different questions.
  (string Text,string Tone) WsusConcern40(ComputerRow row){
-  if(!reportCache.TryGetValue(row.Host,out var cache)||!CacheMatches(cache)||!cache.Found)return ("","");
+  var execution=ExecutionRow(row,true).Target.State;
+  if(!reportCache.TryGetValue(row.Host,out var cache)||!CacheMatches(cache)||!cache.Found)return execution?.ReportRequested==true?("Получение нового отчёта WSUS не подтверждено · данные сервера не получены","Warning"):("","");
   var report=cache.Report;string at=" · отчёт "+Display36.Date(report.LastReportedUtc,true);
   if(report.FailedCount>0)return ("Ошибок по отчёту WSUS: "+report.FailedCount+at,"Error");
   if(report.LastSyncResult is "Failed" or "FailedWithErrors")return ("Последний поиск WSUS завершился с ошибкой · "+Display36.Date(report.LastSyncUtc,true),"Error");
   if(ReportPresentation35.Tone(report.LastReportedUtc,DateTimeOffset.UtcNow,ReportPresentation35.FreshHours)!="Success")return ("Отчёт WSUS устарел · получение нового не подтверждено"+at,"Warning");
-  var execution=ExecutionRow(row,true).Target.State;
   if(execution?.ReportRequested==true&&!report.Fresh(execution.Started))return ("Получение нового отчёта WSUS не подтверждено"+at,"Warning");
   if(overviewErrors.ContainsKey(row.Host))return ("Не удалось обновить данные WSUS · показан сохранённый отчёт"+at,"Warning");
   if(report.NeededCount>0)return ("К установке: "+(report.RequiredComplete?"":"≥ ")+report.NeededCount+" — по отчёту WSUS",report.RequiredComplete?"Info":"Warning");
