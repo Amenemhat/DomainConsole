@@ -1,7 +1,7 @@
 {
   "publish": true,
-  "version": "0.40",
-  "run_id": 39932005696,
-  "commit": "5f3d564f95ba5ded7c93f41b1c6e3d6425fa3aa0",
-  "sha256": "43a3c65fc92011352a08e049911edada00ea7e62437d05985666bd1a7b39a0de"
+  "version": "0.41",
+  "run_id": 40017974471,
+  "commit": "16b98d2648da672316a400c109f25ddf6ee42f0b",
+  "sha256": "78ab5c829adf7d966b069c87b5f468ec7792bbb3e2407c928e830b8e66f8af02"
 }
