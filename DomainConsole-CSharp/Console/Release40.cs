@@ -90,8 +90,8 @@ public partial class MainWindow {
   RefreshRebootCard40(row);if(MainTabs.SelectedItem!=WsusTab)return;
   var (text,tone)=WsusConcern40(row);if(text.Length==0)return;
   if(active){OperationDetail38.Text+=(OperationDetail38.Text.Length>0?"\n":"")+text;OperationDetail38.Visibility=Visibility.Visible;return;}
-  var previous=CurrentStage.Text;CurrentStage.Text=text;CurrentStage.Foreground=Theme.Tone(tone);OperationGlyph38.Kind=tone=="Error"?"Error":tone=="Info"?"Info":"Warning";OperationGlyph38.Tint=Theme.Tone(tone);
-  OperationDetail38.Text="Результат команды: "+previous+"\nДалее: "+(tone=="Error"?"открыть сохранённую причину в отчёте WSUS; после исправления проверить новый отчёт.":tone=="Info"?"установить одобренные применимые обновления в согласованное время.":"проверить доставку отчёта клиента и время получения на сервере.");OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=Visibility.Visible;
+  var previous=CurrentStage.Text;var previousDetail40=OperationDetail38.Text;CurrentStage.Text=text;CurrentStage.Foreground=Theme.Tone(tone);OperationGlyph38.Kind=tone=="Error"?"Error":tone=="Info"?"Info":"Warning";OperationGlyph38.Tint=Theme.Tone(tone);
+  OperationDetail38.Text="Результат команды: "+previous+"\nДалее: "+(tone=="Error"?"открыть сохранённую причину в отчёте WSUS; после исправления проверить новый отчёт.":tone=="Info"?"установить одобренные применимые обновления в согласованное время.":"проверить доставку отчёта клиента и время получения на сервере.");if(previousDetail40.Length>0)OperationDetail38.Text+="\n"+previousDetail40;OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=Visibility.Visible;
  }
  string WsusSummary40(ComputerRow row,string text){
   var concern=WsusConcern40(row);if(concern.Text.Length==0)return text;
