@@ -30,7 +30,7 @@ public partial class MainWindow {
 
  }
  void RefreshServiceBadge34(ComputerRow row){
-  string text="",details="";if(maintenancePlans.TryGetValue(row.Host,out var p)&&!p.Done){details=p.Phase+(p.Detail.Length>0?" · "+p.Detail:"");text=p.Phase.Contains("перезагруз",StringComparison.OrdinalIgnoreCase)?"Ждёт перезагрузки":p.Detail.Contains("Связь",StringComparison.OrdinalIgnoreCase)||p.Phase.Contains("связ",StringComparison.OrdinalIgnoreCase)?"Ждёт связи":p.Phase.Contains("готовност",StringComparison.OrdinalIgnoreCase)?"Ждёт готовности":"Обслуживание";}
+  string text="",details="";if(maintenancePlans.TryGetValue(row.Host,out var p)&&!p.Done){details=p.Phase+(p.Detail.Length>0?" · "+p.Detail:"");text=MaintenanceBadge40(p.Phase,p.Detail);}
   else if(p!=null&&p.Phase=="Требуется действие"){text="Требуется действие";details=p.Detail;}
   else {details=PostRebootText(row.Host).Split('\n')[0];if(details.Length>0)text="Ожидает возврата";}
   HeaderNext31.Text=text;HeaderNext31.ToolTip=details;HeaderNext31.Visibility=text.Length>0?Visibility.Visible:Visibility.Collapsed;

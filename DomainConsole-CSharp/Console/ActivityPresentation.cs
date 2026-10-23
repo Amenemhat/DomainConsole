@@ -12,7 +12,7 @@ public partial class MainWindow {
   RefreshControl37(selected);RefreshUser37(selected);CurrentComputer.Text=row.Name;CurrentDetails.Text=row.OS;CurrentDetails.ToolTip=row.OS+"\n"+row.Host+ConnectionStore.Description(row.Host);
 
   CurrentStage.Text=StageText34(row,state,active,fresh);if(readFailures34.TryGetValue(row.Host+"|результат задания",out var readFailure))CurrentStage.Text+="\nСтатус не обновлён · повтор после "+readFailure.Next.ToLocalTime().ToString("HH:mm:ss");
-  if(!active&&rebootSnapshots.TryGetValue(row.Host,out var observed37)&&observed37.ExternalJobs37.Any(x=>x.Ended.Length==0)){var external=observed37.ExternalJobs37.LastOrDefault(x=>x.Ended.Length==0);CurrentStage.Text="Наблюдение · "+ControlText37(row.Host)+(external!=null?"\n"+external.Stage+(external.Progress.HasValue?" · "+external.Progress+"%":"")+"\nСнимок: "+Display36.Date(external.Updated,true):"\n"+observed37.Control37?.Operation);}
+  if(!active&&rebootSnapshots.TryGetValue(row.Host,out var observed37)&&DateTimeOffset.TryParse(observed37.CollectedUtc,out var observedAt40)&&DateTimeOffset.UtcNow-observedAt40<RebootFresh40&&observed37.ControlRead37&&observed37.ExternalJobs37.Any(x=>x.Ended.Length==0)){var external=observed37.ExternalJobs37.LastOrDefault(x=>x.Ended.Length==0);CurrentStage.Text="Наблюдение · "+ControlText37(row.Host)+(external!=null?"\n"+external.Stage+(external.Progress.HasValue?" · "+external.Progress+"%":"")+"\nСнимок: "+Display36.Date(external.Updated,true):"\n"+observed37.Control37?.Operation);}
   bool reboot35=!active&&RebootReason(selected).Length>0;
   if(reboot35)CurrentStage.Text="Нужна перезагрузка"+(row.Target.Status is "Failed" or "CompletedWithErrors"?" · неудачная попытка сохранена в журнале":"");
   bool failed=row.Target.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired";CurrentStage.Foreground=reboot35?Theme.Tone("Warning"):failed?Theme.Tone("Error"):active?Theme.Tone("Info"):Theme.Brush("TextPrimary");CurrentStage.ToolTip=state?.Stage.Length>0?state.Stage+"\n"+CurrentStage.Text:CurrentStage.Text;
@@ -31,7 +31,7 @@ public partial class MainWindow {
   }
   var pieces38=CurrentStage.Text.Split(new[]{'\n'},2);CurrentStage.Text=pieces38[0];OperationDetail38.Text=pieces38.Length>1?pieces38[1]:"";OperationDetail38.Visibility=OperationDetail38.Text.Length>0?Visibility.Visible:Visibility.Collapsed;
   ApplyTerminalTone39(row,active,reboot35,failed);
-  OperationGlyph38.Kind=active?"Working":failed?"Error":reboot35?"Reboot":row.Target.Status=="RebootObserved"?"Warning":row.Target.Status is "Completed" or "VerifiedAfterReboot"?"Success":"Info";OperationGlyph38.Tint=row.Target.Status=="RebootObserved"?Theme.Tone("Warning"):CurrentStage.Foreground;
+  OperationGlyph38.Kind=active?"Working":failed?"Error":reboot35?"Reboot":row.Target.Status=="RebootObserved"?"Warning":row.Target.Status is "Completed" or "VerifiedAfterReboot"?"Success":"Info";OperationGlyph38.Tint=row.Target.Status=="RebootObserved"?Theme.Tone("Warning"):CurrentStage.Foreground;ApplyStatus40(selected,active);
   RefreshMode39();
   RefreshHeader31(selected);
  }

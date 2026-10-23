@@ -14,6 +14,7 @@ public static class Theme {
   Application.Current.Resources["ProgressFill38"]=new SolidColorBrush((Color)ColorConverter.ConvertFromString(Dark?"#6BF098":"#01B254"));
   Application.Current.Resources["ComputerName36"]=Brush("TextPrimary");Application.Current.Resources["DisabledName36"]=new SolidColorBrush((Color)ColorConverter.ConvertFromString(Dark?"#98A1AB":"#66717D"));
   Application.Current.Resources["AttentionIcon39"]=new SolidColorBrush((Color)ColorConverter.ConvertFromString(Dark?"#FFD84A":"#F3C500"));
+  Application.Current.Resources["RebootSurface40"]=new SolidColorBrush((Color)ColorConverter.ConvertFromString(Dark?"#45382E":"#FFF0E5"));
   // Native popup/edit controls must use the palette too.
   foreach(var key in new[]{SystemColors.WindowBrushKey,SystemColors.ControlBrushKey})Application.Current.Resources[key]=Brush("PanelSurface");
   foreach(var key in new[]{SystemColors.WindowTextBrushKey,SystemColors.ControlTextBrushKey})Application.Current.Resources[key]=Brush("TextPrimary");
