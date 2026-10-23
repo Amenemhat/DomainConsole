@@ -80,7 +80,7 @@ public partial class MainWindow {
  void ApplyStatus40(ComputerRow row,bool active){
   RefreshRebootCard40(row);if(MainTabs.SelectedItem!=WsusTab)return;
   var status=AssessClient41(row);
-  if(active){if(status.Kind is "Error" or "Warning" or "Reboot")OperationDetail38.Text+="\n"+status.Title;return;}
+  if(active){if(status.Details.Length>0){OperationDetail38.Text+=(OperationDetail38.Text.Length>0?"\n":"")+status.Details;OperationDetail38.Visibility=Visibility.Visible;}return;}
   CurrentStage.Text=status.Title;CurrentStage.Foreground=Theme.Tone(status.Tone);OperationGlyph38.Kind=status.Glyph;OperationGlyph38.Tint=Theme.Tone(status.Tone);OperationDetail38.Text=status.Details;OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=string.IsNullOrEmpty(status.Details)?Visibility.Collapsed:Visibility.Visible;
 
  }
