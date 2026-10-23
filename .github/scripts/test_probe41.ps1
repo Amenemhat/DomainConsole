@@ -42,7 +42,7 @@ function New-Fixture([string]$Body,[bool]$Old,[bool]$Foreign=$false){
  $principal=New-ScheduledTaskPrincipal -UserId SYSTEM -LogonType ServiceAccount -RunLevel Highest
  Register-ScheduledTask -TaskName $name -Action $action -Settings $settings -Principal $principal|Out-Null
  [xml]$xml=Export-ScheduledTask $name
- $xml.Task.RegistrationInfo.Date=[DateTime]::UtcNow.AddMinutes($(if($Old){-20}else{0})).ToString('o')
+ $date=$xml.Task.RegistrationInfo.SelectSingleNode('*[local-name()="Date"]');if(!$date){$date=$xml.CreateElement('Date',$xml.DocumentElement.NamespaceURI);$null=$xml.Task.RegistrationInfo.AppendChild($date)};$date.InnerText=[DateTime]::UtcNow.AddMinutes($(if($Old){-20}else{0})).ToString('o')
  Unregister-ScheduledTask $name -Confirm:$false
  Register-ScheduledTask -TaskName $name -Xml $xml.OuterXml|Out-Null
  return $name

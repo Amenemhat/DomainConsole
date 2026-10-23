@@ -88,7 +88,7 @@ public partial class MainWindow {
   if(historyViewId.Length>0)return text;
   var status=AssessClient41(row);var sections=LogViewer.Sections(ResultPresentation36.Format(text));int main=sections.FindIndex(x=>x.Title=="Главное");
   string body=status.Title+"\n"+status.Details;
-  if(main>=0)sections[main]=("Главное",body);else sections.Insert(0,("Главное",body));
+  if(main>=0){var operation=sections[main].Body;sections[main]=("Главное",body);if(operation.Length>0&&operation!=body)sections.Add(("Результат отдельной операции",operation));}else sections.Insert(0,("Главное",body));
   return string.Join("\n\n",sections.Select(s=>"## "+s.Title+"\n"+s.Body));
 
  }

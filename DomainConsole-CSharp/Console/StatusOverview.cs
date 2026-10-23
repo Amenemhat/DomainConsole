@@ -22,7 +22,7 @@ public partial class MainWindow {
  static readonly (string Key,string Label)[] StatusCategories={
   ("Working","Выполняется операция"),("AdDisabled","Отключены в AD"),("Error","Ошибка установки / задания"),("SyncError","Последний поиск: ошибка"),("Warning","Требует внимания"),("Reboot","Нужна перезагрузка"),("Success","Свежий отчёт · обновления не требуются"),("Needed","Есть необходимые обновления"),("Stale","Отчёт устарел"),("NoWsus","Нет в WSUS"),("Unreachable","Нет связи WinRM"),("Access","Нет доступа"),("Connected","Связь подтверждена"),("Unknown","Нет данных")};
  string OverviewServer=>WsusHost.Text.Trim()+":"+WsusPort.Text.Trim();
- bool CacheMatches(CachedWsusReport cached)=>cached.Server.Equals(OverviewServer,StringComparison.OrdinalIgnoreCase);
+ bool CacheMatches(CachedWsusReport cached)=>cached.Server.Equals(OverviewServer,StringComparison.OrdinalIgnoreCase)&&(cached.Host41.Length==0||cached.Endpoint41==Identity40.EndpointKey(new TargetRecord{Host=cached.Host41}));
  OverviewResult OverviewStatus(ComputerRow row){var status=AssessClient41(row);return new(status.Kind,status.Title+"\n"+status.Details);}
 
  static bool AccessError(string error)=>error.Contains("0x80070005",StringComparison.OrdinalIgnoreCase)||error.Contains("Access is denied",StringComparison.OrdinalIgnoreCase)||error.Contains("отказано в доступе",StringComparison.OrdinalIgnoreCase)||error.Contains("доступ запрещ",StringComparison.OrdinalIgnoreCase)||error.Contains("от имени администратора",StringComparison.OrdinalIgnoreCase);

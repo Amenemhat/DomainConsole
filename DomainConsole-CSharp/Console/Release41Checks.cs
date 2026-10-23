@@ -5,7 +5,15 @@ using System.Windows;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
+ static async Task VerifyTransportBudget41(){
+  var target=new TargetRecord{Host="probe-admission41.fixture.invalid"};string code="# DC-ENDPOINT41:"+TransportBudget41.Key(target)+"\nfixture";var release=new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);bool paused=TransportBudget41.Paused;TransportBudget41.Paused=false;TransportBudget41.Reset(target);int calls=0;
+  try{var first=TransportBudget41.Run(code,CancellationToken.None,t=>{Interlocked.Increment(ref calls);return release.Task;});bool rejected=false;try{await TransportBudget41.Run(code,CancellationToken.None,t=>{Interlocked.Increment(ref calls);return Task.FromResult("extra");});}catch(IOException){rejected=true;}if(!rejected||calls!=1)throw new Exception("Admission spawned duplicate endpoint work");release.SetResult("done");await first;
+   bool failed=false;try{await TransportBudget41.Run(code,CancellationToken.None,t=>Task.FromException<string>(new TimeoutException("fixture")));}catch(TimeoutException){failed=true;}if(!failed)throw new Exception("Timeout not propagated");rejected=false;try{await TransportBudget41.Run(code,CancellationToken.None,t=>{Interlocked.Increment(ref calls);return Task.FromResult("extra");});}catch(IOException){rejected=true;}if(!rejected||calls!=1)throw new Exception("Unknown outcome automatically retried");TransportBudget41.Reset(target);if(await TransportBudget41.Run(code,CancellationToken.None,t=>Task.FromResult("resumed"))!="resumed")throw new Exception("Explicit resume failed");
+  }finally{release.TrySetResult("done");TransportBudget41.Reset(target);TransportBudget41.Paused=paused;}
+ }
+
  void VerifyRelease41(){
+  AwaitUi39(VerifyTransportBudget41());
   foreach(var item in new[]{("192.0.2.4","192.0.2.4"),("::ffff:192.0.2.4","192.0.2.4"),("::ffff:c000:204","192.0.2.4"),("2001:db8::4",""),("invalid","")})if(ClientReadiness41.IPv4(item.Item1)!=item.Item2)throw new Exception("IPv4 display normalization failed");
   var now=DateTimeOffset.UtcNow;var report=new WsusReport{NeededCount=0,RequiredComplete=true,LastReportedUtc=now.AddMinutes(-1).ToString("o"),LastSyncUtc=now.AddMinutes(-2).ToString("o"),LastSyncResult="Succeeded",TaskEndedUtc=now.ToString("o")};var proof=new RebootView40(false,true,now.ToString("o"),Array.Empty<string>(),"");
   ClientAssessment41 Evaluate(WsusReport? r=null,RebootView40? p=null,bool active=false,bool searched=true,bool saved=false)=>ClientReadiness41.Evaluate(r??report,saved,true,p??proof,new(){Status="Completed",Ended=now.ToString("o"),ReportRequested=true},active,searched,0,now.AddMinutes(-2).ToString("o"),"",now,24);
