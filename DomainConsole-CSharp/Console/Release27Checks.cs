@@ -9,7 +9,7 @@ public partial class MainWindow {
   try{
    reportCache[row.Host]=new(){Server=OverviewServer,Report=new(){FailedCount=2,InstalledPendingRebootCount=0,LastSyncResult="Succeeded",LastReportedUtc=DateTime.UtcNow.AddMinutes(-5).ToString("o")}};
    rebootSnapshots[row.Host]=new(){Required=true,CollectedUtc=DateTime.UtcNow.ToString("o"),Sources=new(){"fixture"}};
-   if(OverviewStatus(row).Kind!="Reboot"||ReportDisplayStatus(row.Host)!="Reboot"||reportCache[row.Host].Report.FailedCount!=2)throw new Exception("Confirmed reboot loses priority or rewrites server errors");
+   if(OverviewStatus(row).Kind!="Error"||RebootReason(row).Length==0||reportCache[row.Host].Report.FailedCount!=2)throw new Exception("Server errors hidden or confirmed reboot evidence lost");
    rebootSnapshots[row.Host].Required=false;if(OverviewStatus(row).Kind!="Error")throw new Exception("Unresolved errors hidden after reboot flags clear");
    rebootSnapshots[row.Host].Required=null;if(OverviewStatus(row).Kind!="Error")throw new Exception("Unknown reboot flag masks an error");
   }finally{if(old==null)reportCache.Remove(row.Host);else reportCache[row.Host]=old;if(previous==null)rebootSnapshots.Remove(row.Host);else rebootSnapshots[row.Host]=previous;}

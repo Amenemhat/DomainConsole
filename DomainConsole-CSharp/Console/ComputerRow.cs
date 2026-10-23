@@ -28,6 +28,9 @@ public sealed class ComputerRow : INotifyPropertyChanged {
  public System.Windows.Media.Brush NeededBrush37=>Target.AdDisabled?Theme.Brush("DisabledName36"):Theme.Brush("InfoText");
  public void SetNeeded37(int? count,bool complete,string hint){if(Needed37==count&&NeededComplete37==complete&&NeededHint37==hint)return;Needed37=count;NeededComplete37=complete;NeededHint37=hint;foreach(var n in new[]{"NeededText37","NeededHint37","NeededVisibility37","NeededBrush37"})PropertyChanged?.Invoke(this,new(n));}
  public void SetOutcome(string value,string hint){if(Outcome==value&&outcomeHint==hint)return;Outcome=value;OutcomeHint=hint;Refresh();}
+ public string Address40 {get;private set;}="";public string AddressHint40 {get;private set;}="";
+ public System.Windows.Visibility AddressVisibility40=>Address40.Length>0?System.Windows.Visibility.Visible:System.Windows.Visibility.Collapsed;
+ public void SetAddress40(string value,string hint){if(Address40==value&&AddressHint40==hint)return;Address40=value;AddressHint40=hint;foreach(var n in new[]{nameof(Address40),nameof(AddressHint40),nameof(AddressVisibility40)})PropertyChanged?.Invoke(this,new(n));}
  public event PropertyChangedEventHandler? PropertyChanged;
 }
 
