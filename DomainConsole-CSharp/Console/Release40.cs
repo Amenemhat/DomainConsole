@@ -7,7 +7,7 @@ public sealed class HasText40:System.Windows.Data.IValueConverter {public object
 public static class Identity40 {
  public static string ShortName(string host){host=host.Trim().TrimEnd('.');return IPAddress.TryParse(host,out _)?host:host.Split('.')[0];}
  public static string EndpointKey(TargetRecord target){return target.Host.ToUpperInvariant()+"|"+ConnectionStore.Address(target)+"|"+ConnectionStore.Identity(target);}
- public static string ConfiguredAddress(TargetRecord target){string value=ConnectionStore.Address(target);return IPAddress.TryParse(value,out var ip)?ip.ToString():IPAddress.TryParse(target.Host,out ip)?ip.ToString():"";}
+ public static string ConfiguredAddress(TargetRecord target){string value=ConnectionStore.Address(target);return ClientReadiness41.IPv4(value.Length>0?value:target.Host);}
 }
 public sealed record RebootView40(bool? Required,bool Fresh,string Stamp,string[] Sources,string Limitation){
  public string Title=>!Fresh?"Перезагрузка · данные устарели":Required==true?"Требуется перезагрузка":Required==false?"Перезагрузка не требуется":"Перезагрузка не уточнена";
@@ -23,7 +23,7 @@ public partial class MainWindow {
  void RefreshAddress40(ComputerRow row){
   string address=Identity40.ConfiguredAddress(row.Target),hint=address.Length>0?"Заданный адрес подключения; доступность проверяется отдельно":"";
   if(rebootSnapshots.TryGetValue(row.Host,out var snapshot)&&snapshot.Address40.Length>0&&snapshot.AddressKey40==Identity40.EndpointKey(row.Target)){
-   address=snapshot.Address40;hint="Адрес TCP-подключения WinRM\nПолучен: "+Display36.Date(snapshot.AddressReceived40,true)+"\nСохранённый результат проверки; при смене VPN-адреса обновится после следующего подключения.";
+   address=ClientReadiness41.IPv4(snapshot.Address40);hint="Адрес TCP-подключения WinRM\nПолучен: "+Display36.Date(snapshot.AddressReceived40,true)+"\nСохранённый результат проверки; при смене VPN-адреса обновится после следующего подключения.";
   }
   row.SetAddress40(address,hint);
  }
@@ -57,9 +57,8 @@ public partial class MainWindow {
   return view;
  }
  void RefreshRebootCard40(ComputerRow row){
-  var proof=RebootViewFor40(row);bool busy=rebootChecks40.Contains(row.Host);RebootCard40.Visibility=proof.Stamp.Length>0?Visibility.Visible:Visibility.Collapsed;
-  RebootTitle40.Text=proof.Title;RebootTitle40.Foreground=Theme.Tone(proof.Tone);RebootGlyph40.Kind=proof.Fresh&&proof.Required==false?"Success":"Reboot";RebootGlyph40.Tint=Theme.Tone(proof.Tone);RebootDetails40.Text=proof.Details;
-  RebootCheck40.Visibility=!proof.Fresh||proof.Required==null||proof.Limitation.Length>0?Visibility.Visible:Visibility.Collapsed;RebootCheck40.IsEnabled=!busy;RebootCheck40.Content=busy?"Проверяем…":"Проверить сейчас";
+  RebootCard40.Visibility=Visibility.Collapsed;
+
  }
  async Task CheckRebootNow40(ComputerRow row){
   if(!rebootChecks40.Add(row.Host))return;
@@ -75,30 +74,22 @@ public partial class MainWindow {
  }
  // The command result and the server's evidence answer different questions.
  (string Text,string Tone) WsusConcern40(ComputerRow row){
-  var execution=ExecutionRow(row,true).Target.State;
-  if(!reportCache.TryGetValue(row.Host,out var cache)||!CacheMatches(cache)||!cache.Found)return execution?.ReportRequested==true?("Получение нового отчёта WSUS не подтверждено · данные сервера не получены","Warning"):("","");
-  var report=cache.Report;string at=" · отчёт "+Display36.Date(report.LastReportedUtc,true);
-  if(report.FailedCount>0)return ("Ошибок по отчёту WSUS: "+report.FailedCount+at,"Error");
-  if(report.LastSyncResult is "Failed" or "FailedWithErrors")return ("Последний поиск WSUS завершился с ошибкой · "+Display36.Date(report.LastSyncUtc,true),"Error");
-  if(ReportPresentation35.Tone(report.LastReportedUtc,DateTimeOffset.UtcNow,ReportPresentation35.FreshHours)!="Success")return ("Отчёт WSUS устарел · получение нового не подтверждено"+at,"Warning");
-  if(execution?.ReportRequested==true&&!report.Fresh(execution.Started))return ("Получение нового отчёта WSUS не подтверждено"+at,"Warning");
-  if(overviewErrors.ContainsKey(row.Host))return ("Не удалось обновить данные WSUS · показан сохранённый отчёт"+at,"Warning");
-  if(report.NeededCount>0)return ("К установке: "+(report.RequiredComplete?"":"≥ ")+report.NeededCount+" — по отчёту WSUS",report.RequiredComplete?"Info":"Warning");
-  return ("","");
+  var status=AssessClient41(row);return (status.Title,status.Tone);
+
  }
  void ApplyStatus40(ComputerRow row,bool active){
   RefreshRebootCard40(row);if(MainTabs.SelectedItem!=WsusTab)return;
-  var (text,tone)=WsusConcern40(row);if(text.Length==0)return;
-  if(active){if(tone=="Info")return;OperationDetail38.Text+=(OperationDetail38.Text.Length>0?"\n":"")+text;OperationDetail38.Visibility=Visibility.Visible;return;}
-  var previous=CurrentStage.Text;var previousDetail40=OperationDetail38.Text;CurrentStage.Text=text;CurrentStage.Foreground=Theme.Tone(tone);OperationGlyph38.Kind=tone=="Error"?"Error":tone=="Info"?"Info":"Warning";OperationGlyph38.Tint=Theme.Tone(tone);
-  OperationDetail38.Text="Результат команды: "+previous+"\nДалее: "+(tone=="Error"?"открыть сохранённую причину в отчёте WSUS; после исправления проверить новый отчёт.":tone=="Info"?"установить одобренные применимые обновления в согласованное время.":"проверить доставку отчёта клиента и время получения на сервере.");if(previousDetail40.Length>0)OperationDetail38.Text+="\n"+previousDetail40;OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=Visibility.Visible;
+  var status=AssessClient41(row);
+  if(active){if(status.Kind is "Error" or "Warning" or "Reboot")OperationDetail38.Text+="\n"+status.Title;return;}
+  CurrentStage.Text=status.Title;CurrentStage.Foreground=Theme.Tone(status.Tone);OperationGlyph38.Kind=status.Glyph;OperationGlyph38.Tint=Theme.Tone(status.Tone);OperationDetail38.Text=status.Details;OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=string.IsNullOrEmpty(status.Details)?Visibility.Collapsed:Visibility.Visible;
+
  }
  string WsusSummary40(ComputerRow row,string text){
-  var concern=WsusConcern40(row);if(concern.Text.Length==0)return text;
-  var sections=LogViewer.Sections(ResultPresentation36.Format(text));var main=sections.FindIndex(x=>x.Title=="Главное");
-  string next="Далее: "+(concern.Tone=="Error"?"проверить причину в отчёте WSUS и подтвердить новый отчёт после исправления.":concern.Tone=="Info"?"установить одобренные применимые обновления в согласованное время.":"проверить доставку отчёта; повторное чтение старого отчёта не подтверждает его обновление.");
-  if(main>=0){var body=sections[main].Body;sections[main]=("Главное",concern.Text+"\n"+next+"\nРезультат отдельной операции:\n"+body);}
-  else sections.Insert(0,("Главное",concern.Text+"\n"+next));
+  if(historyViewId.Length>0)return text;
+  var status=AssessClient41(row);var sections=LogViewer.Sections(ResultPresentation36.Format(text));int main=sections.FindIndex(x=>x.Title=="Главное");
+  string body=status.Title+"\n"+status.Details;
+  if(main>=0)sections[main]=("Главное",body);else sections.Insert(0,("Главное",body));
   return string.Join("\n\n",sections.Select(s=>"## "+s.Title+"\n"+s.Body));
+
  }
 }

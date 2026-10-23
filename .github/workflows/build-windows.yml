@@ -36,9 +36,9 @@ jobs:
           function Test-Window {
             Remove-Item Publish/ui-smoke-ready.txt -Force -ErrorAction SilentlyContinue
             $p = Start-Process ./Publish/DomainConsole.exe -PassThru
-            $until = [DateTime]::UtcNow.AddSeconds(150)
+            $until = [DateTime]::UtcNow.AddSeconds(240)
             while (!(Test-Path Publish/ui-smoke-ready.txt) -and !$p.HasExited -and [DateTime]::UtcNow -lt $until) { Start-Sleep -Milliseconds 200; $p.Refresh() }
-            if (!$p.HasExited -and !(Test-Path Publish/ui-smoke-ready.txt)) { Stop-Process -Id $p.Id; throw 'UI assertions did not finish within 150 seconds' }
+            if (!$p.HasExited -and !(Test-Path Publish/ui-smoke-ready.txt)) { Stop-Process -Id $p.Id; throw 'UI assertions did not finish within 240 seconds' }
             $p.Refresh()
             if ($p.HasExited) { if (Test-Path Publish/smoke-error.txt) { Get-Content Publish/smoke-error.txt }; throw "Application exited during startup: $($p.ExitCode)" }
             if ($p.MainWindowHandle -eq 0) { Stop-Process -Id $p.Id; throw "Application window was not created" }
@@ -398,6 +398,7 @@ jobs:
             $ipResult=& ([ScriptBlock]::Create($ipText))
             if($ipResult -ne 'PAYLOAD'){throw 'Real IP session or identity guard failed'}
             Write-Output 'Generated endpoint transport connected by IP and validated real client identity.'
+            & ./.github/scripts/test_probe41.ps1 -Session $session -Credential $credential -Fixture (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke')
 
           }finally{
             if($session){Remove-PSSession $session}

@@ -22,7 +22,8 @@ public static partial class PowerShellBridge {
  try{var xml=XDocument.Parse(value[start..(end+7)]);var errors=xml.Descendants().Where(x=>(string?)x.Attribute("S")=="Error").Select(x=>x.Name.LocalName=="Obj"?x.Descendants().FirstOrDefault(y=>y.Name.LocalName=="ToString")?.Value??x.Value:x.Value);var message=string.Join("\n",new[]{prefix}.Concat(errors).Append(value[(end+7)..].Trim()).Where(x=>x.Length>0).Distinct());return Regex.Replace(message,@"_x([0-9a-fA-F]{4})_",m=>((char)Convert.ToInt32(m.Groups[1].Value,16)).ToString());}catch{return prefix.Length>0?prefix:"Служебный ответ PowerShell не удалось разобрать; полный контекст сохранён в техническом журнале.";}
  }
  public static string Literal(string value)=>"'"+value.Replace("'","''")+"'";
- public static async Task<string> Execute(string code,CancellationToken token=default){
+ public static async Task<string> Execute(string code,CancellationToken token=default){using var bounded=CancellationTokenSource.CreateLinkedTokenSource(token);bounded.CancelAfter(TimeSpan.FromSeconds(120));return await TransportBudget41.Run(code,bounded.Token,t=>ExecuteCore41(code,t));}
+ static async Task<string> ExecuteCore41(string code,CancellationToken token){
   var exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),"WindowsPowerShell","v1.0","powershell.exe");
   var wrapped="$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false);try{\n"+code+"\n}catch{[Console]::Error.WriteLine($_.Exception.Message);exit 1}";
   var start=new ProcessStartInfo(exe){UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,StandardInputEncoding=new UTF8Encoding(false),RedirectStandardOutput=true,RedirectStandardError=true,StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};
@@ -30,7 +31,7 @@ public static partial class PowerShellBridge {
   start.ArgumentList.Add("-NoLogo");start.ArgumentList.Add("-NoProfile");start.ArgumentList.Add("-NonInteractive");start.ArgumentList.Add("-EncodedCommand");start.ArgumentList.Add(Convert.ToBase64String(Encoding.Unicode.GetBytes("[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false);$OutputEncoding=[Console]::OutputEncoding;$dcStream=New-Object IO.MemoryStream;[Console]::OpenStandardInput().CopyTo($dcStream);$dcInput=(New-Object Text.UTF8Encoding($false,$true)).GetString($dcStream.ToArray()).TrimStart([char]0xFEFF);& ([ScriptBlock]::Create($dcInput))")));
   using var p=Process.Start(start)??throw new Exception("Не удалось запустить встроенный PowerShell.");
   var stdout=p.StandardOutput.ReadToEndAsync(token);var stderr=p.StandardError.ReadToEndAsync(token);
-  try{await p.StandardInput.WriteAsync(wrapped.AsMemory(),token);p.StandardInput.Close();await p.WaitForExitAsync(token);}catch(OperationCanceledException){try{p.Kill(true);}catch{}throw new TimeoutException("Превышено время операции подключения или чтения. Удалённые задания обслуживания не остановлены.");}var output=await stdout;var error=await stderr;
+  try{await p.StandardInput.WriteAsync(wrapped.AsMemory(),token);p.StandardInput.Close();await p.WaitForExitAsync(token);}catch(OperationCanceledException){try{p.Kill(true);await p.WaitForExitAsync();}catch{}try{await Task.WhenAll(stdout,stderr);}catch{}throw new TimeoutException("Превышено время операции подключения или чтения. Удалённые задания обслуживания не остановлены.");}var output=await stdout;var error=await stderr;
   if(p.ExitCode!=0){SaveTransportError34(error,output);var plain=PlainError(error);throw new Exception(string.IsNullOrWhiteSpace(plain)?"PowerShell завершился с кодом "+p.ExitCode+"; сообщение об ошибке не получено.":plain);}return output.Trim();
  }
 }

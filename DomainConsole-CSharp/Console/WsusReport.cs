@@ -5,6 +5,7 @@ public sealed class WsusReport {
  public List<WsusRequiredUpdate37> RequiredUpdates {get;set;}=new();public bool RequiredListComplete {get;set;}public string RequiredListError {get;set;}="";
  public int? ClientSearchCount31 {get;set;}public string ClientSearchUtc31 {get;set;}="";
  public int? NeededCount {get;set;}public int ApprovedUnknownCount {get;set;}public int ApprovedDownloadedCount {get;set;}public int ApprovedFailedCount {get;set;}public bool RequiredComplete {get;set;}public string RequiredError {get;set;}="";
+ public string ReceivedUtc41 {get;set;}="";
  public string TaskEndedUtc {get;set;}="";
  public List<WsusFailedUpdate> FailedUpdates {get;set;}=new();public string FailureSummary {get;set;}="";public string FailureContext {get;set;}="";public string FailureDetailsError {get;set;}="";public string FullDomainName {get;set;}="";public string LastReportedUtc {get;set;}="";public string LastSyncUtc {get;set;}="";public string LastSyncResult {get;set;}="";
  public int UnknownCount {get;set;}public int NotApplicableCount {get;set;}public int NotInstalledCount {get;set;}public int DownloadedCount {get;set;}public int InstalledCount {get;set;}public int InstalledPendingRebootCount {get;set;}public int FailedCount {get;set;}
@@ -16,7 +17,7 @@ public sealed class WsusReport {
   if(InstalledPendingRebootCount>0)return "Reboot";
   if(LastSyncResult!="Succeeded")return "Unknown";
   if(!DateTimeOffset.TryParse(LastReportedUtc,out var at)||at.Year<2000)return "Unknown";
-  if(DateTimeOffset.UtcNow-at>TimeSpan.FromHours(ReportPresentation35.FreshHours))return "Stale";
+  if(ReportPresentation35.Tone(LastReportedUtc,DateTimeOffset.UtcNow,ReportPresentation35.FreshHours)!="Success")return "Stale";
   return NeededCount>0?"Needed":NeededCount==0&&RequiredComplete?"Success":"Unknown";
  }
  public static string SyncLabel(string value)=>value switch {"Succeeded"=>"успешно", "Failed" or "FailedWithErrors"=>"неудача", "Canceled" or "Cancelled"=>"отменено", "NotPerformed"=>"не выполнялось",_=>"неизвестно ("+value+")"};
@@ -42,7 +43,7 @@ public sealed class WsusReport {
   if(ApprovedUnknownCount>0)lines.Add("Одобрены, применимость не определена: "+ApprovedUnknownCount);
   if(RequiredError.Length>0)lines.Add("Подсчёт неполный: "+MainWindow.ConnectionBrief31(RequiredError));
   if(ClientSearchCount31.HasValue)lines.Add("Последний успешный поиск на клиенте: найдено "+ClientSearchCount31+" · "+Date(ClientSearchUtc31)+". Отдельный источник; одобрения WSUS не подсчитывает.");
-  lines.Add("## Технические сведения · источник и актуальность");lines.Add("Сервер WSUS: "+server);lines.Add("Клиент: "+FullDomainName);lines.Add("Получено: "+DateTimeOffset.Now.ToString("dd.MM.yyyy HH:mm:ss"));lines.Add(Freshness(started));
+  lines.Add("## Технические сведения · источник и актуальность");lines.Add("Сервер WSUS: "+server);lines.Add("Клиент: "+FullDomainName);lines.Add("Получено: "+(ReceivedUtc41.Length>0?Date(ReceivedUtc41):"время чтения не сохранено"));lines.Add(Freshness(started));
   if(SyncExplanation.Length>0)lines.Add(SyncExplanation);
   if(FailedCount>0){lines.Add("## Сохранённые неудачи WSUS");foreach(var f in FailedUpdates){var code=f.Events.Where(e=>e.IsError&&e.ErrorCode.HasValue&&e.ErrorCode!=0).OrderByDescending(e=>e.Date).FirstOrDefault();lines.Add("KB "+f.KB+(code==null?" · код причины не получен":" · "+DomainConsole.Shared.ExecutionDiagnosis.Code(unchecked((int)code.ErrorCode!.Value))+" · "+DomainConsole.Shared.ExecutionDiagnosis.Explain(unchecked((int)code.ErrorCode.Value))));}if(FailedUpdates.Count==0)lines.Add("В сводке: "+FailedCount+". Подробности не получены.");}
   lines.Add("## Техническая статистика · все обновления");lines.Add("Установлено: "+InstalledCount+"; скачано: "+DownloadedCount+"; не установлено: "+NotInstalledCount);lines.Add("Ошибок: "+FailedCount+"; нужна перезагрузка: "+InstalledPendingRebootCount+"; неизвестно: "+UnknownCount);lines.Add("Неприменимо: "+NotApplicableCount);if(FailureDetailsError.Length>0)lines.Add(FailureDetailsError);if(FailureSummary.Length>0&&!FailureSummary.Contains("см. в разделе"))lines.Add(FailureSummary);

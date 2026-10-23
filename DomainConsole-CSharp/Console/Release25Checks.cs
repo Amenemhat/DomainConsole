@@ -10,11 +10,11 @@ public partial class MainWindow {
    clientConnections.Remove(row.Host);overviewErrors.Remove(row.Host);
    var report=new WsusReport{NeededCount=0,RequiredComplete=true,FullDomainName=row.Host,LastReportedUtc=DateTimeOffset.UtcNow.ToString("o"),LastSyncResult="Succeeded"};reportCache[row.Host]=new(){Report=report,Server=OverviewServer,ReceivedUtc=DateTimeOffset.UtcNow.ToString("o")};liveReports.Remove(row.Host);
    if(OverviewStatus(row).Kind!="Stale")throw new Exception("Saved report must be marked stale until refreshed");liveReports.Add(row.Host);
-   if(OverviewStatus(row).Kind!="Success")throw new Exception("Fresh success is not green");
+   if(OverviewStatus(row).Kind!="Warning")throw new Exception("Report alone must not prove full readiness without client checks");
    report.LastSyncResult="Unknown";if(report.Severity("")!="Unknown")throw new Exception("Unknown sync result falsely marked failed");report.LastSyncResult="Succeeded";
    report.LastReportedUtc=DateTimeOffset.UtcNow.AddDays(-2).ToString("o");if(OverviewStatus(row).Kind!="Stale")throw new Exception("Old success incorrectly requests intervention");
-   report.FailedCount=1;liveReports.Remove(row.Host);if(OverviewStatus(row).Kind!="Error")throw new Exception("Old known failure hidden by freshness");report.FailedCount=0;report.InstalledPendingRebootCount=1;if(OverviewStatus(row).Kind!="Warning"||RebootViewFor40(row).Fresh)throw new Exception("Old server-only reboot request treated as current confirmation");report.InstalledPendingRebootCount=0;
-   overviewErrors[row.Host]="Server timeout";if(OverviewStatus(row).Kind!="Stale"||!OverviewStatus(row).Hint.Contains("Server timeout"))throw new Exception("Failed WSUS read replaced saved health");overviewErrors.Remove(row.Host);
+   report.FailedCount=1;liveReports.Remove(row.Host);if(OverviewStatus(row).Kind!="Error")throw new Exception("Old known failure hidden by freshness");report.FailedCount=0;report.InstalledPendingRebootCount=1;if(OverviewStatus(row).Kind is not ("Warning" or "Stale")||RebootViewFor40(row).Fresh)throw new Exception("Old server-only reboot request treated as current confirmation");report.InstalledPendingRebootCount=0;
+   overviewErrors[row.Host]="Server timeout";if(OverviewStatus(row).Kind!="Stale")throw new Exception("Failed WSUS read replaced saved health");overviewErrors.Remove(row.Host);
    reportCache[row.Host].Found=false;if(OverviewStatus(row).Kind!="NoWsus")throw new Exception("Missing WSUS identity not distinguished");
    clientConnections[row.Host]=new(){Error="Access is denied",LastAttempt=DateTimeOffset.UtcNow};if(LinkKind(row.Host)!="Access"||!StatusTags(row).Contains("NoWsus"))throw new Exception("Access denied confused with offline or server absence");
    clientConnections[row.Host].Error="WinRM timeout";clientConnections[row.Host].Lost38=true;if(LinkKind(row.Host)!="Unreachable")throw new Exception("Unreachable has no dedicated state");clientConnections.Remove(row.Host);

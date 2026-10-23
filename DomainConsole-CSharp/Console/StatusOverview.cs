@@ -20,33 +20,11 @@ public partial class MainWindow {
  CancellationTokenSource? overviewCancel;bool overviewRunning,overviewPaused;DateTimeOffset nextOverview=DateTimeOffset.UtcNow.AddSeconds(3);
  string treeAnchor="",recentAnchor="";string statusScope=Store.Read("status-scope.json","");
  static readonly (string Key,string Label)[] StatusCategories={
-  ("AdDisabled","Отключены в AD"),("Error","Ошибка установки / задания"),("SyncError","Последний поиск: ошибка"),("Warning","Требует внимания"),("Reboot","Нужна перезагрузка"),("Success","Свежий отчёт · обновления не требуются"),("Needed","Есть необходимые обновления"),("Stale","Отчёт устарел"),("NoWsus","Нет в WSUS"),("Unreachable","Нет связи WinRM"),("Access","Нет доступа"),("Connected","Связь подтверждена"),("Unknown","Нет данных")};
+  ("Working","Выполняется операция"),("AdDisabled","Отключены в AD"),("Error","Ошибка установки / задания"),("SyncError","Последний поиск: ошибка"),("Warning","Требует внимания"),("Reboot","Нужна перезагрузка"),("Success","Свежий отчёт · обновления не требуются"),("Needed","Есть необходимые обновления"),("Stale","Отчёт устарел"),("NoWsus","Нет в WSUS"),("Unreachable","Нет связи WinRM"),("Access","Нет доступа"),("Connected","Связь подтверждена"),("Unknown","Нет данных")};
  string OverviewServer=>WsusHost.Text.Trim()+":"+WsusPort.Text.Trim();
  bool CacheMatches(CachedWsusReport cached)=>cached.Server.Equals(OverviewServer,StringComparison.OrdinalIgnoreCase);
- OverviewResult OverviewStatus(ComputerRow row){
-  if(row.Target.AdDisabled)return new("AdDisabled","Учётная запись компьютера отключена в AD. При массовом запуске пропускается; ручное действие доступно. Сведения WSUS сохранены.");
-  reportCache.TryGetValue(row.Host,out var cached);if(cached!=null&&!CacheMatches(cached))cached=null;
-  var kind=cached==null?"Unknown":!cached.Found?"NoWsus":cached.Report.Severity("");
-  if(kind=="Reboot"&&RebootReason(row).Length==0&&cached!=null){var copy=Store.Clone(cached.Report);copy.InstalledPendingRebootCount=0;kind=copy.Severity("");if(RebootViewFor40(row).Limitation.StartsWith("Требование сохранено"))kind="Warning";}
-  if((kind is "Success" or "Needed")&&(ReportPresentation35.Tone(cached!.Report.LastReportedUtc,DateTimeOffset.UtcNow,ReportPresentation35.FreshHours)!="Success"||!liveReports.Contains(row.Host)||!DateTimeOffset.TryParse(cached!.ReceivedUtc,out var received)||DateTimeOffset.UtcNow-received>TimeSpan.FromHours(overviewSettings.Hours)))kind="Stale";
-  var label=StatusCategories.FirstOrDefault(x=>x.Key==kind).Label??"Нет данных";
-  string hint="WSUS: "+label;
-  if(cached!=null){hint+="\nДанные сервера получены: "+LocalDateConverter.Format(cached.ReceivedUtc);if(cached.Found)hint+="\nПоследний отчёт клиента: "+LocalDateConverter.Format(cached.Report.LastReportedUtc);if(cached.Report.SyncExplanation.Length>0)hint+="\n"+cached.Report.SyncExplanation+"\nПоиск выполнен: "+LocalDateConverter.Format(cached.Report.LastSyncUtc);if(cached.Report.FailedCount>0)hint+="\nОшибок установки по данным сервера: "+cached.Report.FailedCount;}
-  var wsus=HostJobs39(row.Host).FirstOrDefault(x=>IsWsusJob(x.Job)).Target;
-  if(wsus?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired" or "SubmissionUnknown"){
-   var stamp=wsus.State?.Ended??wsus.State?.Updated??"";
-   hint+="\nПоследнее задание WSUS: "+ComputerRow.StatusText(wsus.Status)+" · "+LocalDateConverter.Format(stamp);
-   if(cached==null||(DateTimeOffset.TryParse(stamp,out var ended)&&DateTimeOffset.TryParse(cached.Report.LastReportedUtc,out var reported)&&ended>reported))kind=wsus.Status is "InterventionRequired" or "SubmissionUnknown"?"Warning":"Error";
-  }
-  var rebootView40=RebootViewFor40(row);if(!rebootView40.Fresh&&rebootView40.Required==true&&kind is not ("Error" or "SyncError"))kind="Warning";
-  var rebootReason=RebootReason(row);if(rebootReason.Length>0){hint+="\n"+rebootReason;if(kind is not ("Error" or "SyncError"))kind="Reboot";}
-  if(rebootSnapshots.TryGetValue(row.Host,out var checkedReboot)&&checkedReboot.Required==false)hint+="\nПосле возврата клиента повторно проверено: перезагрузка не требуется · "+LocalDateConverter.Format(checkedReboot.CollectedUtc);
-  if(rebootSnapshots.TryGetValue(row.Host,out var incomplete)&&incomplete.Required==null)hint+="\nТребование перезагрузки не уточнено; подробности в журнале.";
-  if(HeaderRebootJob(row)!=null){hint+="\nПерезагрузка назначена из шапки; доступна отмена.";kind="Reboot";}
-  if(clientConnections.TryGetValue(row.Host,out var connection)&&connection.Error.Length>0){var access=AccessError(connection.Error);hint+="\n"+(access?"Нет доступа WinRM":"Нет связи WinRM (это не доказательство выключения ПК)")+" · "+connection.LastAttempt.ToLocalTime().ToString("dd.MM HH:mm:ss")+"\n"+ShortConnectionError(connection.Error);}
-  if(overviewErrors.TryGetValue(row.Host,out var error))hint+="\nПоследнее чтение WSUS не удалось: "+ShortConnectionError(error)+"\nПредыдущий результат сохранён.";
-  return new(kind,(StatusCategories.FirstOrDefault(x=>x.Key==kind).Label??"Нет данных")+"\n"+hint);
- }
+ OverviewResult OverviewStatus(ComputerRow row){var status=AssessClient41(row);return new(status.Kind,status.Title+"\n"+status.Details);}
+
  static bool AccessError(string error)=>error.Contains("0x80070005",StringComparison.OrdinalIgnoreCase)||error.Contains("Access is denied",StringComparison.OrdinalIgnoreCase)||error.Contains("отказано в доступе",StringComparison.OrdinalIgnoreCase)||error.Contains("доступ запрещ",StringComparison.OrdinalIgnoreCase)||error.Contains("от имени администратора",StringComparison.OrdinalIgnoreCase);
  IEnumerable<string> StatusTags(ComputerRow row){if(row.Target.AdDisabled)yield return "AdDisabled";var primary=OverviewStatus(row).Kind;yield return primary;if(reportCache.TryGetValue(row.Host,out var cache)&&CacheMatches(cache)){if(!cache.Found&&primary!="NoWsus")yield return "NoWsus";if(cache.Found&&cache.Report.NeededCount>0&&primary!="Needed")yield return "Needed";}if((HeaderRebootJob(row)!=null||RebootReason(row).Length>0)&&primary!="Reboot")yield return "Reboot";var link=LinkKind(row.Host);if(link is "Connected" or "Unreachable" or "Access"&&link!=primary)yield return link;}
  bool MatchesSearch(ComputerRow row)=>(row.Name+" "+row.Host+" "+row.OS+ConnectionStore.Description(row.Host)).Contains(SearchBox.Text,StringComparison.OrdinalIgnoreCase);
@@ -71,7 +49,7 @@ public partial class MainWindow {
  }
  void SetupOverview(){overviewSettings.Hours=Math.Clamp(overviewSettings.Hours,1,168);OverviewAutomatic.IsChecked=overviewSettings.Automatic;OverviewHours.Text=overviewSettings.Hours.ToString();RequestOverviewSoon();}
  void RequestOverviewSoon(){nextOverview=DateTimeOffset.UtcNow.AddSeconds(3);}
- void OverviewTick(){RefreshOutcomes();if(!closing&&overviewSettings.Automatic&&!overviewPaused&&!overviewRunning&&DateTimeOffset.UtcNow>=nextOverview&&!string.IsNullOrWhiteSpace(WsusHost.Text))_=RunOverview();}
+ void OverviewTick(){RefreshOutcomes();if(!TransportBudget41.Paused&&!closing&&overviewSettings.Automatic&&!overviewPaused&&!overviewRunning&&DateTimeOffset.UtcNow>=nextOverview&&!string.IsNullOrWhiteSpace(WsusHost.Text))_=RunOverview();}
  async void OverviewRefresh_Click(object sender,RoutedEventArgs e){if(overviewRunning){overviewPaused=true;overviewCancel?.Cancel();OverviewProgress.Text="Остановка обзора…";return;}overviewPaused=false;await RunOverview();}
  void SaveOverview_Click(object sender,RoutedEventArgs e)=>Guard(()=>{if(!int.TryParse(OverviewHours.Text,out var hours)||hours<1||hours>168)throw new Exception("Интервал: 1–168 часов.");overviewSettings=new(){Automatic=OverviewAutomatic.IsChecked==true,Hours=hours,ShowDisabled=overviewSettings.ShowDisabled};Store.Write("overview-settings.json",overviewSettings);if(!overviewSettings.Automatic){overviewCancel?.Cancel();}else{overviewPaused=false;RequestOverviewSoon();}Notify("Настройки обзора WSUS сохранены.");});
  public static List<ComputerRow> OrderForOverview(IEnumerable<ComputerRow> computers,IEnumerable<string> work,IEnumerable<string> recent){var priority=work.Concat(recent).Distinct(StringComparer.OrdinalIgnoreCase).ToList();return computers.OrderBy(r=>{int i=priority.FindIndex(h=>h.Equals(r.Host,StringComparison.OrdinalIgnoreCase));return i<0?int.MaxValue:i;}).DistinctBy(r=>r.Host,StringComparer.OrdinalIgnoreCase).ToList();}

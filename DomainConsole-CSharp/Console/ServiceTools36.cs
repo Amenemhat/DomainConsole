@@ -5,6 +5,7 @@ public partial class MainWindow {
  public static readonly (string Group,string Label,string Hint,string Key)[] ServiceActions36={
   ("Диагностика","Клиент WSUS","Политики, службы, прокси и события Windows Update","client"),
   ("Диагностика","Windows Update · очереди","BITS, политики и очереди Windows Update","wizard"),
+  ("Диагностика","Опрос и остатки Probe…","Просмотр завершённых Probe, адресная очистка и возобновление опроса клиента","probe41"),
   ("Диагностика","Память и подкачка","RAM, подкачка, лимит памяти и события нехватки ресурсов","memory"),
   ("Диагностика","Загрузка и установка","Процессы и события параллельно с активной операцией","waiting"),
   ("Диагностика","Доставка отчёта","Запрос отправки отчёта и диагностика клиента/IIS","delivery"),
@@ -18,6 +19,6 @@ public partial class MainWindow {
   return window;
  }
  async void ServiceTools36_Click(object sender,RoutedEventArgs e){string action="";Window? window=null;window=ServiceWindow36(key=>{action=key;window!.DialogResult=true;});if(window.ShowDialog()!=true)return;
-  switch(action){case "client":WsusDiagnostics_Click(sender,e);break;case "memory":MemoryDiagnostics_Click(sender,e);break;case "waiting":WaitingDiagnostics_Click(sender,e);break;case "delivery":DeliveryDiagnostics_Click(sender,e);break;case "report":RecoverReport_Click(sender,e);break;case "defender":Defender_Click(sender,e);break;case "services":RestartServices_Click(sender,e);break;case "force":ForceServices_Click(sender,e);break;case "cache":CacheCleanup_Click(sender,e);break;case "wizard":await Guard(async()=>{MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Name="Диагностика Windows Update · очереди",Kind="PowerShell",Code=UpdateWizardScript}},"WSUS");});break;}
+  switch(action){case "probe41":ProbeTools41_Click(sender,e);break;case "client":WsusDiagnostics_Click(sender,e);break;case "memory":MemoryDiagnostics_Click(sender,e);break;case "waiting":WaitingDiagnostics_Click(sender,e);break;case "delivery":DeliveryDiagnostics_Click(sender,e);break;case "report":RecoverReport_Click(sender,e);break;case "defender":Defender_Click(sender,e);break;case "services":RestartServices_Click(sender,e);break;case "force":ForceServices_Click(sender,e);break;case "cache":CacheCleanup_Click(sender,e);break;case "wizard":await Guard(async()=>{MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Name="Диагностика Windows Update · очереди",Kind="PowerShell",Code=UpdateWizardScript}},"WSUS");});break;}
  }
 }
