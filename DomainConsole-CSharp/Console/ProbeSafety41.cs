@@ -26,7 +26,7 @@ try{
  $out=Join-Path $path 'result.json';$latch=Join-Path $path 'blocked.flag'
  $cached=$null
  if(Test-Path -LiteralPath $out){try{$cached=Get-Content -LiteralPath $out -Raw -Encoding UTF8|ConvertFrom-Json -ErrorAction Stop}catch{}}
- if($cached){$at=[DateTime]::Parse($cached.CollectedUtc).ToUniversalTime();$age=([DateTime]::UtcNow-$at).TotalSeconds;if($age -ge 0 -and $age -lt 45){$cached.@@KIND@@|ConvertTo-Json -Depth 12 -Compress;return}}
+ if($cached){$parsed=[DateTime]::MinValue;if([DateTime]::TryParse([string]$cached.CollectedUtc,[ref]$parsed) -and $cached.Reboot.CollectedUtc -and $cached.Activity.CollectedUtc){$age=([DateTime]::UtcNow-$parsed.ToUniversalTime()).TotalSeconds;if($age -ge 0 -and $age -lt 45){$cached.@@KIND@@|ConvertTo-Json -Depth 12 -Compress;return}}}
  if(Test-Path -LiteralPath $latch){throw 'DC_PROBE_PAUSED: предыдущая проверка не завершила уборку; автоматические проверки приостановлены. Откройте диагностику опроса'}
  if($task -and $task.State -in @('Running','Queued')){throw 'DC_PROBE_PAUSED: сборщик уже работает; новый запуск не выполнен'}
  $script=Join-Path $path 'collect.ps1';$exe=Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe'
@@ -70,7 +70,7 @@ foreach($t in @($tasks|Select-Object -First 500)){
 }
 @{Total=$tasks.Count;Inspected=$rows.Count;Rows=@($rows);Note='Maintenance, задания обслуживания, процессы WinRM и каталоги не изменяются. Неизвестные задачи пропущены.'}|ConvertTo-Json -Depth 5 -Compress
 """;
- public async Task ResumeProbe41(TargetRecord target){TransportBudget41.Reset(target);using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(20));await PowerShellBridge.Execute("# DC-MANUAL41\n"+Invoke(target,"$t=Get-ScheduledTask -TaskName 'DomainConsoleCSharp-Snapshot41' -TaskPath '\\' -ErrorAction SilentlyContinue;if($t -and $t.State -in @('Running','Queued')){throw 'Сборщик ещё выполняется; повтор не разрешён'};Remove-Item -LiteralPath (Join-Path $env:ProgramData 'DomainConsoleCSharp\\Snapshot41\\blocked.flag') -Force -ErrorAction SilentlyContinue;'Разрешена следующая ограниченная проверка'"),timeout.Token);}
+ public async Task ResumeProbe41(TargetRecord target){TransportBudget41.Reset(target);using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(20));await PowerShellBridge.Execute("# DC-MANUAL41\n"+Invoke(target,"$t=Get-ScheduledTask -TaskName 'DomainConsoleCSharp-Snapshot41' -TaskPath '\\' -ErrorAction SilentlyContinue;if($t -and $t.State -in @('Running','Queued')){throw 'Сборщик ещё выполняется; повтор не разрешён'};$flag=Join-Path $env:ProgramData 'DomainConsoleCSharp\\Snapshot41\\blocked.flag';if(Test-Path -LiteralPath $flag){Remove-Item -LiteralPath $flag -Force -ErrorAction Stop};'Разрешена следующая ограниченная проверка'"),timeout.Token);}
 }
 
 // Admission happens before PowerShell/New-PSSession. Shared file locks also
