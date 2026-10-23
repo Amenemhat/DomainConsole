@@ -52,6 +52,10 @@ public partial class MainWindow {
   if(!active&&backgroundUpdates.TryGetValue(row.Host,out var live)&&FreshActivity(live)&&(live.InstallerBusy||live.Jobs.Count>0))return new("Working","На клиенте выполняется операция",assessment.Title+"\n"+assessment.Details);
   if(!active&&cache?.Found==false&&assessment.Kind!="Error")assessment=new("NoWsus","Клиент не найден в WSUS","Проверьте регистрацию клиента");
   if(HeaderRebootJob(row)!=null&&assessment.Kind is not ("Error" or "SyncError"))assessment=new("Reboot","Перезагрузка назначена",assessment.Title+"\n"+assessment.Details);
+  if(!active&&assessment.Kind is not ("Error" or "SyncError" or "Reboot")){
+   if(maintenancePlans.TryGetValue(row.Host,out var plan41)&&!plan41.Done&&plan41.Phase!="Требуется действие")assessment=new("Working","Обслуживание · "+plan41.Phase,assessment.Title+"\n"+assessment.Details);
+   else if(reportRecoveries.TryGetValue(row.Host,out var recovery41)&&!recovery41.Done&&recovery41.Phase!="Требуется действие")assessment=new("Working","Восстановление отчётности · "+recovery41.Phase,assessment.Title+"\n"+assessment.Details);
+  }
   return row.Target.AdDisabled?new("AdDisabled","Учётная запись компьютера отключена в AD",assessment.Title+"\n"+assessment.Details):assessment;
  }
  string CurrentReportText41(ComputerRow row){if(reportCache.TryGetValue(row.Host,out var c)&&CacheMatches(c)&&c.Found){c.Report.ReceivedUtc41=c.ReceivedUtc;return liveReports.Contains(row.Host)?c.Report.Format(c.Server,c.Started):CachedReportText(c);}return serverReports.GetValueOrDefault(row.Host,"Отчёт выбранного компьютера можно прочитать кнопкой «Отчёт WSUS».");}
