@@ -27,7 +27,7 @@ public partial class MainWindow {
   if(row.Target.AdDisabled)return new("AdDisabled","Учётная запись компьютера отключена в AD. При массовом запуске пропускается; ручное действие доступно. Сведения WSUS сохранены.");
   reportCache.TryGetValue(row.Host,out var cached);if(cached!=null&&!CacheMatches(cached))cached=null;
   var kind=cached==null?"Unknown":!cached.Found?"NoWsus":cached.Report.Severity("");
-  if(kind=="Reboot"&&RebootReason(row).Length==0&&cached!=null){var copy=Store.Clone(cached.Report);copy.InstalledPendingRebootCount=0;kind=copy.Severity("");}
+  if(kind=="Reboot"&&RebootReason(row).Length==0&&cached!=null){var copy=Store.Clone(cached.Report);copy.InstalledPendingRebootCount=0;kind=copy.Severity("");if(RebootViewFor40(row).Limitation.StartsWith("Требование сохранено"))kind="Warning";}
   if((kind is "Success" or "Needed")&&(ReportPresentation35.Tone(cached!.Report.LastReportedUtc,DateTimeOffset.UtcNow,ReportPresentation35.FreshHours)!="Success"||!liveReports.Contains(row.Host)||!DateTimeOffset.TryParse(cached!.ReceivedUtc,out var received)||DateTimeOffset.UtcNow-received>TimeSpan.FromHours(overviewSettings.Hours)))kind="Stale";
   var label=StatusCategories.FirstOrDefault(x=>x.Key==kind).Label??"Нет данных";
   string hint="WSUS: "+label;
@@ -38,7 +38,8 @@ public partial class MainWindow {
    hint+="\nПоследнее задание WSUS: "+ComputerRow.StatusText(wsus.Status)+" · "+LocalDateConverter.Format(stamp);
    if(cached==null||(DateTimeOffset.TryParse(stamp,out var ended)&&DateTimeOffset.TryParse(cached.Report.LastReportedUtc,out var reported)&&ended>reported))kind=wsus.Status is "InterventionRequired" or "SubmissionUnknown"?"Warning":"Error";
   }
-  var rebootReason=RebootReason(row);if(rebootReason.Length>0){hint+="\n"+rebootReason;kind="Reboot";}
+  var rebootView40=RebootViewFor40(row);if(!rebootView40.Fresh&&rebootView40.Required==true&&kind is not ("Error" or "SyncError"))kind="Warning";
+  var rebootReason=RebootReason(row);if(rebootReason.Length>0){hint+="\n"+rebootReason;if(kind is not ("Error" or "SyncError"))kind="Reboot";}
   if(rebootSnapshots.TryGetValue(row.Host,out var checkedReboot)&&checkedReboot.Required==false)hint+="\nПосле возврата клиента повторно проверено: перезагрузка не требуется · "+LocalDateConverter.Format(checkedReboot.CollectedUtc);
   if(rebootSnapshots.TryGetValue(row.Host,out var incomplete)&&incomplete.Required==null)hint+="\nТребование перезагрузки не уточнено; подробности в журнале.";
   if(HeaderRebootJob(row)!=null){hint+="\nПерезагрузка назначена из шапки; доступна отмена.";kind="Reboot";}

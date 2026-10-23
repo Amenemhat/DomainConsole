@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using DomainConsole.Shared;
 namespace DomainConsole;
+public sealed class HasText40:System.Windows.Data.IValueConverter {public object Convert(object value,Type type,object parameter,System.Globalization.CultureInfo culture)=>!string.IsNullOrWhiteSpace(value?.ToString());public object ConvertBack(object value,Type type,object parameter,System.Globalization.CultureInfo culture)=>throw new NotSupportedException();}
 public static class Identity40 {
  public static string ShortName(string host){host=host.Trim().TrimEnd('.');return IPAddress.TryParse(host,out _)?host:host.Split('.')[0];}
  public static string EndpointKey(TargetRecord target){return target.Host.ToUpperInvariant()+"|"+ConnectionStore.Address(target)+"|"+ConnectionStore.Identity(target);}
@@ -17,6 +18,7 @@ public partial class MainWindow {
  async void OpenRawEvents40()=>await Guard(async()=>{var row=Current();if(eventWrites39.TryGetValue(row.Host,out var pending))await pending;var folder=EventFolder31(row.Host);if(!System.IO.Directory.Exists(folder)){Notify("Сохранённых событий этого клиента пока нет");return;}System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(folder){UseShellExecute=true});});
  // One bounded freshness policy for the card, header, tree and read-only dialog.
  static readonly TimeSpan RebootFresh40=TimeSpan.FromMinutes(5);
+ readonly HashSet<string> rebootProbeFailures40=new(StringComparer.OrdinalIgnoreCase);
  readonly HashSet<string> rebootChecks40=new(StringComparer.OrdinalIgnoreCase);
  void RefreshAddress40(ComputerRow row){
   string address=Identity40.ConfiguredAddress(row.Target),hint=address.Length>0?"Заданный адрес подключения; доступность проверяется отдельно":"";
@@ -51,16 +53,17 @@ public partial class MainWindow {
   }
   var view=DescribeReboot40(latest,current?.BootUtc??"",DateTimeOffset.UtcNow);
   if(reportCache.TryGetValue(row.Host,out var cache)&&CacheMatches(cache)&&cache.Found&&cache.Report.InstalledPendingRebootCount>0&&DateTimeOffset.TryParse(cache.Report.LastReportedUtc,out var report)&&(!DateTimeOffset.TryParse(latest?.CollectedUtc,out var checkedAt)||report>checkedAt)&&(!DateTimeOffset.TryParse(current?.BootUtc,out var boot)||report>=boot))return new(null,false,cache.Report.LastReportedUtc,Array.Empty<string>(),"Требование сохранено в отчёте WSUS. Нужна проверка флагов на клиенте.");
+  if(rebootProbeFailures40.Contains(row.Host))return view with {Fresh=false,Limitation="Последняя проверка не удалась; сохранённый снимок не подтверждает текущее состояние. Повторите проверку; подробности в журнале."};
   return view;
  }
  void RefreshRebootCard40(ComputerRow row){
   var proof=RebootViewFor40(row);bool busy=rebootChecks40.Contains(row.Host);RebootCard40.Visibility=proof.Stamp.Length>0?Visibility.Visible:Visibility.Collapsed;
   RebootTitle40.Text=proof.Title;RebootTitle40.Foreground=Theme.Tone(proof.Tone);RebootGlyph40.Kind=proof.Fresh&&proof.Required==false?"Success":"Reboot";RebootGlyph40.Tint=Theme.Tone(proof.Tone);RebootDetails40.Text=proof.Details;
-  RebootCheck40.Visibility=!proof.Fresh||proof.Required==null?Visibility.Visible:Visibility.Collapsed;RebootCheck40.IsEnabled=!busy;RebootCheck40.Content=busy?"Проверяем…":"Проверить сейчас";
+  RebootCheck40.Visibility=!proof.Fresh||proof.Required==null||proof.Limitation.Length>0?Visibility.Visible:Visibility.Collapsed;RebootCheck40.IsEnabled=!busy;RebootCheck40.Content=busy?"Проверяем…":"Проверить сейчас";
  }
  async Task CheckRebootNow40(ComputerRow row){
   if(!rebootChecks40.Add(row.Host))return;
-  try{RefreshRebootCard40(row);await ReadClientStatus(row,force:true);RefreshOutcomes();if(IsCurrent(row))ShowCurrent();}
+  try{RefreshRebootCard40(row);var result=await ReadClientStatus(row,force:true);if(result==null)rebootProbeFailures40.Add(row.Host);RefreshOutcomes();if(IsCurrent(row))ShowCurrent();}
   finally{rebootChecks40.Remove(row.Host);if(IsCurrent(row))RefreshRebootCard40(row);}
  }
  async void RebootCheck40_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{if(ComputerGrid.SelectedItem is ComputerRow row)await CheckRebootNow40(row);});
@@ -80,19 +83,20 @@ public partial class MainWindow {
   var execution=ExecutionRow(row,true).Target.State;
   if(execution?.ReportRequested==true&&!report.Fresh(execution.Started))return ("Получение нового отчёта WSUS не подтверждено"+at,"Warning");
   if(overviewErrors.ContainsKey(row.Host))return ("Не удалось обновить данные WSUS · показан сохранённый отчёт"+at,"Warning");
+  if(report.NeededCount>0)return ("К установке: "+(report.RequiredComplete?"":"≥ ")+report.NeededCount+" — по отчёту WSUS",report.RequiredComplete?"Info":"Warning");
   return ("","");
  }
  void ApplyStatus40(ComputerRow row,bool active){
   RefreshRebootCard40(row);if(MainTabs.SelectedItem!=WsusTab)return;
   var (text,tone)=WsusConcern40(row);if(text.Length==0)return;
   if(active){OperationDetail38.Text+=(OperationDetail38.Text.Length>0?"\n":"")+text;OperationDetail38.Visibility=Visibility.Visible;return;}
-  var previous=CurrentStage.Text;CurrentStage.Text=text;CurrentStage.Foreground=Theme.Tone(tone);OperationGlyph38.Kind=tone=="Error"?"Error":"Warning";OperationGlyph38.Tint=Theme.Tone(tone);
-  OperationDetail38.Text="Результат команды: "+previous+"\nДалее: "+(tone=="Error"?"открыть сохранённую причину в отчёте WSUS; после исправления проверить новый отчёт.":"проверить доставку отчёта клиента и время получения на сервере.");OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=Visibility.Visible;
+  var previous=CurrentStage.Text;CurrentStage.Text=text;CurrentStage.Foreground=Theme.Tone(tone);OperationGlyph38.Kind=tone=="Error"?"Error":tone=="Info"?"Info":"Warning";OperationGlyph38.Tint=Theme.Tone(tone);
+  OperationDetail38.Text="Результат команды: "+previous+"\nДалее: "+(tone=="Error"?"открыть сохранённую причину в отчёте WSUS; после исправления проверить новый отчёт.":tone=="Info"?"установить одобренные применимые обновления в согласованное время.":"проверить доставку отчёта клиента и время получения на сервере.");OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=Visibility.Visible;
  }
  string WsusSummary40(ComputerRow row,string text){
   var concern=WsusConcern40(row);if(concern.Text.Length==0)return text;
   var sections=LogViewer.Sections(ResultPresentation36.Format(text));var main=sections.FindIndex(x=>x.Title=="Главное");
-  string next="Далее: "+(concern.Tone=="Error"?"проверить причину в отчёте WSUS и подтвердить новый отчёт после исправления.":"проверить доставку отчёта; повторное чтение старого отчёта не подтверждает его обновление.");
+  string next="Далее: "+(concern.Tone=="Error"?"проверить причину в отчёте WSUS и подтвердить новый отчёт после исправления.":concern.Tone=="Info"?"установить одобренные применимые обновления в согласованное время.":"проверить доставку отчёта; повторное чтение старого отчёта не подтверждает его обновление.");
   if(main>=0){var body=sections[main].Body;sections[main]=("Главное",concern.Text+"\n"+next+"\nРезультат отдельной операции:\n"+body);}
   else sections.Insert(0,("Главное",concern.Text+"\n"+next));
   return string.Join("\n\n",sections.Select(s=>"## "+s.Title+"\n"+s.Body));

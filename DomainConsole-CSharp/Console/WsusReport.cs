@@ -11,7 +11,6 @@ public sealed class WsusReport {
  public bool Fresh(string started)=>DateTimeOffset.TryParse(DateTimeOffset.TryParse(TaskEndedUtc,out _)?TaskEndedUtc:started,out var begin)&&DateTimeOffset.TryParse(LastReportedUtc,out var at)&&at>=begin;
  public string Freshness(string started){if(DateTimeOffset.TryParse(TaskEndedUtc,out var ended)&&DateTimeOffset.TryParse(LastReportedUtc,out var reported))return reported<ended?"Серверный отчёт предшествует завершению задания; итог этой операции ещё не подтверждён сводкой WSUS.":"Отчёт сервера обновлён после завершения задания. Точная связь с запросом не устанавливается.";return string.IsNullOrWhiteSpace(started)?"Свежесть относительно задания не проверялась.":Fresh(started)?"Свежий отчёт получен сервером после начала задания. Точная связь с запросом не устанавливается.":"Свежий отчёт после начала задания не подтверждён.";}
  public string Severity(string started){
-  if(InstalledPendingRebootCount>0)return "Reboot";
   if(FailedCount>0)return "Error";
   if(LastSyncResult is "Failed" or "FailedWithErrors")return "SyncError";
   if(InstalledPendingRebootCount>0)return "Reboot";

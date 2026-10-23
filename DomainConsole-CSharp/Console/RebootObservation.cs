@@ -23,6 +23,6 @@ public partial class MainWindow {
   var before=target.State!.Status;ReconcileRebootState(target.State,snapshot);if(target.State.Status!=before){target.Status=target.State.Status;changed=true;}
  }if(changed){Save();foreach(var row in Computers.Where(r=>r.Host.Equals(host,StringComparison.OrdinalIgnoreCase))){var target=History.FirstOrDefault(j=>j.Id==row.JobId)?.Targets.FirstOrDefault(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase));if(target!=null){row.Target.Status=target.Status;row.Target.State=target.State;row.Refresh();}}}}
  void ApplyPostBootResult(ComputerRow row,PollResult data){if(data.State!=null&&rebootSnapshots.TryGetValue(row.Host,out var snapshot))ReconcileRebootState(data.State,snapshot);}
- string ReportDisplayStatus(string host){if(Computers.FirstOrDefault(r=>r.Host.Equals(host,StringComparison.OrdinalIgnoreCase)) is ComputerRow row&&RebootReason(row).Length>0)return "Reboot";return reportSeverity.GetValueOrDefault(host,"Unknown");}
+ string ReportDisplayStatus(string host){if(Computers.FirstOrDefault(r=>r.Host.Equals(host,StringComparison.OrdinalIgnoreCase)) is ComputerRow row)return OverviewStatus(row).Kind;return reportSeverity.GetValueOrDefault(host,"Unknown");}
 }
 

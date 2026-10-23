@@ -48,7 +48,7 @@ public sealed class LogViewer:UserControl {
   var result=new List<(string Title,string Body)>();var seen=new HashSet<string>(StringComparer.Ordinal);
   foreach(var part in source){
    bool diagnostic=part.Title.Contains("диагност",StringComparison.OrdinalIgnoreCase);
-   if(diagnostic){var meaningful=part.Body.Split('\n').Where(line=>!Regex.IsMatch(line,@"^\s*(?:--- .+ ---|Диагностика: (?:запрошена|выполняется|собрана отдельно от основного задания)\.?|(?:Запрос|Чтение|Сбор) (?:файлов )?диагностики(?:\.{3})?)\s*$",RegexOptions.IgnoreCase)).Select(x=>x.Trim()).Where(x=>x.Length>0).ToList();if(meaningful.Count==0)continue;}
+   if(diagnostic){var meaningful=part.Body.Split('\n').Where(line=>!Regex.IsMatch(line,@"^\s*(?:--- .+ ---|(?:Диагностика: )?(?:запрошена|выполняется|собрана отдельно от основного задания|ожидает сбора|собрана|не запрошена|собирается · лимит 5 минут(?: · \d+ сек)?)\.?|(?:Запрос|Чтение|Сбор) (?:файлов )?диагностики(?:\.{3})?)\s*$",RegexOptions.IgnoreCase)).Select(x=>x.Trim()).Where(x=>x.Length>0).ToList();if(meaningful.Count==0)continue;}
    string key=part.Title.Trim()+"\n"+part.Body.Replace("\r\n","\n").Trim();if(!seen.Add(key))continue;result.Add(part);
   }
   return result;
