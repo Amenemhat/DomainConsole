@@ -1,0 +1,24 @@
+using System.Windows;
+using DomainConsole.Shared;
+namespace DomainConsole;
+public sealed class ReadyProof43 {public string Key{get;set;}="";public string Job{get;set;}="";public string Boot{get;set;}="";public string At{get;set;}="";public string Report{get;set;}="";public string Scan{get;set;}="";public string Reboot{get;set;}="";}
+public partial class MainWindow {
+ readonly Dictionary<string,ReadyProof43> readyProofs43=Store.Read("ready-proofs43.json",new Dictionary<string,ReadyProof43>());
+ readonly SemaphoreSlim pollQueue43=new(3);
+ async Task PollRows43(){var rows=ActivePollRows().Where(JobPollDue42).ToList();await Task.WhenAll(rows.Select(async row=>{await pollQueue43.WaitAsync();try{if(TransportBudget41.Paused)return;await Task.Delay(Random.Shared.Next(30,650));if(!TransportBudget41.Paused)await Poll(row);}finally{pollQueue43.Release();}}));}
+ void PollActivity43(string key,string label){if(closing)return;Dispatcher.BeginInvoke(()=>{if(closing)return;foreach(var row in Computers)if(TransportBudget41.Key(ConnectionStore.Capture(row.Target))==key)row.SetService43(TransportBudget41.Paused?"":label);});}
+ ClientAssessment41 PreserveReady43(ComputerRow row,ClientAssessment41 assessment,bool active,RemoteState? state,CachedWsusReport? cache,RebootView40 reboot,string scan){
+  string key=Identity40.EndpointKey(ConnectionStore.Capture(row.Target))+"|"+OverviewServer+"|"+row.Target.DirectoryId;
+  string job=HostJobs39(row.Host).FirstOrDefault(x=>IsWsusJob(x.Job)&&CurrentIdentity(x.Target)).Job?.Id??"";
+  string boot=rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"";
+  if(assessment.Kind=="Success"){
+   var proof=new ReadyProof43{Key=key,Job=job,Boot=boot,At=DateTimeOffset.UtcNow.ToString("o"),Report=cache?.Report.LastReportedUtc??"",Scan=scan,Reboot=reboot.Stamp};
+   if(!readyProofs43.TryGetValue(row.Host,out var previous)||previous.Key!=key||previous.Job!=job||previous.Report!=proof.Report||previous.Scan!=scan||previous.Reboot!=proof.Reboot){readyProofs43[row.Host]=proof;Store.Write("ready-proofs43.json",readyProofs43);}
+   return assessment;
+  }
+  if(!readyProofs43.TryGetValue(row.Host,out var saved))return assessment;
+  bool contradiction=active||row.Target.AdDisabled||saved.Key!=key||saved.Job!=job||saved.Boot!=boot||assessment.Kind is "Error" or "SyncError" or "Reboot" or "Needed" or "NoWsus" or "Working"||reboot.Required==true||cache?.Found==false||cache?.Report.NeededCount>0||cache?.Report.FailedCount>0||cache?.Report.ApprovedUnknownCount>0||cache?.Report.LastSyncResult is "Failed" or "FailedWithErrors";
+  if(contradiction){readyProofs43.Remove(row.Host);Store.Write("ready-proofs43.json",readyProofs43);return assessment;}
+  return new("Success","Проверено · необходимых обновлений нет","Последняя полная проверка: "+Display36.Date(saved.At)+"\nПерезагрузка не требовалась · отчёт WSUS подтверждён: "+Display36.Date(saved.Report)+"\nСледующая проверка — по расписанию или вручную");
+ }
+}

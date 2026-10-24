@@ -395,6 +395,7 @@ jobs:
             if($ipResult -ne 'PAYLOAD'){throw 'Real IP session or identity guard failed'}
             Write-Output 'Generated endpoint transport connected by IP and validated real client identity.'
             & ./.github/scripts/test_probe42.ps1 -Session $session -Credential $credential -Fixture (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke')
+            & ./.github/scripts/test_collector43.ps1 -Session $session -Fixture (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke')
 
           }finally{
             if($session){Remove-PSSession $session}

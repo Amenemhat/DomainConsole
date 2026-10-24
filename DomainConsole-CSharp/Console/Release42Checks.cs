@@ -2,7 +2,7 @@ using System.IO;
 using System.Text;
 namespace DomainConsole;
 public partial class MainWindow {
- void VerifyRelease42(){
+ void VerifyRelease42(){VerifyRelease43();
   foreach(string mode in new[]{"Get","Read","Inspect","Recover","Stop"})File.WriteAllText(Path.Combine(Path.GetTempPath(),"probe42-"+mode+".ps1"),RemoteService.SnapshotScript42(mode),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"probe42-error.ps1"),RemoteService.SnapshotScript42("Get",reboot:"throw 'FIXTURE_REBOOT_ERROR42'"),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"probe42-slow.ps1"),RemoteService.SnapshotScript42("Get",activity:"[Threading.Thread]::Sleep(90000);'{}'"),new UTF8Encoding(true));

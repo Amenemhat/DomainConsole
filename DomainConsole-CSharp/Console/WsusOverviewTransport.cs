@@ -8,7 +8,7 @@ public sealed partial class RemoteService {
   await PowerShellBridge.Execute(Invoke(target,body),timeout.Token);
  }
  // One authenticated remote call per batch; the same WSUS object serves every target in it.
- public async Task<List<OverviewReply>> WsusOverview(WsusSettings settings,List<string> hosts,CancellationToken token){
+ public async Task<List<OverviewReply>> WsusOverview(WsusSettings settings,List<string> hosts,CancellationToken token){using var read43=PollingControl43.Read();
   using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(TimeSpan.FromSeconds(90));
   var names=hosts.ToDictionary(h=>h,ConnectionStore.WsusName,StringComparer.OrdinalIgnoreCase);string body=OverviewScript(settings,names.Values.Where(n=>n.Length>0).Distinct(StringComparer.OrdinalIgnoreCase).ToList());
   var json=await PowerShellBridge.Execute(Invoke(settings.Host,body),timeout.Token);

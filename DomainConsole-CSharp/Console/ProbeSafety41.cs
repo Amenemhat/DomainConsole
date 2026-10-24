@@ -63,7 +63,7 @@ foreach($t in @($tasks|Select-Object -First 500)){
   if($owned -and !$when){$last=(Get-ScheduledTaskInfo -TaskName $t.TaskName -TaskPath $t.TaskPath -ErrorAction Stop).LastRunTime;if($last.Year -ge 2000){$when=$last.ToUniversalTime()}}
   if($owned -and $when -and ([DateTime]::UtcNow-$when).TotalMinutes -ge 10 -and $t.State -in @('Ready','Disabled')){
    $status='Можно удалить';$reason='Завершённая старая Probe; сигнатура и возраст подтверждены'
-   if($clean){$again=Get-ScheduledTask -TaskName $t.TaskName -TaskPath $t.TaskPath -ErrorAction Stop;if($again.State -notin @('Ready','Disabled') -or $again.Actions[0].Arguments -ne $action[0].Arguments){$status='Пропущено';$reason='Состояние изменилось'}else{Unregister-ScheduledTask -TaskName $t.TaskName -TaskPath $t.TaskPath -Confirm:$false -ErrorAction Stop;$status='Удалено'}}
+   if($clean){$again=Get-ScheduledTask -TaskName $t.TaskName -TaskPath $t.TaskPath -ErrorAction Stop;if($again.State -notin @('Ready','Disabled') -or $again.Actions[0].Arguments -ne $action[0].Arguments){$status='Пропущено';$reason='Состояние изменилось'}else{Unregister-ScheduledTask -TaskName $t.TaskName -TaskPath $t.TaskPath -Confirm:$false -ErrorAction Stop;$status='Удалено';$dir=Join-Path $base $id;if(Test-Path -LiteralPath $dir){$item=Get-Item -LiteralPath $dir -Force;if(!($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){foreach($file in @(Get-ChildItem -LiteralPath $dir -Force)){if(!$file.PSIsContainer -and !($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -and $file.Name -in @('activity.json','activity.tmp','error.txt')){Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop}};if(!(Get-ChildItem -LiteralPath $dir -Force)){Remove-Item -LiteralPath $dir -Force -ErrorAction Stop}}}}}
   }elseif($t.State -in @('Running','Queued')){$reason='Проверка выполняется или ожидает запуска'}
  }catch{$status='Пропущено';$reason=$_.Exception.Message}
  $rows+=@{Task=$t.TaskName;State=[string]$t.State;Result=$status;Reason=$reason;RegisteredUtc=$(if($when){$when.ToString('o')}else{''})}
@@ -85,9 +85,9 @@ public static class TransportBudget41 {
   var match=System.Text.RegularExpressions.Regex.Match(code,@"# DC-ENDPOINT41:([A-F0-9]{64})");
   if(!match.Success)return await execute(token);
   bool manual=code.Contains("# DC-MANUAL41\n",StringComparison.Ordinal);
-  if(Paused&&!manual&&code.Contains("# DC-READ42",StringComparison.Ordinal))throw new IOException("DC_PROBE_PAUSED: служебные подключения приостановлены в этой консоли");
+  if(Paused&&!manual&&(PollingControl43.IsRead||code.Contains("# DC-READ42",StringComparison.Ordinal)))throw new IOException("DC_PROBE_PAUSED: служебные подключения приостановлены в этой консоли");
   string dir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"DomainConsole","Transport41");Directory.CreateDirectory(dir);string path=Path.Combine(dir,match.Groups[1].Value);FileStream gate;
   try{gate=new FileStream(path+".lock",FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);}catch(IOException){throw new PollWait42("Busy","Подключение к клиенту уже выполняется; повтор не создан",10);}
-  using(gate){await slots.WaitAsync(token);try{return await execute(token);}finally{slots.Release();}}
+  using(gate){await slots.WaitAsync(token);try{token.ThrowIfCancellationRequested();if(Paused&&!manual&&PollingControl43.IsRead)throw new OperationCanceledException("Опрос выключен");string label=code.Contains("$dcJobId34=")?"Чтение состояния задания":code.Contains("# DC-READ42")?"Проверка состояния клиента":code.Contains("whoami;hostname")?"Проверка связи":"Получение данных WSUS";if(PollingControl43.IsRead)PollingControl43.Show(match.Groups[1].Value,label);return await execute(token);}finally{if(PollingControl43.IsRead)PollingControl43.Show(match.Groups[1].Value,"");slots.Release();}}
  }
 }
