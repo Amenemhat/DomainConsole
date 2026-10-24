@@ -70,7 +70,8 @@ foreach($t in @($tasks|Select-Object -First 500)){
 }
 @{Total=$tasks.Count;Inspected=$rows.Count;Rows=@($rows);Note='Maintenance, задания обслуживания, процессы WinRM и каталоги не изменяются. Неизвестные задачи пропущены.'}|ConvertTo-Json -Depth 5 -Compress
 """;
- public async Task ResumeProbe41(TargetRecord target){TransportBudget41.Reset(target);using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(20));await PowerShellBridge.Execute("# DC-MANUAL41\n"+Invoke(target,"$t=Get-ScheduledTask -TaskName 'DomainConsoleCSharp-Snapshot41' -TaskPath '\\' -ErrorAction SilentlyContinue;if($t -and $t.State -in @('Running','Queued')){throw 'Сборщик ещё выполняется; повтор не разрешён'};$flag=Join-Path $env:ProgramData 'DomainConsoleCSharp\\Snapshot41\\blocked.flag';if(Test-Path -LiteralPath $flag){Remove-Item -LiteralPath $flag -Force -ErrorAction Stop};'Разрешена следующая ограниченная проверка'"),timeout.Token);}
+ public async Task ResumeProbe41(TargetRecord target){var result=await InspectSnapshot42(target,"Recover");if(!result.Contains("Recovered"))throw new IOException(result);}
+
 }
 
 // Admission happens before PowerShell/New-PSSession. Shared file locks also
@@ -84,10 +85,9 @@ public static class TransportBudget41 {
   var match=System.Text.RegularExpressions.Regex.Match(code,@"# DC-ENDPOINT41:([A-F0-9]{64})");
   if(!match.Success)return await execute(token);
   bool manual=code.Contains("# DC-MANUAL41\n",StringComparison.Ordinal);
-  if(Paused&&!manual)throw new IOException("DC_PROBE_PAUSED: служебные подключения приостановлены в этой консоли");
+  if(Paused&&!manual&&code.Contains("# DC-READ42",StringComparison.Ordinal))throw new IOException("DC_PROBE_PAUSED: служебные подключения приостановлены в этой консоли");
   string dir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"DomainConsole","Transport41");Directory.CreateDirectory(dir);string path=Path.Combine(dir,match.Groups[1].Value);FileStream gate;
-  try{gate=new FileStream(path+".lock",FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);}catch(IOException){throw new IOException("DC_PROBE_PAUSED: подключение к этому клиенту уже выполняется; повтор не создан");}
-  using(gate){if(!manual&&File.Exists(path+".blocked"))throw new IOException("DC_PROBE_PAUSED: исход предыдущего подключения неизвестен; возобновите опрос через диагностику");
-   await slots.WaitAsync(token);try{return await execute(token);}catch(Exception ex) when(ex is TimeoutException||ex.Message.Contains("DC_PROBE_PAUSED:",StringComparison.Ordinal)){File.WriteAllText(path+".blocked",DateTimeOffset.UtcNow.ToString("o"));throw;}finally{slots.Release();}}
+  try{gate=new FileStream(path+".lock",FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);}catch(IOException){throw new PollWait42("Busy","Подключение к клиенту уже выполняется; повтор не создан",10);}
+  using(gate){await slots.WaitAsync(token);try{return await execute(token);}finally{slots.Release();}}
  }
 }

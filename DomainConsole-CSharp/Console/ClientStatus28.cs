@@ -5,7 +5,7 @@ public partial class MainWindow {
  readonly List<TargetRecord> adActivity=Store.Read("ad-activity.json",new List<TargetRecord>());
  readonly Dictionary<string,Task<RebootSnapshot?>> statusReads=new(StringComparer.OrdinalIgnoreCase);
  readonly SemaphoreSlim statusSlots=new(3);readonly Dictionary<string,string> statusLimitations=new(StringComparer.OrdinalIgnoreCase);
- Task<RebootSnapshot?> ReadClientStatus(ComputerRow row,CancellationToken token=default,bool force=false){if(statusReads.TryGetValue(row.Host,out var pending))return pending;if(!force&&!ReadDue34(row.Host+"|флаги и аптайм"))return Task.FromResult<RebootSnapshot?>(null);
+ Task<RebootSnapshot?> ReadClientStatus(ComputerRow row,CancellationToken token=default,bool force=false){if(statusReads.TryGetValue(row.Host,out var pending))return pending;if(!RemoteService.SnapshotDue42(ConnectionStore.Capture(row.Target))||!ReadDue34(row.Host+"|флаги и аптайм"))return Task.FromResult<RebootSnapshot?>(null);
   if(!force&&rebootSnapshots.TryGetValue(row.Host,out var cached)&&DateTimeOffset.TryParse(cached.UptimeReceivedUtc,out var at)&&DateTimeOffset.UtcNow>=at&&DateTimeOffset.UtcNow-at<TimeSpan.FromSeconds(45)&&cached.UptimeSeconds.HasValue&&ConnectionFresh(row.Host))return Task.FromResult<RebootSnapshot?>(cached);
   var task=ReadClientCore(row,token);statusReads[row.Host]=task;return task;
  }
