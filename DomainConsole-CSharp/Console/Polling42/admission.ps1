@@ -40,6 +40,7 @@ try{
    Remove-Item -LiteralPath (Join-Path $path 'blocked.flag'),(Join-Path $path 'result.json') -Force -ErrorAction SilentlyContinue
    Reply 'Recovered' 'Предыдущий исполнитель завершён; следующий опрос разрешён' 0;return
   }
+  if($run -and !$run.Accounted -and (!$snapshot -or $snapshot.Id -ne $run.Id) -and ([DateTime]::UtcNow-[DateTime]::Parse($run.StartedUtc).ToUniversalTime()).TotalSeconds -lt 10){Reply 'Busy' 'Планировщик запускает сборщик' 10;return}
   if($run -and !$run.Accounted){
    if($snapshot -and $snapshot.Id -eq $run.Id -and $snapshot.Healthy){$run.Failures=0;$run.NextUtc='';$run.Error=''}
    else{
