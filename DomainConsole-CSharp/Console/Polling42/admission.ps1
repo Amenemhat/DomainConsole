@@ -41,7 +41,7 @@ try{
    Reply 'Recovered' 'Предыдущий исполнитель завершён; следующий опрос разрешён' 0;return
   }
   if($run -and !$run.Accounted){
-   if($snapshot -and $snapshot.Id -eq $run.Id -and $snapshot.Complete){$run.Failures=0;$run.NextUtc='';$run.Error=''}
+   if($snapshot -and $snapshot.Id -eq $run.Id -and $snapshot.Healthy){$run.Failures=0;$run.NextUtc='';$run.Error=''}
    else{
     $run.Failures=[int]$run.Failures+1;$reason=if($snapshot -and $snapshot.Id -eq $run.Id){[string]$snapshot.Error}else{'Сборщик завершился без результата (возможен предельный тайм-аут)'}
     $err=Join-Path $path 'error.txt';if(Test-Path -LiteralPath $err){$reason+='; '+[string](Get-Content -LiteralPath $err -Encoding UTF8 -TotalCount 8)}

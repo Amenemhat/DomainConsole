@@ -43,9 +43,10 @@ try{
   $errorFile=Join-Path $path ($part+'.error');if(Test-Path -LiteralPath $errorFile){$errors+=([IO.File]::ReadAllText($errorFile))}
   $worker.Dispose();$worker=$null
  }
+ if($parts.Reboot -and $parts.Reboot.Error){$errors+=[string]$parts.Reboot.Error};if($parts.Activity -and $parts.Activity.Limitation){$errors+=[string]$parts.Activity.Limitation}
  if(!$parts.Reboot){$parts.Reboot=@{CollectedUtc=[DateTime]::UtcNow.ToString('o');Required=$null;Error=($errors -join '; ')}}
  if(!$parts.Activity){$parts.Activity=@{CollectedUtc=[DateTime]::UtcNow.ToString('o');Limitation=($errors -join '; ')}}
- $bundle=@{Id=$run.Id;CollectedUtc=[DateTime]::UtcNow.ToString('o');Reboot=$parts.Reboot;Activity=$parts.Activity;Complete=($errors.Count -eq 0);Error=($errors -join '; ')}
+ $bundle=@{Id=$run.Id;CollectedUtc=[DateTime]::UtcNow.ToString('o');Reboot=$parts.Reboot;Activity=$parts.Activity;Complete=($errors.Count -eq 0);Healthy=([bool]$parts.Reboot.BootUtc -and !$parts.Reboot.Error);Error=($errors -join '; ')}
  $bundle|ConvertTo-Json -Depth 25 -Compress|Set-Content -LiteralPath (Join-Path $path 'result.tmp') -Encoding UTF8
  Move-Item -LiteralPath (Join-Path $path 'result.tmp') -Destination (Join-Path $path 'result.json') -Force
  Save-State @{Id=$run.Id;Phase='Completed';UpdatedUtc=[DateTime]::UtcNow.ToString('o');Error=$bundle.Error}

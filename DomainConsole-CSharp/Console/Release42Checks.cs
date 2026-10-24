@@ -4,7 +4,7 @@ namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease42(){
   foreach(string mode in new[]{"Get","Read","Inspect","Recover","Stop"})File.WriteAllText(Path.Combine(Path.GetTempPath(),"probe42-"+mode+".ps1"),RemoteService.SnapshotScript42(mode),new UTF8Encoding(true));
-  File.WriteAllText(Path.Combine(Path.GetTempPath(),"probe42-error.ps1"),RemoteService.SnapshotScript42("Get",activity:"throw 'FIXTURE_ACTIVITY_ERROR42'"),new UTF8Encoding(true));
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"probe42-error.ps1"),RemoteService.SnapshotScript42("Get",reboot:"throw 'FIXTURE_REBOOT_ERROR42'"),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"probe42-slow.ps1"),RemoteService.SnapshotScript42("Get",activity:"[Threading.Thread]::Sleep(90000);'{}'"),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"probe42-autonomous.ps1"),RemoteService.SnapshotScript42("Get",supervisor:"Start-Sleep -Seconds 90"),new UTF8Encoding(true));
   // Live collector partial source failures must not claim known reboot flags.
