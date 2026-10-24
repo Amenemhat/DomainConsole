@@ -11,7 +11,7 @@ function Admit-Next {Expire-Cache;$f=Join-Path $path 'run.json';if(Test-Path $f)
 foreach($f in Get-ChildItem $Fixture -Filter 'probe42-*.ps1'){$tokens=$null;$errors=$null;$null=[Management.Automation.Language.Parser]::ParseFile($f.FullName,[ref]$tokens,[ref]$errors);if($errors){throw ($f.Name+': '+($errors|Out-String))}}
 $first=Query 'Get';if($first.Status -ne 'Busy'){throw ('Start failed: '+($first|ConvertTo-Json -Depth 5))}
 $result=Await-Result;if($result.Status -ne 'Ready' -or !$result.Snapshot.Reboot.CollectedUtc -or !$result.Snapshot.Activity.CollectedUtc){throw ('No SYSTEM snapshot: '+($result|ConvertTo-Json -Depth 6))}
-if([xml.xmlconvert]::ToTimeSpan((Get-ScheduledTask $task).Settings.ExecutionTimeLimit).TotalSeconds -ne 60){throw 'Legacy task was not safely migrated'}
+if([System.Xml.XmlConvert]::ToTimeSpan((Get-ScheduledTask $task).Settings.ExecutionTimeLimit).TotalSeconds -ne 60){throw 'Legacy task was not safely migrated'}
 $registered=(Get-ScheduledTaskInfo $task).LastRunTime
 foreach($n in 1..12){if((Query 'Get').Status -ne 'Ready'){throw 'Cache lost'}}
 $jobs=@();try{foreach($n in 1..6){$jobs+=Invoke-Command -ComputerName localhost -Credential $Credential -Authentication Negotiate -AsJob -ScriptBlock {param($text);& ([ScriptBlock]::Create($text))} -ArgumentList (Code 'Get')};$jobs|Wait-Job -Timeout 40|Out-Null;foreach($j in $jobs){if($j.State -ne 'Completed'){throw 'Concurrent request failed'};$r=Receive-Job $j -ErrorAction Stop|ConvertFrom-Json;if($r.Status -notin @('Ready','Busy')){throw 'Busy became persistent block'}}}finally{$jobs|Remove-Job -Force -ErrorAction SilentlyContinue}
