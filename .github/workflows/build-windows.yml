@@ -370,7 +370,7 @@ jobs:
       - name: Verify activity probe through a real WinRM session
         shell: pwsh
         run: |
-          $code=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/live-probe-wrapper.ps1'))
+          $code=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/probe42-Get.ps1'))
           if($code -notmatch "New-ScheduledTaskPrincipal -UserId SYSTEM"){throw 'Activity probe must use local SYSTEM'}
           Enable-PSRemoting -SkipNetworkProfileCheck -Force
           $user='dcprobe'+([guid]::NewGuid().ToString('N').Substring(0,8))
@@ -386,10 +386,6 @@ jobs:
             New-ItemProperty $reg -Name LocalAccountTokenFilterPolicy -Value 1 -PropertyType DWord -Force|Out-Null
             Set-Item WSMan:\localhost\Client\TrustedHosts 'localhost,127.0.0.1' -Force
             $session=New-PSSession -ComputerName localhost -Credential $credential -Authentication Negotiate -ErrorAction Stop
-            $result=Invoke-Command -Session $session -ScriptBlock {param($code);& ([ScriptBlock]::Create($code))} -ArgumentList $code -ErrorAction Stop
-            $probe=$result|ConvertFrom-Json
-            if($null -eq $probe.Jobs -or $probe.Limitation){throw ('Incomplete remote activity result: '+$probe.Limitation)}
-            Write-Output 'Read-only activity snapshot collected by SYSTEM through authenticated WinRM.'
             $ipText=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/endpoint-session.ps1'))
             $ipText=$ipText.Substring($ipText.IndexOf('$dcConnectWatch='))
             $machineId=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography').MachineGuid

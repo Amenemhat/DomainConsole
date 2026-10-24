@@ -1,5 +1,6 @@
 param([Parameter(Mandatory)]$Session,[Parameter(Mandatory)][pscredential]$Credential,[Parameter(Mandatory)][string]$Fixture)
 $ErrorActionPreference='Stop'
+$baseline42=@(Get-Process wsmprovhost -ErrorAction SilentlyContinue).Count
 $task='DomainConsoleCSharp-Snapshot41';$path=Join-Path $env:ProgramData 'DomainConsoleCSharp\Snapshot41'
 function Code($mode){[IO.File]::ReadAllText((Join-Path $Fixture ('probe42-'+$mode+'.ps1')))}
 function Invoke-Probe([string]$body){Invoke-Command -Session $Session -ScriptBlock {param($text);& ([ScriptBlock]::Create($text))} -ArgumentList $body -ErrorAction Stop}
@@ -9,8 +10,10 @@ function Expire-Cache {$f=Join-Path $path 'result.json';if(Test-Path $f){$v=Get-
 function Admit-Next {Expire-Cache;$f=Join-Path $path 'run.json';if(Test-Path $f){$v=Get-Content $f -Raw|ConvertFrom-Json;$v.NextUtc=[DateTime]::UtcNow.AddSeconds(-1).ToString('o');$v|ConvertTo-Json -Depth 8|Set-Content $f -Encoding UTF8}}
 # Parse every generated script before any execution.
 foreach($f in Get-ChildItem $Fixture -Filter 'probe42-*.ps1'){$tokens=$null;$errors=$null;$null=[Management.Automation.Language.Parser]::ParseFile($f.FullName,[ref]$tokens,[ref]$errors);if($errors){throw ($f.Name+': '+($errors|Out-String))}}
+if((Query 'Recover').Status -ne 'Recovered'){throw 'Initial collector has not settled'}
+if(Get-ScheduledTask $task -ErrorAction SilentlyContinue){Set-ScheduledTask -TaskName $task -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::FromSeconds(40)) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries)|Out-Null}
 $first=Query 'Get';if($first.Status -ne 'Busy'){throw ('Start failed: '+($first|ConvertTo-Json -Depth 5))}
-$result=Await-Result;if($result.Status -ne 'Ready' -or !$result.Snapshot.Reboot.CollectedUtc -or !$result.Snapshot.Activity.CollectedUtc){throw ('No SYSTEM snapshot: '+($result|ConvertTo-Json -Depth 6))}
+$result=Await-Result;if($result.Status -ne 'Ready' -or !$result.Snapshot.Reboot.CollectedUtc -or !$result.Snapshot.Activity.CollectedUtc -or !$result.Snapshot.Healthy){throw ('No SYSTEM snapshot: '+($result|ConvertTo-Json -Depth 6))}
 if([System.Xml.XmlConvert]::ToTimeSpan((Get-ScheduledTask $task).Settings.ExecutionTimeLimit).TotalSeconds -ne 60){throw 'Legacy task was not safely migrated'}
 $registered=(Get-ScheduledTaskInfo $task).LastRunTime
 foreach($n in 1..12){if((Query 'Get').Status -ne 'Ready'){throw 'Cache lost'}}
@@ -57,4 +60,7 @@ try{
  foreach($keep in @($fresh,$foreign,$running)){if(!(Get-ScheduledTask $keep -ErrorAction SilentlyContinue)){throw 'Fresh, foreign or running task removed'}}
  if(!(Get-ScheduledTask 'DomainConsoleCSharp-Maintenance' -ErrorAction SilentlyContinue)){throw 'Maintenance removed'}
 }finally{foreach($name in $created){Stop-ScheduledTask $name -ErrorAction SilentlyContinue;Unregister-ScheduledTask $name -Confirm:$false -ErrorAction SilentlyContinue}}
+$until42=[DateTime]::UtcNow.AddSeconds(70)
+while(@(Get-Process wsmprovhost -ErrorAction SilentlyContinue).Count -gt $baseline42 -and [DateTime]::UtcNow -lt $until42){Start-Sleep -Seconds 1}
+if(@(Get-Process wsmprovhost -ErrorAction SilentlyContinue).Count -gt $baseline42){throw 'WinRM processes did not return to baseline'}
 Write-Output 'Probe42: real SYSTEM single-flight/cache, six WinRM readers, partial failures, cooldown/circuit breaker, non-cooperating worker termination, autonomous scheduler deadline, verified recovery and legacy cleanup passed.'
