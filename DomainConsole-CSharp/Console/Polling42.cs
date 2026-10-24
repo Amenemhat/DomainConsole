@@ -18,7 +18,7 @@ public sealed partial class RemoteService {
  public static string SnapshotScript42(string mode="Get",string? reboot=null,string? activity=null,string? supervisor=null)=>Resource42("admission.ps1").Replace("@@MODE@@",mode).Replace("@@COLLECTOR@@",PowerShellBridge.Literal(supervisor??Resource42("collector.ps1"))).Replace("@@REBOOT@@",PowerShellBridge.Literal(Worker42("Reboot",reboot??RebootStateScript))).Replace("@@ACTIVITY@@",PowerShellBridge.Literal(Worker42("Activity",activity??LiveUpdateScript)));
  public static PollWait42? SnapshotWait42(TargetRecord target)=>snapshotWait42.GetValueOrDefault(TransportBudget41.Key(target));
  public static bool SnapshotDue42(TargetRecord target)=>!snapshotWait42.TryGetValue(TransportBudget41.Key(target),out var wait)||DateTimeOffset.UtcNow>=wait.Next;
- static string Read42(TargetRecord t,string script)=>"# DC-READ42\n"+Invoke(t,script);
+ string Read42(TargetRecord t,string script)=>"# DC-READ42\n"+Invoke(t,script);
  public async Task<string> SnapshotPart42(TargetRecord target,string part,CancellationToken token=default){
   var key=TransportBudget41.Key(target);
   if(snapshotCache42.TryGetValue(key,out var cached)&&DateTimeOffset.UtcNow<cached.Until){using var json=JsonDocument.Parse(cached.Json);return json.RootElement.GetProperty(part).GetRawText();}
