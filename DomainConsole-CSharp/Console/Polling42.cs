@@ -53,7 +53,7 @@ public partial class MainWindow {
   string title=wait.Kind switch{"Busy"=>"Опрос уже выполняется","Cooldown"=>"Опрос ожидает повторной проверки","Blocked"=>"Состояние клиента не обновлено","Unknown"=>"Проверяется завершение прежнего опроса",_=>"Состояние клиента не обновлено"};
   string details="Служебный снимок не получен; сохранённые данные оставлены. "+wait.Message+(wait.Next==DateTimeOffset.MaxValue?" · автоматический повтор остановлен":" · следующая проверка: "+Display36.Date(wait.Next.ToString("o")));
   statusLimitations[host]=details;string signature=wait.Kind+"|"+wait.Message;
-  if(pollEventKeys42.GetValueOrDefault(key)!=signature){pollEventKeys42[key]=signature;Event31(host,"poll42-"+operation,signature,title,"Warning",details);}
+  string eventKey43=host+"|collector";if(pollEventKeys42.GetValueOrDefault(eventKey43)!=signature){pollEventKeys42[eventKey43]=signature;Event31(host,"poll42",signature,title,"Warning",details);}
   var folder=Path.Combine(Store.Root,"Diagnostics");Directory.CreateDirectory(folder);string name=TransportBudget41.Key(new(){Host=host});Store.Write("Diagnostics/poll42-"+name+".json",new{Operation=operation,Kind=wait.Kind,Error=wait.Message,Next=wait.Next});
  }
 }

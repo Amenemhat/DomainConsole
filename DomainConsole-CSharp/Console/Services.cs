@@ -23,7 +23,7 @@ public static partial class PowerShellBridge {
  }
  public static string Literal(string value)=>"'"+value.Replace("'","''")+"'";
  public static async Task<string> Execute(string code,CancellationToken token=default){using var bounded=PollingControl43.IsRead?CancellationTokenSource.CreateLinkedTokenSource(token,PollingControl43.Token):CancellationTokenSource.CreateLinkedTokenSource(token);if(PollingControl43.IsRead&&TransportBudget41.Paused)throw new OperationCanceledException("Опрос выключен");bounded.CancelAfter(TimeSpan.FromSeconds(120));return await TransportBudget41.Run(code,bounded.Token,t=>ExecuteCore41(code,t));}
- static async Task<string> ExecuteCore41(string code,CancellationToken token){
+ static async Task<string> ExecuteCore41(string code,CancellationToken token){if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_PAUSE_SMOKE43")=="1")File.AppendAllText(Path.Combine(AppContext.BaseDirectory,"poll-network43.txt"),"transport started\n");
   var exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),"WindowsPowerShell","v1.0","powershell.exe");
   var wrapped="$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false);try{\n"+code+"\n}catch{[Console]::Error.WriteLine($_.Exception.Message);exit 1}";
   var start=new ProcessStartInfo(exe){UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,StandardInputEncoding=new UTF8Encoding(false),RedirectStandardOutput=true,RedirectStandardError=true,StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};

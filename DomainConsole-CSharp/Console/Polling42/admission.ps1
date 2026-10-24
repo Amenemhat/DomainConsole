@@ -23,7 +23,7 @@ try{
  if($task){
   try{$seconds=[System.Xml.XmlConvert]::ToTimeSpan($task.Settings.ExecutionTimeLimit).TotalSeconds}catch{$differences+='ExecutionTimeLimit: некорректный формат'}
   $sid=[string]$task.Principal.UserId
-  try{if($sid -ne 'S-1-5-18'){$sid=(New-Object Security.Principal.NTAccount($sid)).Translate([Security.Principal.SecurityIdentifier]).Value}catch{$sid='unknown:'+ $sid}
+  try{if($sid -ne 'S-1-5-18'){$sid=(New-Object Security.Principal.NTAccount($sid)).Translate([Security.Principal.SecurityIdentifier]).Value}}catch{$sid='unknown:'+ $sid}
   if(@($task.Actions).Count -ne 1){$differences+='Actions: ожидалось 1'}
   if($task.Actions[0].Execute -ne $exe){$differences+=('Execute: '+$task.Actions[0].Execute)}
   if($task.Actions[0].Arguments -ne $arguments){$differences+=('Arguments: '+$task.Actions[0].Arguments)}

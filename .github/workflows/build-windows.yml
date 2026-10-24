@@ -53,6 +53,34 @@ jobs:
           Remove-Item Publish/ui-smoke-ready.txt -Force
           Remove-Item Publish/Data -Recurse -Force
           Write-Output "History persisted, opened without network, and survived AD list refresh."
+      - name: Parse generated collector scripts before execution
+        shell: pwsh
+        run: |
+          foreach($file in Get-ChildItem (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke') -Filter '*.ps1'|Where-Object {$_.Name -like 'probe42-*' -or $_.Name -like 'collector43-*'}){
+            $tokens=$null;$errors=$null
+            $null=[Management.Automation.Language.Parser]::ParseFile($file.FullName,[ref]$tokens,[ref]$errors)
+            if($errors){throw ($file.Name+': '+($errors|Out-String))}
+          }
+      - name: Verify persisted master OFF before startup timers
+        shell: pwsh
+        run: |
+          New-Item Publish/Data -ItemType Directory -Force|Out-Null
+          Set-Content Publish/Data/poll-paused41.json 'true'
+          Set-Content Publish/Data/computers.json '[{"Name":"PAUSE-FIXTURE","Host":"pause43.invalid","OS":"Windows test"}]'
+          Set-Content Publish/Data/wsus-settings.json '{"Host":"wsus43.invalid","Port":8530}'
+          Remove-Item Publish/poll-network43.txt -ErrorAction SilentlyContinue
+          $env:DOMAINCONSOLE_PAUSE_SMOKE43='1'
+          $p=Start-Process ./Publish/DomainConsole.exe -PassThru
+          try {
+            Start-Sleep -Seconds 15
+            $p.Refresh()
+            if($p.HasExited){throw 'Paused application exited unexpectedly'}
+            if(Test-Path Publish/poll-network43.txt){throw 'Persisted OFF started a PowerShell transport'}
+            $null=$p.CloseMainWindow()
+            if(!$p.WaitForExit(10000)){throw 'Paused app failed to close'}
+            if(!(Get-Content Publish/Data/poll-paused41.json -Raw|ConvertFrom-Json)){throw 'OFF setting lost'}
+          }finally{if(!$p.HasExited){Stop-Process $p.Id};Remove-Item Env:DOMAINCONSOLE_PAUSE_SMOKE43 -ErrorAction SilentlyContinue;Remove-Item Publish/Data -Recurse -Force}
+          Write-Output 'Normal startup with persisted OFF: timers run, zero PowerShell transports, state preserved.'
       - name: Verify local SYSTEM execution and logs
         shell: pwsh
         run: |

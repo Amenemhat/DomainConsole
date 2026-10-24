@@ -5,10 +5,10 @@ public sealed class ReadyProof43 {public string Key{get;set;}="";public string J
 public partial class MainWindow {
  readonly Dictionary<string,ReadyProof43> readyProofs43=Store.Read("ready-proofs43.json",new Dictionary<string,ReadyProof43>());
  readonly SemaphoreSlim pollQueue43=new(3);
- async Task PollRows43(){var rows=ActivePollRows().Where(JobPollDue42).ToList();await Task.WhenAll(rows.Select(async row=>{await pollQueue43.WaitAsync();try{if(TransportBudget41.Paused)return;await Task.Delay(Random.Shared.Next(30,650));if(!TransportBudget41.Paused)await Poll(row);}finally{pollQueue43.Release();}}));}
+ async Task PollRows43(){var generation=PollingControl43.Token;var rows=ActivePollRows().Where(JobPollDue42).ToList();await Task.WhenAll(rows.Select(async row=>{bool entered=false;try{await pollQueue43.WaitAsync(generation);entered=true;if(TransportBudget41.Paused)return;await Task.Delay(Random.Shared.Next(30,650),generation);if(!TransportBudget41.Paused)await Poll(row);}catch(OperationCanceledException) when(generation.IsCancellationRequested){}finally{if(entered)pollQueue43.Release();}}));}
  void PollActivity43(string key,string label){if(closing)return;Dispatcher.BeginInvoke(()=>{if(closing)return;foreach(var row in Computers)if(TransportBudget41.Key(ConnectionStore.Capture(row.Target))==key)row.SetService43(TransportBudget41.Paused?"":label);});}
  ClientAssessment41 PreserveReady43(ComputerRow row,ClientAssessment41 assessment,bool active,RemoteState? state,CachedWsusReport? cache,RebootView40 reboot,string scan){
-  string key=Identity40.EndpointKey(ConnectionStore.Capture(row.Target))+"|"+OverviewServer+"|"+row.Target.DirectoryId;
+  string key=Identity40.EndpointKey(ConnectionStore.Capture(row.Target))+"|"+OverviewServer+"|ssl="+(WsusSsl.IsChecked==true)+"|"+row.Target.DirectoryId;
   string job=HostJobs39(row.Host).FirstOrDefault(x=>IsWsusJob(x.Job)&&CurrentIdentity(x.Target)).Job?.Id??"";
   string boot=rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"";
   if(assessment.Kind=="Success"){

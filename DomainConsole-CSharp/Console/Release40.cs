@@ -60,7 +60,7 @@ public partial class MainWindow {
   RebootCard40.Visibility=Visibility.Collapsed;
 
  }
- async Task CheckRebootNow40(ComputerRow row){
+ async Task CheckRebootNow40(ComputerRow row){if(TransportBudget41.Paused){Notify("Опрос выключен. Включите его рядом с настройками.");return;}
   if(!rebootChecks40.Add(row.Host))return;
   try{RefreshRebootCard40(row);var result=await ReadClientStatus(row,force:true);if(result==null)rebootProbeFailures40.Add(row.Host);RefreshOutcomes();if(IsCurrent(row))ShowCurrent();}
   finally{rebootChecks40.Remove(row.Host);if(IsCurrent(row))RefreshRebootCard40(row);}
