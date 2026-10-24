@@ -1,12 +1,13 @@
-using System.IO;
 namespace DomainConsole;
 public static class PollingControl43 {
- static readonly AsyncLocal<int> depth=new();
+ sealed record ReadContext(CancellationToken Token);
+ static readonly AsyncLocal<ReadContext?> context=new();
  static CancellationTokenSource cycle=new();
- public static bool IsRead=>depth.Value>0;
- public static CancellationToken Token=>cycle.Token;
- public static IDisposable Read(){if(TransportBudget41.Paused)throw new OperationCanceledException("Опрос выключен в этой консоли");depth.Value++;return new Scope();}
- sealed class Scope:IDisposable {public void Dispose()=>depth.Value=Math.Max(0,depth.Value-1);}
+ public static bool IsRead=>context.Value!=null;
+ public static CancellationToken Token=>context.Value?.Token??cycle.Token;
+ public static bool Cancelled=>IsRead&&Token.IsCancellationRequested;
+ public static IDisposable Read(){if(TransportBudget41.Paused)throw new OperationCanceledException("Опрос выключен в этой консоли");var previous=context.Value;context.Value=previous??new ReadContext(cycle.Token);return new Scope(previous);}
+ sealed class Scope(ReadContext? previous):IDisposable {public void Dispose()=>context.Value=previous;}
  public static void Pause(){TransportBudget41.Paused=true;cycle.Cancel();}
  public static void Resume(){cycle=new();TransportBudget41.Paused=false;}
  public static event Action<string,string>? Activity;
