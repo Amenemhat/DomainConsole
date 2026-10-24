@@ -9,12 +9,13 @@ $acl=New-Object Security.AccessControl.DirectorySecurity
 $acl.SetAccessRuleProtection($true,$false)
 foreach($sid in @('S-1-5-18','S-1-5-32-544')){$acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule((New-Object Security.Principal.SecurityIdentifier($sid)),'FullControl','ContainerInherit,ObjectInherit','None','Allow')))}
 Set-Acl -LiteralPath $path -AclObject $acl
-function Read-Json($name){$f=Join-Path $path $name;if(Test-Path -LiteralPath $f){if((Get-Item -LiteralPath $f).Length -gt 1048576){throw 'Снимок служебного опроса превышает 1 МБ'};try{return Get-Content -LiteralPath $f -Raw -Encoding UTF8|ConvertFrom-Json -ErrorAction Stop}catch{return $null}};return $null}
+function Read-Json($name){$f=Join-Path $path $name;if(Test-Path -LiteralPath $f){if((Get-Item -LiteralPath $f -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Ссылка вместо данных сборщика'};if((Get-Item -LiteralPath $f).Length -gt 1048576){throw 'Снимок служебного опроса превышает 1 МБ'};try{return Get-Content -LiteralPath $f -Raw -Encoding UTF8|ConvertFrom-Json -ErrorAction Stop}catch{return $null}};return $null}
 function Reply($status,$reason,$seconds,$snapshot=$null){@{Status=$status;Reason=$reason;RetrySeconds=$seconds;Snapshot=$snapshot;Run=$run;State=(Read-Json 'state.json')}|ConvertTo-Json -Depth 28 -Compress}
 function Save-Run{$run|ConvertTo-Json -Depth 6 -Compress|Set-Content -LiteralPath (Join-Path $path 'run.tmp') -Encoding UTF8;Move-Item -LiteralPath (Join-Path $path 'run.tmp') -Destination (Join-Path $path 'run.json') -Force}
 $lock=$null;$run=$null
 try{
  try{$lock=[IO.File]::Open((Join-Path $path 'admission.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}catch{Reply 'Busy' 'Проверку уже координирует другая консоль' 10;return}
+ foreach($file in @(Get-ChildItem -LiteralPath $path -Force)){if($file.Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Ссылка внутри каталога сборщика; запуск запрещён'}}
  $name='DomainConsoleCSharp-Snapshot41';$exe=Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe';$script=Join-Path $path 'collect.ps1'
  $arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$script+'"'
  $task=Get-ScheduledTask -TaskName $name -TaskPath '\' -ErrorAction SilentlyContinue

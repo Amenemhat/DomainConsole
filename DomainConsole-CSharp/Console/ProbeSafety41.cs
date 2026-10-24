@@ -55,8 +55,8 @@ foreach($t in @($tasks|Select-Object -First 500)){
  $status='Пропущено';$reason='Принадлежность или возраст не подтверждены';$owned=$false;$when=$null
  try{
   $id=$t.TaskName.Substring('DomainConsoleCSharp-Probe-'.Length);$guid=[Guid]::Empty
-  $action=@($t.Actions);$exe=Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe'
-  $owned=$t.TaskPath -eq '\' -and [Guid]::TryParseExact($id,'D',[ref]$guid) -and $action.Count -eq 1 -and $action[0].Execute -eq $exe -and $action[0].Arguments -match '^-NoProfile -NonInteractive -EncodedCommand [A-Za-z0-9+/=]+$' -and $t.Principal.UserId -in @('SYSTEM','S-1-5-18') -and [System.Xml.XmlConvert]::ToTimeSpan($t.Settings.ExecutionTimeLimit).TotalSeconds -eq 30
+  $principalSid=[string]$t.Principal.UserId;try{if($principalSid -ne 'S-1-5-18'){$principalSid=(New-Object Security.Principal.NTAccount($principalSid)).Translate([Security.Principal.SecurityIdentifier]).Value}}catch{$principalSid='unknown'};$action=@($t.Actions);$exe=Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe'
+  $owned=$t.TaskPath -eq '\' -and [Guid]::TryParseExact($id,'D',[ref]$guid) -and $action.Count -eq 1 -and $action[0].Execute -eq $exe -and $action[0].Arguments -match '^-NoProfile -NonInteractive -EncodedCommand [A-Za-z0-9+/=]+$' -and $principalSid -eq 'S-1-5-18' -and [System.Xml.XmlConvert]::ToTimeSpan($t.Settings.ExecutionTimeLimit).TotalSeconds -eq 30
   if($owned){[xml]$xml=Export-ScheduledTask -TaskName $t.TaskName -TaskPath $t.TaskPath -ErrorAction Stop;$date=[string]$xml.Task.RegistrationInfo.Date;if($date){$when=[DateTime]::Parse($date).ToUniversalTime()}}
   # No commands are decoded or executed. The exact legacy signature, registration
   # age and a second live state check are required; missing metadata is a skip.

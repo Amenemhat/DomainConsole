@@ -68,7 +68,7 @@ public partial class MainWindow {
  List<ClientEvent31> AllEvents32(string host){if(!diskReadAt39.TryGetValue(host,out var read39)||DateTimeOffset.UtcNow-read39>TimeSpan.FromMinutes(1))_=LoadEvents39(host);var disk=diskEvents39.GetValueOrDefault(host);var memory=memoryEvents32.GetValueOrDefault(host);var recent=recentEvents31.GetValueOrDefault(host);int count=memory?.Count??0;if(groupedEvents39.TryGetValue(host,out var old)&&ReferenceEquals(old.Disk,disk)&&ReferenceEquals(old.Memory,memory)&&ReferenceEquals(old.Recent,recent)&&old.Count==count)return old.Result;var result=CompactEvents34((disk??new()).Concat(memory??new()).Concat(recent??new()).DistinctBy(e=>EventKey32(e)+"|"+e.Operation36));groupedEvents39[host]=(disk,memory,recent,count,result);return result;}
  static string EventGroupKey36(ClientEvent31 e)=>e.Kind+"|"+e.Operation36+"|"+e.Text+"|"+e.Details;
  bool historyReset35=true;string historyHost35="";List<ClientEvent31>? historyPending35;
- void RefreshEventHistory32(string host){
+ void RefreshEventHistory32(string host){if(CollectorNotice43!=null){var wait43=RemoteService.SnapshotWait42(ConnectionStore.Capture(new TargetRecord{Host=host}));CollectorNotice43.Visibility=wait43!=null?Visibility.Visible:Visibility.Collapsed;if(wait43!=null){CollectorNoticeText43.Text="Служебный снимок не получен; сохранённые данные оставлены.";CollectorNoticeText43.ToolTip=wait43.Message;}}
   var all=AllEvents32(host);EventHistoryGroup32.Header="История событий · "+all.Count;
   var selected36=EventList32.SelectedItems.Cast<ClientEvent31>().Select(EventGroupKey36).ToHashSet();
   var items=all.Where(x=>EventErrors32.IsChecked!=true||x.Kind is "Error" or "Warning").ToList();

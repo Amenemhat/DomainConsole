@@ -56,7 +56,7 @@ public partial class MainWindow {
    if(maintenancePlans.TryGetValue(row.Host,out var plan41)&&!plan41.Done&&plan41.Phase!="Требуется действие")assessment=new("Working","Обслуживание · "+plan41.Phase,assessment.Title+"\n"+assessment.Details);
    else if(reportRecoveries.TryGetValue(row.Host,out var recovery41)&&!recovery41.Done&&recovery41.Phase!="Требуется действие")assessment=new("Working","Восстановление отчётности · "+recovery41.Phase,assessment.Title+"\n"+assessment.Details);
   }
-  assessment=PreserveReady43(row,assessment,active,state,cache,proof,scan.Step?.Ended??"");
+  assessment=PreserveReady43(row,assessment,active,state,cache,proof,scan.Step?.Ended??"");if(assessment.Kind=="Success"&&rebootWatches.TryGetValue(row.Host,out var watch43)&&!watch43.Done&&rebootSnapshots.TryGetValue(row.Host,out var snap43)&&RebootReturned(watch43,snap43)&&ObservedAfter(snap43,watch43.RequestedUtc)&&snap43.Required==false){watch43.Done=true;watch43.Phase="Перезагрузка и готовность подтверждены";Store.Write("reboot-watches.json",rebootWatches);}
   return row.Target.AdDisabled?new("AdDisabled","Учётная запись компьютера отключена в AD",assessment.Title+"\n"+assessment.Details):assessment;
  }
  string CurrentReportText41(ComputerRow row){if(reportCache.TryGetValue(row.Host,out var c)&&CacheMatches(c)&&c.Found){c.Report.ReceivedUtc41=c.ReceivedUtc;return liveReports.Contains(row.Host)?c.Report.Format(c.Server,c.Started):CachedReportText(c);}return serverReports.GetValueOrDefault(row.Host,"Отчёт выбранного компьютера можно прочитать кнопкой «Отчёт WSUS».");}
