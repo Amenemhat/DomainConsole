@@ -3,7 +3,7 @@ using System.Text;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
- void VerifyRelease43(){VerifyRelease44();
+ void VerifyRelease43(){VerifyRelease44();VerifyRelease45();
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-remove.ps1"),RemoteService.RemoveCollectorScript43(),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-enable.ps1"),RemoteService.RemoveCollectorScript43("Enable"),new UTF8Encoding(true));
   AwaitUi39(VerifyPause43());

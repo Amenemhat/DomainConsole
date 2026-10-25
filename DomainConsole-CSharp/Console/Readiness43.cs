@@ -17,8 +17,9 @@ public partial class MainWindow {
    return assessment;
   }
   if(!readyProofs43.TryGetValue(row.Host,out var saved))return assessment;
-  bool contradiction=active||row.Target.AdDisabled||saved.Key!=key||saved.Job!=job||saved.Boot!=boot||assessment.Kind is "Error" or "SyncError" or "Reboot" or "Needed" or "NoWsus" or "Working"||reboot.Required==true||cache?.Found==false||cache?.Report.NeededCount>0||cache?.Report.FailedCount>0||cache?.Report.ApprovedUnknownCount>0||cache?.Report.LastSyncResult is "Failed" or "FailedWithErrors";
+  bool contradiction=active||row.Target.AdDisabled||saved.Key!=key||saved.Job!=job||(boot.Length>0&&saved.Boot!=boot)||assessment.Kind is "Error" or "SyncError" or "Reboot" or "Needed" or "NoWsus" or "Working"||reboot.Required==true||cache?.Found==false||cache?.Report.NeededCount>0||cache?.Report.FailedCount>0||cache?.Report.ApprovedUnknownCount>0||cache?.Report.LastSyncResult is "Failed" or "FailedWithErrors";
   if(contradiction){readyProofs43.Remove(row.Host);Store.Write("ready-proofs43.json",readyProofs43);return assessment;}
   return new("Success","Проверено · необходимых обновлений нет","Последняя полная проверка: "+Display36.Date(saved.At)+"\nПерезагрузка не требовалась · отчёт WSUS подтверждён: "+Display36.Date(saved.Report)+"\nСледующая проверка — по расписанию или вручную");
  }
 }
+

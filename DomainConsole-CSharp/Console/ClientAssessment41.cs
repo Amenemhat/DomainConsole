@@ -14,6 +14,10 @@ public static class ClientReadiness41 {
   string dates=report==null?"":"Отчёт WSUS: "+Display36.Date(report.LastReportedUtc)+" · "+ReportPresentation35.AgeAt41(report.LastReportedUtc,now);
   ClientAssessment41 Result(string k,string title,string detail)=>new(k,title,detail+(dates.Length>0?"\n"+dates:""));
   if(active){string concern=report?.FailedCount>0?"Ошибок по отчёту WSUS: "+report.FailedCount:report!=null&&ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"?"Отчёт WSUS устарел":"";if(reboot.Required==true)concern+=(concern.Length>0?"\n":"")+"Требуется перезагрузка";return Result("Working",state?.Stage.Length>0?state.Stage:"Выполняется задание",concern);}
+  if(reboot.Required==true){
+   bool installed45=state?.Results.Any(x=>x.Kind=="Updates"&&x.ExitCode==0&&DateTimeOffset.TryParse(x.Ended,out _))==true&&state.InstalledCount38>0;
+   return Result("Reboot",installed45?"Установка успешна · требуется перезагрузка":reboot.Title,reboot.Details+(report?.FailedCount>0?"\nОшибок по сохранённому отчёту WSUS: "+report.FailedCount:"")+(state?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired"?"\nЕсть ошибка задания; подробности в критерии обновлений":""));
+  }
   if(state?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired" or "SubmissionUnknown")return Result("Error","Ошибка · "+ResultPresentation36.BriefFailure(state.Error.Length>0?state.Error:ComputerRow.StatusText(state.Status)),"Проверьте причину в журнале задания"+(reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
   if(report?.FailedCount>0)return Result("Error","Ошибок по отчёту WSUS: "+report.FailedCount,"Откройте причины в отчёте WSUS"+(reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
   if(report?.LastSyncResult is "Failed" or "FailedWithErrors")return Result("SyncError","Последний поиск WSUS завершился с ошибкой","Поиск: "+Display36.Date(report.LastSyncUtc)+" · выполните диагностику связи с WSUS");
@@ -56,6 +60,7 @@ public partial class MainWindow {
   if(!active&&cache?.Found==false&&assessment.Kind!="Error")assessment=new("NoWsus","Клиент не найден в WSUS","Проверьте регистрацию клиента");
   if(HeaderRebootJob(row)!=null&&assessment.Kind is not ("Error" or "SyncError"))assessment=new("Reboot","Перезагрузка назначена",assessment.Title+"\n"+assessment.Details);
   assessment=PreserveReady43(row,assessment,active,state,cache,proof,scan.Step?.Ended??"");if(assessment.Kind=="Success"&&rebootWatches.TryGetValue(row.Host,out var watch43)&&!watch43.Done&&rebootSnapshots.TryGetValue(row.Host,out var snap43)&&RebootReturned(watch43,snap43)&&ObservedAfter(snap43,watch43.RequestedUtc)&&snap43.Required==false){watch43.Done=true;watch43.Phase="Перезагрузка и готовность подтверждены";Store.Write("reboot-watches.json",rebootWatches);}
+  assessment=ExplainAssessment45(row,assessment,cache,proof,state,active,scan.Step?.Ended??"",scan.State?.UpdatesRemaining);
   return row.Target.AdDisabled?new("AdDisabled","Учётная запись компьютера отключена в AD",assessment.Title+"\n"+assessment.Details):assessment;
  }
  string CurrentReportText41(ComputerRow row){if(reportCache.TryGetValue(row.Host,out var c)&&CacheMatches(c)&&c.Found){c.Report.ReceivedUtc41=c.ReceivedUtc;return liveReports.Contains(row.Host)?c.Report.Format(c.Server,c.Started):CachedReportText(c);}return serverReports.GetValueOrDefault(row.Host,"Отчёт выбранного компьютера можно прочитать кнопкой «Отчёт WSUS».");}

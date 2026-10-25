@@ -6,10 +6,11 @@ public static class RebootSnapshotPolicy {
  public static bool SameBoot(RebootSnapshot? old,RebootSnapshot next)=>old!=null&&DateTimeOffset.TryParse(old.BootUtc,out var before)&&DateTimeOffset.TryParse(next.BootUtc,out var after)&&after==before;
  public static bool EvidenceAfterBoot(string evidence,string boot)=>DateTimeOffset.TryParse(evidence,out var at)&&DateTimeOffset.TryParse(boot,out var start)&&at>=start;
  public static void Merge(RebootSnapshot? old,RebootSnapshot next){
-  next.PreservedRequired=null;next.PreservedUtc="";
-  if(next.Required==null&&SameBoot(old,next)&&!(old!.Sources.Count>0&&old.Sources.All(x=>x.StartsWith("PendingFileRenameOperations")))){
-   var stamp=old!.Required.HasValue?old.CollectedUtc:old.PreservedUtc;
-   if(EvidenceAfterBoot(stamp,next.BootUtc)){next.PreservedRequired=old.Required??old.PreservedRequired;next.PreservedUtc=stamp;}
+  next.PreservedRequired=null;next.PreservedUtc="";next.PreservedSources45.Clear();
+  if(next.Error.Length>0&&next.Required==false)next.Required=null;
+  if(next.Required==null&&old!=null&&!SupersedesPositive(old,next)&&!(old.Sources.Count>0&&old.Sources.All(x=>x.StartsWith("PendingFileRenameOperations")))){
+   var stamp=old.Required.HasValue?old.CollectedUtc:old.PreservedUtc;
+   if(DateTimeOffset.TryParse(stamp,out var at)&&DateTimeOffset.TryParse(next.CollectedUtc,out var observed)&&observed>=at){next.PreservedRequired=old.Required??old.PreservedRequired;next.PreservedUtc=stamp;next.PreservedSources45=(old.Required==true?old.Sources:old.PreservedSources45).ToList();}
   }
  }
 }
@@ -24,4 +25,5 @@ public partial class MainWindow {
  public static string StatusErrorSummary(string error){if(error.Contains("80070005",StringComparison.OrdinalIgnoreCase)||error.Contains("отказано в доступе",StringComparison.OrdinalIgnoreCase))return "Не удалось полностью проверить необходимость перезагрузки: 0x80070005 — отказано в доступе.";var code=Regex.Match(error,@"(?i)(?:0x)?8[0-9a-f]{7}").Value;return "Проверка необходимости перезагрузки неполная"+(code.Length>0?" · "+code:"")+". Подробности в техническом разделе.";}
  string StatusDiagnosticText(string host){if(!statusDiagnostics.TryGetValue(host,out var d)||d.Resolved)return "";return "\n\n## Диагностика статуса клиента\n"+(d.Resolved?"Повторная проверка выполнена успешно; прежнее ограничение снято.":StatusErrorSummary(d.Error)+" Связь WinRM установлена; это не ошибка подключения.")+"\n"+LocalDateConverter.Format(d.Resolved?d.LastUtc:d.SinceUtc)+(d.Resolved?"":"\n\n## Технический журнал · проверка статуса\nПервое наблюдение: "+LocalDateConverter.Format(d.SinceUtc)+"\nПоследнее наблюдение: "+LocalDateConverter.Format(d.LastUtc)+"\n"+d.Error);}
 }
+
 

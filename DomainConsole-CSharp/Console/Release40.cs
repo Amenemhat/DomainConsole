@@ -38,7 +38,7 @@ public partial class MainWindow {
   bool afterBoot=!DateTimeOffset.TryParse(boot,out var b)||DateTimeOffset.TryParse(proof.CollectedUtc,out var c)&&c>=b;
   bool fresh=DateTimeOffset.TryParse(proof.CollectedUtc,out var at)&&now>=at.AddMinutes(-1)&&now-at<=RebootFresh40&&afterBoot;
   var sources=proof.Sources.Where(x=>!x.StartsWith("PendingFileRenameOperations",StringComparison.OrdinalIgnoreCase)).Select(ShortRebootSource).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-  bool preserved44=proof.Required==null&&proof.PreservedRequired==true&&RebootSnapshotPolicy.EvidenceAfterBoot(proof.PreservedUtc,boot);bool? required=preserved44?true:QueueOnly32(proof.Sources)?null:proof.Required;if(preserved44)fresh=false;
+  bool preserved44=proof.Required==null&&proof.PreservedRequired==true&&DateTimeOffset.TryParse(proof.PreservedUtc,out var kept45)&&(!DateTimeOffset.TryParse(boot,out var boot45)||kept45>=boot45);bool? required=preserved44?true:QueueOnly32(proof.Sources)?null:proof.Required;if(preserved44){fresh=false;sources=proof.PreservedSources45.Select(ShortRebootSource).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();}
   // A false value with a failed source check is not a complete negative result.
   if(proof.Error.Length>0&&required==false)required=null;if(!afterBoot)required=null;
   string limit=proof.Error.Length>0?"Проверка неполная; подробности в журнале":!afterBoot?"Перезагрузка выполнена · требуется повторная проверка флагов":"";
@@ -52,6 +52,10 @@ public partial class MainWindow {
    latest=new(){Required=p.Required,CollectedUtc=p.CollectedUtc,Sources=p.Sources.ToList(),Error=p.Error};
   }
   var view=DescribeReboot40(latest,current?.BootUtc??"",DateTimeOffset.UtcNow);
+  if(view.Required==null){
+   var prior45=HostJobs39(row.Host).Where(x=>CurrentIdentity(x.Target)).Select(x=>x.Target.State?.RebootEvidence).Where(x=>x?.Required==true&&DateTimeOffset.TryParse(x.CollectedUtc,out _)).OrderByDescending(x=>x!.CollectedUtc).FirstOrDefault();
+   if(prior45!=null&&DateTimeOffset.TryParse(prior45.CollectedUtc,out var positive45)&&(!DateTimeOffset.TryParse(current?.BootUtc,out var boot45)||boot45<=positive45)&&!(latest?.Required==false&&latest.Error.Length==0&&DateTimeOffset.TryParse(latest.CollectedUtc,out var negative45)&&negative45>positive45))view=new(true,false,prior45.CollectedUtc,prior45.Sources.Select(ShortRebootSource).ToArray(),"Последняя проверка неполная; прежнее требование сохраняется до уточнения");
+  }
   if(view.Required!=true&&reportCache.TryGetValue(row.Host,out var cache)&&CacheMatches(cache)&&cache.Found&&cache.Report.InstalledPendingRebootCount>0&&DateTimeOffset.TryParse(cache.Report.LastReportedUtc,out var report)&&(!DateTimeOffset.TryParse(latest?.CollectedUtc,out var checkedAt)||report>checkedAt)&&(!DateTimeOffset.TryParse(current?.BootUtc,out var boot)||report>=boot))return new(null,false,cache.Report.LastReportedUtc,Array.Empty<string>(),"Требование сохранено в отчёте WSUS. Нужна проверка флагов на клиенте.");
   if(rebootProbeFailures40.Contains(row.Host))return view with {Fresh=false,Limitation="Последняя проверка не удалась; сохранённый снимок не подтверждает текущее состояние. Повторите проверку; подробности в журнале."};
   return view;
@@ -78,10 +82,11 @@ public partial class MainWindow {
 
  }
  void ApplyStatus40(ComputerRow row,bool active){
-  RefreshRebootCard40(row);if(RebootVerify44!=null){var view44=RebootViewFor40(row);RebootVerify44.Visibility=!view44.Fresh?Visibility.Visible:Visibility.Collapsed;}if(MainTabs.SelectedItem!=WsusTab)return;
+  RefreshRebootCard40(row);RebootVerify44.Visibility=Visibility.Collapsed;ReadinessTree45.Visibility=Visibility.Collapsed;if(MainTabs.SelectedItem!=WsusTab)return;
   var status=AssessClient41(row);
-  if(active){if(status.Details.Length>0){OperationDetail38.Text+=(OperationDetail38.Text.Length>0?"\n":"")+status.Details;OperationDetail38.Visibility=Visibility.Visible;}return;}
-  CurrentStage.Text=status.Title;CurrentStage.Foreground=Theme.Tone(status.Tone);OperationGlyph38.Kind=status.Glyph;OperationGlyph38.Tint=Theme.Tone(status.Tone);OperationDetail38.Text=status.Details;OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=string.IsNullOrEmpty(status.Details)?Visibility.Collapsed:Visibility.Visible;
+  RenderCriteria45(row,status,active);
+  if(active)return;
+  CurrentStage.Text=status.Title;CurrentStage.Foreground=Theme.Tone(status.Tone);OperationGlyph38.Kind=status.Glyph;OperationGlyph38.Tint=Theme.Tone(status.Tone);OperationDetail38.Text=status.Details;OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=Visibility.Collapsed;
 
  }
  string WsusSummary40(ComputerRow row,string text){

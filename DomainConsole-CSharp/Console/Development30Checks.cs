@@ -11,7 +11,7 @@ public partial class MainWindow {
   if(!RebootSnapshotPolicy.SupersedesPositive(new(){Required=true,CollectedUtc=oldAt},fresh))throw new Exception("Legacy positive timestamp did not confirm a later reboot");
   var same=new RebootSnapshot{BootUtc=before,Required=null,CollectedUtc=now};RebootSnapshotPolicy.Merge(old,same);if(same.PreservedRequired!=true)throw new Exception("Same-boot partial read discarded valid evidence");
   var clear=new RebootSnapshot{BootUtc=before,Required=false,CollectedUtc=now,PreservedRequired=true,PreservedUtc=oldAt};RebootSnapshotPolicy.Merge(old,clear);if(clear.PreservedRequired.HasValue||clear.Required!=false)throw new Exception("Fresh negative probe did not clear cached positive");
-  var unknownBoot=new RebootSnapshot{CollectedUtc=now};RebootSnapshotPolicy.Merge(old,unknownBoot);if(unknownBoot.PreservedRequired.HasValue)throw new Exception("Missing boot identity treated as same boot");
+  var unknownBoot=new RebootSnapshot{CollectedUtc=now};RebootSnapshotPolicy.Merge(old,unknownBoot);if(unknownBoot.PreservedRequired!=true)throw new Exception("Missing boot discarded positive evidence without proving reboot");
   var awaiting=new RemoteState{Status="AwaitingReboot",Ended=oldAt,RebootRequired=true};ReconcileRebootState(awaiting,fresh);if(awaiting.Status!="RebootObserved"||awaiting.RebootRequired)throw new Exception("New boot retains old AwaitingReboot state");
   awaiting=new(){Status="AwaitingReboot",Ended=oldAt,RebootRequired=true};ReconcileRebootState(awaiting,clear);if(awaiting.Status!="Completed"||awaiting.RebootRequired)throw new Exception("Fresh negative snapshot retains old AwaitingReboot state");
   awaiting=new(){Status="AwaitingReboot",Ended=oldAt,RebootRequired=true};ReconcileRebootState(awaiting,new(){BootUtc=boot,CollectedUtc=now,Required=true});if(awaiting.Status!="AwaitingReboot")throw new Exception("New positive reboot indication was cleared");
@@ -43,3 +43,4 @@ public partial class MainWindow {
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"reboot-system-30.ps1"),RemoteService.LiveProbeWrapper(RemoteService.RebootStateScript),new UTF8Encoding(true));
  }
 }
+
