@@ -33,7 +33,7 @@ public static class Criteria45 {
   string rebootTone=reboot.Required==true?"Warning":reboot.Required==false&&(ready||reboot.Fresh)?"Success":"Warning";
   var reboots=new List<Check45>{new(reboot.Required==true?"Положительные источники: "+string.Join(", ",reboot.Sources):reboot.Required==false?"Полная проверка WUA / Windows Update / CBS — флаги отсутствуют":"Полная отрицательная проверка не получена",rebootTone,reboot.Required==true?"Reboot":rebootTone=="Success"?"Success":"Warning"),new("Проверено: "+Display36.Date(reboot.Stamp),"Info","Info")};
   if(reboot.Limitation.Length>0)reboots.Add(new(reboot.Limitation,"Warning","Warning"));
-  bool action=!active&&!reboot.Fresh&&(reboot.Required==true||status.Kind!="Success"&&status.Kind is not ("Error" or "SyncError" or "Needed" or "NoWsus"));
+  bool action=!active&&!reboot.Fresh&&(reboot.Required==true||reboot.Limitation.Contains("Перезагрузка выполнена")||status.Kind=="Warning"&&status.Title.Contains("флаги перезагрузки"));
   return new(){new("updates","Обновления · "+ut,updateTone,active?"Working":updateTone=="Success"?"Success":updateTone=="Error"?"Error":"Info",updates),new("report","Отчёт WSUS · "+rt,reportTone,reportTone=="Success"?"Success":reportTone=="Error"?"Error":"Warning",reports),new("reboot","Перезагрузка · "+bt,rebootTone,reboot.Required==true?"Reboot":rebootTone=="Success"?"Success":"Warning",reboots,action)};
  }
 }
@@ -51,7 +51,7 @@ public partial class MainWindow {
  }
  void RenderCriteria45(ComputerRow row,ClientAssessment41 a,bool active){
   if(!criteria45.TryGetValue(row.Host,out var groups))return;
-  ReadinessTree45.Visibility=Visibility.Visible;string signature=row.Host+"|"+active+"|"+string.Join("|",groups.Select(g=>g.Text+g.Tone+g.Action+string.Join(";",g.Checks.Select(c=>c.Text+c.Tone))));if(rendered45==signature)return;rendered45=signature;
+  ReadinessTree45.Visibility=Visibility.Visible;string signature=Theme.Current+"|"+row.Host+"|"+active+"|"+string.Join("|",groups.Select(g=>g.Text+g.Tone+g.Action+string.Join(";",g.Checks.Select(c=>c.Text+c.Tone))));if(rendered45==signature)return;rendered45=signature;
   rendering45=true;ReadinessTree45.Children.Clear();bool expandedProblem=false;
   foreach(var group in groups){string key=row.Host+"|"+group.Key;var exp=new Expander{Margin=new(0,1,0,1)};var head=new DockPanel{LastChildFill=true};
    if(group.Action){var button=new Button{Content="Проверить сейчас",Margin=new(8,0,0,0),Padding=new(4,0,4,0),VerticalAlignment=VerticalAlignment.Center,IsEnabled=!TransportBudget41.Paused&&!rebootChecks40.Contains(row.Host)};button.SetResourceReference(StyleProperty,"GhostButton");button.Click+=RebootCheck40_Click;DockPanel.SetDock(button,Dock.Right);head.Children.Add(button);}
