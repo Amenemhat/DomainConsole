@@ -74,7 +74,7 @@ public partial class MainWindow {
   var id=p.NextJobId.Length>0?p.NextJobId:p.JobId;var job=History.FirstOrDefault(j=>j.Id==id);if(job==null)continue;
   foreach(var t in job.Targets.Where(t=>t.Status=="Queued"&&t.State==null))if(!queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host==t.Host))queue.Enqueue((job,t));
  }}
- void ExpirePlans44(){foreach(var p in maintenancePlans.Values)NormalizePlan44(p);foreach(var p in maintenancePlans.Values.Where(p=>!p.Done&&PlanExpired44(p,DateTimeOffset.UtcNow)).ToList()){FinishPlan44(p.Host);p.Phase="Требуется действие";p.Detail="Срок автоматического продолжения истёк (2 суток). Работающие клиентские задания не остановлены.";SaveMaintenance();}}
+ void ExpirePlans44(){foreach(var p in maintenancePlans.Values)NormalizePlan44(p);var expired=maintenancePlans.Values.Where(p=>!p.Done&&PlanExpired44(p,DateTimeOffset.UtcNow)).ToList();foreach(var p in expired){FinishPlan44(p.Host,false);p.Phase="Требуется действие";p.Detail="Срок автоматического продолжения истёк (2 суток). Работающие клиентские задания не остановлены.";}if(expired.Count>0){SaveMaintenance();Save();}}
 
  string MaintenanceText(string host)=>maintenancePlans.TryGetValue(host,out var p)?"\n\n## Обслуживание клиента\n"+p.Phase+(p.Detail.Length>0?"\n"+p.Detail:"")+"\nПлан начат: "+Display36.Date(p.StartedUtc,true)+" · задание: "+p.JobId+"\nРежим: "+(p.Install?"полное обслуживание":"только поиск и отчёт")+"; циклов: "+p.Cycles+" / 3":"";
  void RefreshAttentionButton(){if(AttentionButton==null)return;var rows=AttentionEntries36().Where(x=>x.Required).ToList();AttentionButton.Content="Требуют внимания · "+rows.Count;AttentionButton.Foreground=rows.Any(x=>x.Tone=="Error")?Theme.Tone("Error"):rows.Count>0?Theme.Tone("Warning"):Theme.Brush("TextPrimary");}
