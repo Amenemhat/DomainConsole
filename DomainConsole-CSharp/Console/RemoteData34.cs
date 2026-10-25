@@ -18,14 +18,14 @@ function Read-DcJson34([string]$file){
 }
 $state=Read-DcJson34 (Join-Path $p 'status.json');if($state -and [string]$state.Id -ne $dcJobId34){throw 'DC_DATA_ERROR|status.json|Идентификатор снимка не совпадает с заданием'}
 function Read-DcTail34([string]$file,[int]$limit){
- $stream=$null;try{$stream=New-Object IO.FileStream($file,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete));$count=[int][Math]::Min($stream.Length,$limit);$null=$stream.Seek(-$count,[IO.SeekOrigin]::End);$buffer=New-Object byte[] $count;$read=0;while($read -lt $count){$part=$stream.Read($buffer,$read,$count-$read);if($part -le 0){break};$read+=$part};$text=[Text.Encoding]::UTF8.GetString($buffer,0,$read).TrimStart([char]0xFEFF);return [string]::Join([Environment]::NewLine,@($text -split '\r?\n'|Select-Object -Last 80))}finally{if($stream){$stream.Dispose()}}
+ $stream=$null;try{$stream=New-Object IO.FileStream($file,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete));$count=[int][Math]::Min($stream.Length,$limit);$truncated=$stream.Length -gt $count;$null=$stream.Seek(0,[IO.SeekOrigin]::Begin);$buffer=New-Object byte[] $count;$read=0;while($read -lt $count){$part=$stream.Read($buffer,$read,$count-$read);if($part -le 0){break};$read+=$part};$text=[Text.Encoding]::UTF8.GetString($buffer,0,$read).TrimStart([char]0xFEFF);return $text+$(if($truncated){[Environment]::NewLine+'… Вывод файла ограничен; полный файл доступен кнопкой «Журналы».'}else{''})}finally{if($stream){$stream.Dispose()}}
 }
-$text='';$files=@();$remaining=65536
+$text='';$files=@();$remaining=if($includeOutput34){1048576}else{65536}
 if($includeOutput34 -or ($state -and $state.Ended)){
- foreach($file in @(Get-ChildItem -LiteralPath $p -File -ErrorAction SilentlyContinue|Where-Object {$_.Name -match '\.(log|out|err)$'}|Sort-Object LastWriteTimeUtc -Descending|Select-Object -First 16)){
-  if($remaining -le 0){break};try{$body=Read-DcTail34 $file.FullName $remaining}catch{$warnings+=('Не удалось прочитать '+$file.Name+': '+$_.Exception.Message);continue};if($body.Length -gt $remaining){$body=$body.Substring($body.Length-$remaining)};$remaining-=$body.Length;$files+=@{Name=$file.Name;Body=$body};$text+=('--- '+$file.Name+' ---'+[Environment]::NewLine+$body+[Environment]::NewLine)
+ foreach($file in @(Get-ChildItem -LiteralPath $p -File -ErrorAction SilentlyContinue|Where-Object {$_.Name -match '\.(log|out|err)$'}|Sort-Object @{Expression={if($_.Name -match '^step-(\d+)\.(out|err)$'){0}else{1}}},@{Expression={if($_.Name -match '^step-(\d+)'){[int]$Matches[1]}else{999}}},Name|Select-Object -First 32)){
+  if($remaining -le 0){break};try{$body=Read-DcTail34 $file.FullName $remaining}catch{$warnings+=('Не удалось прочитать '+$file.Name+': '+$_.Exception.Message);continue};if($body.Length -gt $remaining){$body=$body.Substring(0,[Math]::Max(0,$remaining-100))+"`n… Вывод ограничен; полный файл — кнопка «Журналы»."};$remaining-=$body.Length;$files+=@{Name=$file.Name;Body=$body};$text+=('--- '+$file.Name+' ---'+[Environment]::NewLine+$body+[Environment]::NewLine)
  }
- if($remaining -le 0){$text+='Краткий опрос ограничен 64 КБ. Полные исходные журналы доступны кнопкой «Журналы».'}
+ if($remaining -le 0){$text+='Объём чтения ограничен. Полные исходные журналы доступны кнопкой «Журналы».'}
 }
 $taskState='Unknown';$taskResult=$null;$alive=$true
 try{$task=Get-ScheduledTask -TaskName ('DomainConsoleCSharp-'+$dcJobId34) -ErrorAction SilentlyContinue;$taskState='Missing';if($task){$taskState=[string]$task.State;$taskResult=(Get-ScheduledTaskInfo -InputObject $task -ErrorAction Stop).LastTaskResult};$alive=@(Get-CimInstance Win32_Process -Filter "Name='DomainConsole.Agent.exe'"|Where-Object {$_.CommandLine -and $_.CommandLine.IndexOf($p,[StringComparison]::OrdinalIgnoreCase) -ge 0}).Count -gt 0}catch{$taskState='Unknown';$warnings+='Проверка исполнителя недоступна: '+$_.Exception.Message}
@@ -51,3 +51,4 @@ public static partial class PowerShellBridge {
  static readonly object transportLogGate34=new();static int transportLogSlot34;
  static void SaveTransportError34(string error,string output){try{lock(transportLogGate34){var folder=Path.Combine(Store.Root,"Diagnostics");Directory.CreateDirectory(folder);static string Cap(string s)=>s.Length>32768?s[..32768]+"\n… исходный ответ ограничен":s;File.WriteAllText(Path.Combine(folder,"transport-"+(transportLogSlot34++%16)+".txt"),DateTimeOffset.Now.ToString("o")+"\nSTDERR:\n"+Cap(error)+"\nSTDOUT:\n"+Cap(output));}}catch{}}
 }
+

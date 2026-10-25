@@ -11,7 +11,7 @@ public partial class MainWindow {
  bool checkingReboots;
  static bool RebootReturned(RebootWatch watch,RebootSnapshot snapshot)=>DateTimeOffset.TryParse(watch.RequestedUtc,out var sent)&&DateTimeOffset.TryParse(snapshot.BootUtc,out var boot)&&boot>sent&&(!DateTimeOffset.TryParse(watch.BeforeBootUtc,out var before)||boot>before);
  static bool ObservedAfter(RebootSnapshot snapshot,string stamp)=>DateTimeOffset.TryParse(snapshot.CollectedUtc,out var observed)&&DateTimeOffset.TryParse(stamp,out var earlier)&&observed>=earlier;
- string RebootReason(ComputerRow row){var view=RebootViewFor40(row);return view.Fresh&&view.Required==true?"Требуется перезагрузка. "+view.Details:"";}
+ string RebootReason(ComputerRow row){var view=RebootViewFor40(row);return view.Required==true?"Требуется перезагрузка. "+view.Details:"";}
  void WatchReboot(RemoteJob job,string host,int delaySeconds){rebootWatches[host]=new(){JobId=job.Id,RequestedUtc=job.Created,Next=DateTimeOffset.UtcNow.AddSeconds(delaySeconds+15),Until=DateTimeOffset.UtcNow.AddDays(2)};Store.Write("reboot-watches.json",rebootWatches);}
 
  bool CurrentHost(string host)=>(ComputerGrid.SelectedItem as ComputerRow)?.Host.Equals(host,StringComparison.OrdinalIgnoreCase)==true;
@@ -39,4 +39,5 @@ $plan=$null;if($dcRebootJobId){try{$planFile=Join-Path $env:ProgramData ('Domain
 
 """;
 }
+
 

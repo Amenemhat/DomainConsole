@@ -3,7 +3,7 @@ using System.Text;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
- void VerifyRelease43(){
+ void VerifyRelease43(){VerifyRelease44();
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-remove.ps1"),RemoteService.RemoveCollectorScript43(),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-enable.ps1"),RemoteService.RemoveCollectorScript43("Enable"),new UTF8Encoding(true));
   AwaitUi39(VerifyPause43());
@@ -14,3 +14,4 @@ public partial class MainWindow {
  }
  static async Task VerifyPause43(){bool paused=TransportBudget41.Paused;try{PollingControl43.Resume();using(var read=PollingControl43.Read()){var token=PollingControl43.Token;PollingControl43.Pause();if(!token.IsCancellationRequested)throw new Exception("Pause did not cancel read token");int calls=0;bool blocked=false;try{await PowerShellBridge.Execute("throw 'must not execute'");}catch(OperationCanceledException){blocked=true;}if(!blocked||calls!=0)throw new Exception("Paused read reached PowerShell");PollingControl43.Resume();if(!PollingControl43.Token.IsCancellationRequested)throw new Exception("Old read generation revived on resume");}PollingControl43.Resume();using(PollingControl43.Read()){if(PollingControl43.Token.IsCancellationRequested)throw new Exception("Resume reused cancelled generation");}PollingControl43.Pause();bool denied=false;try{using var read=PollingControl43.Read();}catch(OperationCanceledException){denied=true;}if(!denied)throw new Exception("Read scope admitted during OFF");}finally{if(paused)PollingControl43.Pause();else PollingControl43.Resume();}}
 }
+

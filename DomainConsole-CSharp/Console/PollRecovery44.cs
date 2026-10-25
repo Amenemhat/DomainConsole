@@ -1,0 +1,11 @@
+using System.Text.Json;
+using System.Windows;
+using DomainConsole.Shared;
+namespace DomainConsole;
+public sealed partial class RemoteService {
+ public async Task<string> ResetPolling44(TargetRecord target){using var deadline=new CancellationTokenSource(TimeSpan.FromSeconds(100));while(true){var raw=await PowerShellBridge.Execute("# DC-MANUAL41\n"+Invoke(target,SnapshotScript42("Reset")),deadline.Token);using var doc=JsonDocument.Parse(raw);var root=doc.RootElement;var status=root.GetProperty("Status").GetString()??"Unknown";if(status is "Busy" or "Stopping"){await Task.Delay(2000,deadline.Token);continue;}var reason=root.GetProperty("Reason").GetString()??"";if(status=="Cooldown"){var key=TransportBudget41.Key(target);snapshotCache42.TryRemove(key,out _);snapshotWait42[key]=new PollWait42("Cooldown",reason,120);networkFailures42.TryRemove(key,out _);}return reason;}}
+}
+public partial class MainWindow {
+ void RefreshCollector44(string host){if(CollectorNotice43==null)return;var wait=RemoteService.SnapshotWait42(ConnectionStore.Capture(new TargetRecord{Host=host}));CollectorNotice43.Visibility=wait==null?Visibility.Collapsed:Visibility.Visible;PollReset44.IsEnabled=!TransportBudget41.Paused; if(wait==null)return;var seconds=(int)Math.Ceiling((wait.Next-DateTimeOffset.UtcNow).TotalSeconds);CollectorNoticeText43.Text=wait.Message+"\n"+(TransportBudget41.Paused?"Опрос выключен — автоматический повтор приостановлен":wait.Next==DateTimeOffset.MaxValue?"Автоматический повтор остановлен; доступна адресная диагностика":seconds>0?"Повторная проверка через "+seconds/60+" мин "+seconds%60+" с":"Повторная проверка разрешена по расписанию")+". Задания обновлений не останавливаются.";}
+ async void PollReset44_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{if(TransportBudget41.Paused){Notify("Для повторной проверки включите опрос.");return;}var row=Current();PollReset44.IsEnabled=false;try{var message=await remote.ResetPolling44(row.Target);ReadSucceeded34(row.Host,"флаги и аптайм");ReadSucceeded34(row.Host,"фоновая активность");Event31(row.Host,"poll-reset44",DateTimeOffset.UtcNow.ToString("o"),"Восстановление служебной проверки","Info",message);Notify(message);}finally{PollReset44.IsEnabled=true;RefreshCollector44(row.Host);}});
+}

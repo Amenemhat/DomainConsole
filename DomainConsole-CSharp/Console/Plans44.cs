@@ -1,0 +1,15 @@
+using System.Windows;
+using DomainConsole.Shared;
+namespace DomainConsole;
+public partial class MainWindow {
+ static bool PlanExpired44(MaintenancePlan p,DateTimeOffset now){if(!DateTimeOffset.TryParse(p.StartedUtc,out var start)||start>now.AddMinutes(1))return true;var deadline=start.AddDays(2);if(DateTimeOffset.TryParse(p.DeadlineUtc44,out var saved)&&saved<deadline)deadline=saved;return now>=deadline;}
+ void ReconcilePlan44(string host,string id,PollResult data){if(!maintenancePlans.TryGetValue(host,out var p)||p.Done||p.JobId!=id||data.State==null)return;var state=data.State;if(IsCurrentExecution(state.Status)||state.Status=="Queued")return;
+  if(state.Status is "Failed" or "CompletedWithErrors" or "Cancelled" or "InterventionRequired"){p.Done=true;p.Phase=state.Status=="Cancelled"?"Обслуживание остановлено":"Требуется действие";p.Detail=state.Error.Length>0?ConnectionBrief31(state.Error):ComputerRow.StatusText(state.Status);}
+  else if(state.Status is "Completed" or "VerifiedAfterReboot"&&state.HasUpdateSteps&&state.UpdateOperationStarted&&state.UpdatesRemaining==0&&state.RebootEvidence?.Required==false){p.Done=true;p.Phase="Обслуживание завершено";p.Detail="Необходимых обновлений по результату клиента нет; флаги перезагрузки отсутствуют. Отчёт WSUS проверяется отдельно.";}
+  else {p.Next=DateTimeOffset.UtcNow;p.Phase=state.RebootEvidence?.Required==true?"Ожидается перезагрузка":"Проверка результата обслуживания";}
+  SaveMaintenance();
+ }
+ void FinishPlan44(string host){if(maintenancePlans.TryGetValue(host,out var p)){p.Done=true;p.Phase="Обслуживание остановлено пользователем";p.Detail="Автоматическое продолжение прекращено. Переданные задания продолжаются.";foreach(var id in new[]{p.JobId,p.NextJobId}){var job=History.FirstOrDefault(j=>j.Id==id&&j.AutomaticChild31);if(job!=null)foreach(var t in job.Targets.Where(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&t.Status=="Queued"&&t.State==null))t.Status="Cancelled";}var pending=queue.Where(q=>q.Target.Status!="Cancelled").ToList();queue.Clear();foreach(var item in pending)queue.Enqueue(item);SaveMaintenance();Save();Event31(host,"plan44",p.JobId+"|stopped","Автоматическое продолжение остановлено","Info",p.Detail);}}
+ async void PlanReset44_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{var row=Current();if(MessageBox.Show(this,"Завершить сохранённый план только этого компьютера и перечитать состояние? Работающие установки и команды не останавливаются.","План обслуживания",MessageBoxButton.YesNo)!=MessageBoxResult.Yes)return;FinishPlan44(row.Host);ShowCurrent();RefreshOutcomes();if(!TransportBudget41.Paused){await ReadClientStatus(row,force:true);await FetchWsusReport(row);}else Notify("План завершён. Для чтения текущего состояния включите опрос.");});
+ void RefreshPlan44(string host){if(PlanReset44!=null)PlanReset44.Visibility=maintenancePlans.TryGetValue(host,out var p)&&!p.Done?Visibility.Visible:Visibility.Collapsed;}
+}

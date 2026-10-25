@@ -766,7 +766,10 @@ jobs:
            [IO.File]::WriteAllText($status,(@{Id=$dcJobId34;Status='Running';Ended=''}|ConvertTo-Json))
            [IO.File]::WriteAllText((Join-Path $p 'step-1.out'),('X'*200000))
            $result=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
-           if($result.State.Status -ne 'Running' -or $result.Files.Count -ne 1 -or $result.Files[0].Body.Length -gt 65536){throw 'Recovery or bounded log output failed'}
+           if($result.State.Status -ne 'Running' -or $result.Files.Count -ne 1 -or $result.Files[0].Body.Length -gt 1048576){throw 'Recovery or bounded log output failed'}
+           [IO.File]::WriteAllText((Join-Path $p 'step-1.out'),('FIRST44'+[Environment]::NewLine+(('middle'+[Environment]::NewLine)*200)+'LAST44'))
+           $full=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
+           if(!$full.Files[0].Body.Contains('FIRST44') -or !$full.Files[0].Body.Contains('LAST44')){throw 'Earlier commands lost by tail truncation'}
            $includeOutput34=$false;$result=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
            if($result.Files.Count -ne 0){throw 'Background poll needlessly reads full output'}
            [IO.File]::WriteAllText((Join-Path $p 'step-1.updates.json'),'.')
@@ -792,6 +795,7 @@ jobs:
           name: DomainConsole-UI-review
           path: ${{ runner.temp }}/DomainConsole-smoke/ui-*
           if-no-files-found: warn
+
 
 
 

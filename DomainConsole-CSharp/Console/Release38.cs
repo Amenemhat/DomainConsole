@@ -14,7 +14,7 @@ public partial class MainWindow {
   if(active!=null)return new(active.Targets.First(t=>t.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)),active.Id);
   return ExecutionRow(selected,MainTabs.SelectedItem==WsusTab);
  }
- void BeginAcceptedPlan38(RemoteJob job,TargetRecord target){maintenancePlans[target.Host]=new(){PlanId37=job.PlanId37,Host=target.Host,Identity=target.ConnectionIdentity,JobId=job.Id,Install=true,Phase="Выполняется полное обслуживание",Cycles=1};SaveMaintenance();}
+ void BeginAcceptedPlan38(RemoteJob job,TargetRecord target){if(maintenancePlans.TryGetValue(target.Host,out var old44)&&(old44.PlanId37==job.PlanId37||old44.JobId==job.Id))return;maintenancePlans[target.Host]=new(){StartedUtc=job.Created,DeadlineUtc44=DateTimeOffset.Parse(job.Created).AddDays(2).ToString("o"),PlanId37=job.PlanId37,Host=target.Host,Identity=target.ConnectionIdentity,JobId=job.Id,Install=true,Phase="Выполняется полное обслуживание",Cycles=1};SaveMaintenance();}
  public static AdmissionReply38 ParseAdmission38(string text){
   var match=Regex.Match(text,@"DC_ADMISSION38\|([A-Za-z0-9+/=]+)");if(match.Success){try{return JsonSerializer.Deserialize<AdmissionReply38>(Encoding.UTF8.GetString(Convert.FromBase64String(match.Groups[1].Value)),Store.Options)??new();}catch{}}
   return new(){ReasonCode="unknown",Message="Новый запуск не выполнен: допуск не подтверждён. Текущее задание продолжает наблюдаться."};
@@ -22,3 +22,4 @@ public partial class MainWindow {
  void RejectAdmission38(RemoteJob job,TargetRecord target,Exception error){var reply=ParseAdmission38(error.Message);target.Status="LaunchRejected";target.State=new(){Id=job.Id,Status="LaunchRejected",Ended=DateTime.UtcNow.ToString("o")};target.Output="## Запуск не выполнен\n"+reply.Message+"\nВыполнявшееся задание не отменено. Его статус отображается отдельно.";Event31(target.Host,"admission",job.Id,reply.Message,"Warning",reply.ActiveJobId.Length>0?"Действующее задание: "+reply.ActiveJobId:"");Notify(reply.Message);}
  void StopCurrent38_Click(object sender,RoutedEventArgs e){if(ComputerGrid.SelectedItem is not ComputerRow row)return;var operation=OperationRow38(row);if(operation.JobId.Length==0)return;var job=History.FirstOrDefault(j=>j.Id==operation.JobId);if(job==null)return;historyViewId=job.Id;MainTabs.SelectedItem=IsWsusJob(job)?WsusTab:CommandsTab;Cancel_Click(sender,e);}
 }
+

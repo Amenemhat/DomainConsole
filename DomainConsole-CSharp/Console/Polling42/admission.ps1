@@ -41,10 +41,10 @@ try{
  if($running){
   $started=if($run){[DateTime]::Parse($run.StartedUtc).ToUniversalTime()}else{(Get-ScheduledTaskInfo -InputObject $task).LastRunTime.ToUniversalTime()}
   $age=([DateTime]::UtcNow-$started).TotalSeconds
-  if($mode -eq 'Stop' -or $age -ge 45){[IO.File]::WriteAllText((Join-Path $path 'cancel.flag'),'cancel')}
+  if($mode -in @('Stop','Reset') -or $age -ge 45){[IO.File]::WriteAllText((Join-Path $path 'cancel.flag'),'cancel')}
   # A command to stop is not proof of stop. Hold admission while rechecking.
   if($age -ge 65){Stop-ScheduledTask -InputObject $task -ErrorAction Stop;Reply 'Stopping' 'Превышен предел сборщика; проверяется остановка' 10;return}
-  Reply $(if($mode -eq 'Stop'){'Stopping'}else{'Busy'}) $(if($mode -eq 'Stop'){'Запрошено штатное завершение сборщика'}elseif($age -ge 20){'Сборщик отвечает дольше обычного'}else{'Сборщик выполняется'}) 10;return
+  Reply $(if($mode -in @('Stop','Reset')){'Stopping'}else{'Busy'}) $(if($mode -in @('Stop','Reset')){'Запрошено штатное завершение сборщика'}elseif($age -ge 20){'Сборщик отвечает дольше обычного'}else{'Сборщик выполняется'}) 10;return
  }
  # OS task state alone is insufficient: a previous worker must also be gone.
  $execution=$null
@@ -53,7 +53,8 @@ try{
   $workers=@(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction Stop|Where-Object {$_.CommandLine -and ($_.CommandLine.IndexOf($script,[StringComparison]::OrdinalIgnoreCase) -ge 0 -or $_.CommandLine.IndexOf((Join-Path $path 'Reboot.ps1'),[StringComparison]::OrdinalIgnoreCase) -ge 0 -or $_.CommandLine.IndexOf((Join-Path $path 'Activity.ps1'),[StringComparison]::OrdinalIgnoreCase) -ge 0)})
   if($workers.Count){Reply 'Unknown' 'Процесс предыдущего сборщика ещё существует; требуется сверка' 120;return}
   if($mode -eq 'Inspect'){Reply 'Inspected' $(if($run){[string]$run.Error}else{'Сборщик не запускался этой версией'}) 0 $snapshot;return}
-  if($mode -eq 'Stop'){Reply 'Stopped' 'Остановка служебного сборщика подтверждена' 120 $snapshot;return}
+  if($mode -in @('Stop','Reset')){Reply 'Stopped' 'Остановка служебного сборщика подтверждена' 120 $snapshot;return}
+  if($mode -eq 'Reset'){if($run){$run.Failures=0;$run.NextUtc=[DateTime]::UtcNow.AddSeconds(120).ToString('o');$run.Error='Предыдущий сборщик остановлен; повторная проверка после паузы';$run.Accounted=$true;Save-Run};Remove-Item -LiteralPath (Join-Path $path 'result.json') -Force -ErrorAction SilentlyContinue;Reply 'Cooldown' 'Остановка сборщика подтверждена; повторная проверка через 2 минуты' 120;return}
   if($mode -eq 'Recover'){
    if($run){$run.Failures=0;$run.NextUtc='';$run.Error='';$run.Accounted=$true;Save-Run}
    Remove-Item -LiteralPath (Join-Path $path 'blocked.flag'),(Join-Path $path 'result.json') -Force -ErrorAction SilentlyContinue
@@ -90,3 +91,4 @@ try{
   Reply 'Busy' 'Сборщик запущен; ожидается результат' 10
  }finally{if($execution){$execution.Dispose()}}
 }finally{if($lock){$lock.Dispose()}}
+

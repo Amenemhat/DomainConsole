@@ -13,11 +13,11 @@ public static class ClientReadiness41 {
  public static ClientAssessment41 Evaluate(WsusReport? report,bool saved,bool found,RebootView40 reboot,RemoteState? state,bool active,bool searched,int? remaining,string searchAt,string error,DateTimeOffset now,int hours,string boot=""){
   string dates=report==null?"":"Отчёт WSUS: "+Display36.Date(report.LastReportedUtc)+" · "+ReportPresentation35.AgeAt41(report.LastReportedUtc,now);
   ClientAssessment41 Result(string k,string title,string detail)=>new(k,title,detail+(dates.Length>0?"\n"+dates:""));
-  if(active){string concern=report?.FailedCount>0?"Ошибок по отчёту WSUS: "+report.FailedCount:report!=null&&ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"?"Отчёт WSUS устарел":"";if(reboot.Fresh&&reboot.Required==true)concern+=(concern.Length>0?"\n":"")+"Требуется перезагрузка";return Result("Working",state?.Stage.Length>0?state.Stage:"Выполняется задание",concern);}
-  if(state?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired" or "SubmissionUnknown")return Result("Error","Ошибка · "+MainWindow.ConnectionBrief31(state.Error.Length>0?state.Error:ComputerRow.StatusText(state.Status)),"Проверьте причину в журнале задания"+(reboot.Fresh&&reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
-  if(report?.FailedCount>0)return Result("Error","Ошибок по отчёту WSUS: "+report.FailedCount,"Откройте причины в отчёте WSUS"+(reboot.Fresh&&reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
+  if(active){string concern=report?.FailedCount>0?"Ошибок по отчёту WSUS: "+report.FailedCount:report!=null&&ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"?"Отчёт WSUS устарел":"";if(reboot.Required==true)concern+=(concern.Length>0?"\n":"")+"Требуется перезагрузка";return Result("Working",state?.Stage.Length>0?state.Stage:"Выполняется задание",concern);}
+  if(state?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired" or "SubmissionUnknown")return Result("Error","Ошибка · "+MainWindow.ConnectionBrief31(state.Error.Length>0?state.Error:ComputerRow.StatusText(state.Status)),"Проверьте причину в журнале задания"+(reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
+  if(report?.FailedCount>0)return Result("Error","Ошибок по отчёту WSUS: "+report.FailedCount,"Откройте причины в отчёте WSUS"+(reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
   if(report?.LastSyncResult is "Failed" or "FailedWithErrors")return Result("SyncError","Последний поиск WSUS завершился с ошибкой","Поиск: "+Display36.Date(report.LastSyncUtc)+" · выполните диагностику связи с WSUS");
-  if(reboot.Fresh&&reboot.Required==true)return Result("Reboot","Требуется перезагрузка",reboot.Details+(report==null?"\nОтчёт WSUS не получен":ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"?"\nОтчёт WSUS устарел":""));
+  if(reboot.Required==true)return Result("Reboot",reboot.Title,reboot.Details+(report==null?"\nОтчёт WSUS не получен":ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"?"\nОтчёт WSUS устарел":""));
   if(report==null)return Result("Unknown","Отчёт WSUS не получен","Прочитайте данные сервера WSUS");
   if(!found)return Result("NoWsus","Клиент не найден в WSUS","Проверьте регистрацию клиента");
   if(ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success")return Result("Stale","Отчёт WSUS устарел или время некорректно","Проверьте дату отчёта и доставку отчётности");
@@ -29,7 +29,7 @@ public static class ClientReadiness41 {
   if(!reboot.Fresh||reboot.Required!=false)return Result("Warning","Проверка неполная · флаги перезагрузки не подтверждены","К установке по отчёту: 0 · проверьте флаги на клиенте\n"+reboot.Details);
   if(DateTimeOffset.TryParse(boot,out var b)&&DateTimeOffset.TryParse(report.LastReportedUtc,out var r)&&r<b)return Result("Warning","Проверка неполная · отчёт получен до загрузки Windows","Нужен отчёт после последней загрузки");
   if(searched&&remaining>0)return Result("Warning","Данные клиента и WSUS расходятся","Последний поиск клиента: осталось "+remaining+" · "+Display36.Date(searchAt)+". Выполните новый поиск и отчёт");
-  if(!searched||remaining!=0||!DateTimeOffset.TryParse(searchAt,out var at)||now-at>TimeSpan.FromHours(hours)||at>now.AddMinutes(1)||DateTimeOffset.TryParse(boot,out var started)&&at<started)return Result("Warning","Проверка неполная · нет актуального поиска клиента","К установке по отчёту: 0 · выполните проверку обновлений");
+  if(!searched||remaining!=0||!DateTimeOffset.TryParse(searchAt,out var at)||now-at>TimeSpan.FromHours(hours)||at>now.AddMinutes(1)||DateTimeOffset.TryParse(boot,out var started)&&at<started)return Result("Warning","Проверка неполная · нет актуального поиска клиента","Поиск клиента не подтверждён для текущей загрузки и источника. Подробности — в журнале.");
   return Result("Success","Проверено · необходимых обновлений нет","Отчёт WSUS свежий · перезагрузка не требуется\nПоиск клиента: "+Display36.Date(searchAt)+" · флаги: "+Display36.Date(reboot.Stamp));
  }
 }
@@ -44,7 +44,7 @@ public partial class MainWindow {
   // A newer successful client operation, rather than rereading an old server
   // row, is what can resolve a former operation failure.
   if(state?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired"&&cache?.Found==true&&DateTimeOffset.TryParse(state.Ended,out var e)&&DateTimeOffset.TryParse(cache.Report.LastReportedUtc,out var reportAt)&&reportAt>e&&cache.Report.FailedCount==0){var newer=jobs.FirstOrDefault(x=>IsWsusJob(x.Job)&&x.Target.Status is "Completed" or "VerifiedAfterReboot"&&DateTimeOffset.TryParse(x.Target.State?.Ended,out var finish)&&finish>e);if(newer.Target!=null)state=newer.Target.State;}
-  var scan=jobs.Where(x=>IsWsusJob(x.Job)&&!x.Job.MicrosoftSource&&x.Target.Status is "Completed" or "VerifiedAfterReboot"&&x.Target.State!=null).Select(x=>(State:x.Target.State!,Step:x.Target.State!.Results.LastOrDefault(r=>r.Kind=="UpdateScan"&&r.ExitCode==0))).Where(x=>x.Step!=null).OrderByDescending(x=>x.Step!.Ended).FirstOrDefault();
+  var scan=jobs.Where(x=>IsWsusJob(x.Job)&&!x.Job.MicrosoftSource&&x.Target.Status is "Completed" or "VerifiedAfterReboot"&&x.Target.State!=null).Select(x=>(State:x.Target.State!,Step:x.Target.State!.Results.LastOrDefault(r=>(r.Kind=="UpdateScan"||r.Kind=="Updates")&&r.ExitCode==0))).Where(x=>x.Step!=null).OrderByDescending(x=>x.Step!.Ended).FirstOrDefault();
   var lastInstall=jobs.SelectMany(x=>x.Target.State?.Results??new List<StepResult>()).Where(x=>x.Kind=="Updates").Select(x=>x.Ended).OrderByDescending(x=>x).FirstOrDefault();
   if(scan.Step!=null&&DateTimeOffset.TryParse(lastInstall,out var installed)&&DateTimeOffset.TryParse(scan.Step.Ended,out var scanned)&&scanned<installed)scan=default;
   bool active=operation.Target!=null;var proof=RebootViewFor40(row);
@@ -52,10 +52,6 @@ public partial class MainWindow {
   if(!active&&backgroundUpdates.TryGetValue(row.Host,out var live)&&FreshActivity(live)&&(live.InstallerBusy||live.Jobs.Count>0))return new("Working","На клиенте выполняется операция",assessment.Title+"\n"+assessment.Details);
   if(!active&&cache?.Found==false&&assessment.Kind!="Error")assessment=new("NoWsus","Клиент не найден в WSUS","Проверьте регистрацию клиента");
   if(HeaderRebootJob(row)!=null&&assessment.Kind is not ("Error" or "SyncError"))assessment=new("Reboot","Перезагрузка назначена",assessment.Title+"\n"+assessment.Details);
-  if(!active&&assessment.Kind is not ("Error" or "SyncError" or "Reboot")){
-   if(maintenancePlans.TryGetValue(row.Host,out var plan41)&&!plan41.Done&&plan41.Phase!="Требуется действие")assessment=new("Working","Обслуживание · "+plan41.Phase,assessment.Title+"\n"+assessment.Details);
-   else if(reportRecoveries.TryGetValue(row.Host,out var recovery41)&&!recovery41.Done&&recovery41.Phase!="Требуется действие")assessment=new("Working","Восстановление отчётности · "+recovery41.Phase,assessment.Title+"\n"+assessment.Details);
-  }
   assessment=PreserveReady43(row,assessment,active,state,cache,proof,scan.Step?.Ended??"");if(assessment.Kind=="Success"&&rebootWatches.TryGetValue(row.Host,out var watch43)&&!watch43.Done&&rebootSnapshots.TryGetValue(row.Host,out var snap43)&&RebootReturned(watch43,snap43)&&ObservedAfter(snap43,watch43.RequestedUtc)&&snap43.Required==false){watch43.Done=true;watch43.Phase="Перезагрузка и готовность подтверждены";Store.Write("reboot-watches.json",rebootWatches);}
   return row.Target.AdDisabled?new("AdDisabled","Учётная запись компьютера отключена в AD",assessment.Title+"\n"+assessment.Details):assessment;
  }
@@ -75,5 +71,6 @@ public partial class MainWindow {
 
  static string ProbeInventoryText41(string json){using var doc=System.Text.Json.JsonDocument.Parse(json);var root=doc.RootElement;var rows=root.GetProperty("Rows").EnumerateArray().ToList();int removed=rows.Count(x=>x.GetProperty("Result").GetString()=="Удалено"),eligible=rows.Count(x=>x.GetProperty("Result").GetString()=="Можно удалить"),skipped=rows.Count-removed-eligible;return "## Главное\nОстатки Probe: "+root.GetProperty("Total").GetInt32()+" · проверено: "+root.GetProperty("Inspected").GetInt32()+"\nУдалено: "+removed+" · можно удалить: "+eligible+" · пропущено: "+skipped+"\nЗакройте старые экземпляры консоли перед очисткой. Действующие и неизвестные задачи сохраняются.\n\n## Результаты проверки\n"+string.Join("\n",rows.Select(x=>x.GetProperty("Task").GetString()+" · "+x.GetProperty("State").GetString()+" · "+x.GetProperty("Result").GetString()+"\n"+x.GetProperty("Reason").GetString()+" · "+Display36.Date(x.GetProperty("RegisteredUtc").GetString()??"",true)))+"\n\n## Область очистки\n"+root.GetProperty("Note").GetString();}
  void PausePolling41_Click(object sender,RoutedEventArgs e){if(TransportBudget41.Paused)PollingControl43.Resume();else{PollingControl43.Pause();overviewCancel?.Cancel();foreach(var r43 in Computers)r43.SetService43("");}Store.Write("poll-paused41.json",TransportBudget41.Paused);RefreshPollButton41();Notify(TransportBudget41.Paused?"Новые служебные подключения приостановлены. Переданные задания продолжают работу.":"Служебные подключения разрешены; блокировки отдельных клиентов сохраняются.");}
- void RefreshPollButton41(){if(PausePolling41!=null)PausePolling41.Content=TransportBudget41.Paused?"Опрос: выкл.":"Опрос: вкл.";}
+ void RefreshPollButton41(){if(PausePolling41!=null)PausePolling41.IsChecked=!TransportBudget41.Paused;}
 }
+

@@ -19,7 +19,7 @@ public partial class MainWindow {
    if(title.StartsWith("Контроль выполнения")&&sections.Any(s=>s.Title.StartsWith("Причина сбоя")))continue;
    if(title.StartsWith("Диагностика статуса")&&body.Contains("прежнее ограничение снято"))continue;
    var unique=new List<string>();foreach(var originalLine in body.Split('\n')){var line=originalLine;var codeMatch=Regex.Match(line,@"(?i)0x([89a-f][0-9a-f]{7})");if(codeMatch.Success){var codeKey=codeMatch.Groups[1].Value.ToUpperInvariant();var card=ErrorReference31.Find(unchecked((int)Convert.ToUInt32(codeKey,16)));if(card!=null&&card.Symbol.Length>0&&line.Contains(" · "+card.Symbol)){if(!explained.Add(codeKey)){int marker=line.IndexOf(" · "+card.Symbol,StringComparison.Ordinal);line=line[..marker];}}}var key=line.Trim();if(key.Length==0){if(unique.Count>0&&unique[^1].Length>0)unique.Add("");continue;}if(key=="Команда завершилась с ненулевым кодом. Подробности смотрите в выводе и журналах; код зависит от запущенной программы.")continue;
-    if(key.Length>70&&!signatures.Add(key))continue;
+    if(!title.StartsWith("Вывод команды")&&key.Length>70&&!signatures.Add(key))continue;
     unique.Add(line);
    }
    if(unique.Count==0)continue;var normalized=string.Join("\n",unique).Trim();if(normalized.Length>0)output.Add("## "+title+"\n"+normalized);
@@ -27,3 +27,4 @@ public partial class MainWindow {
   return string.Join("\n\n",output);
  }
 }
+
