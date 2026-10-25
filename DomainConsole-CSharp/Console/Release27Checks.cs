@@ -9,7 +9,7 @@ public partial class MainWindow {
   try{
    reportCache[row.Host]=new(){Server=OverviewServer,Report=new(){FailedCount=2,InstalledPendingRebootCount=0,LastSyncResult="Succeeded",LastReportedUtc=DateTime.UtcNow.AddMinutes(-5).ToString("o")}};
    rebootSnapshots[row.Host]=new(){Required=true,CollectedUtc=DateTime.UtcNow.ToString("o"),Sources=new(){"fixture"}};
-   if(OverviewStatus(row).Kind!="Error"||RebootReason(row).Length==0||reportCache[row.Host].Report.FailedCount!=2)throw new Exception("Server errors hidden or confirmed reboot evidence lost");
+   if(OverviewStatus(row).Kind!="Reboot"||RebootReason(row).Length==0||reportCache[row.Host].Report.FailedCount!=2||!criteria45.GetValueOrDefault(row.Host,new()).SelectMany(g=>g.Checks).Any(c=>c.Tone=="Error"))throw new Exception("Server errors hidden or confirmed reboot evidence lost");
    rebootSnapshots[row.Host].Required=false;if(OverviewStatus(row).Kind!="Error")throw new Exception("Unresolved errors hidden after reboot flags clear");
    rebootSnapshots[row.Host].Required=null;if(OverviewStatus(row).Kind!="Error")throw new Exception("Unknown reboot flag masks an error");
   }finally{if(old==null)reportCache.Remove(row.Host);else reportCache[row.Host]=old;if(previous==null)rebootSnapshots.Remove(row.Host);else rebootSnapshots[row.Host]=previous;}
@@ -34,3 +34,4 @@ public partial class MainWindow {
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"reboot-state.ps1"),RemoteService.RebootStateScript,new UTF8Encoding(true));
  }
 }
+
