@@ -5,6 +5,11 @@ namespace DomainConsole;
 public sealed record Check45(string Text,string Tone,string Glyph);
 public sealed record Criterion45(string Key,string Text,string Tone,string Glyph,List<Check45> Checks,bool Action=false);
 public static class Criteria45 {
+ public static List<Criterion45> Confirmed(ReadyProof43 proof)=>new(){
+  new("updates","Обновления · необходимых нет · "+Display36.Date(proof.Scan),"Success","Success",new(){new("При полной проверке: поиск успешен, применимость определена, необходимых обновлений 0","Success","Success"),new("Актуальных неразрешённых ошибок на момент проверки не было","Success","Success")}),
+  new("report","Отчёт WSUS · подтверждён "+Display36.Date(proof.Report),"Success","Success",new(){new("При полной проверке: клиент найден на выбранном сервере, данные прочитаны и согласованы","Success","Success"),new("Отчёт и успешный обмен с WSUS подтверждены при проверке "+Display36.Date(proof.At),"Success","Success")}),
+  new("reboot","Перезагрузка · не требовалась · "+Display36.Date(proof.Reboot),"Success","Success",new(){new("Полная отрицательная проверка флагов на момент "+Display36.Date(proof.Reboot),"Success","Success"),new("Последующие подтверждённые изменения отменяют этот результат; одна давность — нет","Info","Info")})
+ };
  public static bool Newer(string a,string b)=>DateTimeOffset.TryParse(a,out var x)&&DateTimeOffset.TryParse(b,out var y)&&x>y;
  public static bool Resolved45(WsusReport report,RemoteState? state){
   if(state==null||!Newer(state.Ended,report.LastReportedUtc)||report.FailedCount<=0||report.FailedUpdates.Count!=report.FailedCount)return false;
@@ -45,7 +50,7 @@ public partial class MainWindow {
  ClientAssessment41 ExplainAssessment45(ComputerRow row,ClientAssessment41 a,CachedWsusReport? cache,RebootView40 reboot,RemoteState? state,bool active,string scan,int? remaining){
   if(!IsCurrent(row))return a;
   if(a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var ready45)){if(scan.Length==0){scan=ready45.Scan;remaining=0;}}
-  var list=Criteria45.Build(a,cache?.Found==true?cache.Report:null,reboot,state,active,scan,remaining,cache!=null&&!liveReports.Contains(row.Host),overviewErrors.GetValueOrDefault(row.Host,""),rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"");criteria45[row.Host]=list;
+  var list=a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var complete45)?Criteria45.Confirmed(complete45):Criteria45.Build(a,cache?.Found==true?cache.Report:null,reboot,state,active,scan,remaining,cache!=null&&!liveReports.Contains(row.Host),overviewErrors.GetValueOrDefault(row.Host,""),rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"");criteria45[row.Host]=list;
   if(a.Kind=="Warning"&&list.Count(g=>g.Tone is "Warning" or "Error")>1)a=a with{Title="Готовность не подтверждена · несколько условий не выполнены"};
   return a with{Details=string.Join("\n",list.Select(g=>(g.Tone=="Success"?"✓ ":g.Tone=="Error"?"✕ ":g.Tone is "Warning" or "Stale" or "Unknown"?"⚠ ":"• ")+g.Text))+"\n"+(a.Kind=="Success"?a.Details:reboot.Limitation)};
  }
