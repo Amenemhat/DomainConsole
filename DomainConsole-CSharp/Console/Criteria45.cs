@@ -40,6 +40,7 @@ public partial class MainWindow {
  readonly HashSet<string> seenProblems45=new(StringComparer.OrdinalIgnoreCase);
  string rendered45="";bool rendering45;
  ClientAssessment41 ExplainAssessment45(ComputerRow row,ClientAssessment41 a,CachedWsusReport? cache,RebootView40 reboot,RemoteState? state,bool active,string scan,int? remaining){
+  if(!IsCurrent(row))return a;
   if(a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var ready45)){if(scan.Length==0){scan=ready45.Scan;remaining=0;}}
   var list=Criteria45.Build(a,cache?.Found==true?cache.Report:null,reboot,state,active,scan,remaining,cache!=null&&!liveReports.Contains(row.Host),overviewErrors.GetValueOrDefault(row.Host,""),rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"");criteria45[row.Host]=list;
   return a with{Details=string.Join("\n",list.Select(g=>g.Text))+"\n"+(a.Kind=="Success"?a.Details:reboot.Limitation)};
@@ -50,7 +51,7 @@ public partial class MainWindow {
   rendering45=true;ReadinessTree45.Children.Clear();bool expandedProblem=false;
   foreach(var group in groups){string key=row.Host+"|"+group.Key;var exp=new Expander{Margin=new(0,1,0,1)};var head=new DockPanel{LastChildFill=true};
    if(group.Action){var button=new Button{Content="Проверить сейчас",Margin=new(8,0,0,0),Padding=new(4,0,4,0),VerticalAlignment=VerticalAlignment.Center,IsEnabled=!TransportBudget41.Paused&&!rebootChecks40.Contains(row.Host)};button.SetResourceReference(StyleProperty,"GhostButton");button.Click+=RebootCheck40_Click;DockPanel.SetDock(button,Dock.Right);head.Children.Add(button);}
-   var label=new TextBlock{Text=(group.Glyph=="Success"?"✓ ":group.Glyph=="Reboot"?"↻ ":group.Glyph=="Error"?"✕ ":"• ")+group.Text,FontSize=12,FontWeight=FontWeights.SemiBold,Foreground=Theme.Tone(group.Tone),TextTrimming=TextTrimming.CharacterEllipsis,ToolTip=group.Text};head.Children.Add(label);exp.Header=head;exp.HorizontalContentAlignment=HorizontalAlignment.Stretch;
+   var icon=new StatusGlyph{Kind=group.Glyph,Tint=Theme.Tone(group.Tone),Width=16,Height=16,Margin=new(0,0,5,0),VerticalAlignment=VerticalAlignment.Center};DockPanel.SetDock(icon,Dock.Left);head.Children.Add(icon);var label=new TextBlock{Text=group.Text,FontSize=12,FontWeight=FontWeights.SemiBold,Foreground=Theme.Tone(group.Tone),TextTrimming=TextTrimming.CharacterEllipsis,ToolTip=group.Text};head.Children.Add(label);exp.Header=head;exp.HorizontalContentAlignment=HorizontalAlignment.Stretch;
    var body=new StackPanel{Margin=new(18,1,0,2)};var problems=group.Checks.Where(c=>c.Tone is "Warning" or "Error").ToList();bool auto=!active&&!expandedProblem&&problems.Count>0&&!expansion45.ContainsKey(key)&&seenProblems45.Add(key+"|"+string.Join(";",problems.Select(x=>x.Text.Split('·')[0])));
    if(auto)expandedProblem=true;bool open=expansion45.GetValueOrDefault(key,auto);exp.IsExpanded=open;
    void Fill(bool all){body.Children.Clear();foreach(var check in all?group.Checks:problems){body.Children.Add(new TextBlock{Text=(check.Tone=="Success"?"✓ ":check.Tone=="Error"?"✕ ":"• ")+check.Text,FontSize=11,Foreground=Theme.Tone(check.Tone),TextWrapping=TextWrapping.Wrap,Margin=new(0,1,0,1)});}}
