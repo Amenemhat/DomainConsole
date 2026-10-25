@@ -4,6 +4,7 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease45(){
+  if(LogViewer.LineTone("Установка успешна · требуется перезагрузка")!="Warning"||LogViewer.LineTone("✓ Обновления · необходимых нет")!="Success"||LogViewer.LineTone("✕ Отчёт WSUS · ошибка")!="Error")throw new Exception("Journal disagrees with readiness criterion tones");
   var now=DateTimeOffset.UtcNow;string at=now.AddHours(-1).ToString("o"),boot=now.AddDays(-1).ToString("o");
   var old=new RebootSnapshot{Required=true,CollectedUtc=at,BootUtc=boot,Sources=new(){"Windows Update API","RebootRequired (Windows Update)","RebootPending (CBS)"}};
   var partial=new RebootSnapshot{CollectedUtc=now.ToString("o"),Error="uptime unavailable"};RebootSnapshotPolicy.Merge(old,partial);
