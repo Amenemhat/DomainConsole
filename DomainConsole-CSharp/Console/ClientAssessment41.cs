@@ -14,7 +14,7 @@ public static class ClientReadiness41 {
   string dates=report==null?"":"Отчёт WSUS: "+Display36.Date(report.LastReportedUtc)+" · "+ReportPresentation35.AgeAt41(report.LastReportedUtc,now);
   ClientAssessment41 Result(string k,string title,string detail)=>new(k,title,detail+(dates.Length>0?"\n"+dates:""));
   if(active){string concern=report?.FailedCount>0?"Ошибок по отчёту WSUS: "+report.FailedCount:report!=null&&ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"?"Отчёт WSUS устарел":"";if(reboot.Required==true)concern+=(concern.Length>0?"\n":"")+"Требуется перезагрузка";return Result("Working",state?.Stage.Length>0?state.Stage:"Выполняется задание",concern);}
-  if(state?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired" or "SubmissionUnknown")return Result("Error","Ошибка · "+MainWindow.ConnectionBrief31(state.Error.Length>0?state.Error:ComputerRow.StatusText(state.Status)),"Проверьте причину в журнале задания"+(reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
+  if(state?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired" or "SubmissionUnknown")return Result("Error","Ошибка · "+ResultPresentation36.BriefFailure(state.Error.Length>0?state.Error:ComputerRow.StatusText(state.Status)),"Проверьте причину в журнале задания"+(reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
   if(report?.FailedCount>0)return Result("Error","Ошибок по отчёту WSUS: "+report.FailedCount,"Откройте причины в отчёте WSUS"+(reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
   if(report?.LastSyncResult is "Failed" or "FailedWithErrors")return Result("SyncError","Последний поиск WSUS завершился с ошибкой","Поиск: "+Display36.Date(report.LastSyncUtc)+" · выполните диагностику связи с WSUS");
   if(reboot.Required==true)return Result("Reboot",reboot.Title,reboot.Details+(report==null?"\nОтчёт WSUS не получен":ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"?"\nОтчёт WSUS устарел":""));
@@ -29,7 +29,10 @@ public static class ClientReadiness41 {
   if(!reboot.Fresh||reboot.Required!=false)return Result("Warning","Проверка неполная · флаги перезагрузки не подтверждены","К установке по отчёту: 0 · проверьте флаги на клиенте\n"+reboot.Details);
   if(DateTimeOffset.TryParse(boot,out var b)&&DateTimeOffset.TryParse(report.LastReportedUtc,out var r)&&r<b)return Result("Warning","Проверка неполная · отчёт получен до загрузки Windows","Нужен отчёт после последней загрузки");
   if(searched&&remaining>0)return Result("Warning","Данные клиента и WSUS расходятся","Последний поиск клиента: осталось "+remaining+" · "+Display36.Date(searchAt)+". Выполните новый поиск и отчёт");
-  if(!searched||remaining!=0||!DateTimeOffset.TryParse(searchAt,out var at)||now-at>TimeSpan.FromHours(hours)||at>now.AddMinutes(1)||DateTimeOffset.TryParse(boot,out var started)&&at<started)return Result("Warning","Проверка неполная · нет актуального поиска клиента","Поиск клиента не подтверждён для текущей загрузки и источника. Подробности — в журнале.");
+  if(!searched)return Result("Warning","Поиск клиента не подтверждён","К установке по отчёту: 0 · нет сохранённого успешного поиска для этого источника");
+  if(!DateTimeOffset.TryParse(searchAt,out var at)||at>now.AddMinutes(1))return Result("Warning","Время поиска клиента не подтверждено","К установке по отчёту: 0 · проверьте время и результат поиска");
+  if(DateTimeOffset.TryParse(boot,out var started)&&at<started)return Result("Warning","Поиск клиента выполнен до перезагрузки","К установке по отчёту: 0 · нужна проверка после последней загрузки");
+  if(remaining!=0||now-at>TimeSpan.FromHours(hours))return Result("Warning","Нужна повторная проверка обновлений","Последний подтверждённый поиск: "+Display36.Date(searchAt));
   return Result("Success","Проверено · необходимых обновлений нет","Отчёт WSUS свежий · перезагрузка не требуется\nПоиск клиента: "+Display36.Date(searchAt)+" · флаги: "+Display36.Date(reboot.Stamp));
  }
 }

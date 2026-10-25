@@ -53,8 +53,8 @@ try{
   $workers=@(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction Stop|Where-Object {$_.CommandLine -and ($_.CommandLine.IndexOf($script,[StringComparison]::OrdinalIgnoreCase) -ge 0 -or $_.CommandLine.IndexOf((Join-Path $path 'Reboot.ps1'),[StringComparison]::OrdinalIgnoreCase) -ge 0 -or $_.CommandLine.IndexOf((Join-Path $path 'Activity.ps1'),[StringComparison]::OrdinalIgnoreCase) -ge 0)})
   if($workers.Count){Reply 'Unknown' 'Процесс предыдущего сборщика ещё существует; требуется сверка' 120;return}
   if($mode -eq 'Inspect'){Reply 'Inspected' $(if($run){[string]$run.Error}else{'Сборщик не запускался этой версией'}) 0 $snapshot;return}
-  if($mode -in @('Stop','Reset')){Reply 'Stopped' 'Остановка служебного сборщика подтверждена' 120 $snapshot;return}
-  if($mode -eq 'Reset'){if($run){$run.Failures=0;$run.NextUtc=[DateTime]::UtcNow.AddSeconds(120).ToString('o');$run.Error='Предыдущий сборщик остановлен; повторная проверка после паузы';$run.Accounted=$true;Save-Run};Remove-Item -LiteralPath (Join-Path $path 'result.json') -Force -ErrorAction SilentlyContinue;Reply 'Cooldown' 'Остановка сборщика подтверждена; повторная проверка через 2 минуты' 120;return}
+  if($mode -eq 'Stop'){Reply 'Stopped' 'Остановка служебного сборщика подтверждена' 120 $snapshot;return}
+  if($mode -eq 'Reset'){if(!$run){$run=@{Id='';StartedUtc=[DateTime]::UtcNow.ToString('o');Failures=0;NextUtc='';Error='';Accounted=$true;Version=43}};if($run){$run.Failures=0;$run.NextUtc=[DateTime]::UtcNow.AddSeconds(120).ToString('o');$run.Error='Предыдущий сборщик остановлен; повторная проверка после паузы';$run.Accounted=$true;Save-Run};Remove-Item -LiteralPath (Join-Path $path 'result.json') -Force -ErrorAction SilentlyContinue;Reply 'Cooldown' 'Остановка сборщика подтверждена; повторная проверка через 2 минуты' 120;return}
   if($mode -eq 'Recover'){
    if($run){$run.Failures=0;$run.NextUtc='';$run.Error='';$run.Accounted=$true;Save-Run}
    Remove-Item -LiteralPath (Join-Path $path 'blocked.flag'),(Join-Path $path 'result.json') -Force -ErrorAction SilentlyContinue

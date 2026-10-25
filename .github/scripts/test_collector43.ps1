@@ -32,4 +32,10 @@ try{
  $until=[DateTime]::UtcNow.AddSeconds(100);do{Start-Sleep -Seconds 2;$r=Run 'probe42-Read.ps1'}while($r.Status -in @('Busy','Stopping') -and [DateTime]::UtcNow -lt $until)
  if($r.Status -ne 'Ready'){throw 'Collector failed after reinstall'}
 }finally{Remove-Item $sentinel -Recurse -Force -ErrorAction SilentlyContinue}
+# New reset is read-only task control: confirmed stop, then remote cooldown.
+$reset=Run 'probe44-Reset.ps1'
+if($reset.Status -ne 'Cooldown' -or $reset.RetrySeconds -ne 120){throw 'Reset skipped confirmed stop/cooldown'}
+if((Run 'probe42-Get.ps1').Status -ne 'Cooldown'){throw 'Reset immediately restarted collector'}
+$null=Run 'probe42-Recover.ps1'
 Write-Output 'Collector43: real WinRM inspection with mismatched task, SYSTEM identity, no downgrade, owned hung supervisor cleanup, foreign task protection, unrelated maintenance/data preservation, disabled reinstall gate, idempotency and re-enable passed.'
+

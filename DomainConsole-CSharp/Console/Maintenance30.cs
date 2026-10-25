@@ -26,7 +26,7 @@ public partial class MainWindow {
  }
  async Task AdvanceMaintenance(Func<ComputerRow,Task<RebootSnapshot?>>? statusProbe=null,Func<TargetRecord,Task<LiveUpdateActivity>>? activityProbe=null,bool dispatch=true){if(TransportBudget41.Paused||advancingMaintenance||closing)return;statusProbe??=r=>ReadClientStatus(r,force:true);activityProbe??=remote.LiveUpdates;advancingMaintenance=true;try{
   foreach(var p in maintenancePlans.Values.Where(p=>!p.Done&&p.Next<=DateTimeOffset.UtcNow).Take(3).ToList()){
-   p.Next=DateTimeOffset.UtcNow.AddMinutes(1);if(!AutoServiceEnabled&&p.Install){p.Done=true;p.Phase="Автоматическое продолжение выключено";continue;}var row=Computers.FirstOrDefault(r=>r.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase));
+   NormalizePlan44(p);p.Next=DateTimeOffset.UtcNow.AddMinutes(1);if(!AutoServiceEnabled&&p.Install){p.Done=true;p.Phase="Автоматическое продолжение выключено";continue;}var row=Computers.FirstOrDefault(r=>r.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase));
    if(row==null||row.Target.AdDisabled){p.Done=true;p.Phase="Требуется действие";p.Detail=row==null?"Компьютер отсутствует в рабочем списке":"Учётная запись отключена в AD";continue;}
    if(ForeignControl37(p.Host)){p.Done=true;p.Phase="Требуется действие";p.Detail="Управление передано другой консоли; автоматическое продолжение прекращено";continue;}
    var captured=ConnectionStore.Capture(row.Target);if(captured.ConnectionIdentity!=p.Identity){p.Done=true;p.Phase="Требуется действие";p.Detail="Идентичность подключения изменилась; проверьте цель перед продолжением";continue;}
@@ -35,14 +35,14 @@ public partial class MainWindow {
    if(target!=null&&ActiveTarget(target)){p.Phase="Выполняется обслуживание";continue;}
    if(target!=null&&!TerminalSuccess(target)){if(target.Status is "ConnectionFailed" or "Unavailable" or "AccessDenied" or "SubmissionUnknown"){p.Detail="Связь/передача не подтверждена; требуется проверка результата, повторный запуск не выполняется";continue;}p.Done=true;p.Phase=target.Status=="Cancelled"?"Обслуживание остановлено":"Требуется действие";p.Detail="Автоматическое продолжение прекращено: "+ComputerRow.StatusText(target.Status)+". См. результат задания.";continue;}
    if(p.Phase=="Ожидается перезагрузка"){
-    var snapshot=await statusProbe(row).WaitAsync(TimeSpan.FromSeconds(105));if(snapshot==null){p.Detail="Клиент пока не ответил; повторный опрос запланирован";continue;}
+    var snapshot=await statusProbe(row).WaitAsync(TimeSpan.FromSeconds(105));if(p.Done)continue;if(snapshot==null){p.Detail="Клиент пока не ответил; повторный опрос запланирован";continue;}
     if(!RebootSnapshotPolicy.NewBoot(new(){BootUtc=p.BootUtc},snapshot)){if(snapshot.Required==false&&(!rebootWatches.TryGetValue(p.Host,out var scheduledWatch32)||scheduledWatch32.Done)&&HeaderRebootJob(row)==null){p.Phase="Флаги перезагрузки сняты";p.Detail="Свежий опрос не подтвердил требование перезагрузки; обслуживание продолжается";p.Next=DateTimeOffset.UtcNow;}else p.Detail="Перезагрузите компьютер в согласованное время; продолжение сохранено";continue;}
     p.BootUtc=snapshot.BootUtc;p.Phase="После перезагрузки: ожидание готовности";p.ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));p.Detail="";continue;
    }
    if(DateTimeOffset.UtcNow<p.ReadyAfter)continue;
    // Current operation may have completed with a reboot requirement. Observe once and wait for a new boot.
    if(target!=null&&p.Phase!="После перезагрузки: ожидание готовности"){
-    var snapshot=await statusProbe(row).WaitAsync(TimeSpan.FromSeconds(105));if(snapshot==null){p.Detail="Не удалось обновить статус клиента; будет повторный опрос";continue;}
+    var snapshot=await statusProbe(row).WaitAsync(TimeSpan.FromSeconds(105));if(p.Done)continue;if(snapshot==null){p.Detail="Не удалось обновить статус клиента; будет повторный опрос";continue;}
     if(DateTimeOffset.TryParse(snapshot.BootUtc,out var completedBoot)&&DateTimeOffset.TryParse(target.State?.Ended,out var completedAt)&&completedBoot>completedAt&&p.BootUtc!=snapshot.BootUtc){p.BootUtc=snapshot.BootUtc;p.Phase="После перезагрузки: ожидание готовности";p.ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));p.Detail="";continue;}
     if(snapshot.Required==true){
      p.Phase="Ожидается перезагрузка";p.BootUtc=snapshot.BootUtc;p.Detail="Перезагрузите в согласованное время. После возврата обслуживание продолжится автоматически.";continue;
@@ -52,7 +52,7 @@ public partial class MainWindow {
    }
    if(History.Any(j=>IsWsusJob(j)&&j.Targets.Any(t=>t.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)))){p.Detail="Ожидается завершение другого задания WSUS";continue;}
    if(p.Install&&p.Phase=="После перезагрузки: ожидание готовности"){
-    var fresh=await statusProbe(row).WaitAsync(TimeSpan.FromSeconds(105));if(fresh==null){p.Detail="Ожидается свежий снимок клиента";continue;}
+    var fresh=await statusProbe(row).WaitAsync(TimeSpan.FromSeconds(105));if(p.Done)continue;if(fresh==null){p.Detail="Ожидается свежий снимок клиента";continue;}
     if(fresh.Required!=false){p.Phase=fresh.Required==true?"Ожидается перезагрузка":"Требуется действие";p.Done=fresh.Required==null;p.BootUtc=fresh.BootUtc;p.Detail=fresh.Required==true?"После загрузки подтверждено новое требование перезагрузки; источники в журнале":"Не удалось уточнить флаги; установка автоматически не продолжается";continue;}
    }
    if(p.Cycles>=3){p.Done=true;p.Phase="Требуется действие";p.Detail="Достигнут предел: 3 цикла. Проверьте оставшиеся обновления; автоматический повтор остановлен.";continue;}
@@ -74,7 +74,8 @@ public partial class MainWindow {
   var id=p.NextJobId.Length>0?p.NextJobId:p.JobId;var job=History.FirstOrDefault(j=>j.Id==id);if(job==null)continue;
   foreach(var t in job.Targets.Where(t=>t.Status=="Queued"&&t.State==null))if(!queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host==t.Host))queue.Enqueue((job,t));
  }}
- void ExpirePlans44(){bool changed=false;foreach(var p in maintenancePlans.Values.Where(p=>!p.Done&&PlanExpired44(p,DateTimeOffset.UtcNow))){p.Done=true;p.Phase="Требуется действие";p.Detail="Срок автоматического продолжения истёк (2 суток). Работающие клиентские задания не остановлены.";changed=true;}if(changed)SaveMaintenance();}
+ void ExpirePlans44(){foreach(var p in maintenancePlans.Values)NormalizePlan44(p);foreach(var p in maintenancePlans.Values.Where(p=>!p.Done&&PlanExpired44(p,DateTimeOffset.UtcNow)).ToList()){FinishPlan44(p.Host);p.Phase="Требуется действие";p.Detail="Срок автоматического продолжения истёк (2 суток). Работающие клиентские задания не остановлены.";SaveMaintenance();}}
+
  string MaintenanceText(string host)=>maintenancePlans.TryGetValue(host,out var p)?"\n\n## Обслуживание клиента\n"+p.Phase+(p.Detail.Length>0?"\n"+p.Detail:"")+"\nПлан начат: "+Display36.Date(p.StartedUtc,true)+" · задание: "+p.JobId+"\nРежим: "+(p.Install?"полное обслуживание":"только поиск и отчёт")+"; циклов: "+p.Cycles+" / 3":"";
  void RefreshAttentionButton(){if(AttentionButton==null)return;var rows=AttentionEntries36().Where(x=>x.Required).ToList();AttentionButton.Content="Требуют внимания · "+rows.Count;AttentionButton.Foreground=rows.Any(x=>x.Tone=="Error")?Theme.Tone("Error"):rows.Count>0?Theme.Tone("Warning"):Theme.Brush("TextPrimary");}
  void Attention_Click(object sender,RoutedEventArgs e)=>AttentionWindow36().ShowDialog();

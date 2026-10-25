@@ -3,6 +3,7 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease44(){
+  System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(),"probe44-Reset.ps1"),RemoteService.SnapshotScript42("Reset"),new System.Text.UTF8Encoding(true));
   var now=DateTimeOffset.UtcNow;var positive=new RebootSnapshot{Required=true,BootUtc=now.AddDays(-2).ToString("o"),CollectedUtc=now.AddMinutes(-20).ToString("o"),Sources=new(){"RebootRequired"}};
   var view=DescribeReboot40(positive,positive.BootUtc,now);var report=new WsusReport{NeededCount=0,RequiredComplete=true,LastReportedUtc=now.ToString("o"),LastSyncResult="Succeeded"};
   var a=ClientReadiness41.Evaluate(report,false,true,view,new(){Status="Completed"},false,true,0,now.ToString("o"),"",now,24,positive.BootUtc);

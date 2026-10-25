@@ -2,6 +2,7 @@ using System.Windows;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
+ void NormalizePlan44(MaintenancePlan p){var root=History.FirstOrDefault(j=>j.Id==p.PlanId37)??History.FirstOrDefault(j=>j.Id==p.JobId);if(root!=null&&DateTimeOffset.TryParse(root.Created,out var created)&&(!DateTimeOffset.TryParse(p.StartedUtc,out var started)||created<started)){p.StartedUtc=created.ToString("o");p.DeadlineUtc44=created.AddDays(2).ToString("o");}}
  static bool PlanExpired44(MaintenancePlan p,DateTimeOffset now){if(!DateTimeOffset.TryParse(p.StartedUtc,out var start)||start>now.AddMinutes(1))return true;var deadline=start.AddDays(2);if(DateTimeOffset.TryParse(p.DeadlineUtc44,out var saved)&&saved<deadline)deadline=saved;return now>=deadline;}
  void ReconcilePlan44(string host,string id,PollResult data){if(!maintenancePlans.TryGetValue(host,out var p)||p.Done||p.JobId!=id||data.State==null)return;var state=data.State;if(IsCurrentExecution(state.Status)||state.Status=="Queued")return;
   if(state.Status is "Failed" or "CompletedWithErrors" or "Cancelled" or "InterventionRequired"){p.Done=true;p.Phase=state.Status=="Cancelled"?"Обслуживание остановлено":"Требуется действие";p.Detail=state.Error.Length>0?ConnectionBrief31(state.Error):ComputerRow.StatusText(state.Status);}
