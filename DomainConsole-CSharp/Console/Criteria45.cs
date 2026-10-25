@@ -40,6 +40,7 @@ public partial class MainWindow {
  readonly HashSet<string> seenProblems45=new(StringComparer.OrdinalIgnoreCase);
  string rendered45="";bool rendering45;
  ClientAssessment41 ExplainAssessment45(ComputerRow row,ClientAssessment41 a,CachedWsusReport? cache,RebootView40 reboot,RemoteState? state,bool active,string scan,int? remaining){
+  if(a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var ready45)){if(scan.Length==0){scan=ready45.Scan;remaining=0;}}
   var list=Criteria45.Build(a,cache?.Found==true?cache.Report:null,reboot,state,active,scan,remaining,cache!=null&&!liveReports.Contains(row.Host),overviewErrors.GetValueOrDefault(row.Host,""),rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"");criteria45[row.Host]=list;
   return a with{Details=string.Join("\n",list.Select(g=>g.Text))+"\n"+(a.Kind=="Success"?a.Details:reboot.Limitation)};
  }
