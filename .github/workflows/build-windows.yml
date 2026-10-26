@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'DomainConsole-CSharp/**'
+      - 'docs/error-reference/**'
       - 'DomainConsole-Source.zip'
       - '.github/workflows/build-windows.yml'
 permissions:
