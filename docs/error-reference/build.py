@@ -32,6 +32,7 @@ SOURCES = {
 }
 # These are diagnostic plans, not code definitions or executable repairs.
 PROFILES = {
+ 'wof': ("Найти повреждённый WOF-файл", ["Первая связанная с установкой ошибка CBS/DISM, полный путь, пакет и время","Расположение файла: Download, WinSxS, системный либо другой каталог","Состояние хранилища компонентов и события Disk/NTFS/storage при повторении"], ["Код не доказывает повреждение всего кэша или физическую неисправность диска","Не удалять вручную WinSxS и не снимать WOF-сжатие массово","Восстановление и проверка диска выполняются отдельными согласованными действиями"]),
  'result': ('Проверить итог операции', ['Источник кода, ResultCode, результат каждого элемента', 'Актуальные флаги и время завершения'], ['Не трактовать exit code процесса как HRESULT без указания домена']),
  'reboot': ('Уточнить необходимость перезагрузки', ['WUA SystemInfo и ключи Windows Update/CBS', 'BootUtc и время предыдущего положительного флага'], ['Перезагрузка только с отдельным разрешением', 'После возврата заново читать флаги и продолжать разрешённую цепочку']),
  'busy': ('Проверить активную операцию', ['WUA Installer.IsBusy, активное задание и время его начала', 'Динамика CPU/диска/событий; два снимка вместо одного процента'], ['Не перезапускать службы во время подтверждённой установки автоматически', 'Неподвижный процент не доказывает зависание']),
@@ -116,7 +117,7 @@ def build():
         e['coverage'] = 'russian_diagnostic_card' if 'card' in e else 'technical_symbol_only'
         e['reference_marker'] = any('_ERROR_CONTEXT_' in s or s.endswith('_BASE') for s in e['symbols'])
         # Markers and failure bit do not decide outcome/severity without API context.
-        e['verified_at'] = DATE
+        e['verified_at'] = '2026-10-26' if e['code'] == '0x80071160' else DATE
     catalog = dict(schema_version=1, reference_date=DATE,
         scope='Reference data only; not yet integrated into DomainConsole runtime',
         interpretation_policy='See README.md; match namespace and operation before rendering a card',

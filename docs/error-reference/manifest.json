@@ -1,16 +1,16 @@
 {
   "date": "2026-10-18",
   "counts": {
-    "hresult_values": 4302,
-    "win32_values": 2745,
-    "russian_cards": 146,
+    "hresult_values": 4303,
+    "win32_values": 2746,
+    "russian_cards": 147,
     "technical_only": 4156
   },
   "sha256": {
     "sdk-symbols.json": "c2a66fdbe06a6dc900f73f08a9c48514643342493ae2dbfa553fb566a3688ecd",
-    "win32-symbols.json": "5b59255124827aa51863ab26f8b8f5cada5d9b3dae8ca5cbe0054927c5bfc4b8",
-    "cards.tsv": "060a346d714d768e4ef74757f4b73915b9407d3ad1ddda7ac8ba121e689489f5",
-    "catalog.json": "b618375c213dceea48f843c999584252870a2cfa3acbffe92ee037e5437d1607",
-    "REFERENCE.ru.md": "a9c52990637b871498f0bd818a2e5fbfb575606b642574b1d223d54d37efae97"
+    "win32-symbols.json": "8e22708b074f2e1796d178c82054d09a8bb69563903424f1c4af080de0d7fb3e",
+    "cards.tsv": "45b0729b8989b73dd85e8c4ec1176ceec549e8d929a2a3e59ec36f7c307ffb6a",
+    "catalog.json": "1dc835dffb2cd7af9c4e3f69e5da8f1d3398d274012baf543983757d1b852379",
+    "REFERENCE.ru.md": "f9d339ef03d6b2ba31cf48705e8cf6eec97ae79422e21b57993fd65c287c6987"
   }
 }

@@ -16,6 +16,15 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Verify error reference data and reproducibility
+        shell: pwsh
+        run: |
+          python -m unittest discover -s docs/error-reference -p test_reference.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Reference validation failed' }
+          python docs/error-reference/build.py
+          if ($LASTEXITCODE -ne 0) { throw 'Reference rebuild failed' }
+          git diff --exit-code -- docs/error-reference/catalog.json docs/error-reference/REFERENCE.ru.md docs/error-reference/manifest.json
+          if ($LASTEXITCODE -ne 0) { throw 'Reference generated files differ' }
       - name: Build native C# remote executor
         run: dotnet build DomainConsole-CSharp/Agent/DomainConsole.Agent.csproj -c Release
       - name: Publish portable Windows app

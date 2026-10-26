@@ -1673,6 +1673,7 @@ namespace DomainConsole.Shared {
 80071159|ERROR_OFFLOAD_WRITE_FLT_NOT_SUPPORTED|||
 8007115A|ERROR_OFFLOAD_READ_FILE_NOT_SUPPORTED|||
 8007115B|ERROR_OFFLOAD_WRITE_FILE_NOT_SUPPORTED|||
+80071160|ERROR_WOF_FILE_RESOURCE_TABLE_CORRUPT|Драйвер WOF обнаружил повреждение таблицы ресурсов сжатого файла.|Повреждены данные или метаданные конкретного сжатого файла. По одному коду нельзя определить, находится ли он в кэше загрузок, хранилище компонентов или другом каталоге; причина повреждения не установлена.|Найти путь файла и первую относящуюся к этой установке ошибку в CBS/DISM. Для файла в Download после завершения операций допустима адресная повторная загрузка; для WinSxS или системного файла проверить хранилище компонентов и файловую систему. Не назначать полный сброс кэша только по этому коду.
 80071194|ERROR_VOLUME_NOT_SIS_ENABLED|||
 80071389|ERROR_DEPENDENT_RESOURCE_EXISTS|||
 8007138A|ERROR_DEPENDENCY_NOT_FOUND|||

@@ -4,9 +4,9 @@
   "scope": "Reference data only; not yet integrated into DomainConsole runtime",
   "interpretation_policy": "See README.md; match namespace and operation before rendering a card",
   "counts": {
-    "hresult_values": 4302,
-    "win32_values": 2745,
-    "russian_cards": 146,
+    "hresult_values": 4303,
+    "win32_values": 2746,
+    "russian_cards": 147,
     "technical_only": 4156
   },
   "entries": [
@@ -27047,6 +27047,45 @@
       "coverage": "technical_symbol_only",
       "reference_marker": false,
       "verified_at": "2026-10-18"
+    },
+    {
+      "code": "0x80071160",
+      "domain": "hresult",
+      "symbols": [
+        "ERROR_WOF_FILE_RESOURCE_TABLE_CORRUPT"
+      ],
+      "sources": [
+        "https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/RecompiledIdlHeaders/shared/winerror.h"
+      ],
+      "win32_value": 4448,
+      "card": {
+        "editorial_status": "prepared_for_review",
+        "severity": "error",
+        "meaning_ru": "Драйвер WOF обнаружил повреждение таблицы ресурсов сжатого файла.",
+        "possible_causes_ru": [
+          "Повреждены данные или метаданные конкретного сжатого файла. По одному коду нельзя определить, находится ли он в кэше загрузок, хранилище компонентов или другом каталоге; причина повреждения не установлена."
+        ],
+        "next_action_ru": "Найти путь файла и первую относящуюся к этой установке ошибку в CBS/DISM. Для файла в Download после завершения операций допустима адресная повторная загрузка; для WinSxS или системного файла проверить хранилище компонентов и файловую систему. Не назначать полный сброс кэша только по этому коду.",
+        "diagnostic_profile": "wof",
+        "diagnostic_title_ru": "Найти повреждённый WOF-файл",
+        "checks_ru": [
+          "Первая связанная с установкой ошибка CBS/DISM, полный путь, пакет и время",
+          "Расположение файла: Download, WinSxS, системный либо другой каталог",
+          "Состояние хранилища компонентов и события Disk/NTFS/storage при повторении"
+        ],
+        "constraints_ru": [
+          "Код не доказывает повреждение всего кэша или физическую неисправность диска",
+          "Не удалять вручную WinSxS и не снимать WOF-сжатие массово",
+          "Восстановление и проверка диска выполняются отдельными согласованными действиями"
+        ],
+        "automatic_repair_allowed": false,
+        "explanation_is_not_diagnosis": true
+      },
+      "signed32": -2147020448,
+      "failure_bit": true,
+      "coverage": "russian_diagnostic_card",
+      "reference_marker": false,
+      "verified_at": "2026-10-26"
     },
     {
       "code": "0x80071194",

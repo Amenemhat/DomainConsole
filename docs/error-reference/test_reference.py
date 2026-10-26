@@ -33,6 +33,18 @@ class ReferenceTests(unittest.TestCase):
                             lookup('0x800706ba','hresult')['entry']['card']['diagnostic_profile'])
         self.assertEqual(lookup('0xDEADBEEF','hresult')['status'],'unknown')
 
+    def test_wof_file_corruption(self):
+        entry=lookup('-2147020448','hresult')['entry']
+        self.assertEqual(entry['code'],'0x80071160')
+        self.assertEqual(entry['symbols'],['ERROR_WOF_FILE_RESOURCE_TABLE_CORRUPT'])
+        self.assertEqual(entry['win32_value'],4448)
+        self.assertEqual(lookup('4448','win32')['entry']['code'],'0x80071160')
+        self.assertEqual(entry['card']['diagnostic_profile'],'wof')
+        self.assertFalse(entry['card']['automatic_repair_allowed'])
+        self.assertIn('По одному коду нельзя',entry['card']['possible_causes_ru'][0])
+        self.assertEqual(lookup('-65536','exit','powershell.exe')['status'],'program_contract_required')
+        self.assertEqual(lookup('0xFFFF0000','hresult')['status'],'unknown')
+
     def test_integrity_and_coverage(self):
         data=json.loads((ROOT/'catalog.json').read_text())
         entries=data['entries']
