@@ -46,7 +46,7 @@ class ReferenceTests(unittest.TestCase):
         self.assertEqual(lookup('0xFFFF0000','hresult')['status'],'unknown')
 
     def test_integrity_and_coverage(self):
-        data=json.loads((ROOT/'catalog.json').read_text())
+        data=json.loads((ROOT/'catalog.json').read_text(encoding='utf-8'))
         entries=data['entries']
         self.assertEqual(len(entries),len({e['code'] for e in entries}))
         self.assertEqual(data['counts']['russian_cards'],sum('card' in e for e in entries))
@@ -58,7 +58,7 @@ class ReferenceTests(unittest.TestCase):
                 self.assertFalse(e['card']['automatic_repair_allowed'])
                 self.assertTrue(e['card']['checks_ru'])
                 self.assertNotIn('Подробности смотрите в выводе и журналах',e['card']['meaning_ru'])
-        manifest=json.loads((ROOT/'manifest.json').read_text())
+        manifest=json.loads((ROOT/'manifest.json').read_text(encoding='utf-8'))
         for name,digest in manifest['sha256'].items():
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),digest)
 

@@ -76,14 +76,14 @@ def build():
         if symbol and symbol not in e['symbols']: e['symbols'].append(symbol)
         if source and source not in e['sources']: e['sources'].append(source)
         return e
-    for x in json.loads((ROOT/'sdk-symbols.json').read_text()):
+    for x in json.loads((ROOT/'sdk-symbols.json').read_text(encoding='utf-8')):
         add(x['code'], x['symbol'], SOURCES[x['source']])
-    win32 = json.loads((ROOT/'win32-symbols.json').read_text())
+    win32 = json.loads((ROOT/'win32-symbols.json').read_text(encoding='utf-8'))
     for x in win32:
         # HRESULT_FROM_WIN32: do not mistake this for raw command exit code.
         add(x['hresult'], x['symbol'], x['source'], win32_value=x['value'])
     cards = []
-    for line in (ROOT/'cards.tsv').read_text().splitlines():
+    for line in (ROOT/'cards.tsv').read_text(encoding='utf-8').splitlines():
         if not line or line.startswith('#'): continue
         fields = line.split('|')
         assert len(fields)==7, line
@@ -124,7 +124,7 @@ def build():
         counts=dict(hresult_values=len(entries),win32_values=len(win32),russian_cards=len(cards),
             technical_only=sum('card' not in e for e in entries.values())),
         entries=sorted(entries.values(),key=lambda e:e['code']))
-    (ROOT/'catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n')
+    (ROOT/'catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')
     text = ['# Справочник ошибок обслуживания Windows', '',
         f'Снимок источников: {DATE}. Значений HRESULT: **{len(entries)}**, исходных Win32: **{len(win32)}**, подробных русских карточек: **{len(cards)}**.', '',
         'Это подготовленные справочные данные, ещё не включённые в приложение. Возможные причины — гипотезы, пока они не подтверждены журналом конкретной попытки. В каталоге также есть успешные, ожидающие и служебные коды.', '',
@@ -141,9 +141,9 @@ def build():
         'Подробное русское объяснение этих значений пока не подготовлено. Не подставлять общую рекомендацию вместо отсутствующей карточки. Источники каждой записи — в catalog.json.', '',
         '| HRESULT | Техническое имя |', '|---|---|']
     text += [f"| `{e['code']}` | `{' / '.join(e['symbols'])}` |" for e in catalog['entries'] if 'card' not in e]
-    (ROOT/'REFERENCE.ru.md').write_text('\n'.join(text)+'\n')
+    (ROOT/'REFERENCE.ru.md').write_text('\n'.join(text)+'\n',encoding='utf-8',newline='\n')
     checksums = {p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in [ROOT/'sdk-symbols.json',ROOT/'win32-symbols.json',ROOT/'cards.tsv',ROOT/'catalog.json',ROOT/'REFERENCE.ru.md']}
-    (ROOT/'manifest.json').write_text(json.dumps(dict(date=DATE,counts=catalog['counts'],sha256=checksums),indent=2)+'\n')
+    (ROOT/'manifest.json').write_text(json.dumps(dict(date=DATE,counts=catalog['counts'],sha256=checksums),indent=2)+'\n',encoding='utf-8',newline='\n')
     print(json.dumps(catalog['counts']))
 
 if __name__=='__main__': build()

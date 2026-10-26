@@ -31,12 +31,12 @@ def lookup(value, domain, program=None):
             message_ru=states.get(n,'Неизвестное состояние ResultCode'),
             requires_item_hresult=n in (3,4),automatic_repair_allowed=False)
     if domain=='win32':
-        raw=next((x for x in json.loads((ROOT/'win32-symbols.json').read_text()) if x['value']==n),None)
+        raw=next((x for x in json.loads((ROOT/'win32-symbols.json').read_text(encoding='utf-8')) if x['value']==n),None)
         if raw is None:
             return dict(domain=domain,value=n,status='unknown',message_ru='Код Win32 не найден в этом снимке справочника.')
         code=raw['hresult']
     else: code=f'0x{n:08X}'
-    entry=next((x for x in json.loads((ROOT/'catalog.json').read_text())['entries'] if x['code']==code),None)
+    entry=next((x for x in json.loads((ROOT/'catalog.json').read_text(encoding='utf-8'))['entries'] if x['code']==code),None)
     if entry is None:
         return dict(domain=domain,code=code,status='unknown',automatic_repair_allowed=False,
             message_ru='Код не найден в справочнике. Сохраните системное сообщение и контекст; доступен поиск по точному коду.')
