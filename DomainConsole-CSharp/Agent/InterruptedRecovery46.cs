@@ -8,7 +8,7 @@ namespace DomainConsole.Agent {
   // Called only while Coordination37 is held. This reconciles bookkeeping, never
   // retries an update, kills a process, or treats a missing result as success.
   static bool RecoverInterrupted46(string file,RemoteState state){
-   if(state==null||!string.IsNullOrEmpty(state.Ended)||state.Status!="Running"&&state.Status!="Queued"||state.RestoreStatus=="Pending"||state.RestoreStatus=="InterventionRequired"||state.DiagnosticStatus=="Pending"||state.DiagnosticStatus=="Running")return false;
+   if(!controlHeld46||state==null||!string.IsNullOrEmpty(state.Ended)||state.Status!="Running"&&state.Status!="Queued"||state.RestoreStatus=="Pending"||state.RestoreStatus=="InterventionRequired"||state.DiagnosticStatus=="Pending"||state.DiagnosticStatus=="Running")return false;
    DateTimeOffset started,updated;if(!DateTimeOffset.TryParse(state.Started,out started)||!DateTimeOffset.TryParse(state.Updated,out updated)||DateTimeOffset.UtcNow-updated<TimeSpan.FromMinutes(2))return false;
    try{
     DateTime boot=DateTime.MinValue;using(var q=new ManagementObjectSearcher("SELECT LastBootUpTime FROM Win32_OperatingSystem"))foreach(ManagementObject os in q.Get())boot=ManagementDateTimeConverter.ToDateTime((string)os["LastBootUpTime"]).ToUniversalTime();

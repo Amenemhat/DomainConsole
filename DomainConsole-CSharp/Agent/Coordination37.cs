@@ -11,7 +11,8 @@ namespace DomainConsole.Agent {
   static string ControlFile37=>Path.Combine(Path.GetDirectoryName(Folder),"control37.json");
   static ControlRecord37 ReadControl37(){var value=File.Exists(ControlFile37)?Json.Deserialize<ControlRecord37>(File.ReadAllText(ControlFile37)):new ControlRecord37();if(value.Protocol!=1)throw new InvalidOperationException("Несовместимый протокол управления; обновите консоль.");return value;}
   static void WriteControl37(ControlRecord37 value){var temp=ControlFile37+"."+Guid.NewGuid()+".tmp";try{File.WriteAllText(temp,Json.Serialize(value));if(File.Exists(ControlFile37))File.Replace(temp,ControlFile37,null);else File.Move(temp,ControlFile37);}finally{if(File.Exists(temp))File.Delete(temp);}}
-  static T ControlGate37<T>(Func<T> action){using(var mutex=new Mutex(false,@"Global\DomainConsoleCSharp.Coordination37")){bool owns=false;try{try{owns=mutex.WaitOne(10000);}catch(AbandonedMutexException){owns=true;}if(!owns)throw new TimeoutException("Проверка владельца клиента занята; действие не начато.");return action();}finally{if(owns)mutex.ReleaseMutex();}}}
+  [ThreadStatic] static bool controlHeld46;
+  static T ControlGate37<T>(Func<T> action){using(var mutex=new Mutex(false,@"Global\DomainConsoleCSharp.Coordination37")){bool owns=false;try{try{owns=mutex.WaitOne(10000);}catch(AbandonedMutexException){owns=true;}if(!owns)throw new TimeoutException("Проверка владельца клиента занята; действие не начато.");bool previous=controlHeld46;controlHeld46=true;try{return action();}finally{controlHeld46=previous;}}finally{if(owns)mutex.ReleaseMutex();}}}
   static bool JobFinished37(string id){
    Guid guid;if(!Guid.TryParse(id,out guid))return false;var file=Path.Combine(Path.GetDirectoryName(Folder),id,"status.json");if(!File.Exists(file))return false;
    RemoteState state;try{state=Json.Deserialize<RemoteState>(File.ReadAllText(file));}catch{return false;}

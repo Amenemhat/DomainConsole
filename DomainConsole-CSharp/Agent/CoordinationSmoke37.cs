@@ -40,7 +40,7 @@ namespace DomainConsole.Agent {
    var interrupted=new RemoteState{Id=job.Id,Status="Running",Started="2000-01-01T00:00:00Z",Updated="2000-01-01T00:01:00Z"};
    string file=FilePath("status.json");File.WriteAllText(file,Json.Serialize(interrupted));var busy=InstallerBusy37;
    try{InstallerBusy37=()=>true;if(ControlGate37(()=>JobFinished37(job.Id)))throw new Exception("Busy installer released interrupted job");
-    InstallerBusy37=()=>false;if(!ControlGate37(()=>JobFinished37(job.Id)))throw new Exception("Post-boot dead executor not reconciled");
+    InstallerBusy37=()=>false;if(RecoverInterrupted46(file,interrupted))throw new Exception("Recovery wrote outside coordination gate");if(!ControlGate37(()=>JobFinished37(job.Id)))throw new Exception("Post-boot dead executor not reconciled");
     var saved=Json.Deserialize<RemoteState>(File.ReadAllText(file));if(saved.Status!="InterventionRequired"||saved.Ended.Length==0||!File.Exists(file+".interrupted46.bak"))throw new Exception("Interrupted result/audit lost");
     WriteControl37(new ControlRecord37{OwnerId="recovery",PlanId=job.Id,JobIds=new List<string>{job.Id}});
     var child=FixtureJob37("recovery",job.Id);child.AutomaticChild31=true;FixtureFolder37(root,child);bool rejected=false;try{ReserveControl37();}catch(InvalidOperationException){rejected=true;}if(!rejected)throw new Exception("Interrupted update repeated automatically");
