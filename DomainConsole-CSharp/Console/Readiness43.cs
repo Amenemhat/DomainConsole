@@ -5,7 +5,24 @@ public sealed class ReadyProof43 {public string Key{get;set;}="";public string J
 public partial class MainWindow {
  readonly Dictionary<string,ReadyProof43> readyProofs43=Store.Read("ready-proofs43.json",new Dictionary<string,ReadyProof43>());
  readonly SemaphoreSlim pollQueue43=new(3);
- async Task PollRows43(){var generation=PollingControl43.Token;var rows=ActivePollRows().Where(JobPollDue42).ToList();await Task.WhenAll(rows.Select(async row=>{bool entered=false;try{await pollQueue43.WaitAsync(generation);entered=true;if(TransportBudget41.Paused)return;await Task.Delay(Random.Shared.Next(30,650),generation);if(!TransportBudget41.Paused)await Poll(row);}catch(OperationCanceledException) when(generation.IsCancellationRequested){}finally{if(entered)pollQueue43.Release();}}));}
+ readonly HashSet<string> scheduledPoll46=new(StringComparer.OrdinalIgnoreCase);
+ Task PollRows43(){
+  var generation=PollingControl43.Token;
+  foreach(var row in ActivePollRows().Where(JobPollDue42).ToList()){
+   string key=row.JobId+"|"+row.Host;if(!scheduledPoll46.Add(key))continue;
+   _=PollOne46(row,key,generation);
+  }
+  return Task.CompletedTask;
+ }
+ async Task PollOne46(ComputerRow row,string key,CancellationToken generation){
+  bool entered=false;try{await pollQueue43.WaitAsync(generation);entered=true;
+   if(TransportBudget41.Paused)return;await Task.Delay(Random.Shared.Next(30,650),generation);
+   if(!TransportBudget41.Paused)await Poll(row);
+  }catch(OperationCanceledException) when(generation.IsCancellationRequested){}
+  catch(Exception ex){ReadFailed34(row.Host,"результат задания",ex,row.JobId);}
+  finally{if(entered)pollQueue43.Release();scheduledPoll46.Remove(key);}
+ }
+
  void PollActivity43(string key,string label){if(closing)return;Dispatcher.BeginInvoke(()=>{if(closing)return;foreach(var row in Computers)if(TransportBudget41.Key(ConnectionStore.Capture(row.Target))==key)row.SetService43(TransportBudget41.Paused?"":label);});}
  ClientAssessment41 PreserveReady43(ComputerRow row,ClientAssessment41 assessment,bool active,RemoteState? state,CachedWsusReport? cache,RebootView40 reboot,string scan){
   string key=Identity40.EndpointKey(ConnectionStore.Capture(row.Target))+"|"+OverviewServer+"|ssl="+(WsusSsl.IsChecked==true)+"|"+row.Target.DirectoryId;
