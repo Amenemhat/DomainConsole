@@ -172,7 +172,7 @@ namespace DomainConsole.Agent {
           else if(step.Kind=="UpdateScan"){State.UpdateOperationStarted=true;Save();stepResult.ExitCode=Updates(prefix,true);}
           else if(step.Kind=="Diagnostics")stepResult.ExitCode=PowerShell(UpdateLogCode(prefix),prefix,300000);
           else if(step.Kind=="CacheResidueCleanup")stepResult.ExitCode=Run(typeof(Program).Assembly.Location,"cache-cleanup \""+Path.GetDirectoryName(Folder)+"\"",prefix,300000);
-          else if(step.Kind=="CacheCleanup")stepResult.ExitCode=PowerShell(step.Code,prefix,120000);
+          else if(step.Kind=="CacheCleanup")stepResult.ExitCode=PowerShell(step.Code,prefix,300000);
           else if(step.Kind=="ReportRecovery")stepResult.ExitCode=PowerShell(step.Code,prefix,120000);
           else if(step.Kind=="ClientDiagnostics")stepResult.ExitCode=PowerShell("$dcFolder='"+Folder.Replace("'","''")+"';"+step.Code,prefix,120000);
           else if(step.Kind=="DeliveryDiagnostics"){stepResult.ExitCode=PowerShell("$dcFolder='"+Folder.Replace("'","''")+"';"+step.Code,prefix,300000);if(stepResult.ExitCode==0){Report();PowerShell("Get-Service wuauserv,bits,cryptsvc,UsoSvc | Select-Object Name,Status,StartType | Format-Table | Out-String",prefix+"-after-report");}}

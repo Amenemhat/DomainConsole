@@ -90,6 +90,7 @@ public partial class MainWindow {
 
  }
  string WsusSummary40(ComputerRow row,string text){
+  WsusOutput.OmitMain46=historyViewId.Length==0;
   if(historyViewId.Length>0)return text;
   var status=AssessClient41(row);var sections=LogViewer.Sections(ResultPresentation36.Format(text));int main=sections.FindIndex(x=>x.Title=="Главное");
   string body=status.Title+"\n"+status.Details;
