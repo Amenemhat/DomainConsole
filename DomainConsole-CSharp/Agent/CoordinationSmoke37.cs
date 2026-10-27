@@ -27,7 +27,7 @@ namespace DomainConsole.Agent {
    var exe=typeof(Program).Assembly.Location;using(var px=Process.Start(new ProcessStartInfo(exe,"reserve37 \""+xp+"\""){UseShellExecute=false,CreateNoWindow=true,RedirectStandardError=true,RedirectStandardOutput=true}))using(var py=Process.Start(new ProcessStartInfo(exe,"reserve37 \""+yp+"\""){UseShellExecute=false,CreateNoWindow=true,RedirectStandardError=true,RedirectStandardOutput=true})){
     var ex=px.StandardError.ReadToEndAsync();var ey=py.StandardError.ReadToEndAsync();if(!px.WaitForExit(20000)||!py.WaitForExit(20000))throw new Exception("Admission race did not finish");if((px.ExitCode==0)==(py.ExitCode==0))throw new Exception("Concurrent consoles did not elect a single owner");
    }
-   AdmissionSmoke38(Path.Combine(root,"admission38"));Console.WriteLine("Client-wide ownership, foreign force rejection, diagnostics, plan gaps, stale continuations and cross-process admission race verified.");return 0;
+   AdmissionSmoke38(Path.Combine(root,"admission38"));RecoverySmoke46(Path.Combine(root,"recovery46"));Console.WriteLine("Client-wide ownership, foreign force rejection, diagnostics, plan gaps, stale continuations and cross-process admission race verified.");return 0;
   }
   static void SearchTimeoutSmoke37(){
    Stage("Поиск · fixture");State.Recommendation="old installer advice";var fake=new FakeOperation();searchDeadline37=DateTime.UtcNow.AddMilliseconds(500);var task=Task.Run(()=>WaitUpdate(fake,"Поиск"));Thread.Sleep(2300);
@@ -35,5 +35,17 @@ namespace DomainConsole.Agent {
    fake.completed=true;try{if(!task.Wait(5000))throw new Exception("Confirmed search completion was not observed");throw new Exception("Search deadline not reported");}catch(AggregateException ex){if(!(ex.GetBaseException() is TimeoutException))throw;}
    searchDeadline37=default(DateTime);if(State.ActivityMessage.Length>0||State.Recommendation.Length>0)throw new Exception("Finished search retained waiting advice");
   }
+  static void RecoverySmoke46(string root){
+   var job=FixtureJob37("recovery");job.PlanId37=job.Id;FixtureFolder37(root,job);
+   var interrupted=new RemoteState{Id=job.Id,Status="Running",Started="2000-01-01T00:00:00Z",Updated="2000-01-01T00:01:00Z"};
+   string file=FilePath("status.json");File.WriteAllText(file,Json.Serialize(interrupted));var busy=InstallerBusy37;
+   try{InstallerBusy37=()=>true;if(ControlGate37(()=>JobFinished37(job.Id)))throw new Exception("Busy installer released interrupted job");
+    InstallerBusy37=()=>false;if(!ControlGate37(()=>JobFinished37(job.Id)))throw new Exception("Post-boot dead executor not reconciled");
+    var saved=Json.Deserialize<RemoteState>(File.ReadAllText(file));if(saved.Status!="InterventionRequired"||saved.Ended.Length==0||!File.Exists(file+".interrupted46.bak"))throw new Exception("Interrupted result/audit lost");
+    WriteControl37(new ControlRecord37{OwnerId="recovery",PlanId=job.Id,JobIds=new List<string>{job.Id}});
+    var child=FixtureJob37("recovery",job.Id);child.AutomaticChild31=true;FixtureFolder37(root,child);bool rejected=false;try{ReserveControl37();}catch(InvalidOperationException){rejected=true;}if(!rejected)throw new Exception("Interrupted update repeated automatically");
+   }finally{InstallerBusy37=busy;}
+  }
+
  }
 }

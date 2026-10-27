@@ -47,9 +47,10 @@ try {
 } finally {
  foreach($name in $services){try{Start-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus('Running',[TimeSpan]::FromSeconds(20))}catch{$restoreErrors+=$name+': '+$_.Exception.Message}}
 }
-try{Start-ScheduledTask -TaskName 'DomainConsoleCSharp-Maintenance' -ErrorAction Stop;'Фоновая очистка старых кэшей запущена.'}catch{'WARNING: Кэш сброшен, но запуск фоновой очистки не подтверждён: '+$_.Exception.Message+'; используйте «Удалить старые кэши».'}
+
 if($primary){if($restoreErrors.Count){'Дополнительный сбой восстановления служб: '+($restoreErrors -join '; ')};throw $primary}
 if($restoreErrors.Count){throw ('Не восстановлены службы: '+($restoreErrors -join '; '))}
+try{Start-ScheduledTask -TaskName 'DomainConsoleCSharp-Maintenance' -ErrorAction Stop;'Фоновая очистка старых кэшей запущена.'}catch{'WARNING: Кэш сброшен, но запуск фоновой очистки не подтверждён: '+$_.Exception.Message+'; используйте «Удалить старые кэши».'}
 # Logical reset is complete. Removing detached files is a separate, bounded cleanup task.
 'Кэш сброшен; службы запущены. Физическое удаление старых файлов выполняется отдельно и не меняет результат сброса.'
 

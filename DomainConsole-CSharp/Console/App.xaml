@@ -454,6 +454,17 @@
         <ControlTemplate.Triggers><Trigger Property="IsExpanded" Value="True"><Setter TargetName="Body" Property="Visibility" Value="Visible"/></Trigger></ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value></Setter>
     </Style>
+    <Style x:Key="ReadinessDisclosure46" TargetType="Expander">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Expander">
+        <DockPanel Background="Transparent">
+          <ToggleButton DockPanel.Dock="Top" Style="{StaticResource DisclosureHeader}" Background="Transparent" Foreground="{TemplateBinding Foreground}" Content="{TemplateBinding Header}" IsChecked="{Binding IsExpanded,RelativeSource={RelativeSource TemplatedParent},Mode=TwoWay}"/>
+          <Border x:Name="Body" Visibility="Collapsed" Padding="4,0,4,2"><ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/></Border>
+        </DockPanel>
+        <ControlTemplate.Triggers><Trigger Property="IsExpanded" Value="True"><Setter TargetName="Body" Property="Visibility" Value="Visible"/></Trigger></ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
     <Style x:Key="WorkspaceSplitter39" TargetType="GridSplitter">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="GridSplitter"><Grid Background="Transparent"><Border x:Name="Grip" Width="36" Height="2" CornerRadius="1" Background="{DynamicResource Outline}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid><ControlTemplate.Triggers><Trigger Property="ResizeDirection" Value="Columns"><Setter TargetName="Grip" Property="Width" Value="2"/><Setter TargetName="Grip" Property="Height" Value="36"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>

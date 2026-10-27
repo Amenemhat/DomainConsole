@@ -57,8 +57,8 @@ public partial class MainWindow {
   var job=ChannelJob(row,MainTabs.SelectedItem==WsusTab);var t=job?.Targets.FirstOrDefault(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase));
   RefreshServiceBadge34(row);QueueLayout39();
   if(!recentEvents31.TryGetValue(row.Host,out var list)){list=SafeEvents32(row.Host,3);recentEvents31[row.Host]=list;}var key=string.Join("|",list.Select(x=>x.At+x.Text));if(headerEventsKey32!=row.Host+key){bool animate=headerEventsHost32==row.Host;headerEventsHost32=row.Host;headerEventsKey32=row.Host+key;HeaderRecent31.ItemsSource=list.ToList();if(animate){HeaderRecent31.RenderTransform=new TranslateTransform();HeaderRecent31.RenderTransform.BeginAnimation(TranslateTransform.YProperty,new System.Windows.Media.Animation.DoubleAnimation(-5,0,TimeSpan.FromMilliseconds(160)));HeaderRecent31.BeginAnimation(OpacityProperty,new System.Windows.Media.Animation.DoubleAnimation(0.5,1,TimeSpan.FromMilliseconds(160)));}}
-  if(MainTabs.SelectedItem==WsusTab&&EventHistoryGroup32.IsExpanded)RefreshEventHistory32(row.Host);else EventHistoryGroup32.Header="История событий";HeaderRecent31.Visibility=Visibility.Collapsed;
-  EventStorageError32.Text=EventErrors39(row.Host);EventStorageError32.Visibility=EventStorageError32.Text.Length>0?Visibility.Visible:Visibility.Collapsed;if(EventStorageError32.Text.Length>0){EventHistoryGroup32.Header="История событий · ошибка сохранения";EventHistoryGroup32.ToolTip=EventStorageError32.Text;}else EventHistoryGroup32.ToolTip="Показать предыдущие события выбранного компьютера";
+  if(MainTabs.SelectedItem==WsusTab&&EventHistoryGroup32.IsExpanded)RefreshEventHistory32(row.Host);else EventHeader46.Text="История событий";HeaderRecent31.Visibility=Visibility.Collapsed;
+  EventStorageError32.Text=EventErrors39(row.Host);EventStorageError32.Visibility=EventStorageError32.Text.Length>0?Visibility.Visible:Visibility.Collapsed;if(EventStorageError32.Text.Length>0){EventHeader46.Text="История событий · ошибка сохранения";EventHistoryGroup32.ToolTip=EventStorageError32.Text;}else EventHistoryGroup32.ToolTip="Показать предыдущие события выбранного компьютера";
  }
  readonly Dictionary<string,List<ClientEvent31>> memoryEvents32=new(StringComparer.OrdinalIgnoreCase),pendingEvents32=new(Store.Read("event-retry39.json",new Dictionary<string,List<ClientEvent31>>()),StringComparer.OrdinalIgnoreCase);
  readonly Dictionary<string,string> eventWriteErrors32=new(StringComparer.OrdinalIgnoreCase);
@@ -69,7 +69,7 @@ public partial class MainWindow {
  static string EventGroupKey36(ClientEvent31 e)=>e.Kind+"|"+e.Operation36+"|"+e.Text+"|"+e.Details;
  bool historyReset35=true;string historyHost35="";List<ClientEvent31>? historyPending35;
  void RefreshEventHistory32(string host){RefreshCollector44(host);
-  var all=AllEvents32(host);EventHistoryGroup32.Header="История событий · "+all.Count;
+  var all=AllEvents32(host);EventHeader46.Text="История событий · "+all.Count;
   var selected36=EventList32.SelectedItems.Cast<ClientEvent31>().Select(EventGroupKey36).ToHashSet();
   var items=all.Where(x=>EventErrors32.IsChecked!=true||x.Kind is "Error" or "Warning").ToList();
   foreach(var item in items)item.Selected36=selected36.Contains(EventGroupKey36(item));
@@ -86,7 +86,7 @@ public partial class MainWindow {
  void EventHistory32_Changed(object sender,RoutedEventArgs e){if(!IsLoaded||e.OriginalSource!=EventHistoryGroup32)return;Store.Write("event-history-expanded38.json",EventHistoryGroup32.IsExpanded);ArrangeIdentity34();HeaderRecent31.Visibility=Visibility.Collapsed;historyReset35=true;if(ComputerGrid.SelectedItem is ComputerRow row)RefreshEventHistory32(row.Host);}
  void EventFilter32_Changed(object sender,RoutedEventArgs e){if(IsLoaded&&ComputerGrid.SelectedItem is ComputerRow row){historyEventsKey32="";historyReset35=true;RefreshEventHistory32(row.Host);}}
  static string EventCopyText36(IEnumerable<ClientEvent31> items)=>string.Join(Environment.NewLine+Environment.NewLine,items.Select(x=>Display36.Text(x.Display)+(!x.ShortTransport40&&x.Details.Length>0?"\n"+Display36.Text(x.Details):"")+(x.Repeats>1?"\nПовторения:\n"+x.OccurrenceText36:"")));
- void EventSelection36_Changed(object sender,RoutedEventArgs e){if(EventCopySelected36==null)return;int count=EventList32.SelectedItems.Count;EventCopySelected36.Content="Выбранные ("+count+")";EventCopySelected36.IsEnabled=count>0;}
+ void EventSelection36_Changed(object sender,RoutedEventArgs e){if(EventCopySelected36==null)return;int count=EventList32.SelectedItems.Count;EventCopySelected36.ToolTip="Копировать выбранные события ("+count+")";EventCopySelected36.IsEnabled=count>0;}
 
  void EventSelect36_Mouse(object sender,System.Windows.Input.MouseButtonEventArgs e){var element=e.OriginalSource as DependencyObject;while(element!=null&&element!=EventList32){if(element is FrameworkElement f&&f.DataContext is ClientEvent31 item){EventList32.SelectedItem=item;break;}element=VisualTreeHelper.GetParent(element);}}
  void EventCurrent36_Changed(object sender,SelectionChangedEventArgs e){EventSelection36_Changed(sender,e);if(EventCopyOne36!=null)EventCopyOne36.IsEnabled=EventList32.SelectedItem!=null;}
