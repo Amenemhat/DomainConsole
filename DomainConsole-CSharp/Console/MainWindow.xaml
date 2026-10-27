@@ -335,7 +335,7 @@
                 <RowDefinition Height="6"/>
                 <RowDefinition x:Name="WsusReportRow37" Height="2*" MinHeight="80"/>
               </Grid.RowDefinitions>
-              <local:LogViewer Grid.Row="1" x:Name="WsusOutput" Margin="0" Caption="Подробности операции"/>
+              <local:LogViewer Grid.Row="1" x:Name="WsusOutput" OmitMain46="True" Margin="0" Caption="Подробности операции"/>
               <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="Transparent" Style="{StaticResource WorkspaceSplitter39}"/>
               <DockPanel Grid.Row="3">
                 <TextBlock x:Name="WsusReportTitle" DockPanel.Dock="Top" Text="Данные сервера WSUS о выбранном ПК" Margin="0,6" FontWeight="SemiBold" Visibility="Collapsed"/>

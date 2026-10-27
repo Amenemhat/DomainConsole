@@ -36,6 +36,9 @@ public partial class MainWindow {
    string observation=TransportBudget41.Paused?"Опрос выключен · сохранённый результат":row.Target.Status=="SubmissionUnknown"?"Передача задания не подтверждена":clientConnections.GetValueOrDefault(row.Host)?.Lost38==true?"Связь потеряна · состояние установки неизвестно":"Нет свежего статуса задания";
    CurrentStage.Text=observation;OperationDetail38.Text="Последний этап: "+(state?.Stage??row.Target.Status)+" · "+Display36.Date(state?.Updated??"");OperationDetail38.Visibility=Visibility.Visible;CurrentProgress.IsIndeterminate=false;
   }
+  if(active&&CurrentStage.Text.StartsWith("Установка"))OperationGlyph38.Kind="Install";
+  else if(active&&CurrentStage.Text.StartsWith("Скачивание"))OperationGlyph38.Kind="Download";
+  else if(active&&CurrentStage.Text.Contains("поиск",StringComparison.OrdinalIgnoreCase))OperationGlyph38.Kind="Search";
   RefreshMode39();
   RefreshHeader31(selected);
  }
