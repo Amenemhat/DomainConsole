@@ -42,6 +42,12 @@ namespace DomainConsole.Agent {
    try{InstallerBusy37=()=>true;if(ControlGate37(()=>JobFinished37(job.Id)))throw new Exception("Busy installer released interrupted job");
     InstallerBusy37=()=>false;if(RecoverInterrupted46(file,interrupted))throw new Exception("Recovery wrote outside coordination gate");if(!ControlGate37(()=>JobFinished37(job.Id)))throw new Exception("Post-boot dead executor not reconciled");
     var saved=Json.Deserialize<RemoteState>(File.ReadAllText(file));if(saved.Status!="InterventionRequired"||saved.Ended.Length==0||!File.Exists(file+".interrupted46.bak"))throw new Exception("Interrupted result/audit lost");
+    File.Delete(file+".interrupted46.bak");
+    interrupted.Started=DateTime.UtcNow.AddMinutes(-5).ToString("o");interrupted.Updated=DateTime.UtcNow.AddMinutes(-3).ToString("o");interrupted.HasUpdateSteps=true;
+    using(var own=System.Diagnostics.Process.GetCurrentProcess()){interrupted.ExecutorPid37=own.Id;interrupted.ExecutorStarted37=own.StartTime.ToUniversalTime().ToString("o");}
+    File.WriteAllText(file,Json.Serialize(interrupted));if(ControlGate37(()=>JobFinished37(job.Id)))throw new Exception("Live executor released");
+    interrupted.ExecutorPid37=int.MaxValue;File.WriteAllText(file,Json.Serialize(interrupted));
+    if(!ControlGate37(()=>JobFinished37(job.Id)))throw new Exception("Stopped same-boot update job not reconciled");
     WriteControl37(new ControlRecord37{OwnerId="recovery",PlanId=job.Id,JobIds=new List<string>{job.Id}});
     var child=FixtureJob37("recovery",job.Id);child.AutomaticChild31=true;FixtureFolder37(root,child);bool rejected=false;try{ReserveControl37();}catch(InvalidOperationException){rejected=true;}if(!rejected)throw new Exception("Interrupted update repeated automatically");
    }finally{InstallerBusy37=busy;}
