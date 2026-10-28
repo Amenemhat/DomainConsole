@@ -5,6 +5,19 @@ namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease46(){
   System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(),"maintenance47.ps1"),MaintenanceRegistration47.Script,new System.Text.UTF8Encoding(true));
+  var stopJob47=new RemoteJob{OutputChannel="WSUS",Steps=new(){new(){Kind="CacheCleanup"},new(){Kind="PowerShell"},new(){Kind="Updates"}}};
+  var stopState47=new RemoteState{Step=1,SupportsImmediateStop=true,SupportsWuaCancel=true,StopStatus="ForceRequired",Stage="Preparation KB890830"};
+  if(StopPolicy47.For(stopJob47,stopState47)!=new StopPolicy47(false,false,false,false))throw new Exception("Cache preparation exposed WUA or forced termination");
+  stopState47.Step=2;
+  if(StopPolicy47.For(stopJob47,stopState47)!=new StopPolicy47(false,true,true,true))throw new Exception("Text preparation lost its command stop policy");
+  stopState47.Step=3;
+  if(StopPolicy47.For(stopJob47,stopState47)!=new StopPolicy47(true,false,true,true))throw new Exception("MRT lost verified force route");
+  stopState47.Stage="Installing cumulative update";
+  if(StopPolicy47.For(stopJob47,stopState47).Force)throw new Exception("Ordinary WUA update exposed forced termination");
+  stopState47.SupportsWuaCancel=false;
+  if(StopPolicy47.For(stopJob47,stopState47).Immediate)throw new Exception("Old executor exposed WUA cancel");
+  stopState47.Step=0;
+  if(StopPolicy47.For(stopJob47,stopState47)!=new StopPolicy47(false,false,false,false)||StopPolicy47.For(null,stopState47).Force)throw new Exception("Unknown step inferred from future updates");
   AwaitUi39(VerifySubmission47());
   AwaitUi39(VerifyRecoveryPipeline47());
   string shellError47="Внутренняя ошибка Windows PowerShell. Ошибка 80070570 при загрузке управляемой оболочки Windows PowerShell.";
