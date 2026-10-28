@@ -32,6 +32,7 @@ namespace DomainConsole.Agent {
       bool pending=File.Exists(FilePath("step-1.service-recovery/wuauserv.pending"));
       if(pending!=(scenario=="RestoreFailure"))throw new Exception("Pending recovery evidence lost or retained after success");
       var error=File.ReadAllText(FilePath("step-1.failure.txt"));
+      if(!error.Contains("Превышен предел выполнения")||error.Contains("CLIXML"))throw new Exception("Hard timeout has no clear primary diagnosis");
       if(scenario=="RestoreFailure"&&(!error.Contains("FIXTURE_RESTORE_FAILURE")||!error.Contains("124")))throw new Exception("Recovery failure replaced original timeout");
      }
      Console.WriteLine("ServiceRecovery47 "+kind+" "+scenario+" passed");
