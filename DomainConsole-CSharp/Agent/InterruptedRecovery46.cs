@@ -21,6 +21,7 @@ namespace DomainConsole.Agent {
     using(var q=new ManagementObjectSearcher("SELECT CommandLine FROM Win32_Process WHERE Name='DomainConsole.Agent.exe'"))foreach(ManagementObject p in q.Get()){var command=p["CommandLine"] as string;if(command==null||command.IndexOf(folder,StringComparison.OrdinalIgnoreCase)>=0)return false;}
     dynamic scheduler=Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service"));scheduler.Connect();dynamic root=scheduler.GetFolder("\\");foreach(dynamic task in root.GetTasks(1)){if(((string)task.Name).StartsWith("DomainConsoleCSharp-"+state.Id,StringComparison.OrdinalIgnoreCase)&&((int)task.State==4||(int)task.State==2))return false;}
     if(InstallerBusy37())return false;
+    if(!RecoverInterruptedServices47(folder))return false;
     string original=File.ReadAllText(file),backup=file+".interrupted46.bak";
     if(File.Exists(backup))return false;File.WriteAllText(backup,original);
     state=Json.Deserialize<RemoteState>(original);state.Status="InterventionRequired";state.Ended=DateTime.UtcNow.ToString("o");state.Updated=state.Ended;state.StageEnded=state.Ended;

@@ -152,6 +152,7 @@ namespace DomainConsole.Agent {
    if(args.Length==1&&args[0]=="command-stop-smoke")return CommandStopSmoke();
    if(args.Length==1&&args[0]=="emit-encoding-fixture"){EmitEncodingFixture();return 0;}
    if(args.Length==2&&args[0]=="service-recovery-smoke47")return ServiceRecoverySmoke47(args[1]);
+   if(args.Length==2&&args[0]=="service-interruption-worker47")return ServiceInterruptionWorker47(args[1]);
    if(args.Length==2&&args[0]=="interruption-smoke47")return InterruptionSmoke47(args[1]);
    if(args.Length==2&&args[0]=="interruption-worker47")return InterruptionWorker47(args[1]);
    if(args.Length==2&&args[0]=="update-smoke")return UpdateSmoke(args[1]);

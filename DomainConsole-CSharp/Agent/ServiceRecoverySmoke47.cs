@@ -7,6 +7,12 @@ using DomainConsole.Shared;
 namespace DomainConsole.Agent {
  internal static partial class Program {
   static Action<string> serviceRestorerFixture47;
+  static int ServiceInterruptionWorker47(string folder){
+   Folder=Path.GetFullPath(folder);Job=Json.Deserialize<RemoteJob>(File.ReadAllText(FilePath("job.json")));ReserveControl37();
+   using(var self=Process.GetCurrentProcess())State=new RemoteState{Id=Job.Id,Status="Running",HasUpdateSteps=true,Started=DateTime.UtcNow.ToString("o"),ExecutorPid37=self.Id,ExecutorStarted37=self.StartTime.ToUniversalTime().ToString("o")};
+   Stage("Cache interruption fixture");CurrentKind="CacheCleanup";
+   return PowerShell("[IO.Directory]::CreateDirectory($dcServiceRecovery47)|Out-Null;[IO.File]::WriteAllText((Join-Path $dcServiceRecovery47 'bits.pending'),'fixture');[IO.File]::WriteAllText('"+FilePath("service-child-ready47").Replace("'","''")+"','ready');while($true){Start-Sleep -Milliseconds 100}","step-1",60000);
+  }
   // Real Windows PowerShell process and real timeout/job-object termination.
   // Only service START is substituted: no Windows service is changed by this test.
   static int ServiceRecoverySmoke47(string root){
@@ -51,7 +57,31 @@ namespace DomainConsole.Agent {
    }
    var final=Json.Deserialize<RemoteState>(File.ReadAllText(Path.Combine(failedFolder,"status.json")));
    if(final.Results.Count!=1||final.Status!="Failed"||File.Exists(Path.Combine(root,"unexpected-next-step")))throw new Exception("Failed reset continued despite safety boundary");
-   Console.WriteLine("ServiceRecovery47 allowlist and idempotency passed; no real service changed.");
+   var interrupted=FixtureJob37("service-interruption47");interrupted.PlanId37=interrupted.Id;interrupted.Steps[0].Kind="CacheCleanup";
+   string scope=Path.Combine(Path.GetFullPath(root),"agent-killed");Directory.CreateDirectory(scope);FixtureFolder37(scope,interrupted);string interruptedFolder=Folder;
+   var previousBusy=InstallerBusy37;int recoveredCalls=0;serviceRestorerFixture47=n=>{if(n!="bits")throw new Exception("Wrong recovery target");recoveredCalls++;};InstallerBusy37=()=>false;
+   try{using(var agent=Process.Start(new ProcessStartInfo(typeof(Program).Assembly.Location,"service-interruption-worker47 "+Quote(interruptedFolder)){UseShellExecute=false,CreateNoWindow=true})){
+    try{
+     var until=DateTime.UtcNow.AddSeconds(30);while(!File.Exists(Path.Combine(interruptedFolder,"service-child-ready47"))&&!agent.HasExited&&DateTime.UtcNow<until)System.Threading.Thread.Sleep(100);
+     if(agent.HasExited||!File.Exists(Path.Combine(interruptedFolder,"service-child-ready47")))throw new Exception("Service interruption worker not ready");
+     if(ControlGate37(()=>JobFinished37(interrupted.Id))||recoveredCalls!=0)throw new Exception("Live agent recovery accepted");
+     agent.Kill();if(!agent.WaitForExit(10000))throw new Exception("Killed agent survived");
+     var statePath=Path.Combine(interruptedFolder,"status.json");var stale=Json.Deserialize<RemoteState>(File.ReadAllText(statePath));stale.Updated=DateTime.UtcNow.AddMinutes(-3).ToString("o");File.WriteAllText(statePath,Json.Serialize(stale));
+     var identity=Path.Combine(interruptedFolder,"step-1.service-recovery","child.identity");var savedIdentity=File.ReadAllText(identity);File.Delete(identity);
+     if(ControlGate37(()=>JobFinished37(interrupted.Id))||recoveredCalls!=0)throw new Exception("Missing child identity accepted");
+     File.WriteAllText(identity,savedIdentity);InstallerBusy37=()=>true;
+     if(ControlGate37(()=>JobFinished37(interrupted.Id))||recoveredCalls!=0)throw new Exception("Busy WUA allowed interrupted service recovery");
+     InstallerBusy37=()=>false;
+     if(!ControlGate37(()=>JobFinished37(interrupted.Id))||recoveredCalls!=1)throw new Exception("Dead agent service intent not restored exactly once");
+     if(!ControlGate37(()=>JobFinished37(interrupted.Id))||recoveredCalls!=1)throw new Exception("Repeated interrupted service recovery");
+     var outcome=Json.Deserialize<RemoteState>(File.ReadAllText(statePath));if(outcome.Status!="InterventionRequired"||!outcome.Error.StartsWith("DC_INTERRUPTED46:"))throw new Exception("Interrupted cache declared successful");
+     outcome.ServiceRecoveryError47="Expected pending service";File.WriteAllText(statePath,Json.Serialize(outcome));File.WriteAllText(Path.Combine(interruptedFolder,"step-1.service-recovery","bits.pending"),"fixture");
+     InstallerBusy37=()=>true;if(ControlGate37(()=>JobFinished37(interrupted.Id))||recoveredCalls!=1)throw new Exception("Pending terminal service failure bypassed busy guard");InstallerBusy37=()=>false;
+     if(!ControlGate37(()=>JobFinished37(interrupted.Id))||recoveredCalls!=2)throw new Exception("Terminal service recovery did not unblock safely");
+     outcome=Json.Deserialize<RemoteState>(File.ReadAllText(statePath));if(outcome.Status!="InterventionRequired"||outcome.ServiceRecoveryError47.Length!=0)throw new Exception("Service recovery rewrote operation outcome");
+    }finally{if(!agent.HasExited){agent.Kill();agent.WaitForExit(10000);}}
+   }}finally{InstallerBusy37=previousBusy;serviceRestorerFixture47=null;}
+   Console.WriteLine("ServiceRecovery47 allowlist, idempotency and killed-agent persisted-intent recovery passed; no real service changed.");
    return 0;
   }
  }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Diagnostics;
 using System.ServiceProcess;
 using System.Collections.Generic;
+using System.Globalization;
 namespace DomainConsole.Agent {
  internal sealed class ServiceRecovery47 {
   internal static readonly string[] Allowed={"UsoSvc","wuauserv","bits","cryptsvc"};
@@ -39,6 +40,20 @@ namespace DomainConsole.Agent {
    return errors;
   }
   int pid; DateTime started;
-  internal void Remember(Process child){pid=child.Id;started=child.StartTime.ToUniversalTime();}
+  internal void Remember(Process child){
+   pid=child.Id;started=child.StartTime.ToUniversalTime();Directory.CreateDirectory(root);
+   if((File.GetAttributes(root)&FileAttributes.ReparsePoint)!=0)throw new IOException("Каталог восстановления служб является ссылкой");
+   string file=Path.Combine(root,"child.identity"),temp=file+"."+Guid.NewGuid()+".tmp";
+   try{File.WriteAllText(temp,pid.ToString(CultureInfo.InvariantCulture)+"\n"+started.ToString("o"));if(File.Exists(file))File.Replace(temp,file,null);else File.Move(temp,file);}finally{if(File.Exists(temp))File.Delete(temp);}
+  }
+  // A different executor may recover only a persisted, provably exited child.
+  // Missing/partial identity is not evidence that the maintenance script stopped.
+  internal void ReadIdentity(){
+   string file=Path.Combine(root,"child.identity");
+   if((File.GetAttributes(root)&FileAttributes.ReparsePoint)!=0||(File.GetAttributes(file)&FileAttributes.ReparsePoint)!=0)throw new IOException("Недопустимая ссылка в записи исполнителя");
+   var lines=File.ReadAllLines(file);DateTime parsed;int value;
+   if(lines.Length!=2||!int.TryParse(lines[0],out value)||value<=0||!DateTime.TryParseExact(lines[1],"o",CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind,out parsed)||parsed.Kind!=DateTimeKind.Utc)throw new IOException("Не подтверждена идентичность прежнего PowerShell");
+   pid=value;started=parsed;
+  }
  }
 }
