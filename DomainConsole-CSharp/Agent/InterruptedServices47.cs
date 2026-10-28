@@ -6,6 +6,9 @@ using System.Management;
 using DomainConsole.Shared;
 namespace DomainConsole.Agent {
  internal static partial class Program {
+  static bool IsProtectedInterruptedStep47(string folder,RemoteState state){
+   try{var file=Path.Combine(folder,"job.json");if((File.GetAttributes(folder)&FileAttributes.ReparsePoint)!=0||(File.GetAttributes(file)&FileAttributes.ReparsePoint)!=0)return false;var job=Json.Deserialize<RemoteJob>(File.ReadAllText(file));return job!=null&&job.Id==state.Id&&job.Id==Path.GetFileName(folder)&&state.Step>0&&state.Step<=job.Steps.Count&&ServiceRecovery47.Protected(job.Steps[state.Step-1].Kind);}catch{return false;}
+  }
   static bool RecoverTerminalServices47(string file,RemoteState state){
    if(!controlHeld46)return false;
    try{

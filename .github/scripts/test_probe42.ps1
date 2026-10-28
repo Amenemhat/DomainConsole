@@ -65,5 +65,9 @@ try{
 }finally{foreach($name in $created){Stop-ScheduledTask $name -ErrorAction SilentlyContinue;Unregister-ScheduledTask $name -Confirm:$false -ErrorAction SilentlyContinue}}
 $until42=[DateTime]::UtcNow.AddSeconds(70)
 while(@(Get-Process wsmprovhost -ErrorAction SilentlyContinue).Count -gt $baseline42 -and [DateTime]::UtcNow -lt $until42){Start-Sleep -Seconds 1}
-if(@(Get-Process wsmprovhost -ErrorAction SilentlyContinue).Count -gt $baseline42){throw 'WinRM processes did not return to baseline'}
+$finalHosts42=@(Get-Process wsmprovhost -ErrorAction SilentlyContinue).Count
+if($finalHosts42 -gt $baseline42){throw 'WinRM processes did not return to baseline'}
+$collectorCount42=@(Get-ScheduledTask -TaskName $task -ErrorAction Stop).Count
+if($collectorCount42 -ne 1){throw 'Expected exactly one fixed collector task'}
+[pscustomobject]@{ConcurrentReaders=6;CachedSequentialReads=12;WinRMHostsBefore=$baseline42;WinRMHostsAfter=$finalHosts42;CollectorTasksAfter=$collectorCount42;HungActivityWorkersAfter=$left.Count;AutonomousDeadlineSeconds=60}|ConvertTo-Json -Compress|Write-Output
 Write-Output 'Probe42: real SYSTEM single-flight/cache, six WinRM readers, partial failures, cooldown/circuit breaker, non-cooperating worker termination, autonomous scheduler deadline, verified recovery and legacy cleanup passed.'

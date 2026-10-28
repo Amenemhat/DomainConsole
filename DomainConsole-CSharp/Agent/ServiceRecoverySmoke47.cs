@@ -9,7 +9,7 @@ namespace DomainConsole.Agent {
   static Action<string> serviceRestorerFixture47;
   static int ServiceInterruptionWorker47(string folder){
    Folder=Path.GetFullPath(folder);Job=Json.Deserialize<RemoteJob>(File.ReadAllText(FilePath("job.json")));ReserveControl37();
-   using(var self=Process.GetCurrentProcess())State=new RemoteState{Id=Job.Id,Status="Running",HasUpdateSteps=true,Started=DateTime.UtcNow.ToString("o"),ExecutorPid37=self.Id,ExecutorStarted37=self.StartTime.ToUniversalTime().ToString("o")};
+   using(var self=Process.GetCurrentProcess())State=new RemoteState{Id=Job.Id,Status="Running",Step=1,HasUpdateSteps=false,Started=DateTime.UtcNow.ToString("o"),ExecutorPid37=self.Id,ExecutorStarted37=self.StartTime.ToUniversalTime().ToString("o")};
    Stage("Cache interruption fixture");CurrentKind="CacheCleanup";
    return PowerShell("[IO.Directory]::CreateDirectory($dcServiceRecovery47)|Out-Null;[IO.File]::WriteAllText((Join-Path $dcServiceRecovery47 'bits.pending'),'fixture');[IO.File]::WriteAllText('"+FilePath("service-child-ready47").Replace("'","''")+"','ready');while($true){Start-Sleep -Milliseconds 100}","step-1",60000);
   }
