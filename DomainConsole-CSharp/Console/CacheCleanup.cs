@@ -11,6 +11,7 @@ public static class CacheScripts {
 function Register-DcServiceRestore47([string]$name){
  if(!$dcServiceRecovery47){return}
  [IO.Directory]::CreateDirectory($dcServiceRecovery47)|Out-Null
+ if([IO.File]::GetAttributes($dcServiceRecovery47) -band [IO.FileAttributes]::ReparsePoint){throw 'Каталог восстановления служб является ссылкой'}
  $path=Join-Path $dcServiceRecovery47 ($name+'.pending')
  [IO.File]::WriteAllText($path,[DateTime]::UtcNow.ToString('o'))
 }

@@ -19,7 +19,8 @@ try {
   if((Get-FileHash -LiteralPath $oldPath47 -Algorithm SHA256).Hash -ne $parent47){throw 'Контрольная сумма прежнего Maintenance не совпадает; задача не изменена'}
   $previousVersion47=[version](Get-Item -LiteralPath $oldPath47).VersionInfo.FileVersion
   $incomingVersion47=[version](Get-Item -LiteralPath $exe).VersionInfo.FileVersion
-  $replace47=$oldMaintenance.State -notin @('Running','Queued') -and $previousVersion47 -lt $incomingVersion47
+  $differentBinary47=![string]::Equals($oldPath47,[IO.Path]::GetFullPath($exe),[StringComparison]::OrdinalIgnoreCase)
+  $replace47=$oldMaintenance.State -notin @('Running','Queued') -and ($previousVersion47 -lt $incomingVersion47 -or ($previousVersion47 -eq $incomingVersion47 -and $differentBinary47))
  }
  if($replace47){Register-ScheduledTask -TaskName 'DomainConsoleCSharp-Maintenance' -Action $maintenance -Trigger (New-ScheduledTaskTrigger -Daily -At '00:30') -Principal $principal -Settings $settings -Force|Out-Null}
 } finally {if($maintenanceLock47){$maintenanceLock47.Dispose()}}
