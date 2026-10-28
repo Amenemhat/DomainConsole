@@ -4,7 +4,7 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import time
 import urllib.error
@@ -49,10 +49,12 @@ def validate_package(data, expected_digest):
     if digest != expected_digest:
         raise ValueError('Archive checksum mismatch')
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
-        names = archive.namelist()
+        # ZipInfo.filename normalizes backslashes on Windows even when reading.
+        # Validate the original ZIP names before platform-specific normalization.
+        names = [entry.orig_filename for entry in archive.infolist()]
         if not {'DomainConsole.exe', 'Agent/DomainConsole.Agent.exe'}.issubset(names):
             raise ValueError('Package is missing required executables')
-        if any(n.startswith(('Data/', '/')) or '..' in Path(n).parts or '\\' in n for n in names):
+        if any(n.startswith(('Data/', '/')) or '..' in PurePosixPath(n).parts or '\\' in n for n in names):
             raise ValueError('Package contains user data or unexpected paths')
         if archive.testzip() is not None:
             raise ValueError('Archive integrity check failed')
