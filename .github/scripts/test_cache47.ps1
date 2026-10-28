@@ -22,6 +22,7 @@ function Start-ScheduledTask($TaskName){$script:maintenance++;if($script:case -e
 try {
  foreach($script:case in @('Busy','InvalidRoot','InvalidFile','StopFailure','StopWaitTimeout','StartFailure','PrimaryAndRestore','MoveFailure','MaintenanceMissing','Success')){
   $env:windir=Join-Path $Root $script:case;$env:ProgramData=Join-Path $env:windir 'ProgramData'
+  $dcServiceRecovery47=Join-Path $env:windir 'service-recovery'
   $download=Join-Path $env:windir 'SoftwareDistribution\Download'
   New-Item $download -ItemType Directory -Force|Out-Null;Set-Content (Join-Path $download 'keep.bin') 'fixture'
   $script:states=@{UsoSvc='Running';wuauserv='Running';bits='Running';cryptsvc='Stopped'}
@@ -48,6 +49,9 @@ try {
   if($script:case -eq 'PrimaryAndRestore' -and (!$errorText.Contains('fixture primary stop failure') -or !$output.Contains('fixture restore failure'))){throw 'Restoration replaced primary failure'}
   if($success -and (!(Get-ChildItem (Split-Path $download) -Filter 'Download.DomainConsoleBackup_*') -or $script:maintenance -ne 1)){throw 'Successful reset lost backup or duplicated cleanup request'}
   if($script:case -eq 'MaintenanceMissing' -and !$output.Contains('запуск фоновой очистки не подтверждён')){throw 'Missing cleanup task was hidden'}
+  $pending=@(Get-ChildItem $dcServiceRecovery47 -Filter '*.pending' -ErrorAction SilentlyContinue)
+  if($script:case -in @('StartFailure','PrimaryAndRestore')){if($pending.Count -ne 1 -or $pending[0].BaseName -ne 'bits'){throw 'Failed restoration did not retain exactly its intent'}}
+  elseif($pending.Count){throw 'Completed/untouched service retains pending intent'}
   "Verified cache failure boundary: $script:case"
  }
 }finally{$env:windir=$originalWindir;$env:ProgramData=$originalProgramData}

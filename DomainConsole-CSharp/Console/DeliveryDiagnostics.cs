@@ -44,7 +44,7 @@ public static class DeliveryPresentation {
 }
 public static class DeliveryScripts {
 
- public const string Recovery="""
+ public const string Recovery=CacheScripts.ServiceJournal47+"\n"+"""
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 $source=Join-Path $env:windir 'SoftwareDistribution\EventCache.v2'
 $installer=New-Object -ComObject Microsoft.Update.Installer;if(!$dcAllowUpdateConflict -and $installer.IsBusy){throw 'Установка обновлений активна; очистка отменена'}
@@ -56,8 +56,8 @@ if(!$count){'Очередь пуста; очистка не требуется';
 $root=Join-Path $env:ProgramData 'DomainConsoleCSharp';$stage=Join-Path $root ('ReportQueue_'+[guid]::NewGuid().ToString())
 $wasRunning=(Get-Service wuauserv).Status -eq 'Running';$moved=$false
 'Временное сохранение очереди: '+$stage
-try {Stop-Service wuauserv -ErrorAction Stop;(Get-Service wuauserv).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(30));Move-Item -LiteralPath $source -Destination $stage -ErrorAction Stop;$moved=$true}
-finally {if($wasRunning){Start-Service wuauserv -ErrorAction Stop;(Get-Service wuauserv).WaitForStatus('Running',[TimeSpan]::FromSeconds(30))}}
+try {if($wasRunning){Register-DcServiceRestore47 wuauserv};Stop-Service wuauserv -ErrorAction Stop;(Get-Service wuauserv).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(30));Move-Item -LiteralPath $source -Destination $stage -ErrorAction Stop;$moved=$true}
+finally {if($wasRunning){Start-Service wuauserv -ErrorAction Stop;(Get-Service wuauserv).WaitForStatus('Running',[TimeSpan]::FromSeconds(30));Complete-DcServiceRestore47 wuauserv}}
 if($moved){if($keepBackup){'Резервная копия: '+$stage}else{Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction Stop;'Очередь очищена без сохранения копии'}}
 'Время: '+(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz')+'; файлов: '+$count+'; байт: '+$bytes
 'Служба wuauserv: '+(Get-Service wuauserv).Status

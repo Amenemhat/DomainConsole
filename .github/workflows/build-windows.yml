@@ -46,6 +46,11 @@ jobs:
           & ./Publish/Agent/DomainConsole.Agent.exe interruption-smoke47 $root
           if ($LASTEXITCODE -ne 0) { throw 'Abrupt agent termination recovery failed' }
           "DOMAINCONSOLE_INTERRUPTION47=$root" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Verify service restoration after hard PowerShell timeout without touching services
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe service-recovery-smoke47 (Join-Path $env:RUNNER_TEMP 'service-recovery47')
+          if ($LASTEXITCODE -ne 0) { throw 'Service recovery fault injection failed' }
       - name: Verify window and history after restart
         shell: pwsh
         run: |

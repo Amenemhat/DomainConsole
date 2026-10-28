@@ -31,11 +31,12 @@ namespace DomainConsole.Agent {
   static int Report(){State.ReportRequested=true;Save();Stage("WSUS · запрос отправки отчёта");int a=Run("UsoClient.exe","Report","report"),b=Run("wuauclt.exe","/reportnow","report");State.ReportRequestStatus="Запросы завершены: UsoClient="+a+", wuauclt="+b+". Это результат команд клиента; получение отчёта проверяется отдельно на сервере.";Log(State.ReportRequestStatus);Save();return a==0||b==0?0:1;}
   static bool Cancelled()=>File.Exists(FilePath("cancel.flag"))||File.Exists(FilePath("stop-now.flag"));
   static string CurrentKind="";
+  static ServiceRecovery47 serviceRecovery47;
   [DllImport("kernel32.dll")]static extern uint GetOEMCP();
   static int Run(string exe,string args,string prefix=null,int diagnosticTimeout=0){
    var psi=new ProcessStartInfo(exe,args){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true};string name=prefix??"system";
    using(var command=diagnosticTimeout==0&&(CurrentKind=="CMD"||CurrentKind=="PowerShell")&&name.StartsWith("step-")?new CommandProcess(exe,args):null)using(var group=diagnosticTimeout>0?new DiagnosticProcessGroup():null)using(var ordinary=command==null?new Process{StartInfo=psi}:null)using(var output=new ProgressLogWriter(FilePath(name+".out")))using(var rawOut=new FileStream(FilePath(name+".stdout.bin"),FileMode.Append,FileAccess.Write,FileShare.ReadWrite))using(var rawErr=new FileStream(FilePath(name+".stderr.bin"),FileMode.Append,FileAccess.Write,FileShare.ReadWrite)){
-    var process=command==null?ordinary:command.Process;var native=Encoding.GetEncoding((int)GetOEMCP());if(command==null)process.Start();if(group!=null)group.Attach(process);if(State!=null){lock(Gate){if(group!=null)State.DiagnosticProcessId=process.Id;else{State.ProcessId=process.Id;State.ProcessName=Path.GetFileName(exe);}Save();}}
+    var process=command==null?ordinary:command.Process;var native=Encoding.GetEncoding((int)GetOEMCP());if(command==null)process.Start();if(group!=null)group.Attach(process);if(serviceRecovery47!=null)serviceRecovery47.Remember(process);if(State!=null){lock(Gate){if(group!=null)State.DiagnosticProcessId=process.Id;else{State.ProcessId=process.Id;State.ProcessName=Path.GetFileName(exe);}Save();}}
     var stdout=Task.Run(()=>OutputReader.Read((command==null?process.StandardOutput.BaseStream:command.Output),rawOut,native,line=>{File.AppendAllText(FilePath(name+".stdout.raw"),line+Environment.NewLine,Encoding.UTF8);output.WriteLine(line);if(State!=null&&group==null&&!string.IsNullOrWhiteSpace(line)){lock(Gate){State.LastOutputUtc=DateTime.UtcNow.ToString("o");if(ProgressText.Key(line)!=null){var value=ProgressText.Value(line);var number=value.HasValue?value.Value.ToString():"";if(State.ProgressValue!=number)State.LastProgressUtc=State.LastOutputUtc;State.ProgressValue=number;State.Progress=value;if(ProgressText.IsChkdsk(line))State.ActivityMessage=value.HasValue?line.Trim():"CHKDSK: прогресс пересчитывается; ожидайте итог проверки.";}Save();}}}));
     var stderr=Task.Run(()=>OutputReader.Read((command==null?process.StandardError.BaseStream:command.Error),rawErr,native,line=>File.AppendAllText(FilePath(name+".err"),line+Environment.NewLine,Encoding.UTF8)));
     bool timeout=false,interrupted=false;var clock=Stopwatch.StartNew();long signalAt=0;
@@ -52,11 +53,18 @@ namespace DomainConsole.Agent {
    var file=FilePath(prefix+".command.txt");File.WriteAllText(file,code,new UTF8Encoding(true));
    var loader="[IO.File]::WriteAllText('"+FilePath(prefix+".powershell-started.txt").Replace("'","''")+"',[DateTime]::UtcNow.ToString('o'));$dcAllowUpdateConflict="+(Job!=null&&Job.AllowUpdateConflict?"$true":"$false")+";[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false);$OutputEncoding=[Console]::OutputEncoding;$ProgressPreference='SilentlyContinue';$ErrorActionPreference='Stop';$global:LASTEXITCODE=$null;try{& ([ScriptBlock]::Create([IO.File]::ReadAllText('"+file.Replace("'","''")+"',[Text.Encoding]::UTF8)));if($null -ne $LASTEXITCODE){[IO.File]::WriteAllText('"+FilePath(prefix+".native.json").Replace("'","''")+"',[string]$LASTEXITCODE)}}catch{[IO.File]::WriteAllText('"+FilePath(prefix+".failure.txt").Replace("'","''")+"',$_.Exception.Message);[Console]::Error.WriteLine($_.Exception.Message);[Console]::Error.WriteLine('Target: '+[string]$_.TargetObject);[Console]::Error.WriteLine('Exception: '+$_.Exception.GetType().FullName+'; HRESULT: 0x'+$_.Exception.HResult.ToString('X8'));[Console]::Error.WriteLine('ErrorId: '+$_.FullyQualifiedErrorId);if($_.Exception.InnerException){[Console]::Error.WriteLine($_.Exception.InnerException.ToString())};[Console]::Error.WriteLine('Stack: '+$_.ScriptStackTrace);[Console]::Error.WriteLine($_.InvocationInfo.PositionMessage);exit 1}";
    var exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),@"WindowsPowerShell\v1.0\powershell.exe");
-   int exit47=Run(exe,"-NoLogo -NoProfile -NonInteractive -EncodedCommand "+Convert.ToBase64String(Encoding.Unicode.GetBytes(loader)),prefix,diagnosticTimeout);
+   int exit47=1;Exception runError47=null;var restoreErrors47=new List<string>();var protected47=ServiceRecovery47.Protected(CurrentKind);
+   if(protected47){serviceRecovery47=new ServiceRecovery47(FilePath(prefix+".service-recovery"),serviceRestorerFixture47);loader="$dcServiceRecovery47='"+serviceRecovery47.Root.Replace("'","''")+"';"+loader;}
+   try{exit47=Run(exe,"-NoLogo -NoProfile -NonInteractive -EncodedCommand "+Convert.ToBase64String(Encoding.Unicode.GetBytes(loader)),prefix,diagnosticTimeout);}catch(Exception ex){runError47=ex;}finally{if(serviceRecovery47!=null){try{restoreErrors47=serviceRecovery47.Recover();}finally{serviceRecovery47=null;}
+    if(restoreErrors47.Count>0){var message47="Не восстановлены службы: "+string.Join("; ",restoreErrors47);File.AppendAllText(FilePath(prefix+".service-recovery.log"),Environment.NewLine+message47);if(State!=null)State.ServiceRecoveryError47=message47;Log(message47);}
+   }}
+   if(runError47!=null&&!File.Exists(FilePath(prefix+".failure.txt")))File.WriteAllText(FilePath(prefix+".failure.txt"),runError47.Message);
    if(exit47!=0&&!File.Exists(FilePath(prefix+".failure.txt"))){
     string detail47="";if(File.Exists(FilePath(prefix+".err"))){using(var source47=new FileStream(FilePath(prefix+".err"),FileMode.Open,FileAccess.Read,FileShare.ReadWrite)){source47.Seek(Math.Max(0,source47.Length-8192),SeekOrigin.Begin);using(var reader47=new StreamReader(source47,Encoding.UTF8))detail47=reader47.ReadToEnd();}}
     File.WriteAllText(FilePath(prefix+".failure.txt"),ExecutionDiagnosis.PowerShellProcessFailure47(exit47,File.Exists(FilePath(prefix+".powershell-started.txt")),detail47,prefix));
    }
+   if(restoreErrors47.Count>0){File.AppendAllText(FilePath(prefix+".failure.txt"),Environment.NewLine+"Не восстановлены службы: "+string.Join("; ",restoreErrors47));if(exit47==0)exit47=1;}
+   if(runError47!=null)throw new IOException("Ошибка выполнения PowerShell; подробности сохранены в журнале шага.",runError47);
    return exit47;
   }
   static void StartupTask(string suffix,string mode){
@@ -143,6 +151,7 @@ namespace DomainConsole.Agent {
    if(args.Length==2&&args[0]=="stop-fixture"){Console.CancelKeyPress+=(s,e)=>e.Cancel=args[1]=="ignore";Console.WriteLine("READY");Thread.Sleep(60000);return 0;}
    if(args.Length==1&&args[0]=="command-stop-smoke")return CommandStopSmoke();
    if(args.Length==1&&args[0]=="emit-encoding-fixture"){EmitEncodingFixture();return 0;}
+   if(args.Length==2&&args[0]=="service-recovery-smoke47")return ServiceRecoverySmoke47(args[1]);
    if(args.Length==2&&args[0]=="interruption-smoke47")return InterruptionSmoke47(args[1]);
    if(args.Length==2&&args[0]=="interruption-worker47")return InterruptionWorker47(args[1]);
    if(args.Length==2&&args[0]=="update-smoke")return UpdateSmoke(args[1]);
@@ -196,15 +205,16 @@ namespace DomainConsole.Agent {
          if(stepResult.ExitCode!=0&&File.Exists(FilePath(prefix+".failure.txt")))stepResult.Error=File.ReadAllText(FilePath(prefix+".failure.txt"));
          if(stepResult.ExitCode!=0&&!Cancelled()){if(string.IsNullOrWhiteSpace(stepResult.Error))stepResult.Error=!string.IsNullOrWhiteSpace(State.Error)&&(step.Kind=="Updates"||step.Kind=="UpdateScan")?State.Error:"Код завершения: "+ExecutionDiagnosis.Code(stepResult.ExitCode)+". "+ExecutionDiagnosis.Explain(stepResult.ExitCode);State.Error=stepResult.Error;ApplyRecommendation(stepResult.Error);Log(stepResult.Error);}
          stepResult.Ended=DateTime.UtcNow.ToString("o");State.StageEnded=stepResult.Ended;lock(Gate){State.Results.Add(stepResult);}Save();
-         if(stepResult.ExitCode!=0&&!Job.ContinueOnError&&!Cancelled()){State.Status="Failed";Save();}
+         if(stepResult.ExitCode!=0&&(!Job.ContinueOnError||ServiceRecovery47.Protected(step.Kind))&&!Cancelled()){State.Status="Failed";Save();}
          if((step.Kind=="Updates"||step.Kind=="UpdateScan")&&stepResult.ExitCode!=0){diagnostics.Add(prefix);State.DiagnosticStatus="Pending";Save();}
-         if(stepResult.ExitCode!=0&&!Job.ContinueOnError)break;
+         if(stepResult.ExitCode!=0&&(!Job.ContinueOnError||ServiceRecovery47.Protected(step.Kind)))break;
         }
         if(Cancelled())State.Status="Cancelled";
         if(State.Status=="Running")State.Status=State.Results.Any(r=>r.ExitCode!=0)?"CompletedWithErrors":State.RebootRequired?"AwaitingReboot":"Completed";
        }catch(Exception ex){State.Status="Failed";State.Error=ex.Message;Log(ex.ToString());}
        finally{
         if(State.RestoreStatus=="Pending"){try{Restore();}catch(Exception ex){State.RestoreStatus="InterventionRequired";State.Status="InterventionRequired";State.Error=ex.Message;Log(ex.ToString());}}
+        if(!string.IsNullOrEmpty(State.ServiceRecoveryError47)){State.Status="InterventionRequired";if(!State.Error.Contains(State.ServiceRecoveryError47))State.Error+="\n"+State.ServiceRecoveryError47;}
         State.RebootEvidence=RebootEvidence.Collect();if(State.RebootEvidence.Required==true){State.RebootRequired=true;if(State.Status=="Completed")State.Status="AwaitingReboot";}
         State.Ended=DateTime.UtcNow.ToString("o");if(State.Status=="Cancelled"){State.StopStatus="Stopped";State.StopMessage="Задание остановлено администратором";}Save();
 

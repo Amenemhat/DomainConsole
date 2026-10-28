@@ -7,7 +7,20 @@ public sealed class CacheChoice:Window {
 }
 public static class CacheScripts {
  public static string Build(string mode,bool backup,bool catroot)=>"$mode='"+mode+"';$backup="+(backup?"$true":"$false")+";$catroot="+(catroot?"$true":"$false")+";"+Body;
- public const string Body="""
+ public const string ServiceJournal47="""
+function Register-DcServiceRestore47([string]$name){
+ if(!$dcServiceRecovery47){return}
+ [IO.Directory]::CreateDirectory($dcServiceRecovery47)|Out-Null
+ $path=Join-Path $dcServiceRecovery47 ($name+'.pending')
+ [IO.File]::WriteAllText($path,[DateTime]::UtcNow.ToString('o'))
+}
+function Complete-DcServiceRestore47([string]$name){
+ if(!$dcServiceRecovery47){return}
+ $path=Join-Path $dcServiceRecovery47 ($name+'.pending')
+ if(Test-Path -LiteralPath $path){Remove-Item -LiteralPath $path -Force -ErrorAction Stop}
+}
+""";
+ public const string Body=ServiceJournal47+"\n"+"""
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 if(!$dcAllowUpdateConflict -and (New-Object -ComObject Microsoft.Update.Installer).IsBusy){throw 'Установщик WUA занят. Очистка не начата.'}
 $root=Join-Path $env:windir 'SoftwareDistribution'
@@ -25,7 +38,7 @@ function Register-OldCache34([string]$path){
 try {
  foreach($p in $paths){$currentPath=$p;if(Test-Path -LiteralPath $p){$entry=Get-Item -LiteralPath $p -Force;if(!$entry.PSIsContainer){throw 'Путь кэша не является каталогом'};if($entry.Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Корневой путь кэша является ссылкой'}}}
  $stage='Остановка служб';$currentPath=''
- foreach($name in $services){$currentPath=$name;$restoreServices.Add($name);Stop-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(20))}
+ foreach($name in $services){$currentPath=$name;Register-DcServiceRestore47 $name;$restoreServices.Add($name);Stop-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(20))}
  foreach($p in $paths){$stage='Изоляция старого кэша';$currentPath=$p
   if(Test-Path -LiteralPath $p){
    $suffix=if($backup){'.DomainConsoleBackup_'}else{'.DomainConsolePendingDelete_'}
@@ -45,7 +58,7 @@ try {
  'Позиция: '+$_.InvocationInfo.PositionMessage
  if($_.Exception.InnerException){'Вложенная ошибка: '+$_.Exception.InnerException.ToString()}
 } finally {
- foreach($name in $restoreServices){try{Start-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus('Running',[TimeSpan]::FromSeconds(20))}catch{$restoreErrors+=$name+': '+$_.Exception.Message}}
+ foreach($name in $restoreServices){try{Start-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus('Running',[TimeSpan]::FromSeconds(20));Complete-DcServiceRestore47 $name}catch{$restoreErrors+=$name+': '+$_.Exception.Message}}
 }
 
 if($primary){if($restoreErrors.Count){'Дополнительный сбой восстановления служб: '+($restoreErrors -join '; ')};throw $primary}
