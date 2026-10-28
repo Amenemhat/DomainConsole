@@ -805,6 +805,14 @@ jobs:
            [IO.File]::WriteAllText((Join-Path $p 'step-1.out'),('FIRST44'+[Environment]::NewLine+(('middle'+[Environment]::NewLine)*200)+'LAST44'))
            $full=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
            if(!$full.Files[0].Body.Contains('FIRST44') -or !$full.Files[0].Body.Contains('LAST44')){throw 'Earlier commands lost by tail truncation'}
+           2..40|ForEach-Object {[IO.File]::WriteAllText((Join-Path $p ('step-'+$_.ToString()+'.out')),('STEP-'+$_))}
+           [IO.File]::WriteAllText((Join-Path $p 'step-2.err'),'INTERMEDIATE ERROR')
+           $ordered=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
+           if($ordered.Files.Count -ne 41 -or $ordered.Files[-1].Name -ne 'step-40.out' -or ($ordered.Files|Where-Object Name -eq 'step-2.err').Body -ne 'INTERMEDIATE ERROR'){throw 'Sequential files silently truncated or intermediate stderr lost'}
+           $names=@($ordered.Files.Name);if([Array]::IndexOf($names,'step-10.out') -lt [Array]::IndexOf($names,'step-2.out')){throw 'Step files sorted lexicographically'}
+           [IO.File]::WriteAllText((Join-Path $p 'step-1.out'),('Z'*1200000))
+           $limited=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
+           if(!($limited.Files|Where-Object Name -eq 'output-limit.out') -or !$limited.Output.Contains('1 МиБ')){throw 'Output budget hidden from structured result'}
            $includeOutput34=$false;$result=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
            if($result.Files.Count -ne 0){throw 'Background poll needlessly reads full output'}
            [IO.File]::WriteAllText((Join-Path $p 'step-1.updates.json'),'.')

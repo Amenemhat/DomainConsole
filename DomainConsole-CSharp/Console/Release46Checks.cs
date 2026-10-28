@@ -61,6 +61,10 @@ public partial class MainWindow {
 
   if(!Application.Current.Resources.Contains("ReadinessDisclosure46"))throw new Exception("Borderless readiness template missing");
   if(EventHeader46==null||EventCopySelected36.Content is string)throw new Exception("History header actions lost icons");
+  var output47=new PollResult{State=new(){Status="Completed"},Files=Enumerable.Range(1,40).Select(i=>new RemoteOutputFile{Name="step-"+i+".out",Body="STEP"+i+"\nrepeat\nrepeat"}).ToList()};
+  output47.Files.Insert(2,new(){Name="step-2.err",Body="intermediate failure"});output47.Files.Add(new(){Name="output-limit.out",Body="Output budget reached; full files retained"});
+  string presented47=PresentResult("output.fixture.invalid",output47);
+  if(!presented47.Contains("STEP40")||!presented47.Contains("repeat\nrepeat")||!presented47.Contains("intermediate failure")||!presented47.Contains("Output budget reached")||presented47.IndexOf("[step-10.out]",StringComparison.Ordinal)<presented47.IndexOf("[step-2.out]",StringComparison.Ordinal))throw new Exception("Result presentation dropped ordered steps, repeated lines, stderr or output limit");
   var sections=LogViewer.Sections("## Result\nhello\n## Empty\n");if(sections.Count!=1)throw new Exception("Empty section retained");
  }
  async Task VerifyCollectorCompletion47(){
