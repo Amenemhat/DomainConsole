@@ -65,8 +65,8 @@
       "status": "verified_in_stated_scope",
       "limitation": "",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/CollectorTools43.cs": "f4ac8b7ff853c187065b11e9cef498e2795194505e38013d904b782d393781c8",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "97eec6f47750898b4edfbd148de853fc313cda557d1b5a1f836cc95fcac5e8ca"
+        "DomainConsole-CSharp/Console/CollectorTools43.cs": "d9a0119f48fbbdb86148d112f5cce8837ec5a46f802917a97038ece4be668720",
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -76,21 +76,31 @@
       "code": [
         "Console/PollingControl43.cs",
         "Console/CollectorRepair47.cs",
-        "Console/ClientStatus28.cs"
+        "Console/ClientStatus28.cs",
+        "Console/StatusOverview.cs",
+        "Console/Workspace31.cs",
+        "Console/Release43Checks.cs",
+        "Console/Release46Checks.cs"
       ],
-      "scenario": "OFF cancels read generation; ON must not revive it. Delayed collector success after cancellation or address/identity/auth/TLS changes, including a change during follow-up refresh. Delayed status success and failure after identity change.",
+      "scenario": "OFF cancels read generation; ON must not revive it. Delayed collector success after cancellation or address/identity/auth/TLS changes, including a change during follow-up refresh. Delayed status success and failure after identity change. Delayed overview after OFF and OFF/ON; manual stop; delayed connection success/failure after live profile address change and OFF/ON; verify transport callback was actually entered and current success still applies.",
       "expected": "No old response marks current endpoint successful/failed or applies reboot flags; no cancelled repair refresh/publish.",
       "evidence": [
         "VerifyPause43",
         "VerifyCollectorCompletion47",
-        "VerifyObsoleteRead47"
+        "VerifyObsoleteRead47",
+        "VerifyOverviewCancellation47",
+        "VerifyObsoleteConnection47"
       ],
       "status": "verified_in_stated_scope",
       "limitation": "These assertions cover result application and read entry; startup OFF has a separate process test.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/PollingControl43.cs": "1f995de1cf9ef01d5acc5a2a1d416082a0403571b5ec443a695b9ad39fccb13d",
         "DomainConsole-CSharp/Console/CollectorRepair47.cs": "ce9a2f8e7f9793980851b186a0d1a5178dbc331b5d42b7b47b74b8ff3fae8c9a",
-        "DomainConsole-CSharp/Console/ClientStatus28.cs": "def7692e2b50af25c5fe9bca6fed63dcc7f5770cdac505d994aa8a951fc3cfca"
+        "DomainConsole-CSharp/Console/ClientStatus28.cs": "def7692e2b50af25c5fe9bca6fed63dcc7f5770cdac505d994aa8a951fc3cfca",
+        "DomainConsole-CSharp/Console/StatusOverview.cs": "6b125165902beaeb45836aa8c8892221cae0f76b8f24ff36e4b30ebefa8d9c8f",
+        "DomainConsole-CSharp/Console/Workspace31.cs": "0aa20b0e7ee413d9838e3c85a545e8d875c63a7f60bea2eed3b14e4e0d992c12",
+        "DomainConsole-CSharp/Console/Release43Checks.cs": "c203af31b1068bddf128105cf89ee7a960e67410c27ad2c0a7bf79580f3332d6",
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -175,7 +185,7 @@
       "limitation": "Generic handling verified; the specific cache-cleanup incident still requires logs of that exact job.",
       "source_sha256": {
         "DomainConsole-CSharp/Shared/ExecutionDiagnosis.cs": "bd4f164f0bec544fa0863e234d5a9f40145fc3bd1a69ab41392aa6dd82939c8f",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "97eec6f47750898b4edfbd148de853fc313cda557d1b5a1f836cc95fcac5e8ca",
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc",
         "DomainConsole-CSharp/Agent/Program.cs": "e976653f38b2f2a39905be5e5e918b0a20d4af82f0d6fa6d301a9aa41d7ae713"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
@@ -198,7 +208,7 @@
       "limitation": "Generic handling verified; the specific cache-cleanup incident still requires logs of that exact job.",
       "source_sha256": {
         "DomainConsole-CSharp/Shared/ExecutionDiagnosis.cs": "bd4f164f0bec544fa0863e234d5a9f40145fc3bd1a69ab41392aa6dd82939c8f",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "97eec6f47750898b4edfbd148de853fc313cda557d1b5a1f836cc95fcac5e8ca",
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc",
         "DomainConsole-CSharp/Agent/Program.cs": "e976653f38b2f2a39905be5e5e918b0a20d4af82f0d6fa6d301a9aa41d7ae713"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
@@ -473,7 +483,7 @@
       "status": "verified_in_stated_scope",
       "limitation": "Active-operation priority also covered by existing readiness matrix; reboot dispatch is not performed.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "7f88d5aee6a17d02aabf8423817f1879cbecce1fc237434a4bc7e0377a9423e3",
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
         "DomainConsole-CSharp/Console/Criteria45.cs": "4d9b208d50069d7ed689926e252350fffe416562e083f1012728d7cbd132210d",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1",
         "DomainConsole-CSharp/Console/Release45Checks.cs": "a7156cf7aa335f48fff28a0e1f6e7ae4e7c800f62db4ac8bb0b56a670475deca"
@@ -496,7 +506,7 @@
       "limitation": "This checks readiness retention; adaptive polling cadence and persistence use other tests and remain separately reviewable.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/Readiness43.cs": "389774956a5229f6f78948c93a20ec6c8ed6222631f23246cc6b929026a74cc7",
-        "DomainConsole-CSharp/Console/Release43Checks.cs": "a23752d731c499adf9edd0a94e249ba7bb1917c76cf64430508d6c4d9b1b8bb4"
+        "DomainConsole-CSharp/Console/Release43Checks.cs": "c203af31b1068bddf128105cf89ee7a960e67410c27ad2c0a7bf79580f3332d6"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -516,7 +526,7 @@
       "limitation": "This checks readiness retention; adaptive polling cadence and persistence use other tests and remain separately reviewable.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/Readiness43.cs": "389774956a5229f6f78948c93a20ec6c8ed6222631f23246cc6b929026a74cc7",
-        "DomainConsole-CSharp/Console/Release43Checks.cs": "a23752d731c499adf9edd0a94e249ba7bb1917c76cf64430508d6c4d9b1b8bb4"
+        "DomainConsole-CSharp/Console/Release43Checks.cs": "c203af31b1068bddf128105cf89ee7a960e67410c27ad2c0a7bf79580f3332d6"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -873,7 +883,7 @@
       "limitation": "Bulk cancellation and disruption at every cleanup instruction are not covered by this isolated scenario.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/Polling42/remove43.ps1": "79ce91ac8fc77f8b74fa0df475410c71c30347c4fccae717de79e67278623687",
-        "DomainConsole-CSharp/Console/CollectorTools43.cs": "f4ac8b7ff853c187065b11e9cef498e2795194505e38013d904b782d393781c8",
+        "DomainConsole-CSharp/Console/CollectorTools43.cs": "d9a0119f48fbbdb86148d112f5cce8837ec5a46f802917a97038ece4be668720",
         ".github/scripts/test_collector43.ps1": "efec6e061614a100bc68705189914debcc22dd989d617c10f93e7ea55d51eea9"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
@@ -895,7 +905,7 @@
       "limitation": "Bulk cancellation and disruption at every cleanup instruction are not covered by this isolated scenario.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/Polling42/remove43.ps1": "79ce91ac8fc77f8b74fa0df475410c71c30347c4fccae717de79e67278623687",
-        "DomainConsole-CSharp/Console/CollectorTools43.cs": "f4ac8b7ff853c187065b11e9cef498e2795194505e38013d904b782d393781c8",
+        "DomainConsole-CSharp/Console/CollectorTools43.cs": "d9a0119f48fbbdb86148d112f5cce8837ec5a46f802917a97038ece4be668720",
         ".github/scripts/test_collector43.ps1": "efec6e061614a100bc68705189914debcc22dd989d617c10f93e7ea55d51eea9"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
@@ -917,7 +927,7 @@
       "limitation": "Bulk cancellation and disruption at every cleanup instruction are not covered by this isolated scenario.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/Polling42/remove43.ps1": "79ce91ac8fc77f8b74fa0df475410c71c30347c4fccae717de79e67278623687",
-        "DomainConsole-CSharp/Console/CollectorTools43.cs": "f4ac8b7ff853c187065b11e9cef498e2795194505e38013d904b782d393781c8",
+        "DomainConsole-CSharp/Console/CollectorTools43.cs": "d9a0119f48fbbdb86148d112f5cce8837ec5a46f802917a97038ece4be668720",
         ".github/scripts/test_collector43.ps1": "efec6e061614a100bc68705189914debcc22dd989d617c10f93e7ea55d51eea9"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
@@ -939,7 +949,7 @@
       "limitation": "Bulk cancellation and disruption at every cleanup instruction are not covered by this isolated scenario.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/Polling42/remove43.ps1": "79ce91ac8fc77f8b74fa0df475410c71c30347c4fccae717de79e67278623687",
-        "DomainConsole-CSharp/Console/CollectorTools43.cs": "f4ac8b7ff853c187065b11e9cef498e2795194505e38013d904b782d393781c8",
+        "DomainConsole-CSharp/Console/CollectorTools43.cs": "d9a0119f48fbbdb86148d112f5cce8837ec5a46f802917a97038ece4be668720",
         ".github/scripts/test_collector43.ps1": "efec6e061614a100bc68705189914debcc22dd989d617c10f93e7ea55d51eea9"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
@@ -961,7 +971,7 @@
       "limitation": "Bulk cancellation and disruption at every cleanup instruction are not covered by this isolated scenario.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/Polling42/remove43.ps1": "79ce91ac8fc77f8b74fa0df475410c71c30347c4fccae717de79e67278623687",
-        "DomainConsole-CSharp/Console/CollectorTools43.cs": "f4ac8b7ff853c187065b11e9cef498e2795194505e38013d904b782d393781c8",
+        "DomainConsole-CSharp/Console/CollectorTools43.cs": "d9a0119f48fbbdb86148d112f5cce8837ec5a46f802917a97038ece4be668720",
         ".github/scripts/test_collector43.ps1": "efec6e061614a100bc68705189914debcc22dd989d617c10f93e7ea55d51eea9"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
@@ -987,7 +997,7 @@
         "DomainConsole-CSharp/Console/ConnectionState.cs": "91dd7f5edf75f186545dfe0f55024c4afe61b05b7c119d4e58073d3567c35442",
         "DomainConsole-CSharp/Console/ClientStatus28.cs": "def7692e2b50af25c5fe9bca6fed63dcc7f5770cdac505d994aa8a951fc3cfca",
         "DomainConsole-CSharp/Console/Release38Checks.cs": "81d5515bd096a59b034a53e15972331cdc499d64e9c9105511f2d4487158d9ef",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "97eec6f47750898b4edfbd148de853fc313cda557d1b5a1f836cc95fcac5e8ca"
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -1012,7 +1022,7 @@
         "DomainConsole-CSharp/Console/ConnectionState.cs": "91dd7f5edf75f186545dfe0f55024c4afe61b05b7c119d4e58073d3567c35442",
         "DomainConsole-CSharp/Console/ClientStatus28.cs": "def7692e2b50af25c5fe9bca6fed63dcc7f5770cdac505d994aa8a951fc3cfca",
         "DomainConsole-CSharp/Console/Release38Checks.cs": "81d5515bd096a59b034a53e15972331cdc499d64e9c9105511f2d4487158d9ef",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "97eec6f47750898b4edfbd148de853fc313cda557d1b5a1f836cc95fcac5e8ca"
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -1353,7 +1363,7 @@
       "limitation": "Visual framing and background differentiation additionally reviewed from actual Windows screenshots.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "97eec6f47750898b4edfbd148de853fc313cda557d1b5a1f836cc95fcac5e8ca"
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -1373,7 +1383,7 @@
       "limitation": "Visual framing and background differentiation additionally reviewed from actual Windows screenshots.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "97eec6f47750898b4edfbd148de853fc313cda557d1b5a1f836cc95fcac5e8ca"
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -1395,7 +1405,7 @@
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/MainWindow.xaml.cs": "9988231a1a0d814eebbc9d9f503c98b49a3fbffcfc8dd2c88be9b1ac9bb81611",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "97eec6f47750898b4edfbd148de853fc313cda557d1b5a1f836cc95fcac5e8ca",
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc",
         "DomainConsole-CSharp/Console/LogViewer.cs": "5109c30fff6474704d0f0468258638331aacc419cca56f542c3871bd1f0baeb6"
       }
     },
@@ -1555,7 +1565,7 @@
       "limitation": "All DNS/CLIXML/localized provider variants are not asserted by this narrow fixture.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/Workspace31.cs": "dd0c256d64e5788018b405102fe629bdaf91a92818c3b51492e2e017e1f88e2b",
+        "DomainConsole-CSharp/Console/Workspace31.cs": "0aa20b0e7ee413d9838e3c85a545e8d875c63a7f60bea2eed3b14e4e0d992c12",
         "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
       }
@@ -1578,7 +1588,7 @@
       "limitation": "All DNS/CLIXML/localized provider variants are not asserted by this narrow fixture.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/Workspace31.cs": "dd0c256d64e5788018b405102fe629bdaf91a92818c3b51492e2e017e1f88e2b",
+        "DomainConsole-CSharp/Console/Workspace31.cs": "0aa20b0e7ee413d9838e3c85a545e8d875c63a7f60bea2eed3b14e4e0d992c12",
         "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
       }
@@ -1601,7 +1611,7 @@
       "limitation": "All DNS/CLIXML/localized provider variants are not asserted by this narrow fixture.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/Workspace31.cs": "dd0c256d64e5788018b405102fe629bdaf91a92818c3b51492e2e017e1f88e2b",
+        "DomainConsole-CSharp/Console/Workspace31.cs": "0aa20b0e7ee413d9838e3c85a545e8d875c63a7f60bea2eed3b14e4e0d992c12",
         "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
       }
@@ -1689,7 +1699,7 @@
       "limitation": "Empty-label layout uses common binding; full IPv6 network session is not exercised by this display test.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "7f88d5aee6a17d02aabf8423817f1879cbecce1fc237434a4bc7e0377a9423e3",
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
         "DomainConsole-CSharp/Console/Release40.cs": "15fd72895f4b348a72e86e3d7a96c2d167e22233fb7efcf4a8f53d6c3c6952ae",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
       }
@@ -1711,7 +1721,7 @@
       "limitation": "Empty-label layout uses common binding; full IPv6 network session is not exercised by this display test.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "7f88d5aee6a17d02aabf8423817f1879cbecce1fc237434a4bc7e0377a9423e3",
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
         "DomainConsole-CSharp/Console/Release40.cs": "15fd72895f4b348a72e86e3d7a96c2d167e22233fb7efcf4a8f53d6c3c6952ae",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
       }
@@ -1733,7 +1743,7 @@
       "limitation": "Empty-label layout uses common binding; full IPv6 network session is not exercised by this display test.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "7f88d5aee6a17d02aabf8423817f1879cbecce1fc237434a4bc7e0377a9423e3",
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
         "DomainConsole-CSharp/Console/Release40.cs": "15fd72895f4b348a72e86e3d7a96c2d167e22233fb7efcf4a8f53d6c3c6952ae",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
       }
@@ -1755,7 +1765,7 @@
       "limitation": "Empty-label layout uses common binding; full IPv6 network session is not exercised by this display test.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "7f88d5aee6a17d02aabf8423817f1879cbecce1fc237434a4bc7e0377a9423e3",
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
         "DomainConsole-CSharp/Console/Release40.cs": "15fd72895f4b348a72e86e3d7a96c2d167e22233fb7efcf4a8f53d6c3c6952ae",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
       }
@@ -1779,7 +1789,7 @@
       "limitation": "Cross-context identity/error checks have additional tests; not every possible combination of all state fields is exhaustively enumerated.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "7f88d5aee6a17d02aabf8423817f1879cbecce1fc237434a4bc7e0377a9423e3",
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
         "DomainConsole-CSharp/Console/Criteria45.cs": "4d9b208d50069d7ed689926e252350fffe416562e083f1012728d7cbd132210d",
         "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
@@ -1804,7 +1814,7 @@
       "limitation": "Cross-context identity/error checks have additional tests; not every possible combination of all state fields is exhaustively enumerated.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "7f88d5aee6a17d02aabf8423817f1879cbecce1fc237434a4bc7e0377a9423e3",
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
         "DomainConsole-CSharp/Console/Criteria45.cs": "4d9b208d50069d7ed689926e252350fffe416562e083f1012728d7cbd132210d",
         "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
@@ -1829,7 +1839,7 @@
       "limitation": "Cross-context identity/error checks have additional tests; not every possible combination of all state fields is exhaustively enumerated.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "7f88d5aee6a17d02aabf8423817f1879cbecce1fc237434a4bc7e0377a9423e3",
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
         "DomainConsole-CSharp/Console/Criteria45.cs": "4d9b208d50069d7ed689926e252350fffe416562e083f1012728d7cbd132210d",
         "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
@@ -1854,7 +1864,7 @@
       "limitation": "Cross-context identity/error checks have additional tests; not every possible combination of all state fields is exhaustively enumerated.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "7f88d5aee6a17d02aabf8423817f1879cbecce1fc237434a4bc7e0377a9423e3",
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
         "DomainConsole-CSharp/Console/Criteria45.cs": "4d9b208d50069d7ed689926e252350fffe416562e083f1012728d7cbd132210d",
         "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
@@ -1879,7 +1889,7 @@
       "limitation": "Cross-context identity/error checks have additional tests; not every possible combination of all state fields is exhaustively enumerated.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "7f88d5aee6a17d02aabf8423817f1879cbecce1fc237434a4bc7e0377a9423e3",
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
         "DomainConsole-CSharp/Console/Criteria45.cs": "4d9b208d50069d7ed689926e252350fffe416562e083f1012728d7cbd132210d",
         "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec",
         "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
@@ -2113,7 +2123,7 @@
       "limitation": "Programmatic WPF handler/model checks; all physical mouse/key combinations are not covered.",
       "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/StatusOverview.cs": "dd260d272779694f1e7afafb431821684fd3e24c6495ed717c26f266c6afe95b",
+        "DomainConsole-CSharp/Console/StatusOverview.cs": "6b125165902beaeb45836aa8c8892221cae0f76b8f24ff36e4b30ebefa8d9c8f",
         "DomainConsole-CSharp/Console/Release25Checks.cs": "d7a49b13d06ff0e83d0fdc522db19b82bc3c89176ce28b6a4d1d0766147a4ae7"
       }
     },
@@ -2133,7 +2143,7 @@
       "limitation": "Programmatic WPF handler/model checks; all physical mouse/key combinations are not covered.",
       "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/StatusOverview.cs": "dd260d272779694f1e7afafb431821684fd3e24c6495ed717c26f266c6afe95b",
+        "DomainConsole-CSharp/Console/StatusOverview.cs": "6b125165902beaeb45836aa8c8892221cae0f76b8f24ff36e4b30ebefa8d9c8f",
         "DomainConsole-CSharp/Console/Release25Checks.cs": "d7a49b13d06ff0e83d0fdc522db19b82bc3c89176ce28b6a4d1d0766147a4ae7"
       }
     },
@@ -2153,7 +2163,7 @@
       "limitation": "Programmatic WPF handler/model checks; all physical mouse/key combinations are not covered.",
       "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/StatusOverview.cs": "dd260d272779694f1e7afafb431821684fd3e24c6495ed717c26f266c6afe95b",
+        "DomainConsole-CSharp/Console/StatusOverview.cs": "6b125165902beaeb45836aa8c8892221cae0f76b8f24ff36e4b30ebefa8d9c8f",
         "DomainConsole-CSharp/Console/Release25Checks.cs": "d7a49b13d06ff0e83d0fdc522db19b82bc3c89176ce28b6a4d1d0766147a4ae7"
       }
     },
@@ -2173,7 +2183,7 @@
       "limitation": "Programmatic WPF handler/model checks; all physical mouse/key combinations are not covered.",
       "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/StatusOverview.cs": "dd260d272779694f1e7afafb431821684fd3e24c6495ed717c26f266c6afe95b",
+        "DomainConsole-CSharp/Console/StatusOverview.cs": "6b125165902beaeb45836aa8c8892221cae0f76b8f24ff36e4b30ebefa8d9c8f",
         "DomainConsole-CSharp/Console/Release25Checks.cs": "d7a49b13d06ff0e83d0fdc522db19b82bc3c89176ce28b6a4d1d0766147a4ae7"
       }
     },
@@ -2193,7 +2203,7 @@
       "limitation": "Programmatic WPF handler/model checks; all physical mouse/key combinations are not covered.",
       "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/StatusOverview.cs": "dd260d272779694f1e7afafb431821684fd3e24c6495ed717c26f266c6afe95b",
+        "DomainConsole-CSharp/Console/StatusOverview.cs": "6b125165902beaeb45836aa8c8892221cae0f76b8f24ff36e4b30ebefa8d9c8f",
         "DomainConsole-CSharp/Console/Release25Checks.cs": "d7a49b13d06ff0e83d0fdc522db19b82bc3c89176ce28b6a4d1d0766147a4ae7"
       }
     },
@@ -2301,7 +2311,7 @@
       "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/RequiredUpdates37.cs": "fa460bde236a75f96bebecd6163b2acf0fe486515b2f0f73125650566ddaf321",
-        "DomainConsole-CSharp/Console/StatusOverview.cs": "dd260d272779694f1e7afafb431821684fd3e24c6495ed717c26f266c6afe95b",
+        "DomainConsole-CSharp/Console/StatusOverview.cs": "6b125165902beaeb45836aa8c8892221cae0f76b8f24ff36e4b30ebefa8d9c8f",
         "DomainConsole-CSharp/Console/Release37Checks.cs": "df21c76a0e7a1b83796296aec6de4e697bf0f27c4b51d221389ba050604bc01b"
       }
     },
@@ -2323,32 +2333,823 @@
       "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/RequiredUpdates37.cs": "fa460bde236a75f96bebecd6163b2acf0fe486515b2f0f73125650566ddaf321",
-        "DomainConsole-CSharp/Console/StatusOverview.cs": "dd260d272779694f1e7afafb431821684fd3e24c6495ed717c26f266c6afe95b",
+        "DomainConsole-CSharp/Console/StatusOverview.cs": "6b125165902beaeb45836aa8c8892221cae0f76b8f24ff36e4b30ebefa8d9c8f",
         "DomainConsole-CSharp/Console/Release37Checks.cs": "df21c76a0e7a1b83796296aec6de4e697bf0f27c4b51d221389ba050604bc01b"
+      }
+    },
+    {
+      "condition_id": "112.updates",
+      "requirement": "Готовность требует актуального успешного поиска и отсутствия необходимых обновлений по текущим политикам; старый/неполный серверный ноль недостаточен.",
+      "code": [
+        "Console/ClientAssessment41.cs",
+        "Console/Release41Checks.cs"
+      ],
+      "scenario": "Readiness matrix with missing search, stale/unknown reboot, report before job end, active operation, error and future timestamp; actual WPF adapters and stale finished plan.",
+      "expected": "No false ready; report measurement date stays independent of read/job end; main glyph, overview, row and attention agree in these cases.",
+      "evidence": [
+        "VerifyRelease41"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Does not cover every adapter against every combination of partial sources.",
+      "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
+        "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
+      }
+    },
+    {
+      "condition_id": "112.report",
+      "requirement": "Использовать реальное LastReportedUtc сервера; административное чтение не освежает отчёт. Свежий отчёт не обязан быть позже Ended последних служебных действий.",
+      "code": [
+        "Console/ClientAssessment41.cs",
+        "Console/Release41Checks.cs"
+      ],
+      "scenario": "Readiness matrix with missing search, stale/unknown reboot, report before job end, active operation, error and future timestamp; actual WPF adapters and stale finished plan.",
+      "expected": "No false ready; report measurement date stays independent of read/job end; main glyph, overview, row and attention agree in these cases.",
+      "evidence": [
+        "VerifyRelease41"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Does not cover every adapter against every combination of partial sources.",
+      "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
+        "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
+      }
+    },
+    {
+      "condition_id": "112.consumers",
+      "requirement": "Шапка, дерево, последние, главная карточка, журнал, внимание, фильтры и копирование используют один смысл статуса, источников и времени.",
+      "code": [
+        "Console/ClientAssessment41.cs",
+        "Console/Release41Checks.cs"
+      ],
+      "scenario": "Readiness matrix with missing search, stale/unknown reboot, report before job end, active operation, error and future timestamp; actual WPF adapters and stale finished plan.",
+      "expected": "No false ready; report measurement date stays independent of read/job end; main glyph, overview, row and attention agree in these cases.",
+      "evidence": [
+        "VerifyRelease41"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Does not cover every adapter against every combination of partial sources.",
+      "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
+        "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
+      }
+    },
+    {
+      "condition_id": "112.age",
+      "requirement": "Возраст одного источника считается согласованно от исходной отметки, без новой сети на каждую перерисовку; UTC хранится, местное время отображается.",
+      "code": [
+        "Console/ClientAssessment41.cs",
+        "Console/Release41Checks.cs"
+      ],
+      "scenario": "Readiness matrix with missing search, stale/unknown reboot, report before job end, active operation, error and future timestamp; actual WPF adapters and stale finished plan.",
+      "expected": "No false ready; report measurement date stays independent of read/job end; main glyph, overview, row and attention agree in these cases.",
+      "evidence": [
+        "VerifyRelease41"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Does not cover every adapter against every combination of partial sources.",
+      "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/ClientAssessment41.cs": "fad2bf5db02388049936664ddf75903c3fdc7ac2e3565293a1e6ab29bed5b4c8",
+        "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1"
+      }
+    },
+    {
+      "condition_id": "112.criteria-ui",
+      "requirement": "Три основных критерия без нумерации и рамок; подусловия раскрываются стрелкой, проблемный критерий раскрыт, действия возле соответствующей причины.",
+      "code": [
+        "Console/Criteria45.cs",
+        "Console/Release45Checks.cs",
+        "Console/Release46Checks.cs"
+      ],
+      "scenario": "Three criterion roots; manual collapse survives redraw; saved full proof and active installation; reboot action on outdated positive evidence.",
+      "expected": "Three consistent criteria; no reboot-check action during active work; preserved confirmation does not become mixed warning.",
+      "evidence": [
+        "VerifyRelease45",
+        "VerifyRelease46"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "User interaction matrix and border styling are limited to the tested WPF fixtures.",
+      "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Criteria45.cs": "4d9b208d50069d7ed689926e252350fffe416562e083f1012728d7cbd132210d",
+        "DomainConsole-CSharp/Console/Release45Checks.cs": "a7156cf7aa335f48fff28a0e1f6e7ae4e7c800f62db4ac8bb0b56a670475deca",
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
+      }
+    },
+    {
+      "condition_id": "112.reboot-action",
+      "requirement": "Проверка перезагрузки предлагается при неполных/устаревших данных, не вместо подтверждённого актуального отрицательного результата и не как отвлекающее действие во время установки.",
+      "code": [
+        "Console/Criteria45.cs",
+        "Console/Release45Checks.cs",
+        "Console/Release46Checks.cs"
+      ],
+      "scenario": "Three criterion roots; manual collapse survives redraw; saved full proof and active installation; reboot action on outdated positive evidence.",
+      "expected": "Three consistent criteria; no reboot-check action during active work; preserved confirmation does not become mixed warning.",
+      "evidence": [
+        "VerifyRelease45",
+        "VerifyRelease46"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "User interaction matrix and border styling are limited to the tested WPF fixtures.",
+      "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Criteria45.cs": "4d9b208d50069d7ed689926e252350fffe416562e083f1012728d7cbd132210d",
+        "DomainConsole-CSharp/Console/Release45Checks.cs": "a7156cf7aa335f48fff28a0e1f6e7ae4e7c800f62db4ac8bb0b56a670475deca",
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
+      }
+    },
+    {
+      "condition_id": "112.performance",
+      "requirement": "Проверить 400+ клиентов и большую историю, четыре режима/три темы/два размера; сохранять ввод, выделение, прокрутку и раскрытие.",
+      "code": [
+        "Console/Release39Checks.cs",
+        "Console/Release40Checks.cs"
+      ],
+      "scenario": "450 computers, 1006 jobs and 10000 events; repeated refresh, dispatcher input; three themes and four modes in compact/wide windows.",
+      "expected": "Unchanged refresh produces zero row notifications/disk reads; dispatcher input serviced; mode actions/layout checks pass.",
+      "evidence": [
+        "VerifyRelease39",
+        "VerifyRelease40"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "No long-duration production memory soak or full system DPI matrix.",
+      "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Release39Checks.cs": "02c1a46766a1b7efd22e1bbeacc8856f924c8ad5e26680e86155b7cf1026ec17",
+        "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec"
+      }
+    },
+    {
+      "condition_id": "118.scope",
+      "requirement": "OFF не останавливает уже переданные клиентские установки и не управляет другими консолями. Явные рабочие команды сохраняют свой смысл.",
+      "code": [
+        "Console/Release41Checks.cs",
+        "Console/ProbeSafety41.cs",
+        "Console/PollingControl43.cs"
+      ],
+      "scenario": "Pause read transport, reject collector read and allow independent explicit work using the transport admission fixture.",
+      "expected": "Master OFF blocks read entry without blocking unrelated explicit work; no remote update termination is issued by toggle.",
+      "evidence": [
+        "VerifyTransportBudget41"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Remote update preservation also relies on source inspection; no real production installation is interrupted.",
+      "actual": "Named assertions passed in the recorded Windows run; only the specified scope is evidenced.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Release41Checks.cs": "965c3e635d55eda58df4e412e6f2d2cedb636484a7d3aac153067fd6f44044b1",
+        "DomainConsole-CSharp/Console/ProbeSafety41.cs": "0fcb15922a403b8ea80d2c59e6920ec442134b15660285e82712ac8b9d2d5921",
+        "DomainConsole-CSharp/Console/PollingControl43.cs": "1f995de1cf9ef01d5acc5a2a1d416082a0403571b5ec443a695b9ad39fccb13d"
+      }
+    },
+    {
+      "condition_id": "114.explicit-repair",
+      "requirement": "Явная кнопка включения/восстановления рядом со связью для удалённого/зависшего сборщика, независима от очереди рабочих заданий, но сохраняет проверки владения.",
+      "code": [
+        "Console/App.xaml.cs",
+        "Console/CollectorRepair47.cs",
+        "Console/PollRecovery44.cs",
+        "Console/Polling42/remove43.ps1",
+        ".github/scripts/test_collector43.ps1"
+      ],
+      "scenario": "Real SYSTEM collector removal/re-enable with concurrent RepairCollector47 calls, failed preceding flight, master OFF, fresh CollectedUtc; inspect real task including mismatched settings without changing files/ACL.",
+      "expected": "One repair task, full fresh result before success, stale wait removed only after repair; independent read-only inspection preserves unknown task.",
+      "evidence": [
+        "LocalSmoke",
+        "test_collector43.ps1",
+        "VerifyRelease46"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Repair service path exercised on isolated Windows. Header UI state covered by WPF fixture; not a physical simultaneous click from two GUI consoles.",
+      "actual": "Named scenarios passed in the recorded Windows run; inspect and ownership fault cases preserved unrelated data.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/App.xaml.cs": "6dbcf6c5b8566139beb58262d8e556e89cc6559dd29b4378b6a1df4c3ab8c9ae",
+        "DomainConsole-CSharp/Console/CollectorRepair47.cs": "ce9a2f8e7f9793980851b186a0d1a5178dbc331b5d42b7b47b74b8ff3fae8c9a",
+        "DomainConsole-CSharp/Console/PollRecovery44.cs": "ca9bae08e40a12effd4ddc960d88c2871d447235a4ef0f965733ce058c145485",
+        "DomainConsole-CSharp/Console/Polling42/remove43.ps1": "79ce91ac8fc77f8b74fa0df475410c71c30347c4fccae717de79e67278623687",
+        ".github/scripts/test_collector43.ps1": "efec6e061614a100bc68705189914debcc22dd989d617c10f93e7ea55d51eea9"
+      }
+    },
+    {
+      "condition_id": "114.repair-sequence",
+      "requirement": "Сначала штатная остановка своего опроса; затем только подтверждённый собственный процесс при необходимости; один новый чистый сборщик после подтверждённого завершения.",
+      "code": [
+        "Console/App.xaml.cs",
+        "Console/CollectorRepair47.cs",
+        "Console/PollRecovery44.cs",
+        "Console/Polling42/remove43.ps1",
+        ".github/scripts/test_collector43.ps1"
+      ],
+      "scenario": "Real SYSTEM collector removal/re-enable with concurrent RepairCollector47 calls, failed preceding flight, master OFF, fresh CollectedUtc; inspect real task including mismatched settings without changing files/ACL.",
+      "expected": "One repair task, full fresh result before success, stale wait removed only after repair; independent read-only inspection preserves unknown task.",
+      "evidence": [
+        "LocalSmoke",
+        "test_collector43.ps1",
+        "VerifyRelease46"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Repair service path exercised on isolated Windows. Header UI state covered by WPF fixture; not a physical simultaneous click from two GUI consoles.",
+      "actual": "Named scenarios passed in the recorded Windows run; inspect and ownership fault cases preserved unrelated data.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/App.xaml.cs": "6dbcf6c5b8566139beb58262d8e556e89cc6559dd29b4378b6a1df4c3ab8c9ae",
+        "DomainConsole-CSharp/Console/CollectorRepair47.cs": "ce9a2f8e7f9793980851b186a0d1a5178dbc331b5d42b7b47b74b8ff3fae8c9a",
+        "DomainConsole-CSharp/Console/PollRecovery44.cs": "ca9bae08e40a12effd4ddc960d88c2871d447235a4ef0f965733ce058c145485",
+        "DomainConsole-CSharp/Console/Polling42/remove43.ps1": "79ce91ac8fc77f8b74fa0df475410c71c30347c4fccae717de79e67278623687",
+        ".github/scripts/test_collector43.ps1": "efec6e061614a100bc68705189914debcc22dd989d617c10f93e7ea55d51eea9"
+      }
+    },
+    {
+      "condition_id": "114.postconditions",
+      "requirement": "Снятие блокировки и успех только после удалённых постусловий и свежего полного снимка; один повторный клик присоединяется к той же работе.",
+      "code": [
+        "Console/App.xaml.cs",
+        "Console/CollectorRepair47.cs",
+        "Console/PollRecovery44.cs",
+        "Console/Polling42/remove43.ps1",
+        ".github/scripts/test_collector43.ps1"
+      ],
+      "scenario": "Real SYSTEM collector removal/re-enable with concurrent RepairCollector47 calls, failed preceding flight, master OFF, fresh CollectedUtc; inspect real task including mismatched settings without changing files/ACL.",
+      "expected": "One repair task, full fresh result before success, stale wait removed only after repair; independent read-only inspection preserves unknown task.",
+      "evidence": [
+        "LocalSmoke",
+        "test_collector43.ps1",
+        "VerifyRelease46"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Repair service path exercised on isolated Windows. Header UI state covered by WPF fixture; not a physical simultaneous click from two GUI consoles.",
+      "actual": "Named scenarios passed in the recorded Windows run; inspect and ownership fault cases preserved unrelated data.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/App.xaml.cs": "6dbcf6c5b8566139beb58262d8e556e89cc6559dd29b4378b6a1df4c3ab8c9ae",
+        "DomainConsole-CSharp/Console/CollectorRepair47.cs": "ce9a2f8e7f9793980851b186a0d1a5178dbc331b5d42b7b47b74b8ff3fae8c9a",
+        "DomainConsole-CSharp/Console/PollRecovery44.cs": "ca9bae08e40a12effd4ddc960d88c2871d447235a4ef0f965733ce058c145485",
+        "DomainConsole-CSharp/Console/Polling42/remove43.ps1": "79ce91ac8fc77f8b74fa0df475410c71c30347c4fccae717de79e67278623687",
+        ".github/scripts/test_collector43.ps1": "efec6e061614a100bc68705189914debcc22dd989d617c10f93e7ea55d51eea9"
+      }
+    },
+    {
+      "condition_id": "114.diagnose",
+      "requirement": "Inspect читает ограниченные журналы/метаданные без запуска; действия восстановления остаются доступны при провале inventory.",
+      "code": [
+        "Console/App.xaml.cs",
+        "Console/CollectorRepair47.cs",
+        "Console/PollRecovery44.cs",
+        "Console/Polling42/remove43.ps1",
+        ".github/scripts/test_collector43.ps1"
+      ],
+      "scenario": "Real SYSTEM collector removal/re-enable with concurrent RepairCollector47 calls, failed preceding flight, master OFF, fresh CollectedUtc; inspect real task including mismatched settings without changing files/ACL.",
+      "expected": "One repair task, full fresh result before success, stale wait removed only after repair; independent read-only inspection preserves unknown task.",
+      "evidence": [
+        "LocalSmoke",
+        "test_collector43.ps1",
+        "VerifyRelease46"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Repair service path exercised on isolated Windows. Header UI state covered by WPF fixture; not a physical simultaneous click from two GUI consoles.",
+      "actual": "Named scenarios passed in the recorded Windows run; inspect and ownership fault cases preserved unrelated data.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/App.xaml.cs": "6dbcf6c5b8566139beb58262d8e556e89cc6559dd29b4378b6a1df4c3ab8c9ae",
+        "DomainConsole-CSharp/Console/CollectorRepair47.cs": "ce9a2f8e7f9793980851b186a0d1a5178dbc331b5d42b7b47b74b8ff3fae8c9a",
+        "DomainConsole-CSharp/Console/PollRecovery44.cs": "ca9bae08e40a12effd4ddc960d88c2871d447235a4ef0f965733ce058c145485",
+        "DomainConsole-CSharp/Console/Polling42/remove43.ps1": "79ce91ac8fc77f8b74fa0df475410c71c30347c4fccae717de79e67278623687",
+        ".github/scripts/test_collector43.ps1": "efec6e061614a100bc68705189914debcc22dd989d617c10f93e7ea55d51eea9"
+      }
+    },
+    {
+      "condition_id": "52.contrast",
+      "requirement": "Активные/выбранные строки имеют отдельные ресурсы и контрастные Success/Info/подписи во всех темах.",
+      "code": [
+        "Console/Release33Checks.cs",
+        "Console/MainWindow.xaml",
+        "Console/Theme.cs"
+      ],
+      "scenario": "Actual WPF geometry of link icon/text and command options, navigation mode checks, contrast >=4.5 for text against active/selection/sidebar surfaces in three themes, horizontal/vertical scrollbar with million-unit range.",
+      "expected": "No duplicate tab/WSUS header, aligned controls, readable text contrast and >=28 px thumb with full drag range.",
+      "evidence": [
+        "VerifyRelease33"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Contrast assertions cover named text/surface resources; full OS DPI scaling is not exercised.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Release33Checks.cs": "da4ce1177a27a1960e113cd0628f3b57a35003aabde76e8bdea77d0cab1942a8",
+        "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
+        "DomainConsole-CSharp/Console/Theme.cs": "674256b35d9c6f46da7fb2961ae0f0d6ae35170c58c9d252416cbb805d80c46f"
+      }
+    },
+    {
+      "condition_id": "55.align",
+      "requirement": "Факты связи и значки выровнены, MU/затрагивает WU и подписи в командах согласованы.",
+      "code": [
+        "Console/Release33Checks.cs",
+        "Console/MainWindow.xaml",
+        "Console/Theme.cs"
+      ],
+      "scenario": "Actual WPF geometry of link icon/text and command options, navigation mode checks, contrast >=4.5 for text against active/selection/sidebar surfaces in three themes, horizontal/vertical scrollbar with million-unit range.",
+      "expected": "No duplicate tab/WSUS header, aligned controls, readable text contrast and >=28 px thumb with full drag range.",
+      "evidence": [
+        "VerifyRelease33"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Contrast assertions cover named text/surface resources; full OS DPI scaling is not exercised.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Release33Checks.cs": "da4ce1177a27a1960e113cd0628f3b57a35003aabde76e8bdea77d0cab1942a8",
+        "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
+        "DomainConsole-CSharp/Console/Theme.cs": "674256b35d9c6f46da7fb2961ae0f0d6ae35170c58c9d252416cbb805d80c46f"
+      }
+    },
+    {
+      "condition_id": "55.tabs",
+      "requirement": "Команды/WSUS/История справа над действиями по позднему макету; отдельной строки вкладок нет, программная навигация работает.",
+      "code": [
+        "Console/Release33Checks.cs",
+        "Console/MainWindow.xaml",
+        "Console/Theme.cs"
+      ],
+      "scenario": "Actual WPF geometry of link icon/text and command options, navigation mode checks, contrast >=4.5 for text against active/selection/sidebar surfaces in three themes, horizontal/vertical scrollbar with million-unit range.",
+      "expected": "No duplicate tab/WSUS header, aligned controls, readable text contrast and >=28 px thumb with full drag range.",
+      "evidence": [
+        "VerifyRelease33"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Contrast assertions cover named text/surface resources; full OS DPI scaling is not exercised.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Release33Checks.cs": "da4ce1177a27a1960e113cd0628f3b57a35003aabde76e8bdea77d0cab1942a8",
+        "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
+        "DomainConsole-CSharp/Console/Theme.cs": "674256b35d9c6f46da7fb2961ae0f0d6ae35170c58c9d252416cbb805d80c46f"
+      }
+    },
+    {
+      "condition_id": "57.duplicate",
+      "requirement": "Повтор WSUS сервер/порт над действиями убран, информация в отчёте/настройках сохранена.",
+      "code": [
+        "Console/Release33Checks.cs",
+        "Console/MainWindow.xaml",
+        "Console/Theme.cs"
+      ],
+      "scenario": "Actual WPF geometry of link icon/text and command options, navigation mode checks, contrast >=4.5 for text against active/selection/sidebar surfaces in three themes, horizontal/vertical scrollbar with million-unit range.",
+      "expected": "No duplicate tab/WSUS header, aligned controls, readable text contrast and >=28 px thumb with full drag range.",
+      "evidence": [
+        "VerifyRelease33"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Contrast assertions cover named text/surface resources; full OS DPI scaling is not exercised.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Release33Checks.cs": "da4ce1177a27a1960e113cd0628f3b57a35003aabde76e8bdea77d0cab1942a8",
+        "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
+        "DomainConsole-CSharp/Console/Theme.cs": "674256b35d9c6f46da7fb2961ae0f0d6ae35170c58c9d252416cbb805d80c46f"
+      }
+    },
+    {
+      "condition_id": "65.thumb",
+      "requirement": "Бегунок виден, минимальная длина/захват/прокрутка сохраняются.",
+      "code": [
+        "Console/Release33Checks.cs",
+        "Console/MainWindow.xaml",
+        "Console/Theme.cs"
+      ],
+      "scenario": "Actual WPF geometry of link icon/text and command options, navigation mode checks, contrast >=4.5 for text against active/selection/sidebar surfaces in three themes, horizontal/vertical scrollbar with million-unit range.",
+      "expected": "No duplicate tab/WSUS header, aligned controls, readable text contrast and >=28 px thumb with full drag range.",
+      "evidence": [
+        "VerifyRelease33"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Contrast assertions cover named text/surface resources; full OS DPI scaling is not exercised.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Release33Checks.cs": "da4ce1177a27a1960e113cd0628f3b57a35003aabde76e8bdea77d0cab1942a8",
+        "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
+        "DomainConsole-CSharp/Console/Theme.cs": "674256b35d9c6f46da7fb2961ae0f0d6ae35170c58c9d252416cbb805d80c46f"
+      }
+    },
+    {
+      "condition_id": "47.themes",
+      "requirement": "Три согласованные темы сохранены; поздняя палитра #98 применяется вместо ранних оттенков.",
+      "code": [
+        "Console/MainWindow.xaml",
+        "Console/Theme.cs",
+        "Console/Release33Checks.cs",
+        "Console/Release40Checks.cs"
+      ],
+      "scenario": "Shared themes/styles and workspace modes; render compact/wide layouts in all three themes with log tools in headers.",
+      "expected": "Shared later layout and palette retained; action mode/geometry assertions pass; source confirms common styles.",
+      "evidence": [
+        "VerifyRelease33",
+        "VerifyRelease40"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Only fixture states and listed sizes; not an assertion that every historic spacing proposal remains applicable.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
+        "DomainConsole-CSharp/Console/Theme.cs": "674256b35d9c6f46da7fb2961ae0f0d6ae35170c58c9d252416cbb805d80c46f",
+        "DomainConsole-CSharp/Console/Release33Checks.cs": "da4ce1177a27a1960e113cd0628f3b57a35003aabde76e8bdea77d0cab1942a8",
+        "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec"
+      }
+    },
+    {
+      "condition_id": "53.later-layout",
+      "requirement": "История под главной плашкой, фон отдельно свёрнут — поздний #91/#96 заменяет раннюю строку рядом.",
+      "code": [
+        "Console/MainWindow.xaml",
+        "Console/Theme.cs",
+        "Console/Release33Checks.cs",
+        "Console/Release40Checks.cs"
+      ],
+      "scenario": "Shared themes/styles and workspace modes; render compact/wide layouts in all three themes with log tools in headers.",
+      "expected": "Shared later layout and palette retained; action mode/geometry assertions pass; source confirms common styles.",
+      "evidence": [
+        "VerifyRelease33",
+        "VerifyRelease40"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Only fixture states and listed sizes; not an assertion that every historic spacing proposal remains applicable.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
+        "DomainConsole-CSharp/Console/Theme.cs": "674256b35d9c6f46da7fb2961ae0f0d6ae35170c58c9d252416cbb805d80c46f",
+        "DomainConsole-CSharp/Console/Release33Checks.cs": "da4ce1177a27a1960e113cd0628f3b57a35003aabde76e8bdea77d0cab1942a8",
+        "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec"
+      }
+    },
+    {
+      "condition_id": "53.headers",
+      "requirement": "Поиск/копирование/обновление находятся в заголовках, нет лишних строк инструментов.",
+      "code": [
+        "Console/MainWindow.xaml",
+        "Console/Theme.cs",
+        "Console/Release33Checks.cs",
+        "Console/Release40Checks.cs"
+      ],
+      "scenario": "Shared themes/styles and workspace modes; render compact/wide layouts in all three themes with log tools in headers.",
+      "expected": "Shared later layout and palette retained; action mode/geometry assertions pass; source confirms common styles.",
+      "evidence": [
+        "VerifyRelease33",
+        "VerifyRelease40"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Only fixture states and listed sizes; not an assertion that every historic spacing proposal remains applicable.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
+        "DomainConsole-CSharp/Console/Theme.cs": "674256b35d9c6f46da7fb2961ae0f0d6ae35170c58c9d252416cbb805d80c46f",
+        "DomainConsole-CSharp/Console/Release33Checks.cs": "da4ce1177a27a1960e113cd0628f3b57a35003aabde76e8bdea77d0cab1942a8",
+        "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec"
+      }
+    },
+    {
+      "condition_id": "53.style",
+      "requirement": "Все журналы/ввод единообразны по рамке/заголовку/поверхности, события сохраняют цвет; три темы и малое окно.",
+      "code": [
+        "Console/MainWindow.xaml",
+        "Console/Theme.cs",
+        "Console/Release33Checks.cs",
+        "Console/Release40Checks.cs"
+      ],
+      "scenario": "Shared themes/styles and workspace modes; render compact/wide layouts in all three themes with log tools in headers.",
+      "expected": "Shared later layout and palette retained; action mode/geometry assertions pass; source confirms common styles.",
+      "evidence": [
+        "VerifyRelease33",
+        "VerifyRelease40"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Only fixture states and listed sizes; not an assertion that every historic spacing proposal remains applicable.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
+        "DomainConsole-CSharp/Console/Theme.cs": "674256b35d9c6f46da7fb2961ae0f0d6ae35170c58c9d252416cbb805d80c46f",
+        "DomainConsole-CSharp/Console/Release33Checks.cs": "da4ce1177a27a1960e113cd0628f3b57a35003aabde76e8bdea77d0cab1942a8",
+        "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec"
+      }
+    },
+    {
+      "condition_id": "56.consistent",
+      "requirement": "Правило едино для CMD/PS, клиентского журнала и WSUS.",
+      "code": [
+        "Console/MainWindow.xaml",
+        "Console/Theme.cs",
+        "Console/Release33Checks.cs",
+        "Console/Release40Checks.cs"
+      ],
+      "scenario": "Shared themes/styles and workspace modes; render compact/wide layouts in all three themes with log tools in headers.",
+      "expected": "Shared later layout and palette retained; action mode/geometry assertions pass; source confirms common styles.",
+      "evidence": [
+        "VerifyRelease33",
+        "VerifyRelease40"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Only fixture states and listed sizes; not an assertion that every historic spacing proposal remains applicable.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
+        "DomainConsole-CSharp/Console/Theme.cs": "674256b35d9c6f46da7fb2961ae0f0d6ae35170c58c9d252416cbb805d80c46f",
+        "DomainConsole-CSharp/Console/Release33Checks.cs": "da4ce1177a27a1960e113cd0628f3b57a35003aabde76e8bdea77d0cab1942a8",
+        "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec"
+      }
+    },
+    {
+      "condition_id": "57.palette",
+      "requirement": "Фон/дерево/кнопки/контраст соответствуют поздней точной палитре #98, кнопки различимы и имеют тонкую границу.",
+      "code": [
+        "Console/MainWindow.xaml",
+        "Console/Theme.cs",
+        "Console/Release33Checks.cs",
+        "Console/Release40Checks.cs"
+      ],
+      "scenario": "Shared themes/styles and workspace modes; render compact/wide layouts in all three themes with log tools in headers.",
+      "expected": "Shared later layout and palette retained; action mode/geometry assertions pass; source confirms common styles.",
+      "evidence": [
+        "VerifyRelease33",
+        "VerifyRelease40"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Only fixture states and listed sizes; not an assertion that every historic spacing proposal remains applicable.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
+        "DomainConsole-CSharp/Console/Theme.cs": "674256b35d9c6f46da7fb2961ae0f0d6ae35170c58c9d252416cbb805d80c46f",
+        "DomainConsole-CSharp/Console/Release33Checks.cs": "da4ce1177a27a1960e113cd0628f3b57a35003aabde76e8bdea77d0cab1942a8",
+        "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec"
+      }
+    },
+    {
+      "condition_id": "67.alignment",
+      "requirement": "Кнопки и векторы не зависят от метрик шрифта, значок центрирован внутри фиксированной колонки, текст слева по #96.",
+      "code": [
+        "Console/MainWindow.xaml",
+        "Console/Theme.cs",
+        "Console/Release33Checks.cs",
+        "Console/Release40Checks.cs"
+      ],
+      "scenario": "Shared themes/styles and workspace modes; render compact/wide layouts in all three themes with log tools in headers.",
+      "expected": "Shared later layout and palette retained; action mode/geometry assertions pass; source confirms common styles.",
+      "evidence": [
+        "VerifyRelease33",
+        "VerifyRelease40"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Only fixture states and listed sizes; not an assertion that every historic spacing proposal remains applicable.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
+        "DomainConsole-CSharp/Console/Theme.cs": "674256b35d9c6f46da7fb2961ae0f0d6ae35170c58c9d252416cbb805d80c46f",
+        "DomainConsole-CSharp/Console/Release33Checks.cs": "da4ce1177a27a1960e113cd0628f3b57a35003aabde76e8bdea77d0cab1942a8",
+        "DomainConsole-CSharp/Console/Release40Checks.cs": "a69f2090c518aecac353b39398dfec34a06d8be51ae8adbe7afc09cde6e4fdec"
+      }
+    },
+    {
+      "condition_id": "69.report",
+      "requirement": "Первые строки отчёта: нужныеодобренные, отчётсдавностью, соединение; partial≥N не 0, время чтения отдельно, пороги настраиваемы.",
+      "code": [
+        "Console/ReportPresentation35.cs",
+        "Console/Presentation34.cs",
+        "Console/Release35Checks.cs",
+        "Console/Release36Checks.cs"
+      ],
+      "scenario": "WSUS summary order and partial count, failure card with original code/KB, history update while reading, current/selected/all copy through actual handlers.",
+      "expected": "No unknown applicability added to needed count; no last-stage misattribution; reading position preserved; copied payload has correct details.",
+      "evidence": [
+        "VerifyRelease35",
+        "VerifyRelease36"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Full mouse/keyboard interaction combinations and every service failure type are separate tests.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/ReportPresentation35.cs": "c7fc61a032b19ec70b4074ca11c67274d6d062518c44e23e380fa6b71b3269bc",
+        "DomainConsole-CSharp/Console/Presentation34.cs": "f2c716da60ddc27dec256090a53d15aecd457e67ad586d0ca6d65ac69218880e",
+        "DomainConsole-CSharp/Console/Release35Checks.cs": "f34ac660766cb512055dc4c286462352b6e49458e6b83043260f6e60d368d719",
+        "DomainConsole-CSharp/Console/Release36Checks.cs": "9049ba8eed1ece5c3dc22230ee06334314b32d98d81c9ec321b6813620925ee1"
+      }
+    },
+    {
+      "condition_id": "69.history",
+      "requirement": "Раскрытие истории включает последние события без Skip, новые не сбрасывают чтение старых; копирование сохраняет даты/подробности.",
+      "code": [
+        "Console/ReportPresentation35.cs",
+        "Console/Presentation34.cs",
+        "Console/Release35Checks.cs",
+        "Console/Release36Checks.cs"
+      ],
+      "scenario": "WSUS summary order and partial count, failure card with original code/KB, history update while reading, current/selected/all copy through actual handlers.",
+      "expected": "No unknown applicability added to needed count; no last-stage misattribution; reading position preserved; copied payload has correct details.",
+      "evidence": [
+        "VerifyRelease35",
+        "VerifyRelease36"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Full mouse/keyboard interaction combinations and every service failure type are separate tests.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/ReportPresentation35.cs": "c7fc61a032b19ec70b4074ca11c67274d6d062518c44e23e380fa6b71b3269bc",
+        "DomainConsole-CSharp/Console/Presentation34.cs": "f2c716da60ddc27dec256090a53d15aecd457e67ad586d0ca6d65ac69218880e",
+        "DomainConsole-CSharp/Console/Release35Checks.cs": "f34ac660766cb512055dc4c286462352b6e49458e6b83043260f6e60d368d719",
+        "DomainConsole-CSharp/Console/Release36Checks.cs": "9049ba8eed1ece5c3dc22230ee06334314b32d98d81c9ec321b6813620925ee1"
+      }
+    },
+    {
+      "condition_id": "69.result",
+      "requirement": "Краткая фактическая причина/код/KB и следующее действие, не последний технический этап; reboot приоритет, старая ошибка не исчезает и не красит успешную команду.",
+      "code": [
+        "Console/ReportPresentation35.cs",
+        "Console/Presentation34.cs",
+        "Console/Release35Checks.cs",
+        "Console/Release36Checks.cs"
+      ],
+      "scenario": "WSUS summary order and partial count, failure card with original code/KB, history update while reading, current/selected/all copy through actual handlers.",
+      "expected": "No unknown applicability added to needed count; no last-stage misattribution; reading position preserved; copied payload has correct details.",
+      "evidence": [
+        "VerifyRelease35",
+        "VerifyRelease36"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Full mouse/keyboard interaction combinations and every service failure type are separate tests.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/ReportPresentation35.cs": "c7fc61a032b19ec70b4074ca11c67274d6d062518c44e23e380fa6b71b3269bc",
+        "DomainConsole-CSharp/Console/Presentation34.cs": "f2c716da60ddc27dec256090a53d15aecd457e67ad586d0ca6d65ac69218880e",
+        "DomainConsole-CSharp/Console/Release35Checks.cs": "f34ac660766cb512055dc4c286462352b6e49458e6b83043260f6e60d368d719",
+        "DomainConsole-CSharp/Console/Release36Checks.cs": "9049ba8eed1ece5c3dc22230ee06334314b32d98d81c9ec321b6813620925ee1"
+      }
+    },
+    {
+      "condition_id": "70.copy",
+      "requirement": "Три действия записи/выбранных/всех, активность по выбору; все учитывает фильтр и сохраняет время/подробности, значки в заголовке.",
+      "code": [
+        "Console/ReportPresentation35.cs",
+        "Console/Presentation34.cs",
+        "Console/Release35Checks.cs",
+        "Console/Release36Checks.cs"
+      ],
+      "scenario": "WSUS summary order and partial count, failure card with original code/KB, history update while reading, current/selected/all copy through actual handlers.",
+      "expected": "No unknown applicability added to needed count; no last-stage misattribution; reading position preserved; copied payload has correct details.",
+      "evidence": [
+        "VerifyRelease35",
+        "VerifyRelease36"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Full mouse/keyboard interaction combinations and every service failure type are separate tests.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/ReportPresentation35.cs": "c7fc61a032b19ec70b4074ca11c67274d6d062518c44e23e380fa6b71b3269bc",
+        "DomainConsole-CSharp/Console/Presentation34.cs": "f2c716da60ddc27dec256090a53d15aecd457e67ad586d0ca6d65ac69218880e",
+        "DomainConsole-CSharp/Console/Release35Checks.cs": "f34ac660766cb512055dc4c286462352b6e49458e6b83043260f6e60d368d719",
+        "DomainConsole-CSharp/Console/Release36Checks.cs": "9049ba8eed1ece5c3dc22230ee06334314b32d98d81c9ec321b6813620925ee1"
+      }
+    },
+    {
+      "condition_id": "70.grouping",
+      "requirement": "Повторы всех типов группируются по типу/операции/коду/смыслу с количеством и первым/последним временем, разные сбои не сливаются.",
+      "code": [
+        "Console/Presentation34.cs",
+        "Console/Release36Checks.cs"
+      ],
+      "scenario": "Repeated equal events grouped, different operation kept separate, already-grouped input grouped again.",
+      "expected": "Repeat count and occurrences preserved without inflation.",
+      "evidence": [
+        "VerifyRelease36"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Fixture covers operation distinction; does not exhaust every possible error text.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Presentation34.cs": "f2c716da60ddc27dec256090a53d15aecd457e67ad586d0ca6d65ac69218880e",
+        "DomainConsole-CSharp/Console/Release36Checks.cs": "9049ba8eed1ece5c3dc22230ee06334314b32d98d81c9ec321b6813620925ee1"
+      }
+    },
+    {
+      "condition_id": "62.kind",
+      "requirement": "PowerShell указан полностью, внутренний Kind берётся из идентификатора, не подписи; CMD сохранён.",
+      "code": [
+        "Console/Presentation34.cs",
+        "Console/App.xaml.cs"
+      ],
+      "scenario": "Real Local SYSTEM job with CMD, canonical PowerShell selected via ShellKind34 and legacy PS alias; structured stdout read back.",
+      "expected": "All three commands execute and their original markers remain in output.",
+      "evidence": [
+        "LocalSmoke"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Short controlled commands on Windows CI; arbitrary user script semantics are not rewritten or certified.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Presentation34.cs": "f2c716da60ddc27dec256090a53d15aecd457e67ad586d0ca6d65ac69218880e",
+        "DomainConsole-CSharp/Console/App.xaml.cs": "6dbcf6c5b8566139beb58262d8e556e89cc6559dd29b4378b6a1df4c3ab8c9ae"
+      }
+    },
+    {
+      "condition_id": "62.legacy",
+      "requirement": "Псевдоним PS нормализуется при истории/импорте без изменения сценария.",
+      "code": [
+        "Console/Presentation34.cs",
+        "Console/App.xaml.cs"
+      ],
+      "scenario": "Real Local SYSTEM job with CMD, canonical PowerShell selected via ShellKind34 and legacy PS alias; structured stdout read back.",
+      "expected": "All three commands execute and their original markers remain in output.",
+      "evidence": [
+        "LocalSmoke"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Short controlled commands on Windows CI; arbitrary user script semantics are not rewritten or certified.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Presentation34.cs": "f2c716da60ddc27dec256090a53d15aecd457e67ad586d0ca6d65ac69218880e",
+        "DomainConsole-CSharp/Console/App.xaml.cs": "6dbcf6c5b8566139beb58262d8e556e89cc6559dd29b4378b6a1df4c3ab8c9ae"
+      }
+    },
+    {
+      "condition_id": "62.execution",
+      "requirement": "Настоящая короткая PowerShell-команда и повтор PS проверены, первичный вывод не теряется.",
+      "code": [
+        "Console/Presentation34.cs",
+        "Console/App.xaml.cs"
+      ],
+      "scenario": "Real Local SYSTEM job with CMD, canonical PowerShell selected via ShellKind34 and legacy PS alias; structured stdout read back.",
+      "expected": "All three commands execute and their original markers remain in output.",
+      "evidence": [
+        "LocalSmoke"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Short controlled commands on Windows CI; arbitrary user script semantics are not rewritten or certified.",
+      "actual": "Named assertions passed in the recorded Windows run; source and fixture scope reviewed.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Presentation34.cs": "f2c716da60ddc27dec256090a53d15aecd457e67ad586d0ca6d65ac69218880e",
+        "DomainConsole-CSharp/Console/App.xaml.cs": "6dbcf6c5b8566139beb58262d8e556e89cc6559dd29b4378b6a1df4c3ab8c9ae"
+      }
+    },
+    {
+      "condition_id": "114.states",
+      "requirement": "Различать Busy, ручной OFF, Cooldown, защитную блокировку, ошибку формата/прав; Busy не становится постоянным Blocked и не означает потерю WinRM.",
+      "code": [
+        ".github/scripts/test_probe42.ps1",
+        ".github/scripts/test_collector43.ps1",
+        "Console/PollRecovery44.cs"
+      ],
+      "scenario": "Real SYSTEM collector: six concurrent WinRM readers, cached reads, three partial source failures, cooldown and blocked package, changed package migration, disabled reinstall and reset cooldown.",
+      "expected": "Busy does not persist as Blocked; repeated cooldown reads do not restart task; changed package can migrate once; removed collector stays Disabled until explicit enable.",
+      "evidence": [
+        "test_probe42.ps1",
+        "test_collector43.ps1"
+      ],
+      "status": "verified_in_stated_scope",
+      "limitation": "Controlled failure markers and isolated runner; not all domain access-denied and network-loss cases.",
+      "actual": "Passed with one collector task and WinRM processes returning to baseline.",
+      "source_sha256": {
+        ".github/scripts/test_probe42.ps1": "dc4d296a5792b77cbd64825dc378d99cdde0579e76f6b4b51252d28c0080a53e",
+        ".github/scripts/test_collector43.ps1": "efec6e061614a100bc68705189914debcc22dd989d617c10f93e7ea55d51eea9",
+        "DomainConsole-CSharp/Console/PollRecovery44.cs": "ca9bae08e40a12effd4ddc960d88c2871d447235a4ef0f965733ce058c145485"
       }
     }
   ],
-  "source_commit": "256c535c4d3cc6a098eab1b5bac60d4c4323e4d3",
-  "workflow_run": "https://github.com/Amenemhat/DomainConsole/actions/runs/40744955876",
-  "workflow_job": 123016159493,
+  "source_commit": "98923e81e25195fce2d1767417a0173cf85292c6",
+  "workflow_run": "https://github.com/Amenemhat/DomainConsole/actions/runs/40749509876",
+  "workflow_job": 123032102954,
   "workflow_result": "success; 56/56 steps",
   "acceptance_complete": false,
-  "coverage_note": "105 conditions have evidence for the explicitly stated scenario only. 399 conditions have no entry in this focused report. This is not a full per-condition acceptance certificate.",
+  "coverage_note": "138 conditions have evidence for the explicitly stated scenario only. 366 conditions have no entry in this focused report. This is not a full per-condition acceptance certificate.",
   "artifacts": [
     {
-      "id": 12841633442,
+      "id": 12843217928,
       "kind": "application",
-      "sha256": "c36933e06241231feefbb3292b03598344527f0e6a1a636496df018588abb131"
+      "sha256": "9c84ab2f2ae804a62c165f013bbf907ab440e08007a604289aaa37ab5ff049a5"
     },
     {
-      "id": 12841886621,
+      "id": 12843093253,
       "kind": "ui-checks",
-      "sha256": "70db2a323c942f00eb1acc84bff041f8ff097835ce6a1d604b764e6490ffb7bd"
+      "sha256": "36caf425e7f6648b11479da2aff9c0dfba8b0a4a52d47072ce2ccf0f6a273265"
     },
     {
-      "id": 12841971495,
+      "id": 12842789302,
       "kind": "service-fault-checks",
-      "sha256": "21e55ceff0d333566e38cd5e54601756f52be44e0e554d894002a6eefd2fa7df"
+      "sha256": "7e610625d75177179f33b712837f08f2d67bdb739fee8ffff40e56fdf15be49d"
     }
-  ]
+  ],
+  "metrics": {
+    "concurrent_readers": 6,
+    "cached_reads": 12,
+    "winrm_before": 2,
+    "winrm_after": 1,
+    "collector_tasks_after": 1,
+    "hung_workers_after": 0,
+    "autonomous_deadline_seconds": 60,
+    "computers": 450,
+    "jobs": 1006,
+    "events": 10000,
+    "refresh_ms": [
+      8.05,
+      7.1,
+      7.46,
+      11.95,
+      7.41
+    ],
+    "unchanged_property_notifications": 0,
+    "disk_reads_during_repeated_refresh": 0,
+    "input_dispatcher_serviced": true
+  }
 }
