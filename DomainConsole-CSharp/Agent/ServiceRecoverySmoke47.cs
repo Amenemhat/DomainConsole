@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Diagnostics;
 using DomainConsole.Shared;
 namespace DomainConsole.Agent {
  internal static partial class Program {
@@ -35,6 +36,21 @@ namespace DomainConsole.Agent {
    if(guard.Recover().Count!=1||calls!=0||!File.Exists(Path.Combine(path,"WinRM.pending")))throw new Exception("Foreign service accepted");
    File.Delete(Path.Combine(path,"WinRM.pending"));File.WriteAllText(Path.Combine(path,"bits.pending"),"own");
    if(guard.Recover().Count!=0||guard.Recover().Count!=0||calls!=1)throw new Exception("Recovery not idempotent");
+   var livePath=Path.Combine(root,"live-child");Directory.CreateDirectory(livePath);File.WriteAllText(Path.Combine(livePath,"bits.pending"),"own");
+   using(var child=Process.Start(new ProcessStartInfo(typeof(Program).Assembly.Location,"stop-fixture ignore"){UseShellExecute=false,CreateNoWindow=true})){
+    try{var liveGuard=new ServiceRecovery47(livePath,n=>calls++);liveGuard.Remember(child);int before=calls;
+     if(liveGuard.Recover().Count!=1||calls!=before)throw new Exception("Live child raced service restoration");
+     child.Kill();if(!child.WaitForExit(10000))throw new Exception("Fixture child did not exit");
+     if(liveGuard.Recover().Count!=0||calls!=before+1)throw new Exception("Exited child did not permit restoration");
+    }finally{if(!child.HasExited){child.Kill();child.WaitForExit(10000);}}
+   }
+   var failedJob=new RemoteJob{ContinueOnError=true,Steps=new List<CommandStep>{new CommandStep{Kind="CacheCleanup",Name="Expected cache failure",Code="throw 'CACHE_FAILURE_FIXTURE'"},new CommandStep{Kind="PowerShell",Name="Must not run",Code="[IO.File]::WriteAllText('"+Path.Combine(root,"unexpected-next-step").Replace("'","''")+"','bad')"}}};
+   var failedFolder=Path.Combine(Path.GetFullPath(root),failedJob.Id);Directory.CreateDirectory(failedFolder);File.WriteAllText(Path.Combine(failedFolder,"job.json"),Json.Serialize(failedJob));
+   using(var executor=Process.Start(new ProcessStartInfo(typeof(Program).Assembly.Location,"run "+Quote(failedFolder)){UseShellExecute=false,CreateNoWindow=true})){
+    if(!executor.WaitForExit(60000)){executor.Kill();executor.WaitForExit(10000);throw new Exception("Protected failure fixture exceeded deadline");}
+   }
+   var final=Json.Deserialize<RemoteState>(File.ReadAllText(Path.Combine(failedFolder,"status.json")));
+   if(final.Results.Count!=1||final.Status!="Failed"||File.Exists(Path.Combine(root,"unexpected-next-step")))throw new Exception("Failed reset continued despite safety boundary");
    Console.WriteLine("ServiceRecovery47 allowlist and idempotency passed; no real service changed.");
    return 0;
   }

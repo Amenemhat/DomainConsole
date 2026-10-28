@@ -556,18 +556,20 @@ jobs:
           $text=$text.Replace('$keepBackup=$false;','')
           function New-Object {param($ComObject) if($ComObject -ne 'Microsoft.Update.Installer'){throw 'Unexpected COM'};[pscustomobject]@{IsBusy=$script:busy}}
           function Get-Service {param($Name) $s=[pscustomobject]@{Status=$script:service};$s|Add-Member ScriptMethod WaitForStatus {param($state,$timeout) if($script:service -ne $state){throw 'Service state mismatch'}};$s}
-          function Stop-Service {param($Name,$ErrorAction) $script:service='Stopped'}
+          function Stop-Service {param($Name,$ErrorAction) $script:service='Stopped';if($script:stopFail){throw 'Primary stop fixture failure'}}
           function Start-Service {param($Name,$ErrorAction) if($script:restartFail){throw 'Restart fixture failure'};$script:service='Running'}
-          foreach($mode in @('delete','backup','busy','restart-failure')){
+          foreach($mode in @('delete','backup','busy','restart-failure','primary-and-restore')){
             $fixture=Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS ('recovery-'+$mode)
-            $env:windir=$fixture;$env:ProgramData=$fixture
+            $env:windir=$fixture;$env:ProgramData=$fixture;$dcServiceRecovery47=Join-Path $fixture 'service-recovery'
             $source=Join-Path $fixture 'SoftwareDistribution/EventCache.v2'
             $null=[IO.Directory]::CreateDirectory($source)
             $null=[IO.Directory]::CreateDirectory((Join-Path $fixture 'DomainConsoleCSharp'))
             [IO.File]::WriteAllText((Join-Path $source 'event.bin'),'KEEP_FOR_BACKUP')
-            $script:service='Running';$script:busy=$mode -eq 'busy';$script:restartFail=$mode -eq 'restart-failure';$keepBackup=$mode -eq 'backup';$failed=$false
-            try {$null=& ([ScriptBlock]::Create($text))}catch{$failed=$true}
+            $script:service='Running';$script:busy=$mode -eq 'busy';$script:restartFail=$mode -in @('restart-failure','primary-and-restore');$script:stopFail=$mode -eq 'primary-and-restore';$keepBackup=$mode -eq 'backup';$failed=$false
+            $errorText='';$lines=@();try {$lines=& ([ScriptBlock]::Create($text))}catch{$failed=$true;$errorText=$_.ToString()}
             $copies=@(Get-ChildItem (Join-Path $fixture 'DomainConsoleCSharp') -Directory -Filter 'ReportQueue_*')
+            if($mode -eq 'primary-and-restore' -and (!$failed -or !$errorText.Contains('Primary stop fixture failure') -or !(Test-Path (Join-Path $dcServiceRecovery47 'wuauserv.pending')))){throw 'Primary error or pending service intent lost'}
+            if($mode -in @('delete','backup','busy') -and @(Get-ChildItem $dcServiceRecovery47 -Filter '*.pending' -ErrorAction SilentlyContinue).Count){throw 'Unexpected pending service intent'}
             if($mode -eq 'delete' -and ((Test-Path $source) -or $copies.Count -or $failed -or $script:service -ne 'Running')){throw 'Delete recovery failed'}
             if($mode -eq 'backup' -and ($copies.Count -ne 1 -or $failed -or !(Test-Path (Join-Path $copies[0].FullName 'event.bin')))){throw 'Backup recovery failed'}
             if($mode -eq 'busy' -and (!$failed -or !(Test-Path (Join-Path $source 'event.bin')))){throw 'Busy installer protection failed'}
