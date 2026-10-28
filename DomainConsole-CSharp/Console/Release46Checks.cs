@@ -4,6 +4,7 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease46(){
+  System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(),"maintenance47.ps1"),MaintenanceRegistration47.Script,new System.Text.UTF8Encoding(true));
   AwaitUi39(VerifySubmission47());
   AwaitUi39(VerifyRecoveryPipeline47());
   string shellError47="Внутренняя ошибка Windows PowerShell. Ошибка 80070570 при загрузке управляемой оболочки Windows PowerShell.";
