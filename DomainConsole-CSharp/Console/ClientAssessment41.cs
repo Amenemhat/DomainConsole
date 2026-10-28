@@ -73,7 +73,13 @@ public partial class MainWindow {
   bool busy=false;async Task Run(Func<Task<string>> action){if(busy)return;busy=true;foreach(var button in new[]{inspect,stop,resume,preview,clean})button.IsEnabled=false;try{text.Text=await action();}catch(Exception ex){text.Text="Не удалось прочитать состояние опроса\n"+ex.Message;}finally{busy=false;foreach(var button in new[]{inspect,stop,resume,preview,clean})button.IsEnabled=true;}}
   inspect.Click+=async(s,args)=>await Run(()=>remote.InspectSnapshot42(row.Target));
   stop.Click+=async(s,args)=>await Run(()=>remote.InspectSnapshot42(row.Target,"Stop"));
-  resume.Click+=async(s,args)=>await Run(async()=>{var result=await remote.InspectSnapshot42(row.Target,"Recover");if(result.Contains("Recovered")){ReadSucceeded34(row.Host,"флаги и аптайм");ReadSucceeded34(row.Host,"фоновая активность");}return result;});
+  resume.Click+=async(s,args)=>await Run(async()=>{
+   var target=ConnectionStore.Capture(row.Target);var generation=PollingControl43.Token;
+   string result="Ответ восстановления устарел: профиль или режим опроса изменился. Повторный запуск не создавался.";
+   await CompleteCollectorRepair47(target,generation,remote.RepairCollector47(target),()=>{
+    ReadSucceeded34(row.Host,"флаги и аптайм");ReadSucceeded34(row.Host,"фоновая активность");return Task.CompletedTask;
+   },value=>result=value);return result;
+  });
   preview.Click+=async(s,args)=>await Run(async()=>ProbeInventoryText41(await remote.ProbeInventory41(row.Target)));
   clean.Click+=async(s,args)=>{if(MessageBox.Show(window,"Удалить подтверждённые завершённые старые Probe? Рабочие задания сохраняются.","Очистка Probe",MessageBoxButton.YesNo)==MessageBoxResult.Yes)await Run(async()=>ProbeInventoryText41(await remote.ProbeInventory41(row.Target,true)));};window.ShowDialog();
  });
