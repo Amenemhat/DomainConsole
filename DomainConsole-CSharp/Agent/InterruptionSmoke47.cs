@@ -40,7 +40,13 @@ namespace DomainConsole.Agent {
        killed.Updated=DateTime.UtcNow.AddMinutes(-3).ToString("o");File.WriteAllText(file,Json.Serialize(killed));string before=File.ReadAllText(file);
        InstallerBusy37=()=>true;if(ControlGate37(()=>JobFinished37(job.Id)))throw new Exception("Busy WUA released after kill");
        if(File.ReadAllText(file)!=before)throw new Exception("Busy check mutated state");
-       InstallerBusy37=()=>false;if(!ControlGate37(()=>JobFinished37(job.Id)))throw new Exception("Dead same-boot worker not reconciled");
+       InstallerBusy37=()=>false;
+       // Crash after backup commit, before terminal status commit. Only an exact
+       // backup of this state may resume; conflicting evidence stays untouched.
+       string backup=file+".interrupted46.bak";File.WriteAllText(backup,"unrelated evidence");
+       if(ControlGate37(()=>JobFinished37(job.Id))||File.ReadAllText(file)!=before||File.ReadAllText(backup)!="unrelated evidence")throw new Exception("Conflicting recovery backup accepted or modified");
+       File.WriteAllText(backup,before);
+       if(!ControlGate37(()=>JobFinished37(job.Id)))throw new Exception("Recovery cannot resume after backup checkpoint");
        var recovered=Json.Deserialize<RemoteState>(File.ReadAllText(file));
        if(recovered.Status!="InterventionRequired"||!recovered.Error.StartsWith("DC_INTERRUPTED46:")||recovered.Ended.Length==0||File.ReadAllText(file+".interrupted46.bak")!=before)throw new Exception("Unknown outcome/backup lost");
        outputs.Add(recovered);
@@ -51,7 +57,7 @@ namespace DomainConsole.Agent {
        var scan=FixtureJob37("kill-fixture47");scan.PlanId37=scan.Id;scan.Steps[0].Kind="UpdateScan";FixtureFolder37(scope,scan);ReserveControl37();ReserveControl37();
        if(ReadControl37().JobIds.Count!=1)throw new Exception("Repeated reservation duplicated job");
        File.WriteAllText(FilePath("status.json"),Json.Serialize(new RemoteState{Id=scan.Id,Status="Completed",Ended=DateTime.UtcNow.ToString("o")}));ReleaseControl37();
-       Console.WriteLine(stage+": real worker killed; no final result; grace/busy guards; backup; no blind replay; release twice; one fresh-search reservation; worker alive=0.");
+       Console.WriteLine(stage+": real worker killed; no final result; grace/busy guards; backup checkpoint retry/conflict; no blind replay; release twice; one fresh-search reservation; worker alive=0.");
       }finally{if(!p.HasExited){p.Kill();p.WaitForExit(10000);}}
      }
     }

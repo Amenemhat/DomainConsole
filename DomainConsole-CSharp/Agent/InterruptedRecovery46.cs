@@ -24,7 +24,13 @@ namespace DomainConsole.Agent {
     if(InstallerBusy37())return false;
     if(!RecoverInterruptedServices47(folder))return false;
     string original=File.ReadAllText(file),backup=file+".interrupted46.bak";
-    if(File.Exists(backup))return false;File.WriteAllText(backup,original);
+    if((File.GetAttributes(file)&FileAttributes.ReparsePoint)!=0)return false;
+    if(File.Exists(backup)){
+     if((File.GetAttributes(backup)&FileAttributes.ReparsePoint)!=0||File.ReadAllText(backup)!=original)return false;
+    }else{
+     string backupTemp=backup+"."+Guid.NewGuid()+".tmp";
+     try{File.WriteAllText(backupTemp,original);File.Move(backupTemp,backup);}finally{if(File.Exists(backupTemp))File.Delete(backupTemp);}
+    }
     state=Json.Deserialize<RemoteState>(original);state.Status="InterventionRequired";state.Ended=DateTime.UtcNow.ToString("o");state.Updated=state.Ended;state.StageEnded=state.Ended;
     state.Error="DC_INTERRUPTED46: "+(afterBoot?"Исполнитель прерван до новой загрузки Windows.":"Исполнитель отсутствует, задача не выполняется, конечный результат не сохранён.")+" Результат операции неизвестен; повторная установка автоматически не запускается. Выполните свежую проверку результата.";
     string temp=file+"."+Guid.NewGuid()+".tmp";try{File.WriteAllText(temp,Json.Serialize(state));File.Replace(temp,file,null);}finally{if(File.Exists(temp))File.Delete(temp);}return true;
