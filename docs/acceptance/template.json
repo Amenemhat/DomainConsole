@@ -20,7 +20,8 @@
           "actual": "",
           "result": "pending",
           "commit": "",
-          "evidence": ""
+          "evidence": "",
+          "condition_id": ""
         }
       ]
     }

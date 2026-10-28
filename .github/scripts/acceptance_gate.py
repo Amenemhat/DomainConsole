@@ -19,12 +19,14 @@ def validate_acceptance(report, registry, request):
         require(report.get(key) == request[key], f'Acceptance {key} differs from release')
     require(text(report.get('reviewer')) and text(report.get('reviewed_at')), 'Reviewer and review time required')
     expected = {x['issue'] for x in registry['issues']}
+    require(len(expected) == len(registry['issues']), 'Duplicate issue in requirement registry')
+    specifications = {x['issue']: x for x in registry['issues']}
     rows = report.get('issues', [])
     require(isinstance(rows, list), 'Issue rows required')
     numbers = [x.get('issue') for x in rows]
     require(all(type(n) is int for n in numbers), 'Integer issue numbers required')
     require(len(set(numbers)) == len(numbers), 'Duplicate issue rows')
-    require(expected <= set(numbers), 'Historical requirements omitted from acceptance')
+    require(expected == set(numbers), 'Acceptance and registered issue sets differ')
     by_number = {x['issue']: x for x in rows}
     closable = set()
     for row in rows:
@@ -32,12 +34,20 @@ def validate_acceptance(report, registry, request):
         status = row.get('status')
         require(status in ('passed', 'deferred', 'superseded'), 'Unverified/failed/pending requirement blocks release')
         if status == 'passed':
+            conditions = specifications[row['issue']].get('conditions', [])
+            require(isinstance(conditions, list) and bool(conditions), 'Active conditions must be classified in registry before acceptance')
+            require(all(isinstance(c, dict) and text(c.get('id')) and text(c.get('requirement')) for c in conditions), 'Invalid registered condition')
+            condition_ids = [c['id'] for c in conditions]
+            require(len(set(condition_ids)) == len(condition_ids), 'Duplicate condition in registry')
             checks = row.get('checks', [])
             require(isinstance(checks, list) and bool(checks), 'Per-requirement checks required')
             for check in checks:
                 require(all(text(check.get(k)) for k in ('requirement', 'scenario', 'expected', 'actual', 'evidence')), 'Incomplete check evidence')
                 require(check.get('result') == 'passed', 'Check did not pass')
                 require(check.get('commit') == request['commit'], 'Check belongs to another source commit')
+            checked_ids = [c.get('condition_id') for c in checks]
+            require(all(text(i) for i in checked_ids), 'Every check must identify its registered condition')
+            require(set(checked_ids) == set(condition_ids), 'Active conditions omitted or unknown conditions claimed')
             closable.add(row['issue'])
         elif status == 'deferred':
             require(text(row.get('reason')) and text(row.get('tracking_issue')), 'Deferred work needs reason and open tracking issue')
