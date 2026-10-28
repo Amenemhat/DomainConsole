@@ -77,6 +77,9 @@ namespace DomainConsole.Agent {
      if(!ControlGate37(()=>JobFinished37(interrupted.Id))||recoveredCalls!=1)throw new Exception("Repeated interrupted service recovery");
      var outcome=Json.Deserialize<RemoteState>(File.ReadAllText(statePath));if(outcome.Status!="InterventionRequired"||!outcome.Error.StartsWith("DC_INTERRUPTED46:"))throw new Exception("Interrupted cache declared successful");
      outcome.ServiceRecoveryError47="Expected pending service";File.WriteAllText(statePath,Json.Serialize(outcome));File.WriteAllText(Path.Combine(interruptedFolder,"step-1.service-recovery","bits.pending"),"fixture");
+     string journal=Path.Combine(interruptedFolder,"step-1.service-recovery"), savedJournal=journal+".fixture-backup";Directory.Move(journal,savedJournal);
+     try{if(ControlGate37(()=>JobFinished37(interrupted.Id))||recoveredCalls!=1)throw new Exception("Missing terminal recovery journal treated as restored");}finally{Directory.Move(savedJournal,journal);}
+     File.Delete(identity);try{if(ControlGate37(()=>JobFinished37(interrupted.Id))||recoveredCalls!=1)throw new Exception("Missing terminal identity treated as restored");}finally{File.WriteAllText(identity,savedIdentity);}
      InstallerBusy37=()=>true;if(ControlGate37(()=>JobFinished37(interrupted.Id))||recoveredCalls!=1)throw new Exception("Pending terminal service failure bypassed busy guard");InstallerBusy37=()=>false;
      if(!ControlGate37(()=>JobFinished37(interrupted.Id))||recoveredCalls!=2)throw new Exception("Terminal service recovery did not unblock safely");
      outcome=Json.Deserialize<RemoteState>(File.ReadAllText(statePath));if(outcome.Status!="InterventionRequired"||outcome.ServiceRecoveryError47.Length!=0)throw new Exception("Service recovery rewrote operation outcome");
