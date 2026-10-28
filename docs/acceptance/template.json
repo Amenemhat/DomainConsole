@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "version": "REPLACE",
+  "commit": "REPLACE",
+  "run_id": 0,
+  "sha256": "REPLACE",
+  "registry_sha256": "REPLACE",
+  "reviewer": "",
+  "reviewed_at": "",
+  "issues": [
+    {
+      "issue": 1,
+      "current_requirement": "",
+      "status": "pending",
+      "checks": [
+        {
+          "requirement": "",
+          "scenario": "",
+          "expected": "",
+          "actual": "",
+          "result": "pending",
+          "commit": "",
+          "evidence": ""
+        }
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "single-instance",
+      "result": "pending",
+      "commit": "",
+      "expected": "",
+      "actual": "",
+      "evidence": ""
+    },
+    {
+      "id": "two-consoles",
+      "result": "pending",
+      "commit": "",
+      "expected": "",
+      "actual": "",
+      "evidence": ""
+    },
+    {
+      "id": "reboot-mid-operation",
+      "result": "pending",
+      "commit": "",
+      "expected": "",
+      "actual": "",
+      "evidence": ""
+    },
+    {
+      "id": "collector-remove-enable-recover",
+      "result": "pending",
+      "commit": "",
+      "expected": "",
+      "actual": "",
+      "evidence": ""
+    },
+    {
+      "id": "offline-and-reconnect",
+      "result": "pending",
+      "commit": "",
+      "expected": "",
+      "actual": "",
+      "evidence": ""
+    },
+    {
+      "id": "polling-master-off",
+      "result": "pending",
+      "commit": "",
+      "expected": "",
+      "actual": "",
+      "evidence": ""
+    },
+    {
+      "id": "status-evidence-consistency",
+      "result": "pending",
+      "commit": "",
+      "expected": "",
+      "actual": "",
+      "evidence": ""
+    },
+    {
+      "id": "ui-all-modes-themes-sizes",
+      "result": "pending",
+      "commit": "",
+      "expected": "",
+      "actual": "",
+      "evidence": ""
+    },
+    {
+      "id": "selection-scroll-preservation",
+      "result": "pending",
+      "commit": "",
+      "expected": "",
+      "actual": "",
+      "evidence": ""
+    },
+    {
+      "id": "full-command-output",
+      "result": "pending",
+      "commit": "",
+      "expected": "",
+      "actual": "",
+      "evidence": ""
+    },
+    {
+      "id": "cache-reset-failure-and-restoration",
+      "result": "pending",
+      "commit": "",
+      "expected": "",
+      "actual": "",
+      "evidence": ""
+    }
+  ],
+  "close_issues": []
+}

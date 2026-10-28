@@ -23,7 +23,11 @@ class ReleaseGuards(unittest.TestCase):
             archive.writestr('DomainConsole.exe', b'fixture')
             archive.writestr('Agent/DomainConsole.Agent.exe', b'fixture')
             if extra:
-                archive.writestr(extra, b'not allowed')
+                # Preserve the malicious ZIP entry verbatim on Windows too.
+                # ZipInfo(extra) otherwise normalizes backslashes to slashes.
+                entry = zipfile.ZipInfo()
+                entry.filename = extra
+                archive.writestr(entry, b'not allowed')
         return result.getvalue()
 
     def test_explicit_publication_and_exact_identity_required(self):
@@ -95,9 +99,10 @@ class ReleaseGuards(unittest.TestCase):
 
     def test_user_data_and_unexpected_paths_rejected(self):
         for path in ['Data/history.json', '../escape', '/absolute', 'Agent\\unexpected.exe']:
-            data = self.package(path)
-            with self.assertRaises(ValueError):
-                validate_package(data, hashlib.sha256(data).hexdigest())
+            with self.subTest(path=path):
+                data = self.package(path)
+                with self.assertRaises(ValueError):
+                    validate_package(data, hashlib.sha256(data).hexdigest())
 
 
 if __name__ == '__main__':

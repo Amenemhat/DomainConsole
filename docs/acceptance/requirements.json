@@ -1,0 +1,878 @@
+{
+  "schema": 1,
+  "audited_source": "59c522e52ce70cafade35095122b4c2c1aad28fa",
+  "review_date": "2026-10-28",
+  "note": "96 исторически закрытых Issues. Это реестр требований для повторной приёмки, не свидетельство прохождения 96 сценариев. Исходные формулировки и комментарии доступны по URL; поздние согласования имеют приоритет.",
+  "issues": [
+    {
+      "issue": 1,
+      "title": "Статусы компьютеров: отделить результат WSUS, свежесть данных и доступность",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/1",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Последняя полная готовность остаётся зелёной до следующей проверки; раннее превращение успеха в синий только по возрасту заменено.",
+      "successor": 115
+    },
+    {
+      "issue": 2,
+      "title": "Фоновое обновление обзора WSUS для всех компьютеров AD",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/2",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 3,
+      "title": "Фильтры статусов со счётчиками и добавление любых категорий в работу",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/3",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 4,
+      "title": "Значок необходимости перезагрузки и кнопка в шапке компьютера",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/4",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 5,
+      "title": "Групповая отметка компьютеров через Shift и Ctrl",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/5",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 6,
+      "title": "Диагностика дубликатов SusClientId и точечная перерегистрация клиентов WSUS",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/6",
+      "state_at_audit": "open",
+      "validation": "pending",
+      "decision": "Действующая открытая задача; реализация и приёмка не подтверждены. Не исключать из сверки следующего выпуска."
+    },
+    {
+      "issue": 7,
+      "title": "Вывод выполненных команд пропадает при объединении файлов удалённого журнала",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/7",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 8,
+      "title": "0x80070020: различать блокировку файла Windows Update и запись status.json агента",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/8",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 9,
+      "title": "Уточнить «Ошибка WSUS»: отделить последний неудачный поиск клиента от недоступности сервера и ошибок установки",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/9",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 10,
+      "title": "Детализация WSUS Failed: показывать реальный код сбоя и отличать успешную клиентскую историю",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/10",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 11,
+      "title": "Перезапуск служб Windows Update: выбрать все службы одной галочкой",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/11",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Выбрать все относится к обычному списку служб. Принудительный выбор процессов использует Ctrl/Shift без флажков; это разные диалоги.",
+      "successor": 78
+    },
+    {
+      "issue": 12,
+      "title": "Дерево AD: выровнять стрелки раскрытия и устранить возврат прокрутки к выбранному компьютеру",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/12",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 14,
+      "title": "Согласовать итоговый значок с новым результатом клиента: перезагрузка против прежнего Failed WSUS",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/14",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 15,
+      "title": "Ручные адреса и VPN: подключение по IP отдельно от идентичности компьютера",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/15",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 17,
+      "title": "Сделать журнал сбоя служб кратким: явная причина, без повторов и посторонней диагностики CBS",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/17",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 18,
+      "title": "Не ждать отчёт WSUS и не писать о завершении установки, если сбой произошёл до поиска",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/18",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 19,
+      "title": "Принудительный перезапуск зависших служб Windows Update по подтверждённому PID",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/19",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 20,
+      "title": "Обновлять клиентские признаки перезагрузки при обзоре статусов компьютеров",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/20",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 21,
+      "title": "После перезагрузки повторно получать статус и при необходимости продолжать обслуживание",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/21",
+      "state_at_audit": "closed",
+      "validation": "reopened-for-integrated-acceptance",
+      "decision": "Первоначальный только поиск расширен согласованным Авто; при выключенном Авто не запускать новые автоматические шаги. Повторная сквозная приёмка по #112/#114; историческое исправление части задачи не отрицается.",
+      "successor": 39
+    },
+    {
+      "issue": 22,
+      "title": "Показывать аптайм и время последней загрузки Windows в шапке клиента",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/22",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 23,
+      "title": "Разделить значки WSUS и доступности, показывать давность связи и справочные данные AD",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/23",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 24,
+      "title": "Увеличить и выровнять значки статусов; уплотнить список последних компьютеров",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/24",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 26,
+      "title": "Перезагрузка: различать отправку команды, возврат клиента и просрочку",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/26",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 27,
+      "title": "Последние компьютеры: заменить тонкий прогресс полупрозрачной заливкой строки",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/27",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Прогресс относится к рабочим операциям; служебное чтение без анимации.",
+      "successor": 115
+    },
+    {
+      "issue": 29,
+      "title": "Подсказки значков: единая область наведения и пояснение неизвестного статуса",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/29",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 30,
+      "title": "IP/VPN: выбор текущей или другой учётной записи и понятная диагностика подключения",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/30",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 31,
+      "title": "0.29: после подтверждённой перезагрузки поиск откладывается по неоднозначному флагу",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/31",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Запрет автоматической установки в раннем сценарии заменён явным режимом Авто; неизвестные флаги не считать отрицательными.",
+      "successor": 39
+    },
+    {
+      "issue": 32,
+      "title": "Отключённые учётные записи компьютеров AD: обозначение и пропуск массового обслуживания",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/32",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 33,
+      "title": "Последовательности обслуживания: сброс кэша, перезагрузка и полный цикл обновлений",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/33",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 35,
+      "title": "Автоматически восстанавливать отчётность по подтверждённой рекомендации после проверки обновлений",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/35",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 37,
+      "title": "VPN после перезагрузки: таймаут проверки связи выглядит как отмена операции",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/37",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 38,
+      "title": "Связь в дереве: успешный опрос через 90 секунд превращается в неизвестный статус",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/38",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 39,
+      "title": "После перезагрузки поиск находит обновления, но согласованная автоустановка не продолжается",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/39",
+      "state_at_audit": "closed",
+      "validation": "reopened-for-integrated-acceptance",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки. Повторная сквозная приёмка по #112/#114; историческое исправление части задачи не отрицается."
+    },
+    {
+      "issue": 40,
+      "title": "Журнал: основная причина сбоя сразу в итогах, устранение дублей между разделами",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/40",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 41,
+      "title": "Подготовить расширенный справочник HRESULT: техническое значение, русское объяснение и диагностика",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/41",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 43,
+      "title": "Отчёт WSUS: читаемая сводка, счётчик одобренных применимых обновлений и отдельные ошибки",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/43",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 44,
+      "title": "Очистка кэша: показывать этап и причину ошибки пути, обрабатывать исчезающие файлы",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/44",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 45,
+      "title": "Шапка клиента: отдельные блоки состояния, интерактивная связь и история событий",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/45",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 47,
+      "title": "Компактный интерфейс и палитры: шапка, навигация и рабочие панели",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/47",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Сохраняются компактность/палитры; расположение элементов определяется последним согласованным макетом.",
+      "successor": 101
+    },
+    {
+      "issue": 48,
+      "title": "История событий пуста: отделить данные от оформления и сохранять ошибки записи",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/48",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 49,
+      "title": "Журналы задания: после скачивания открыть сохранённую папку",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/49",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 50,
+      "title": "Перезагрузка: общие отложенные файловые операции не равны требованию Windows Update",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/50",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 52,
+      "title": "Контраст палитр, активных строк и различимость значков",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/52",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 53,
+      "title": "Единое оформление журналов и полная ширина текущих событий",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/53",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 55,
+      "title": "Выравнивание панели связи и компактных параметров; навигация в шапке",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/55",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Новая компоновка шапки и нижних настроек имеет приоритет над ранним размещением.",
+      "successor": 96
+    },
+    {
+      "issue": 56,
+      "title": "Компактные заголовки и отступы в окнах журналов",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/56",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 57,
+      "title": "Разделить светлый фон, кнопки и навигацию; усилить значки статусов",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/57",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 58,
+      "title": "Усилить контраст прогресса в списке последних компьютеров",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/58",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Контраст реального прогресса сохраняется; для фоновых чтений прогресс не показывается.",
+      "successor": 115
+    },
+    {
+      "issue": 59,
+      "title": "Устранить конфликт статусов WSUS и автообслуживания в шапке",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/59",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 60,
+      "title": "Выровнять значки настроек и перезагрузки в шапке",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/60",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 61,
+      "title": "Повторный сброс без блокировки остатками; отдельная очистка старых кэшей",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/61",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 62,
+      "title": "Критично: выбор PS передаёт неподдерживаемый тип вместо PowerShell",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/62",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 63,
+      "title": "Различать предупреждение/перезагрузку и ошибку: золотисто-жёлтые значки",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/63",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Золотистый текст заменён оранжевым; предупреждающие значки жёлтые.",
+      "successor": 98
+    },
+    {
+      "issue": 64,
+      "title": "Ошибки JSON при опросе: отделить чтение статуса от связи и убрать повторяющийся технический шум",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/64",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 65,
+      "title": "Прозрачный фон дорожек прокрутки во всех окнах и палитрах",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/65",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 67,
+      "title": "Центрирование кнопок и значков; цвет отмены перезагрузки",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/67",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Центрирование заменено фиксированной левой колонкой значка и левым выравниванием текста.",
+      "successor": 96
+    },
+    {
+      "issue": 69,
+      "title": "Согласованные изменения отчёта WSUS, общей панели клиента и истории",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/69",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 70,
+      "title": "История: группировка повторов всех типов и три действия копирования",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/70",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Флажки выбора строк заменены Ctrl/Shift; отдельные раскрываемые поля событий убраны. Группировка не объединяет разные JobId.",
+      "successor": 93
+    },
+    {
+      "issue": 71,
+      "title": "Даты интерфейса: единый краткий формат без смещений часового пояса",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/71",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 72,
+      "title": "Шапка: увеличить вкладки и заменить значок настроек узнаваемой шестерёнкой",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/72",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Вкладки находятся справа над действиями; настройки и вертикальные Опрос/Авто внизу. Старую общую строку не возвращать.",
+      "successor": 96
+    },
+    {
+      "issue": 73,
+      "title": "Все выводы приложения: главный результат и действия сверху, подробности и сведения задания снизу",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/73",
+      "state_at_audit": "closed",
+      "validation": "reopened-for-integrated-acceptance",
+      "decision": "Текущая операция показывает полное название обновления и KB; старое требование убрать название из шапки заменено.",
+      "successor": 87
+    },
+    {
+      "issue": 74,
+      "title": "WSUS: ненулевые ошибки и перезагрузка в сводке, ошибка также в верхней панели",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/74",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 75,
+      "title": "Дерево AD: восстановить визуальное отличие отключённых компьютеров и усилить подписи",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/75",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 76,
+      "title": "Панель WSUS: единая навигация диагностики и восстановления без дублей, компактные действия и корректная прокрутка",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/76",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 77,
+      "title": "Требуют внимания: понятное действие и краткая причина для каждого клиента, цветовые акценты",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/77",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 78,
+      "title": "Зависшие службы: множественный выбор процессов для принудительного перезапуска",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/78",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 80,
+      "title": "Требуют внимания: сохранять раскрытые подробности, прокрутку и выделение при автообновлении",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/80",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 81,
+      "title": "Контраст интерфейса: отключённые в AD, полужирные последние клиенты и более выразительные значки шапки",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/81",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 82,
+      "title": "Пользователь клиента: имя и фамилия одного пользователя, последнее наблюдение при выходе или offline",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/82",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 83,
+      "title": "Отчёт WSUS: список одобренных применимых обновлений сразу после главной сводки",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/83",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 84,
+      "title": "Дерево и последние клиенты: отдельный значок со счётчиком необходимых обновлений",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/84",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 85,
+      "title": "Долгий поиск WUA: понятное время ожидания, ограниченный сценарий и честное состояние отмены",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/85",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 86,
+      "title": "Поля поиска: устранить обрезание текста в компактном интерфейсе",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/86",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 87,
+      "title": "Статус скачивания и установки: показывать название обновления вместе с KB, а не только в подсказке",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/87",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 88,
+      "title": "Несколько консолей: согласованное управление одним клиентом и видимость чужих заданий",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/88",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 90,
+      "title": "0.37: нечитаемый отказ допуска плана и неверная причина «владелец изменился» при той же консоли",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/90",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 91,
+      "title": "Панель связи: компактная компоновка после добавления пользователя",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/91",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Итоговая шапка: ОС под именем, имя пользователя без метки, время без секунд, IPv4; первоначальная компоновка не возвращается.",
+      "successor": 96
+    },
+    {
+      "issue": 92,
+      "title": "Связь: не показывать обрыв после единственного тайм-аута и согласовать значки с последним ответом",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/92",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 93,
+      "title": "История событий: убрать флажки у строк, выделение Ctrl/Shift и копирование выбранных",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/93",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Выбор Ctrl/Shift сохраняется; прежнее требование сохранить checkbox фильтра заменено выпадающим списком.",
+      "successor": 112
+    },
+    {
+      "issue": 95,
+      "title": "0.38: задержки прокрутки и действий при обновлении интерфейса — профилировать поток UI",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/95",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 96,
+      "title": "0.38: разделители шапки, отдельное начертание времени пользователя и левое выравнивание кнопок",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/96",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 97,
+      "title": "0.38: единый вид раскрываемых блоков, рамки истории/фоновой активности и компактные события",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/97",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 98,
+      "title": "0.38: привести яркость палитры и цвета значков устройств к согласованному макету",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/98",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 99,
+      "title": "0.38: настройки, команды и история должны занимать всю рабочую область под шапкой",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/99",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 100,
+      "title": "0.38: понятный итог «перезагрузка подтверждена; флаги не уточнены» и корректные цвета неполной проверки",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/100",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 101,
+      "title": "Единый стиль однотипных элементов во всём приложении: общее правило изменений",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/101",
+      "state_at_audit": "open",
+      "validation": "pending",
+      "decision": "Действующая открытая задача; реализация и приёмка не подтверждены. Не исключать из сверки следующего выпуска."
+    },
+    {
+      "issue": 103,
+      "title": "0.39: главная карточка не должна показывать общий успех при ошибках или устаревшей отчётности WSUS",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/103",
+      "state_at_audit": "closed",
+      "validation": "reopened-for-integrated-acceptance",
+      "decision": "Последняя полная готовность не протухает только от возраста. Новые противоречащие факты учитываются; старую ошибку не приписывать новой установке. Повторная сквозная приёмка по #112/#114; историческое исправление части задачи не отрицается.",
+      "successor": 112
+    },
+    {
+      "issue": 104,
+      "title": "0.39: точная проверка перезагрузки, свежесть причин и неверная подпись «Ждёт перезагрузки»",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/104",
+      "state_at_audit": "closed",
+      "validation": "reopened-for-integrated-acceptance",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки. Повторная сквозная приёмка по #112/#114; историческое исправление части задачи не отрицается."
+    },
+    {
+      "issue": 105,
+      "title": "0.39: пустые разделители шапки, уведомления поверх кнопок и ориентация ручки разделителя",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/105",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 106,
+      "title": "0.39: убрать дубли диагностических разделов и служебные блоки без результата",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/106",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 107,
+      "title": "0.39: для событий WinRM показывать только заголовок; полный текст ошибки хранить в журналах",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/107",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 108,
+      "title": "0.40: копировать имя без домена и показывать IP рядом с именем клиента",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/108",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 110,
+      "title": "0.40: показывать требуемую перезагрузку основным результатом, убрать вложенную карточку и отрицательный результат",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/110",
+      "state_at_audit": "closed",
+      "validation": "updated-requirement",
+      "decision": "Отдельная вложенная карточка убрана; отрицательная проверка теперь допустима строкой одного из трёх критериев.",
+      "successor": 112
+    },
+    {
+      "issue": 111,
+      "title": "0.40: отображать только IPv4; нормализовать IPv4-mapped IPv6 без префикса ::ffff:",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/111",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 112,
+      "title": "Единая система статусов, готовности и актуальности данных во всех представлениях приложения",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/112",
+      "state_at_audit": "open",
+      "validation": "pending",
+      "decision": "Действующая открытая задача; реализация и приёмка не подтверждены. Не исключать из сверки следующего выпуска."
+    },
+    {
+      "issue": 113,
+      "title": "Критично: несколько серверов затронуты накоплением Probe/WinRM; второй сервер завис, масштаб неизвестен",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/113",
+      "state_at_audit": "open",
+      "validation": "pending",
+      "decision": "Действующая открытая задача; реализация и приёмка не подтверждены. Не исключать из сверки следующего выпуска."
+    },
+    {
+      "issue": 114,
+      "title": "0.41: различать временную занятость и защитную паузу опроса; сохранять причину блокировки",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/114",
+      "state_at_audit": "open",
+      "validation": "pending",
+      "decision": "Действующая открытая задача; реализация и приёмка не подтверждены. Не исключать из сверки следующего выпуска."
+    },
+    {
+      "issue": 115,
+      "title": "Адаптивный опрос: режим покоя успешных клиентов, сохранение сроков и отдельное чтение WSUS",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/115",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 116,
+      "title": "0.42: блокировка «Параметры задачи отличаются» на нескольких клиентах; диагностика различий и SID principal",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/116",
+      "state_at_audit": "open",
+      "validation": "pending",
+      "decision": "Действующая открытая задача; реализация и приёмка не подтверждены. Не исключать из сверки следующего выпуска."
+    },
+    {
+      "issue": 117,
+      "title": "Настройки: аварийное удаление сборщика и полная очистка его остатков на выбранных/всех клиентах",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/117",
+      "state_at_audit": "open",
+      "validation": "pending",
+      "decision": "Действующая открытая задача; реализация и приёмка не подтверждены. Не исключать из сверки следующего выпуска."
+    },
+    {
+      "issue": 118,
+      "title": "Общий выключатель всех опросов рядом с «Авто» и настройками, с сохранением состояния",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/118",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 119,
+      "title": "Команды: сохранять последовательный полный вывод всех команд и шагов задания",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/119",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 120,
+      "title": "0.45: полный сброс кэша повторно завершается 0xFFFF0000; показать причину и фактический этап",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/120",
+      "state_at_audit": "open",
+      "validation": "pending",
+      "decision": "Действующая открытая задача; реализация и приёмка не подтверждены. Не исключать из сверки следующего выпуска."
+    },
+    {
+      "issue": 121,
+      "title": "Справочник: 0x80071160 — повреждение таблицы ресурсов WOF-файла",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/121",
+      "state_at_audit": "closed",
+      "validation": "pending",
+      "decision": "Требования сверить с поздними уточнениями; закрытие исторической задачи не является приёмкой текущей сборки."
+    },
+    {
+      "issue": 122,
+      "title": "Не менять выбранного клиента и вкладку при завершении фонового запуска задания",
+      "url": "https://github.com/Amenemhat/DomainConsole/issues/122",
+      "state_at_audit": "open",
+      "validation": "pending",
+      "decision": "Действующая открытая задача; реализация и приёмка не подтверждены. Не исключать из сверки следующего выпуска."
+    }
+  ],
+  "mandatory_scenarios": [
+    "single-instance",
+    "two-consoles",
+    "reboot-mid-operation",
+    "collector-remove-enable-recover",
+    "offline-and-reconnect",
+    "polling-master-off",
+    "status-evidence-consistency",
+    "ui-all-modes-themes-sizes",
+    "selection-scroll-preservation",
+    "full-command-output",
+    "cache-reset-failure-and-restoration"
+  ]
+}
