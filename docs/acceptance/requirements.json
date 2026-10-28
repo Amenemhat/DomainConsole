@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "audited_source": "98923e81e25195fce2d1767417a0173cf85292c6",
+  "audited_source": "9c570ddb0dab9875e1d12d0e1f4139129dbc8986",
   "review_date": "2026-10-28",
   "note": "105 задач и 504 вручную выделенных актуальных условия. Классификация завершена, поусловная приёмка ещё не завершена. Поздние согласования имеют приоритет; наличие условия не является доказательством прохождения.",
   "issues": [
@@ -1645,7 +1645,9 @@
           "requirement": "Опрос/размер журналов/параллельность/повтор после серии сбоев ограничены; нехватка памяти не маскируется отменой задания."
         }
       ],
-      "condition_review": "Условия вручную актуализированы с учётом поздних решений; не являются заявлением о выполнении."
+      "condition_review": "Условия вручную актуализированы с учётом поздних решений; не являются заявлением о выполнении.",
+      "state_after_review": "open",
+      "reopened_reason": "Optional JSON read warnings could disappear when structured command output was rendered. Reopened for exact-artifact verification of all conditions."
     },
     {
       "issue": 65,

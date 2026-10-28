@@ -66,7 +66,7 @@
       "limitation": "",
       "source_sha256": {
         "DomainConsole-CSharp/Console/CollectorTools43.cs": "d9a0119f48fbbdb86148d112f5cce8837ec5a46f802917a97038ece4be668720",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "4418d2556b51865108d8338c3973e504d32d5f5c1f66a1e4419b8eb31f375807"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -80,16 +80,23 @@
         "Console/StatusOverview.cs",
         "Console/Workspace31.cs",
         "Console/Release43Checks.cs",
-        "Console/Release46Checks.cs"
+        "Console/Release46Checks.cs",
+        "Console/Observation47Checks.cs",
+        "Console/AutomaticReportCheck.cs",
+        "Console/AutomaticRecovery30.cs",
+        "Console/WsusFailures.cs",
+        "Console/RebootObservation.cs"
       ],
-      "scenario": "OFF cancels read generation; ON must not revive it. Delayed collector success after cancellation or address/identity/auth/TLS changes, including a change during follow-up refresh. Delayed status success and failure after identity change. Delayed overview after OFF and OFF/ON; manual stop; delayed connection success/failure after live profile address change and OFF/ON; verify transport callback was actually entered and current success still applies.",
+      "scenario": "OFF cancels read generation; ON must not revive it. Delayed collector success after cancellation or address/identity/auth/TLS changes, including a change during follow-up refresh. Delayed status success and failure after identity change. Delayed overview after OFF and OFF/ON; manual stop; delayed connection success/failure after live profile address change and OFF/ON; verify transport callback was actually entered and current success still applies. Also delay job, post-job reboot and WSUS responses across OFF/ON/profile changes; delay queue diagnosis, event/history and automatic recovery across endpoint/SSL/generation/report changes.",
       "expected": "No old response marks current endpoint successful/failed or applies reboot flags; no cancelled repair refresh/publish.",
       "evidence": [
         "VerifyPause43",
         "VerifyCollectorCompletion47",
         "VerifyObsoleteRead47",
         "VerifyOverviewCancellation47",
-        "VerifyObsoleteConnection47"
+        "VerifyObsoleteConnection47",
+        "VerifyObsoleteJobObservation47",
+        "VerifyObsoleteReportDetails47"
       ],
       "status": "verified_in_stated_scope",
       "limitation": "These assertions cover result application and read entry; startup OFF has a separate process test.",
@@ -100,7 +107,12 @@
         "DomainConsole-CSharp/Console/StatusOverview.cs": "6b125165902beaeb45836aa8c8892221cae0f76b8f24ff36e4b30ebefa8d9c8f",
         "DomainConsole-CSharp/Console/Workspace31.cs": "0aa20b0e7ee413d9838e3c85a545e8d875c63a7f60bea2eed3b14e4e0d992c12",
         "DomainConsole-CSharp/Console/Release43Checks.cs": "c203af31b1068bddf128105cf89ee7a960e67410c27ad2c0a7bf79580f3332d6",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "4418d2556b51865108d8338c3973e504d32d5f5c1f66a1e4419b8eb31f375807",
+        "DomainConsole-CSharp/Console/Observation47Checks.cs": "2f9b05f1e3ea85b720c412703eb7db4fde9b86bacddb9cd6b52bde1aad2f702a",
+        "DomainConsole-CSharp/Console/AutomaticReportCheck.cs": "55ff70536d4441e1f5c3dd18db3449d421b3227586618de53b4c85f7190b0074",
+        "DomainConsole-CSharp/Console/AutomaticRecovery30.cs": "3113d16af8b5c20a0f16be6a1f59971ad3f74d222e91fa1f02d3874364b24838",
+        "DomainConsole-CSharp/Console/WsusFailures.cs": "0af003befde2089a8fd5783f61fe455f47bcfd031a60629f50435cbae63c786f",
+        "DomainConsole-CSharp/Console/RebootObservation.cs": "dc058153a13469cf5d8eecad7fd528d1c8c797d73be9a2287fa125df993b7275"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -120,8 +132,8 @@
       "status": "verified_in_stated_scope",
       "limitation": "",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/RemoteData34.cs": "e4fd087b9a38c6b12499666b191111683bb2fcef0e3c8d5b2ccf7434f632a626",
-        "DomainConsole-CSharp/Console/MainWindow.xaml.cs": "9988231a1a0d814eebbc9d9f503c98b49a3fbffcfc8dd2c88be9b1ac9bb81611"
+        "DomainConsole-CSharp/Console/RemoteData34.cs": "35a894976f21a774ea84dd7ea7f63b66304f50dd3c2628e784e71ca361470cdd",
+        "DomainConsole-CSharp/Console/MainWindow.xaml.cs": "afca925c9189c76bed864259cef849340b9ee5f7f667796b043dbe1d2dbef1cb"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -141,8 +153,8 @@
       "status": "verified_in_stated_scope",
       "limitation": "",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/RemoteData34.cs": "e4fd087b9a38c6b12499666b191111683bb2fcef0e3c8d5b2ccf7434f632a626",
-        "DomainConsole-CSharp/Console/MainWindow.xaml.cs": "9988231a1a0d814eebbc9d9f503c98b49a3fbffcfc8dd2c88be9b1ac9bb81611"
+        "DomainConsole-CSharp/Console/RemoteData34.cs": "35a894976f21a774ea84dd7ea7f63b66304f50dd3c2628e784e71ca361470cdd",
+        "DomainConsole-CSharp/Console/MainWindow.xaml.cs": "afca925c9189c76bed864259cef849340b9ee5f7f667796b043dbe1d2dbef1cb"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -162,8 +174,8 @@
       "status": "verified_in_stated_scope",
       "limitation": "The source archive export is tested separately by LocalSmoke; this fixture verifies visibility of the limit.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/RemoteData34.cs": "e4fd087b9a38c6b12499666b191111683bb2fcef0e3c8d5b2ccf7434f632a626",
-        "DomainConsole-CSharp/Console/MainWindow.xaml.cs": "9988231a1a0d814eebbc9d9f503c98b49a3fbffcfc8dd2c88be9b1ac9bb81611"
+        "DomainConsole-CSharp/Console/RemoteData34.cs": "35a894976f21a774ea84dd7ea7f63b66304f50dd3c2628e784e71ca361470cdd",
+        "DomainConsole-CSharp/Console/MainWindow.xaml.cs": "afca925c9189c76bed864259cef849340b9ee5f7f667796b043dbe1d2dbef1cb"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -185,7 +197,7 @@
       "limitation": "Generic handling verified; the specific cache-cleanup incident still requires logs of that exact job.",
       "source_sha256": {
         "DomainConsole-CSharp/Shared/ExecutionDiagnosis.cs": "bd4f164f0bec544fa0863e234d5a9f40145fc3bd1a69ab41392aa6dd82939c8f",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc",
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "4418d2556b51865108d8338c3973e504d32d5f5c1f66a1e4419b8eb31f375807",
         "DomainConsole-CSharp/Agent/Program.cs": "e976653f38b2f2a39905be5e5e918b0a20d4af82f0d6fa6d301a9aa41d7ae713"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
@@ -208,7 +220,7 @@
       "limitation": "Generic handling verified; the specific cache-cleanup incident still requires logs of that exact job.",
       "source_sha256": {
         "DomainConsole-CSharp/Shared/ExecutionDiagnosis.cs": "bd4f164f0bec544fa0863e234d5a9f40145fc3bd1a69ab41392aa6dd82939c8f",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc",
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "4418d2556b51865108d8338c3973e504d32d5f5c1f66a1e4419b8eb31f375807",
         "DomainConsole-CSharp/Agent/Program.cs": "e976653f38b2f2a39905be5e5e918b0a20d4af82f0d6fa6d301a9aa41d7ae713"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
@@ -547,7 +559,7 @@
       "limitation": "Registry mutation is not part of this fixture; read-only probe script is separately executed.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/RebootPolicy30.cs": "b16ab977cba0bbea1809d55dfd45d663d7a94130a4379f8cfe571d5d06f4b5b5",
-        "DomainConsole-CSharp/Console/RebootObservation.cs": "d208e1a6f82311284e5720690f08eebbbcbd8e313a337b801882536366256173",
+        "DomainConsole-CSharp/Console/RebootObservation.cs": "dc058153a13469cf5d8eecad7fd528d1c8c797d73be9a2287fa125df993b7275",
         "DomainConsole-CSharp/Console/Release32Checks.cs": "6ee958cc57fbcca66468ba0a5dd2adb0df71359b5c0213cb167ef623a394653b"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
@@ -569,7 +581,7 @@
       "limitation": "Registry mutation is not part of this fixture; read-only probe script is separately executed.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/RebootPolicy30.cs": "b16ab977cba0bbea1809d55dfd45d663d7a94130a4379f8cfe571d5d06f4b5b5",
-        "DomainConsole-CSharp/Console/RebootObservation.cs": "d208e1a6f82311284e5720690f08eebbbcbd8e313a337b801882536366256173",
+        "DomainConsole-CSharp/Console/RebootObservation.cs": "dc058153a13469cf5d8eecad7fd528d1c8c797d73be9a2287fa125df993b7275",
         "DomainConsole-CSharp/Console/Release32Checks.cs": "6ee958cc57fbcca66468ba0a5dd2adb0df71359b5c0213cb167ef623a394653b"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
@@ -997,7 +1009,7 @@
         "DomainConsole-CSharp/Console/ConnectionState.cs": "91dd7f5edf75f186545dfe0f55024c4afe61b05b7c119d4e58073d3567c35442",
         "DomainConsole-CSharp/Console/ClientStatus28.cs": "def7692e2b50af25c5fe9bca6fed63dcc7f5770cdac505d994aa8a951fc3cfca",
         "DomainConsole-CSharp/Console/Release38Checks.cs": "81d5515bd096a59b034a53e15972331cdc499d64e9c9105511f2d4487158d9ef",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "4418d2556b51865108d8338c3973e504d32d5f5c1f66a1e4419b8eb31f375807"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -1022,7 +1034,7 @@
         "DomainConsole-CSharp/Console/ConnectionState.cs": "91dd7f5edf75f186545dfe0f55024c4afe61b05b7c119d4e58073d3567c35442",
         "DomainConsole-CSharp/Console/ClientStatus28.cs": "def7692e2b50af25c5fe9bca6fed63dcc7f5770cdac505d994aa8a951fc3cfca",
         "DomainConsole-CSharp/Console/Release38Checks.cs": "81d5515bd096a59b034a53e15972331cdc499d64e9c9105511f2d4487158d9ef",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "4418d2556b51865108d8338c3973e504d32d5f5c1f66a1e4419b8eb31f375807"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -1363,7 +1375,7 @@
       "limitation": "Visual framing and background differentiation additionally reviewed from actual Windows screenshots.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "4418d2556b51865108d8338c3973e504d32d5f5c1f66a1e4419b8eb31f375807"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -1383,7 +1395,7 @@
       "limitation": "Visual framing and background differentiation additionally reviewed from actual Windows screenshots.",
       "source_sha256": {
         "DomainConsole-CSharp/Console/MainWindow.xaml": "f5986cb6ac3e4fa657af4a9aa50e7b45fb353011e5ef5077202b1c8cf3df031c",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "4418d2556b51865108d8338c3973e504d32d5f5c1f66a1e4419b8eb31f375807"
       },
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable."
     },
@@ -1404,8 +1416,8 @@
       "limitation": "Copy test covers the expanded command output payload, not copying raw files beyond the advertised display budget.",
       "actual": "The named scenario assertions passed in the Windows run recorded above; limitations remain applicable.",
       "source_sha256": {
-        "DomainConsole-CSharp/Console/MainWindow.xaml.cs": "9988231a1a0d814eebbc9d9f503c98b49a3fbffcfc8dd2c88be9b1ac9bb81611",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc",
+        "DomainConsole-CSharp/Console/MainWindow.xaml.cs": "afca925c9189c76bed864259cef849340b9ee5f7f667796b043dbe1d2dbef1cb",
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "4418d2556b51865108d8338c3973e504d32d5f5c1f66a1e4419b8eb31f375807",
         "DomainConsole-CSharp/Console/LogViewer.cs": "5109c30fff6474704d0f0468258638331aacc419cca56f542c3871bd1f0baeb6"
       }
     },
@@ -2437,7 +2449,7 @@
       "source_sha256": {
         "DomainConsole-CSharp/Console/Criteria45.cs": "4d9b208d50069d7ed689926e252350fffe416562e083f1012728d7cbd132210d",
         "DomainConsole-CSharp/Console/Release45Checks.cs": "a7156cf7aa335f48fff28a0e1f6e7ae4e7c800f62db4ac8bb0b56a670475deca",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "4418d2556b51865108d8338c3973e504d32d5f5c1f66a1e4419b8eb31f375807"
       }
     },
     {
@@ -2460,7 +2472,7 @@
       "source_sha256": {
         "DomainConsole-CSharp/Console/Criteria45.cs": "4d9b208d50069d7ed689926e252350fffe416562e083f1012728d7cbd132210d",
         "DomainConsole-CSharp/Console/Release45Checks.cs": "a7156cf7aa335f48fff28a0e1f6e7ae4e7c800f62db4ac8bb0b56a670475deca",
-        "DomainConsole-CSharp/Console/Release46Checks.cs": "82f3b52bca6f58088b2b35c90ecc321bb1fcc319a6599ce472e889280b4932fc"
+        "DomainConsole-CSharp/Console/Release46Checks.cs": "4418d2556b51865108d8338c3973e504d32d5f5c1f66a1e4419b8eb31f375807"
       }
     },
     {
@@ -3105,29 +3117,123 @@
         ".github/scripts/test_collector43.ps1": "efec6e061614a100bc68705189914debcc22dd989d617c10f93e7ea55d51eea9",
         "DomainConsole-CSharp/Console/PollRecovery44.cs": "ca9bae08e40a12effd4ddc960d88c2871d447235a4ef0f965733ce058c145485"
       }
+    },
+    {
+      "condition_id": "62.validate",
+      "code": [
+        "Console/Release34Checks.cs",
+        "Console/Presentation34.cs"
+      ],
+      "scenario": "Reject unsupported editor/import kind before submission; distinguish unsupported shell from Windows Update HRESULT.",
+      "expected": "Unknown kind rejected; PS normalized; failure card requests the supported shell rather than inventing a Windows error.",
+      "evidence": [
+        "VerifyRelease34"
+      ],
+      "limitation": "Checks the editor normalization and presentation fixture; does not enumerate every third-party imported script.",
+      "requirement": "Неподдерживаемый тип отклоняется до отправки с фактическим значением, ошибка приложения не называется WindowsUpdateHRESULT.",
+      "status": "verified_in_stated_scope",
+      "actual": "The named assertions passed in the exact Windows run recorded above; stated limitations remain.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Release34Checks.cs": "384461a0990574046bfa978c8e70bcbf65f42a27a1f1b6b7e69500bfc5b6b860",
+        "DomainConsole-CSharp/Console/Presentation34.cs": "f2c716da60ddc27dec256090a53d15aecd457e67ad586d0ca6d65ac69218880e"
+      }
+    },
+    {
+      "condition_id": "64.atomic",
+      "code": [
+        "Console/RemoteData34.cs",
+        "Console/Release34Checks.cs",
+        ".github/workflows/build-windows.yml"
+      ],
+      "scenario": "Real Windows PowerShell reader sees malformed status, valid replacement, wrong job ID and malformed optional updates JSON; C# parser sees empty, dot and incomplete JSON.",
+      "expected": "Primary malformed/wrong-identity data rejected with bounded retries; valid replacement accepted; optional failure leaves primary Running status intact.",
+      "evidence": [
+        "Verify bounded polling and malformed snapshot recovery",
+        "VerifyRelease34"
+      ],
+      "limitation": "Focused reader/identity tests; not proof of every writer or arbitrary simultaneous disk faults.",
+      "requirement": "Снимки атомарны, проверены тип/личность/пустота/отсутствие, повторы ограничены.",
+      "status": "verified_in_stated_scope",
+      "actual": "The named assertions passed in the exact Windows run recorded above; stated limitations remain.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/RemoteData34.cs": "35a894976f21a774ea84dd7ea7f63b66304f50dd3c2628e784e71ca361470cdd",
+        "DomainConsole-CSharp/Console/Release34Checks.cs": "384461a0990574046bfa978c8e70bcbf65f42a27a1f1b6b7e69500bfc5b6b860",
+        ".github/workflows/build-windows.yml": "62ac17332d332c2aa692b8d3b4d863454d6afa7e234e358ea23fd1ad1f05b1be"
+      }
+    },
+    {
+      "condition_id": "64.streams",
+      "code": [
+        "Console/RemoteData34.cs",
+        "Console/Release34Checks.cs",
+        "Console/Release26Checks.cs",
+        "Console/Services.cs"
+      ],
+      "scenario": "Filter progress-only CLIXML and retain genuine trailing/encoded error; render Russian structured output containing marker-like lines and two command outputs.",
+      "expected": "Progress-only text is not an error; actual error/newline and both command outputs survive.",
+      "evidence": [
+        "VerifyRelease34",
+        "VerifyRelease26"
+      ],
+      "limitation": "Controlled CLIXML/UTF-8 examples; not a separate Russian Windows image or every legacy codepage.",
+      "requirement": "CLIXMLprogress не ошибка, реальные ошибки и кодировка сохранены, сырой XML/служебныйскрипт не в истории.",
+      "status": "verified_in_stated_scope",
+      "actual": "The named assertions passed in the exact Windows run recorded above; stated limitations remain.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/RemoteData34.cs": "35a894976f21a774ea84dd7ea7f63b66304f50dd3c2628e784e71ca361470cdd",
+        "DomainConsole-CSharp/Console/Release34Checks.cs": "384461a0990574046bfa978c8e70bcbf65f42a27a1f1b6b7e69500bfc5b6b860",
+        "DomainConsole-CSharp/Console/Release26Checks.cs": "8d389be9ae35385bb5e856f15067ae985cb5ba2f9f07f6aae04835e9fc77e95e",
+        "DomainConsole-CSharp/Console/Services.cs": "f55d4f5240f06754ce46f883ec022f5300995692cc5d8be7835e85a1211cc84d"
+      }
+    },
+    {
+      "condition_id": "64.preserve",
+      "code": [
+        "Console/Observation47Checks.cs",
+        "Console/RemoteData34.cs",
+        "Console/Release34Checks.cs",
+        "Console/MainWindow.xaml.cs"
+      ],
+      "scenario": "Delayed successful/failed job result after endpoint or generation change; malformed optional updates file with structured command output.",
+      "expected": "Old response does not mutate saved state/output/connection; optional warning remains in technical details while primary operation stays Running.",
+      "evidence": [
+        "VerifyObsoleteJobObservation47",
+        "VerifyRelease34",
+        "Verify bounded polling and malformed snapshot recovery"
+      ],
+      "limitation": "Does not certify all local UI exception paths or resource-exhaustion behavior.",
+      "requirement": "При ошибке наблюдения предыдущие данные с датой сохраняются, операция не отменяется и не объявляется ошибочной.",
+      "status": "verified_in_stated_scope",
+      "actual": "The named assertions passed in the exact Windows run recorded above; stated limitations remain.",
+      "source_sha256": {
+        "DomainConsole-CSharp/Console/Observation47Checks.cs": "2f9b05f1e3ea85b720c412703eb7db4fde9b86bacddb9cd6b52bde1aad2f702a",
+        "DomainConsole-CSharp/Console/RemoteData34.cs": "35a894976f21a774ea84dd7ea7f63b66304f50dd3c2628e784e71ca361470cdd",
+        "DomainConsole-CSharp/Console/Release34Checks.cs": "384461a0990574046bfa978c8e70bcbf65f42a27a1f1b6b7e69500bfc5b6b860",
+        "DomainConsole-CSharp/Console/MainWindow.xaml.cs": "afca925c9189c76bed864259cef849340b9ee5f7f667796b043dbe1d2dbef1cb"
+      }
     }
   ],
-  "source_commit": "98923e81e25195fce2d1767417a0173cf85292c6",
-  "workflow_run": "https://github.com/Amenemhat/DomainConsole/actions/runs/40749509876",
-  "workflow_job": 123032102954,
+  "source_commit": "9c570ddb0dab9875e1d12d0e1f4139129dbc8986",
+  "workflow_run": "https://github.com/Amenemhat/DomainConsole/actions/runs/40753565131",
+  "workflow_job": 123046363070,
   "workflow_result": "success; 56/56 steps",
   "acceptance_complete": false,
-  "coverage_note": "138 conditions have evidence for the explicitly stated scenario only. 366 conditions have no entry in this focused report. This is not a full per-condition acceptance certificate.",
+  "coverage_note": "142 conditions have evidence for the explicitly stated scenario only. 362 conditions have no entry in this focused report. This is not a full per-condition acceptance certificate.",
   "artifacts": [
     {
-      "id": 12843217928,
+      "id": 12845229003,
       "kind": "application",
-      "sha256": "9c84ab2f2ae804a62c165f013bbf907ab440e08007a604289aaa37ab5ff049a5"
+      "sha256": "ed995d6a4d5b18dd42118205eaaa46e72567497c48300906c995c095f0334118"
     },
     {
-      "id": 12843093253,
+      "id": 12844638187,
       "kind": "ui-checks",
-      "sha256": "36caf425e7f6648b11479da2aff9c0dfba8b0a4a52d47072ce2ccf0f6a273265"
+      "sha256": "98ee0dcf83b74f3ae943190396660252436a8feb93b40317e9248e0aa0930dbe"
     },
     {
-      "id": 12842789302,
+      "id": 12844438626,
       "kind": "service-fault-checks",
-      "sha256": "7e610625d75177179f33b712837f08f2d67bdb739fee8ffff40e56fdf15be49d"
+      "sha256": "e1b446b8955a7dfff63c082dee1f7f122033ee0a1139cd69adf11c5c6c3817f3"
     }
   ],
   "metrics": {
@@ -3142,11 +3248,11 @@
     "jobs": 1006,
     "events": 10000,
     "refresh_ms": [
-      8.05,
-      7.1,
-      7.46,
-      11.95,
-      7.41
+      12.38,
+      10.13,
+      9.96,
+      17.64,
+      8.83
     ],
     "unchanged_property_notifications": 0,
     "disk_reads_during_repeated_refresh": 0,
