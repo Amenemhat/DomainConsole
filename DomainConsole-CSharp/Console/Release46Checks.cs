@@ -24,6 +24,7 @@ public partial class MainWindow {
   AwaitUi39(VerifyCollectorCompletion47());
   AwaitUi39(VerifyObsoleteRead47());
   AwaitUi39(VerifyObsoleteConnection47());
+  AwaitUi39(VerifyObsoleteJobObservation47());
   AwaitUi39(VerifySubmission47());
   AwaitUi39(VerifyRecoveryPipeline47());
   string shellError47="Внутренняя ошибка Windows PowerShell. Ошибка 80070570 при загрузке управляемой оболочки Windows PowerShell.";
