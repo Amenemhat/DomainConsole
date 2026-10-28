@@ -10,6 +10,7 @@ $aclBefore=(Get-Acl $path).Sddl
 $null=Run 'probe42-Inspect.ps1'
 $afterInspect=@(Get-ChildItem $path -File|ForEach-Object { $_.Name+':'+$_.LastWriteTimeUtc.Ticks+':'+$_.Length }) -join '|'
 if($beforeInspect -ne $afterInspect -or $aclBefore -ne (Get-Acl $path).Sddl){throw 'Read-only inspection changed collector files or ACL'}
+if($inspect.ExpectedTask.PrincipalSid -ne 'S-1-5-18' -or $inspect.ActualTask.PrincipalSid -ne 'S-1-5-18' -or !$inspect.TaskPresent){throw 'Expected/actual task configuration omitted'}
 $original=Export-ScheduledTask $task
 try{
  $wrong=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::FromSeconds(90)) -MultipleInstances IgnoreNew

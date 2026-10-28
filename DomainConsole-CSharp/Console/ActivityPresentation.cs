@@ -37,6 +37,7 @@ public partial class MainWindow {
   OperationGlyph38.Kind=active?"Working":failed?"Error":reboot35?"Reboot":row.Target.Status=="RebootObserved"?"Warning":row.Target.Status is "Completed" or "VerifiedAfterReboot"?"Success":"Info";OperationGlyph38.Tint=row.Target.Status=="RebootObserved"?Theme.Tone("Warning"):CurrentStage.Foreground;ApplyStatus40(selected,active);
   if(active&&(TransportBudget41.Paused||(DateTimeOffset.TryParse(state?.Updated,out var observed46)&&DateTimeOffset.UtcNow-observed46>TimeSpan.FromSeconds(90))||clientConnections.GetValueOrDefault(row.Host)?.Lost38==true)){
    string observation=TransportBudget41.Paused?"Опрос выключен · сохранённый результат":row.Target.Status=="SubmissionUnknown"?"Передача задания не подтверждена":clientConnections.GetValueOrDefault(row.Host)?.Lost38==true?"Связь потеряна · состояние установки неизвестно":"Нет свежего статуса задания";
+   OperationGlyph38.Kind=clientConnections.GetValueOrDefault(row.Host)?.Lost38==true?"Unreachable":"Stale";OperationGlyph38.Tint=Theme.Tone(TransportBudget41.Paused?"Stale":"Warning");CurrentStage.Foreground=OperationGlyph38.Tint;
    CurrentStage.Text=observation;OperationDetail38.Text="Последний этап: "+(state?.Stage??row.Target.Status)+" · "+Display36.Date(state?.Updated??"");OperationDetail38.Visibility=Visibility.Visible;CurrentProgress.IsIndeterminate=false;CurrentProgress.Visibility=Visibility.Collapsed;
   }
   if(active&&CurrentStage.Text.StartsWith("Установка"))OperationGlyph38.Kind="Install";
