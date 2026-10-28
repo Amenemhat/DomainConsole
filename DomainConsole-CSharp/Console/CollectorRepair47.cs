@@ -37,14 +37,22 @@ public sealed partial class RemoteService {
 public partial class MainWindow {
  readonly HashSet<string> repairingCollectors47=new(StringComparer.OrdinalIgnoreCase);
  static bool EventMatches47(ClientEvent31 item,int filter)=>filter switch{1=>item.Kind is "Error" or "Warning",2=>item.Kind=="Error",3=>item.Kind=="Warning",_=>true};
+ async Task<bool> CompleteCollectorRepair47(TargetRecord target,CancellationToken generation,Task<string> repair,Func<Task> refresh,Action<string> publish){
+  bool Current()=>!closing&&!TransportBudget41.Paused&&!generation.IsCancellationRequested&&CurrentEndpoint(target);
+  var result=await repair;if(!Current())return false;
+  await refresh();if(!Current())return false;
+  publish(result);return true;
+ }
  async void CollectorRepair47_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{
   var row=Current();if(TransportBudget41.Paused){Notify("Для восстановления включите опрос.");return;}
+  var target=ConnectionStore.Capture(row.Target);var generation=PollingControl43.Token;
   if(!repairingCollectors47.Add(row.Host))return;
   try{RefreshCollector44(row.Host);Event31(row.Host,"collector-repair47",DateTimeOffset.UtcNow.ToString("o"),"Восстановление сборщика","Info","Останавливается только собственный сборщик. Установки обновлений продолжаются.");
-   var result=await remote.RepairCollector47(row.Target);
-   ReadSucceeded34(row.Host,"флаги и аптайм");ReadSucceeded34(row.Host,"фоновая активность");
-   await ReadClientStatus(row,force:true);Event31(row.Host,"collector-repair47",DateTimeOffset.UtcNow.ToString("o"),"Сборщик восстановлен","Success",result);Notify(result);
-  }catch(Exception ex){Event31(row.Host,"collector-repair47",DateTimeOffset.UtcNow.ToString("o"),"Восстановление сборщика не подтверждено","Warning",ShortConnectionError(ex.Message));throw;}
+   await CompleteCollectorRepair47(target,generation,remote.RepairCollector47(target),async()=>{
+    ReadSucceeded34(row.Host,"флаги и аптайм");ReadSucceeded34(row.Host,"фоновая активность");
+    await ReadClientStatus(row,force:true);
+   },result=>{Event31(row.Host,"collector-repair47",DateTimeOffset.UtcNow.ToString("o"),"Сборщик восстановлен","Success",result);if(CurrentHost(row.Host))Notify(result);});
+  }catch(Exception ex){if(closing||generation.IsCancellationRequested||!CurrentEndpoint(target))return;Event31(row.Host,"collector-repair47",DateTimeOffset.UtcNow.ToString("o"),"Восстановление сборщика не подтверждено","Warning",ShortConnectionError(ex.Message));throw;}
   finally{repairingCollectors47.Remove(row.Host);if(CurrentHost(row.Host)){RefreshCollector44(row.Host);ShowCurrent();}}
  });
 }
