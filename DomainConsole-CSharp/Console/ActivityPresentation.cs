@@ -9,6 +9,7 @@ public partial class MainWindow {
  public static string DownloadSource(BackgroundDownload download,LiveUpdateActivity live)=>Uri.TryCreate(download.RemoteName,UriKind.Absolute,out var source)&&Uri.TryCreate(live.PolicySource,UriKind.Absolute,out var policy)&&source.Host.Equals(policy.Host,StringComparison.OrdinalIgnoreCase)&&source.Port==policy.Port&&source.AbsolutePath.StartsWith("/Content/",StringComparison.OrdinalIgnoreCase)?"Источник совпадает с WSUS из политики клиента":"Связь источника с настроенным WSUS не установлена";
  void UpdateWsusStage(){if(ComputerGrid.SelectedItem is not ComputerRow selected){CurrentStage.Text="Выберите компьютер.";CurrentProgress.Visibility=Visibility.Collapsed;BackgroundGroup.Visibility=Visibility.Collapsed;RecommendationButton.Visibility=Visibility.Collapsed;return;}
   var row=OperationRow38(selected);var state=row.Target.State;bool active=IsCurrentExecution(row.Target.Status);bool fresh=ConnectionFresh(row.Host)&&StateFresh(state);bool terminal=state!=null&&!active;
+  OperationDetail38.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty,"TextMuted");
   RefreshCollector44(selected.Host);
   RefreshControl37(selected);RefreshUser37(selected);CurrentComputer.Text=row.Name;CurrentDetails.Text=row.OS;CurrentDetails.ToolTip=row.OS+"\n"+row.Host+ConnectionStore.Description(row.Host);
 

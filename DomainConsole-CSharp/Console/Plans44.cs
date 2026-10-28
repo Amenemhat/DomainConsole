@@ -6,6 +6,7 @@ public partial class MainWindow {
  static bool PlanExpired44(MaintenancePlan p,DateTimeOffset now){if(!DateTimeOffset.TryParse(p.StartedUtc,out var start)||start>now.AddMinutes(1))return true;var deadline=start.AddDays(2);if(DateTimeOffset.TryParse(p.DeadlineUtc44,out var saved)&&saved<deadline)deadline=saved;return now>=deadline;}
  void ReconcilePlan44(string host,string id,PollResult data){if(!maintenancePlans.TryGetValue(host,out var p)||p.Done||p.JobId!=id||data.State==null)return;var state=data.State;if(IsCurrentExecution(state.Status)||state.Status=="Queued")return;
   if(state.Status=="InterventionRequired"&&state.HasUpdateSteps&&InterruptedByBoot(state,data)){
+   if(p.RecoveryCheck47)return;
    p.RecoveryCheck47=true;p.Phase="После перезагрузки: ожидание готовности";p.Detail="Операция прервана загрузкой Windows. Сначала будет выполнен новый поиск; прежняя установка не повторяется вслепую.";p.BootUtc=data.BootUtc;p.ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));p.Next=p.ReadyAfter;SaveMaintenance();return;
   }
   if(state.Status is "Failed" or "CompletedWithErrors" or "Cancelled" or "InterventionRequired"){p.Done=true;p.Phase=state.Status=="Cancelled"?"Обслуживание остановлено":"Требуется действие";p.Detail=state.Error.Length>0?ConnectionBrief31(state.Error):ComputerRow.StatusText(state.Status);}

@@ -8,6 +8,7 @@ public partial class MainWindow {
   try{var data47=new PollResult{AgentAlive=false,TaskState="Ready",BootUtc=DateTimeOffset.UtcNow.AddMinutes(-5).ToString("o"),State=new(){Status="InterventionRequired",HasUpdateSteps=true,Started=DateTimeOffset.UtcNow.AddHours(-1).ToString("o")}};
    ReconcilePlan44(interrupted47.Targets[0].Host,interrupted47.Id,data47);
    var plan47=maintenancePlans[interrupted47.Targets[0].Host];if(!plan47.RecoveryCheck47||plan47.Done)throw new Exception("Interrupted update did not enter fresh search recovery");
+   var due47=plan47.ReadyAfter;ReconcilePlan44(interrupted47.Targets[0].Host,interrupted47.Id,data47);if(plan47.ReadyAfter!=due47)throw new Exception("Repeated stale status extended recovery deadline");
    plan47.JobId="";plan47.PlanId37="";QueueMaintenanceJob(plan47,interrupted47.Targets[0]);var next47=History.First(j=>j.Id==plan47.JobId);
    if(next47.Steps.Single().Kind!="UpdateScan"||!plan47.Install||plan47.RecoveryCheck47)throw new Exception("Interrupted installation replayed instead of a fresh search");
    FinishPlan44(interrupted47.Targets[0].Host);History.Remove(next47);

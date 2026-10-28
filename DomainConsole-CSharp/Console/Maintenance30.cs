@@ -61,9 +61,10 @@ public partial class MainWindow {
    if(History.Any(j=>IsWsusJob(j)&&j.Targets.Any(t=>t.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)))){p.Detail="Ожидается завершение другого задания WSUS";continue;}
    if(p.Install&&p.Phase=="После перезагрузки: ожидание готовности"){
     var fresh=await statusProbe(row).WaitAsync(TimeSpan.FromSeconds(105));if(p.Done)continue;if(fresh==null){p.Detail="Ожидается свежий снимок клиента";continue;}
+    if(!DateTimeOffset.TryParse(fresh.BootUtc,out var freshBoot47)||!DateTimeOffset.TryParse(fresh.CollectedUtc,out var freshAt47)||freshAt47<freshBoot47||(DateTimeOffset.TryParse(p.BootUtc,out var expectedBoot47)&&freshBoot47<expectedBoot47)){p.Detail="Снимок не подтверждает текущую загрузку Windows; продолжение ожидает свежие данные";continue;}
     if(fresh.Required!=false){p.Phase=fresh.Required==true?"Ожидается перезагрузка":"Требуется действие";p.Done=fresh.Required==null;p.BootUtc=fresh.BootUtc;p.Detail=fresh.Required==true?"После загрузки подтверждено новое требование перезагрузки; источники в журнале":"Не удалось уточнить флаги; установка автоматически не продолжается";continue;}
    }
-   if(p.Cycles>=3){p.Done=true;p.Phase="Требуется действие";p.Detail="Достигнут предел: 3 цикла. Проверьте оставшиеся обновления; автоматический повтор остановлен.";continue;}
+   if(p.Cycles>=3&&!p.RecoveryCheck47){p.Done=true;p.Phase="Требуется действие";p.Detail="Достигнут предел: 3 цикла. Проверьте оставшиеся обновления; автоматический повтор остановлен.";continue;}
    try{var live=await activityProbe(captured).WaitAsync(TimeSpan.FromSeconds(105));if(live.InstallerBusy||live.InstallationEvidence.Length>0||live.Limitation.Length>0){p.Detail="Клиент занят или готовность не подтверждена; повторный опрос запланирован";continue;}}
    catch(Exception ex){p.Detail="Проверка готовности не удалась: "+ShortConnectionError(ex.Message);continue;}
    if(closing||TransportBudget41.Paused||p.Done)continue;QueueMaintenanceJob(p,captured);
