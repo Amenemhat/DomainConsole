@@ -77,19 +77,21 @@ public partial class MainWindow {
   var sections=LogViewer.Sections("## Result\nhello\n## Empty\n");if(sections.Count!=1)throw new Exception("Empty section retained");
  }
  async Task VerifyObsoleteConnection47(){
-  var row=Current();var saved=Store.Clone(row.Target);var connection=clientConnections.GetValueOrDefault(row.Host);bool paused=TransportBudget41.Paused;
+  const string host="connection-generation47.fixture.invalid";var row=new ComputerRow(new(){Host=host});
+  ConnectionStore.Profiles.TryGetValue(host,out var saved);bool paused=TransportBudget41.Paused;
   try{
    foreach(bool fail in new[]{false,true})foreach(bool cancel in new[]{false,true}){
-    PollingControl43.Resume();row.Target.ConnectionSnapshot=true;row.Target.ConnectionAddress="192.0.2.47";clientConnections.Remove(row.Host);
-    var source=new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-    var pending=CheckConnectionObserved47(row,_=>source.Task);
-    if(cancel){PollingControl43.Pause();PollingControl43.Resume();}else row.Target.ConnectionAddress="192.0.2.48";
+    PollingControl43.Resume();ConnectionStore.Profiles[host]=new(){AuthMode="Current",Address="192.0.2.47",Identity="fixture"};clientConnections.Remove(host);
+    var source=new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);bool entered=false;
+    var pending=CheckConnectionObserved47(row,_=>{entered=true;return source.Task;});
+    if(!entered)throw new Exception("Connection fixture never entered transport");
+    if(cancel){PollingControl43.Pause();PollingControl43.Resume();}else ConnectionStore.Profiles[host].Address="192.0.2.48";
     if(fail)source.SetException(new Exception("obsolete WinRM failure"));else source.SetResult("connected");
-    if(await pending||clientConnections.ContainsKey(row.Host))throw new Exception("Obsolete connection success/failure changed current endpoint");
+    if(await pending||clientConnections.ContainsKey(host))throw new Exception("Obsolete connection success/failure changed current endpoint");
    }
-   PollingControl43.Resume();clientConnections.Remove(row.Host);
-   if(!await CheckConnectionObserved47(row,_=>Task.FromResult("connected"))||!clientConnections.ContainsKey(row.Host))throw new Exception("Current connection success discarded");
-  }finally{row.Target.ConnectionSnapshot=saved.ConnectionSnapshot;row.Target.ConnectionAddress=saved.ConnectionAddress;if(connection==null)clientConnections.Remove(row.Host);else clientConnections[row.Host]=connection;if(paused)PollingControl43.Pause();else PollingControl43.Resume();}
+   PollingControl43.Resume();clientConnections.Remove(host);
+   if(!await CheckConnectionObserved47(row,_=>Task.FromResult("connected"))||!clientConnections.ContainsKey(host))throw new Exception("Current connection success discarded");
+  }finally{if(saved==null)ConnectionStore.Profiles.Remove(host);else ConnectionStore.Profiles[host]=saved;clientConnections.Remove(host);liveConnections.Remove(host);if(paused)PollingControl43.Pause();else PollingControl43.Resume();}
  }
  async Task VerifyCollectorCompletion47(){
   const string host="collector-endpoint47.fixture.invalid";
