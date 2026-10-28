@@ -23,6 +23,7 @@ public partial class MainWindow {
   if(cleanupTargets47.Count!=2||cleanupTargets47[0].Target.ConnectionAddress!="192.0.2.1"||cleanupTargets47[1].Target.ConnectionAddress!="192.0.2.2")throw new Exception("Confirmed collector cleanup targets changed during sequential work");
   AwaitUi39(VerifyCollectorCompletion47());
   AwaitUi39(VerifyObsoleteRead47());
+  AwaitUi39(VerifyObsoleteConnection47());
   AwaitUi39(VerifySubmission47());
   AwaitUi39(VerifyRecoveryPipeline47());
   string shellError47="Внутренняя ошибка Windows PowerShell. Ошибка 80070570 при загрузке управляемой оболочки Windows PowerShell.";
@@ -74,6 +75,21 @@ public partial class MainWindow {
   var copyViewer47=new LogViewer{Text=restored47};copyViewer47.SetExpanded("Вывод команды",true);string copied47=copyViewer47.VisibleText();
   if(!copied47.Contains("Command 1")||!copied47.Contains("Command 40")||!copied47.Contains("код шага: 5 (0x00000005)")||!copied47.Contains("stderr")||!copied47.Contains("STEP40")||!copied47.Contains("intermediate failure")||!copied47.Contains("Output budget reached"))throw new Exception("Reopened and copied output lost command names, result codes or step content");
   var sections=LogViewer.Sections("## Result\nhello\n## Empty\n");if(sections.Count!=1)throw new Exception("Empty section retained");
+ }
+ async Task VerifyObsoleteConnection47(){
+  var row=Current();var saved=Store.Clone(row.Target);var connection=clientConnections.GetValueOrDefault(row.Host);bool paused=TransportBudget41.Paused;
+  try{
+   foreach(bool fail in new[]{false,true})foreach(bool cancel in new[]{false,true}){
+    PollingControl43.Resume();row.Target.ConnectionSnapshot=true;row.Target.ConnectionAddress="192.0.2.47";clientConnections.Remove(row.Host);
+    var source=new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var pending=CheckConnectionObserved47(row,_=>source.Task);
+    if(cancel){PollingControl43.Pause();PollingControl43.Resume();}else row.Target.ConnectionAddress="192.0.2.48";
+    if(fail)source.SetException(new Exception("obsolete WinRM failure"));else source.SetResult("connected");
+    if(await pending||clientConnections.ContainsKey(row.Host))throw new Exception("Obsolete connection success/failure changed current endpoint");
+   }
+   PollingControl43.Resume();clientConnections.Remove(row.Host);
+   if(!await CheckConnectionObserved47(row,_=>Task.FromResult("connected"))||!clientConnections.ContainsKey(row.Host))throw new Exception("Current connection success discarded");
+  }finally{row.Target.ConnectionSnapshot=saved.ConnectionSnapshot;row.Target.ConnectionAddress=saved.ConnectionAddress;if(connection==null)clientConnections.Remove(row.Host);else clientConnections[row.Host]=connection;if(paused)PollingControl43.Pause();else PollingControl43.Resume();}
  }
  async Task VerifyCollectorCompletion47(){
   const string host="collector-endpoint47.fixture.invalid";
