@@ -834,3 +834,11 @@ jobs:
 
 
 
+
+      - name: Save service recovery fault-injection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DomainConsole-service-recovery47
+          path: ${{ runner.temp }}/service-recovery47/**
+          if-no-files-found: warn

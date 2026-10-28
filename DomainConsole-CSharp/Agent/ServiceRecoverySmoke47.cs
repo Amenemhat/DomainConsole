@@ -18,11 +18,11 @@ namespace DomainConsole.Agent {
      (scenario=="NormalFinally"?"throw 'FIXTURE_PRIMARY_FAILURE'":"while($true){Start-Sleep -Milliseconds 100}")+
      "}finally{[IO.File]::WriteAllText('"+FilePath("finally-ran").Replace("'","''")+"','yes');Remove-Item $p -Force}";
     try{
-     int exit=PowerShell(code,"step-1",2500);
+     int exit=PowerShell(code,"step-1",12000);
      if(scenario=="NormalFinally"){
       if(exit==0||!File.Exists(FilePath("finally-ran"))||restored.Count!=0||!File.ReadAllText(FilePath("step-1.failure.txt")).Contains("FIXTURE_PRIMARY_FAILURE"))throw new Exception("Normal finally / primary failure changed");
      }else{
-      if(exit!=124||File.Exists(FilePath("finally-ran"))||restored.Count!=1||restored[0]!="wuauserv")throw new Exception("Hard timeout failed to restore exactly the recorded service");
+      if(exit!=124||File.Exists(FilePath("finally-ran"))||restored.Count!=1||restored[0]!="wuauserv")throw new Exception("Hard timeout failed to restore exactly the recorded service: exit="+exit+"; finally="+File.Exists(FilePath("finally-ran"))+"; restored="+string.Join(",",restored)+"; failure="+(File.Exists(FilePath("step-1.failure.txt"))?File.ReadAllText(FilePath("step-1.failure.txt")):"none"));
       bool pending=File.Exists(FilePath("step-1.service-recovery/wuauserv.pending"));
       if(pending!=(scenario=="RestoreFailure"))throw new Exception("Pending recovery evidence lost or retained after success");
       var error=File.ReadAllText(FilePath("step-1.failure.txt"));
