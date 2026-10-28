@@ -69,6 +69,10 @@ public partial class MainWindow {
   output47.Files.Insert(2,new(){Name="step-2.err",Body="intermediate failure"});output47.Files.Add(new(){Name="output-limit.out",Body="Output budget reached; full files retained"});
   string presented47=PresentResult("output.fixture.invalid",output47);
   if(!presented47.Contains("STEP40")||!presented47.Contains("repeat\nrepeat")||!presented47.Contains("intermediate failure")||!presented47.Contains("Output budget reached")||presented47.IndexOf("[step-10.out]",StringComparison.Ordinal)<presented47.IndexOf("[step-2.out]",StringComparison.Ordinal))throw new Exception("Result presentation dropped ordered steps, repeated lines, stderr or output limit");
+  output47.State!.Results=Enumerable.Range(1,40).Select(i=>new StepResult{Name="Command "+i,Kind=i%2==0?"PowerShell":"CMD",ExitCode=i==2?5:0}).ToList();
+  var reopened47=Store.Clone(output47);string restored47=PresentResult("output.fixture.invalid",reopened47);
+  var copyViewer47=new LogViewer{Text=restored47};copyViewer47.SetExpanded("Вывод команды",true);string copied47=copyViewer47.VisibleText();
+  if(!copied47.Contains("Command 1")||!copied47.Contains("Command 40")||!copied47.Contains("код шага: 5 (0x00000005)")||!copied47.Contains("stderr")||!copied47.Contains("STEP40")||!copied47.Contains("intermediate failure")||!copied47.Contains("Output budget reached"))throw new Exception("Reopened and copied output lost command names, result codes or step content");
   var sections=LogViewer.Sections("## Result\nhello\n## Empty\n");if(sections.Count!=1)throw new Exception("Empty section retained");
  }
  async Task VerifyCollectorCompletion47(){
