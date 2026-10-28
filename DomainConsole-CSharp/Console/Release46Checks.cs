@@ -72,13 +72,15 @@ public partial class MainWindow {
   const string host="collector-endpoint47.fixture.invalid";
   ConnectionStore.Profiles.TryGetValue(host,out var saved);
   try{
-   foreach(var mode in new[]{"address","identity","cancel","during-refresh","success"}){
+   foreach(var mode in new[]{"address","identity","ssl","auth","cancel","during-refresh","success"}){
     ConnectionStore.Profiles[host]=new(){AuthMode="Specific",Address="192.0.2.10",Identity="first"};
     var target=ConnectionStore.Capture(new(){Host=host});using var generation=new CancellationTokenSource();
     var ready=new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);int refreshes=0,published=0;
     var completion=CompleteCollectorRepair47(target,generation.Token,ready.Task,()=>{refreshes++;if(mode=="during-refresh")ConnectionStore.Profiles[host].Address="192.0.2.11";return Task.CompletedTask;},_=>published++);
     if(mode=="address")ConnectionStore.Profiles[host].Address="192.0.2.11";
     if(mode=="identity")ConnectionStore.Profiles[host].Identity="second";
+    if(mode=="ssl")ConnectionStore.Profiles[host].Ssl=true;
+    if(mode=="auth")ConnectionStore.Profiles[host].AuthMode="Current";
     if(mode=="cancel")generation.Cancel();
     ready.SetResult("fresh collector result");bool accepted=await completion;
     if(accepted!=(mode=="success")||published!=(mode=="success"?1:0)||refreshes!=(mode is "success" or "during-refresh"?1:0))throw new Exception("Late collector completion leaked across endpoint or polling generation: "+mode);

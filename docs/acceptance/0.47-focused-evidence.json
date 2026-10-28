@@ -1,0 +1,279 @@
+{
+  "schema": 1,
+  "purpose": "Focused condition evidence, not complete release acceptance",
+  "source_pending": true,
+  "code_root": "DomainConsole-CSharp",
+  "conditions": [
+    {
+      "condition_id": "114.recovery-tests",
+      "requirement": "Резко завершить собственный тестовый агент на поиске/скачивании/установке/перед записью; проверить grace, живого исполнителя, занятый WUA, backup, идемпотентность и отсутствие второго задания.",
+      "code": [
+        "Agent/InterruptedRecovery46.cs",
+        "Agent/InterruptionSmoke47.cs",
+        "Console/Recovery47Checks.cs"
+      ],
+      "scenario": "Terminate actual isolated agent during Search, Download, Install and BeforeFinalResult; conflict/matching backup; grace and busy WUA; release twice; reconcile and advance plan.",
+      "expected": "No live worker, no blind replay; unknown outcome persisted; exactly one fresh UpdateScan after confirmed release and idle installer.",
+      "evidence": [
+        "InterruptionSmoke47",
+        "VerifyRecoveryPipeline47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "WUA phases are simulated; no physical power loss or actual CBS installation interrupted."
+    },
+    {
+      "condition_id": "114.no-replay",
+      "requirement": "Прерванная установка имеет неизвестный исход; подтверждённое освобождение, свежие факты и однократный поиск предшествуют допустимому продолжению. Не повторять установку с сохранённого процента.",
+      "code": [
+        "Agent/InterruptedRecovery46.cs",
+        "Agent/InterruptionSmoke47.cs",
+        "Console/Recovery47Checks.cs"
+      ],
+      "scenario": "Terminate actual isolated agent during Search, Download, Install and BeforeFinalResult; conflict/matching backup; grace and busy WUA; release twice; reconcile and advance plan.",
+      "expected": "No live worker, no blind replay; unknown outcome persisted; exactly one fresh UpdateScan after confirmed release and idle installer.",
+      "evidence": [
+        "InterruptionSmoke47",
+        "VerifyRecoveryPipeline47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "WUA phases are simulated; no physical power loss or actual CBS installation interrupted."
+    },
+    {
+      "condition_id": "117.targets",
+      "requirement": "Отдельные/отмеченные/все цели подтверждаются и фиксируются до первого await, включая endpoint и параметры; смена выбора/профиля не перенаправляет очистку.",
+      "code": [
+        "Console/CollectorTools43.cs",
+        "Console/Release46Checks.cs"
+      ],
+      "scenario": "Freeze two selected endpoints, mutate second target address and clear original selection.",
+      "expected": "Both confirmed endpoints retained with original addresses.",
+      "evidence": [
+        "VerifyRelease46 cleanupTargets47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": ""
+    },
+    {
+      "condition_id": "118.generation",
+      "requirement": "Очередь и непосредственно исполнение проверяют поколение/отмену; старый ответ/ожидание не возобновляет выключенный опрос.",
+      "code": [
+        "Console/PollingControl43.cs",
+        "Console/CollectorRepair47.cs",
+        "Console/ClientStatus28.cs"
+      ],
+      "scenario": "OFF cancels read generation; ON must not revive it. Delayed collector success after cancellation or address/identity/auth/TLS changes, including a change during follow-up refresh. Delayed status success and failure after identity change.",
+      "expected": "No old response marks current endpoint successful/failed or applies reboot flags; no cancelled repair refresh/publish.",
+      "evidence": [
+        "VerifyPause43",
+        "VerifyCollectorCompletion47",
+        "VerifyObsoleteRead47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "These assertions cover result application and read entry; startup OFF has a separate process test."
+    },
+    {
+      "condition_id": "119.order",
+      "requirement": "Файлы stdout/stderr отображаются последовательно по номеру шага, без скрытого ограничения последними 80 строками.",
+      "code": [
+        "Console/RemoteData34.cs",
+        "Console/MainWindow.xaml.cs"
+      ],
+      "scenario": "Read 40 numbered stdout files and step-2.err; render all steps with repeated ordinary lines.",
+      "expected": "step-2 precedes step-10; step-40 and intermediate stderr remain; repeated ordinary lines retained.",
+      "evidence": [
+        "Windows workflow: Verify bounded polling and malformed snapshot recovery",
+        "VerifyRelease46 output47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": ""
+    },
+    {
+      "condition_id": "119.no-overwrite",
+      "requirement": "Новые данные не стирают предыдущие шаги и повторяющиеся обычные строки.",
+      "code": [
+        "Console/RemoteData34.cs",
+        "Console/MainWindow.xaml.cs"
+      ],
+      "scenario": "Read 40 numbered stdout files and step-2.err; render all steps with repeated ordinary lines.",
+      "expected": "step-2 precedes step-10; step-40 and intermediate stderr remain; repeated ordinary lines retained.",
+      "evidence": [
+        "Windows workflow: Verify bounded polling and malformed snapshot recovery",
+        "VerifyRelease46 output47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": ""
+    },
+    {
+      "condition_id": "119.limits",
+      "requirement": "Ограничение чтения 1 МиБ обозначено; полные исходные файлы доступны в журнале/архиве.",
+      "code": [
+        "Console/RemoteData34.cs",
+        "Console/MainWindow.xaml.cs"
+      ],
+      "scenario": "Read a 1,200,000-byte first output file; inspect structured Files and rendered result.",
+      "expected": "1 MiB truncation notice is present in structured output and display; source files not modified.",
+      "evidence": [
+        "Windows workflow: Verify bounded polling and malformed snapshot recovery",
+        "VerifyRelease46 output47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "The source archive export is tested separately by LocalSmoke; this fixture verifies visibility of the limit."
+    },
+    {
+      "condition_id": "120.process-domain",
+      "requirement": "0xFFFF0000 трактуется как фактический код процесса, не автоматически HRESULT WUA/повреждение кэша.",
+      "code": [
+        "Shared/ExecutionDiagnosis.cs",
+        "Console/Release46Checks.cs",
+        "Agent/Program.cs"
+      ],
+      "scenario": "Distinguish -65536 before and after script-start marker; known managed-shell stderr versus empty unknown stderr; execute PowerShell exit -65536.",
+      "expected": "Original process code and stderr preserved; 80070570 only when present in evidence; no invented Windows Update diagnosis.",
+      "evidence": [
+        "VerifyRelease46 diagnosed47",
+        "Agent VerifyOutput ps-exit47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "Generic handling verified; the specific cache-cleanup incident still requires logs of that exact job."
+    },
+    {
+      "condition_id": "120.startup",
+      "requirement": "Сохраняются stderr, команда и маркер начала: различаются отказ запуска оболочки и ошибка внутри команды; исходный системный код не теряется.",
+      "code": [
+        "Shared/ExecutionDiagnosis.cs",
+        "Console/Release46Checks.cs",
+        "Agent/Program.cs"
+      ],
+      "scenario": "Distinguish -65536 before and after script-start marker; known managed-shell stderr versus empty unknown stderr; execute PowerShell exit -65536.",
+      "expected": "Original process code and stderr preserved; 80070570 only when present in evidence; no invented Windows Update diagnosis.",
+      "evidence": [
+        "VerifyRelease46 diagnosed47",
+        "Agent VerifyOutput ps-exit47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "Generic handling verified; the specific cache-cleanup incident still requires logs of that exact job."
+    },
+    {
+      "condition_id": "121.definition",
+      "requirement": "0x80071160 / -2147020448 / Win32 4448 соответствует ERROR_WOF_FILE_RESOURCE_TABLE_CORRUPT из Microsoft SDK.",
+      "code": [
+        "docs/error-reference/cards.tsv",
+        "docs/error-reference/test_reference.py",
+        "Console/Release45Checks.cs"
+      ],
+      "scenario": "Lookup signed HRESULT and Win32 4448, validate symbol/card, checksums and namespace behavior; check WPF error reference lookup.",
+      "expected": "ERROR_WOF_FILE_RESOURCE_TABLE_CORRUPT; no automatic repair based on code; matching catalog hashes and card.",
+      "evidence": [
+        "ReferenceTests.test_wof_file_corruption",
+        "ReferenceTests.test_integrity_and_coverage",
+        "VerifyRelease45 wof"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "Local Python checks passed; final Windows artifact lookup must match exact run."
+    },
+    {
+      "condition_id": "121.context",
+      "requirement": "Не выдумывать повреждённый файл и не разрешать сброс кэша/WinSxS по одному коду; предложить поиск исходной ошибки и пути.",
+      "code": [
+        "docs/error-reference/cards.tsv",
+        "docs/error-reference/test_reference.py",
+        "Console/Release45Checks.cs"
+      ],
+      "scenario": "Lookup signed HRESULT and Win32 4448, validate symbol/card, checksums and namespace behavior; check WPF error reference lookup.",
+      "expected": "ERROR_WOF_FILE_RESOURCE_TABLE_CORRUPT; no automatic repair based on code; matching catalog hashes and card.",
+      "evidence": [
+        "ReferenceTests.test_wof_file_corruption",
+        "ReferenceTests.test_integrity_and_coverage",
+        "VerifyRelease45 wof"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "Local Python checks passed; final Windows artifact lookup must match exact run."
+    },
+    {
+      "condition_id": "121.data",
+      "requirement": "Карточка, индексы, справочник и контрольные суммы согласованы; детерминированная пересборка и namespace/signed lookup проверены.",
+      "code": [
+        "docs/error-reference/cards.tsv",
+        "docs/error-reference/test_reference.py",
+        "Console/Release45Checks.cs"
+      ],
+      "scenario": "Lookup signed HRESULT and Win32 4448, validate symbol/card, checksums and namespace behavior; check WPF error reference lookup.",
+      "expected": "ERROR_WOF_FILE_RESOURCE_TABLE_CORRUPT; no automatic repair based on code; matching catalog hashes and card.",
+      "evidence": [
+        "ReferenceTests.test_wof_file_corruption",
+        "ReferenceTests.test_integrity_and_coverage",
+        "VerifyRelease45 wof"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "Local Python checks passed; final Windows artifact lookup must match exact run."
+    },
+    {
+      "condition_id": "122.freeze",
+      "requirement": "Подтверждение фиксирует цели и параметры до асинхронной подготовки.",
+      "code": [
+        "Console/Submission47.cs",
+        "Console/Submission47Checks.cs",
+        "Console/Recovery47Checks.cs"
+      ],
+      "scenario": "Start A/B preparation, mutate original targets/options, switch to C and edit/select/scroll; finish B before A; reject third preparation; advance automatic recovery.",
+      "expected": "Original targets/options retained, one queued job per approval, none after refusal; C selection/editor/focus/recent anchor remain; recovery queues one search without navigation.",
+      "evidence": [
+        "VerifySubmission47",
+        "VerifyRecoveryPipeline47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "Controlled asynchronous WPF fixture, not a three-machine physical VPN/reboot test."
+    },
+    {
+      "condition_id": "122.context",
+      "requirement": "Сохраняются редактор, выделение и якорь списка последних при добавлении/перестановке фоновых клиентов.",
+      "code": [
+        "Console/Submission47.cs",
+        "Console/Submission47Checks.cs",
+        "Console/Recovery47Checks.cs"
+      ],
+      "scenario": "Start A/B preparation, mutate original targets/options, switch to C and edit/select/scroll; finish B before A; reject third preparation; advance automatic recovery.",
+      "expected": "Original targets/options retained, one queued job per approval, none after refusal; C selection/editor/focus/recent anchor remain; recovery queues one search without navigation.",
+      "evidence": [
+        "VerifySubmission47",
+        "VerifyRecoveryPipeline47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "Controlled asynchronous WPF fixture, not a three-machine physical VPN/reboot test."
+    },
+    {
+      "condition_id": "122.no-new-work",
+      "requirement": "Исправление навигации не отменяет/повторяет задание и не создаёт дополнительных опросов/исполнителей.",
+      "code": [
+        "Console/Submission47.cs",
+        "Console/Submission47Checks.cs",
+        "Console/Recovery47Checks.cs"
+      ],
+      "scenario": "Start A/B preparation, mutate original targets/options, switch to C and edit/select/scroll; finish B before A; reject third preparation; advance automatic recovery.",
+      "expected": "Original targets/options retained, one queued job per approval, none after refusal; C selection/editor/focus/recent anchor remain; recovery queues one search without navigation.",
+      "evidence": [
+        "VerifySubmission47",
+        "VerifyRecoveryPipeline47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "Controlled asynchronous WPF fixture, not a three-machine physical VPN/reboot test."
+    },
+    {
+      "condition_id": "122.matrix",
+      "requirement": "A/B/C завершаются в обратном порядке при редактировании C; проверить пакет, отказ допуска и автоматическое продолжение.",
+      "code": [
+        "Console/Submission47.cs",
+        "Console/Submission47Checks.cs",
+        "Console/Recovery47Checks.cs"
+      ],
+      "scenario": "Start A/B preparation, mutate original targets/options, switch to C and edit/select/scroll; finish B before A; reject third preparation; advance automatic recovery.",
+      "expected": "Original targets/options retained, one queued job per approval, none after refusal; C selection/editor/focus/recent anchor remain; recovery queues one search without navigation.",
+      "evidence": [
+        "VerifySubmission47",
+        "VerifyRecoveryPipeline47"
+      ],
+      "status": "awaiting_exact_windows_run",
+      "limitation": "Controlled asynchronous WPF fixture, not a three-machine physical VPN/reboot test."
+    }
+  ]
+}
