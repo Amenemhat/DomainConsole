@@ -51,7 +51,7 @@
             <RowDefinition x:Name="TreeRow" Height="0.62*"/>
           </Grid.RowDefinitions>
           <Expander x:Name="RecentGroup" Header="Последние в работе" Foreground="{DynamicResource TextPrimary}" IsExpanded="True" Expanded="NavigationGroup_Changed" Collapsed="NavigationGroup_Changed" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
-            <ListBox x:Name="RecentList" ItemsSource="{Binding RecentComputers}" SelectionChanged="Recent_Changed" PreviewMouseLeftButtonDown="Recent_PreviewMouseDown" Background="Transparent" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+            <ListBox x:Name="RecentList" ScrollViewer.CanContentScroll="True" VirtualizingPanel.ScrollUnit="Item" ItemsSource="{Binding RecentComputers}" SelectionChanged="Recent_Changed" PreviewMouseLeftButtonDown="Recent_PreviewMouseDown" Background="Transparent" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
               <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
                   <Setter Property="Padding" Value="2,1"/>
