@@ -8,6 +8,7 @@ public sealed partial class RemoteService {
  static readonly ConcurrentDictionary<string,Lazy<Task<string>>> collectorRepairs47=new();
  static readonly ConcurrentDictionary<string,CancellationTokenSource> snapshotCancellation47=new();
  public Task<string> RepairCollector47(TargetRecord target){
+  if(TransportBudget41.Paused)throw new OperationCanceledException("Опрос выключен; включите его перед восстановлением сборщика.");
   var frozen=ConnectionStore.Capture(target);string key=TransportBudget41.Key(frozen);
   var flight=collectorRepairs47.GetOrAdd(key,_=>new Lazy<Task<string>>(()=>RepairCore47(frozen,key),LazyThreadSafetyMode.ExecutionAndPublication));
   _=flight.Value.ContinueWith(_=>collectorRepairs47.TryRemove(new KeyValuePair<string,Lazy<Task<string>>>(key,flight)),TaskScheduler.Default);

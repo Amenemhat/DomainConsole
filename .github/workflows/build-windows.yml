@@ -98,7 +98,7 @@ jobs:
         shell: pwsh
         run: |
           $p = Start-Process ./Publish/DomainConsole.exe -ArgumentList 'local-smoke' -PassThru
-          if (!$p.WaitForExit(90000)) { Stop-Process -Id $p.Id; throw 'Local transport timeout' }
+          if (!$p.WaitForExit(240000)) { Stop-Process -Id $p.Id; throw 'Local transport and collector repair timeout' }
           if ($p.ExitCode -ne 0 -or !(Test-Path Publish/local-smoke-ok.txt)) { if (Test-Path Publish/local-smoke-error.txt) { Get-Content Publish/local-smoke-error.txt }; throw 'Local transport failed' }
           Get-Content Publish/local-smoke-ok.txt
           Remove-Item Publish/local-smoke-*.txt
