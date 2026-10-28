@@ -22,6 +22,7 @@ public partial class MainWindow {
   var cleanupTargets47=CaptureCollectorTargets47(cleanupRows47);cleanupRows47[1].Target.ConnectionAddress="192.0.2.99";cleanupRows47.Clear();
   if(cleanupTargets47.Count!=2||cleanupTargets47[0].Target.ConnectionAddress!="192.0.2.1"||cleanupTargets47[1].Target.ConnectionAddress!="192.0.2.2")throw new Exception("Confirmed collector cleanup targets changed during sequential work");
   AwaitUi39(VerifyCollectorCompletion47());
+  AwaitUi39(VerifyObsoleteRead47());
   AwaitUi39(VerifySubmission47());
   AwaitUi39(VerifyRecoveryPipeline47());
   string shellError47="Внутренняя ошибка Windows PowerShell. Ошибка 80070570 при загрузке управляемой оболочки Windows PowerShell.";
@@ -83,6 +84,21 @@ public partial class MainWindow {
     if(accepted!=(mode=="success")||published!=(mode=="success"?1:0)||refreshes!=(mode is "success" or "during-refresh"?1:0))throw new Exception("Late collector completion leaked across endpoint or polling generation: "+mode);
    }
   }finally{if(saved==null)ConnectionStore.Profiles.Remove(host);else ConnectionStore.Profiles[host]=saved;}
+ }
+
+ async Task VerifyObsoleteRead47(){
+  const string host="obsolete-read47.fixture.invalid";var row=new ComputerRow(new(){Host=host});
+  ConnectionStore.Profiles.TryGetValue(host,out var saved);
+  try{
+   foreach(var failure in new[]{false,true}){
+    ConnectionStore.Profiles[host]=new(){AuthMode="Current",Address="",Identity="first"};
+    var ready=new TaskCompletionSource<RebootSnapshot>(TaskCreationOptions.RunContinuationsAsynchronously);var entered=new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var pending=ReadClientCore(row,CancellationToken.None,(target,token)=>{entered.SetResult(true);return ready.Task;});
+    await entered.Task;ConnectionStore.Profiles[host].Identity="second";
+    if(failure)ready.SetException(new System.IO.IOException("old endpoint failed"));else ready.SetResult(new(){Required=true,CollectedUtc=DateTimeOffset.UtcNow.ToString("o")});
+    if(await pending!=null||clientConnections.ContainsKey(host)||rebootSnapshots.ContainsKey(host)||statusLimitations.ContainsKey(host))throw new Exception("Obsolete endpoint result or error changed current client state");
+   }
+  }finally{if(saved==null)ConnectionStore.Profiles.Remove(host);else ConnectionStore.Profiles[host]=saved;readOutcome45.Remove(host);statusReads.Remove(host);}
  }
 
 }
