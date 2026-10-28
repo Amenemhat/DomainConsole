@@ -12,6 +12,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
+from acceptance_gate import load_acceptance
 
 API = 'https://api.github.com'
 
@@ -116,6 +117,10 @@ class GitHub:
 
 def main():
     request = validate_request(json.loads(Path('.github/release-request.json').read_text()))
+    # Publication requires an explicit review of the exact artifact, not merely green CI.
+    # Preview remains available for preparing evidence; it cannot publish or close issues.
+    if request['publish']:
+        load_acceptance(request)
     repository = os.environ['GITHUB_REPOSITORY']
     client = GitHub(repository, os.environ['GH_TOKEN'])
     run = client.repo_call(f"/actions/runs/{request['run_id']}")
