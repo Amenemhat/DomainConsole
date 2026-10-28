@@ -20,7 +20,7 @@ function Start-Service($Name){
 }
 function Start-ScheduledTask($TaskName){$script:maintenance++;if($script:case -eq 'MaintenanceMissing'){throw 'fixture maintenance missing'}}
 try {
- foreach($script:case in @('Busy','InvalidRoot','StopFailure','StopWaitTimeout','StartFailure','PrimaryAndRestore','MoveFailure','MaintenanceMissing','Success')){
+ foreach($script:case in @('Busy','InvalidRoot','InvalidFile','StopFailure','StopWaitTimeout','StartFailure','PrimaryAndRestore','MoveFailure','MaintenanceMissing','Success')){
   $env:windir=Join-Path $Root $script:case;$env:ProgramData=Join-Path $env:windir 'ProgramData'
   $download=Join-Path $env:windir 'SoftwareDistribution\Download'
   New-Item $download -ItemType Directory -Force|Out-Null;Set-Content (Join-Path $download 'keep.bin') 'fixture'
@@ -34,14 +34,15 @@ try {
    $elsewhere=Join-Path $env:windir 'outside';New-Item $elsewhere -ItemType Directory|Out-Null;Set-Content (Join-Path $elsewhere 'keep.bin') 'fixture'
    New-Item $download -ItemType Junction -Value $elsewhere|Out-Null
   }
-  if($script:case -eq 'MoveFailure'){Remove-Item $download -Recurse -Force;Set-Content $download 'not a directory'}
-  $lines=New-Object 'System.Collections.Generic.List[string]';$failed=$false;$errorText=''
+  if($script:case -eq 'InvalidFile'){Remove-Item $download -Recurse -Force;Set-Content $download 'not a directory'}
+  if($script:case -eq 'MoveFailure'){$code=$text.Replace('[IO.Directory]::Move($p,$dest)',"throw 'fixture move failure'")}
+  $lines=New-Object 'System.Collections.Generic.List[string]' ;$failed=$false;$errorText=''
   try{& ([ScriptBlock]::Create($code))|ForEach-Object {$lines.Add([string]$_)}}catch{$failed=$true;$errorText=$_.ToString()}
   $output=$lines -join "`n"
   $success=$script:case -in @('Success','MaintenanceMissing')
   if($failed -eq $success){throw "Unexpected result: $script:case; $errorText"}
   if(!$success -and ($output.Contains('Кэш сброшен') -or $script:maintenance)){throw "False cache success/cleanup launch: $script:case"}
-  if($script:case -in @('Busy','InvalidRoot') -and ($script:stops.Count -or $script:starts.Count)){throw "Validation failure changed services: $script:case"}
+  if($script:case -in @('Busy','InvalidRoot','InvalidFile') -and ($script:stops.Count -or $script:starts.Count)){throw "Validation failure changed services: $script:case"}
   if($script:case -in @('StopFailure','StopWaitTimeout','PrimaryAndRestore') -and ($script:starts.Contains('cryptsvc') -or $script:states.cryptsvc -ne 'Stopped')){throw 'Untouched service changed after early stop failure'}
   if($script:case -in @('StopFailure','StopWaitTimeout','MoveFailure') -and @($script:starts|Where-Object {$script:states[$_] -ne 'Running'}).Count){throw "Restoration skipped: $script:case"}
   if($script:case -eq 'PrimaryAndRestore' -and (!$errorText.Contains('fixture primary stop failure') -or !$output.Contains('fixture restore failure'))){throw 'Restoration replaced primary failure'}

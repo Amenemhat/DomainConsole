@@ -23,7 +23,7 @@ function Register-OldCache34([string]$path){
 }
 
 try {
- foreach($p in $paths){$currentPath=$p;if(Test-Path -LiteralPath $p){if((Get-Item -LiteralPath $p -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Корневой путь кэша является ссылкой'}}}
+ foreach($p in $paths){$currentPath=$p;if(Test-Path -LiteralPath $p){$entry=Get-Item -LiteralPath $p -Force;if(!$entry.PSIsContainer){throw 'Путь кэша не является каталогом'};if($entry.Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Корневой путь кэша является ссылкой'}}}
  $stage='Остановка служб';$currentPath=''
  foreach($name in $services){$currentPath=$name;$restoreServices.Add($name);Stop-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(20))}
  foreach($p in $paths){$stage='Изоляция старого кэша';$currentPath=$p
