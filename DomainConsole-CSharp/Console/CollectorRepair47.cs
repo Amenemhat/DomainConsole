@@ -19,7 +19,7 @@ public sealed partial class RemoteService {
   using var deadline=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);deadline.CancelAfter(TimeSpan.FromSeconds(150));
   try{
   if(snapshotCancellation47.TryGetValue(key,out var oldCancel)){try{oldCancel.Cancel();}catch(ObjectDisposedException){}}
-  if(snapshotFlights42.TryGetValue(key,out var old)&&old.IsValueCreated){try{await old.Value.WaitAsync(TimeSpan.FromSeconds(15),deadline.Token);}catch(TimeoutException){throw new IOException("Прежнее подключение ещё не завершено. Второй сборщик не запущен; повторите после освобождения подключения.");}catch(OperationCanceledException) when(!deadline.IsCancellationRequested){}catch(PollWait42){} }
+  if(snapshotFlights42.TryGetValue(key,out var old)&&old.IsValueCreated){try{await old.Value.WaitAsync(TimeSpan.FromSeconds(15),deadline.Token);}catch(TimeoutException){throw new IOException("Прежнее подключение ещё не завершено. Второй сборщик не запущен; повторите после освобождения подключения.");}catch(OperationCanceledException) when(!deadline.IsCancellationRequested){}catch(PollWait42){}catch(Exception) when(old.Value.IsCompleted&&!deadline.IsCancellationRequested){} }
   async Task Execute(bool enable){
    while(true){deadline.Token.ThrowIfCancellationRequested();try{await RemoveCollector43(target,enable,deadline.Token);return;}
     catch(PollWait42 busy) when(busy.Kind=="Busy"){await Task.Delay(2000,deadline.Token);}

@@ -18,7 +18,7 @@ public sealed partial class RemoteService {
  public static string SnapshotScript42(string mode="Get",string? reboot=null,string? activity=null,string? supervisor=null){
   string collect=supervisor??Resource42("collector.ps1"),r=Worker42("Reboot",reboot??RebootStateScript),a=Worker42("Activity",activity??LiveUpdateScript);
   string Hash(string v)=>Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(v))).ToLowerInvariant();
-  string package=JsonSerializer.Serialize(new{Version=43,Protocol=1,Collector=Hash(collect),Reboot=Hash(r),Activity=Hash(a)});
+  string package=JsonSerializer.Serialize(new{Version=47,Protocol=1,Collector=Hash(collect),Reboot=Hash(r),Activity=Hash(a)});
   return Resource42("admission.ps1").Replace("@@MODE@@",mode).Replace("@@PACKAGE@@","("+PowerShellBridge.Literal(package)+"|ConvertFrom-Json)").Replace("@@COLLECTOR@@",PowerShellBridge.Literal(collect)).Replace("@@REBOOT@@",PowerShellBridge.Literal(r)).Replace("@@ACTIVITY@@",PowerShellBridge.Literal(a));
  }
 

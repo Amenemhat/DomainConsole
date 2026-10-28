@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)]$Session,[Parameter(Mandatory)][string]$Fixture)
+﻿param([Parameter(Mandatory)]$Session,[Parameter(Mandatory)][string]$Fixture)
 $ErrorActionPreference='Stop'
 function Run([string]$file){$code=[IO.File]::ReadAllText((Join-Path $Fixture $file));Invoke-Command -Session $Session -ScriptBlock {param($s);& ([ScriptBlock]::Create($s))} -ArgumentList $code -ErrorAction Stop|ConvertFrom-Json}
 foreach($file in @('collector43-remove.ps1','collector43-enable.ps1')){$t=$null;$e=$null;$null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $Fixture $file),[ref]$t,[ref]$e);if($e){throw ($e|Out-String)}}
@@ -22,6 +22,12 @@ try{
 # Future package must not be downgraded by this console.
 $manifest=Join-Path $path 'package43.json';$old=[IO.File]::ReadAllText($manifest)
 try{$p=$old|ConvertFrom-Json;$p.Version=99;$p|ConvertTo-Json|Set-Content $manifest -Encoding UTF8;if((Run 'probe42-Get.ps1').Status -ne 'Blocked'){throw 'Newer collector downgraded'}}finally{[IO.File]::WriteAllText($manifest,$old)}
+# A 0.43 package request must not roll a 0.47 collector back.
+if(($old|ConvertFrom-Json).Version -ne 47){throw 'Collector package revision was not advanced'}
+$legacy=[IO.File]::ReadAllText((Join-Path $Fixture 'probe42-Get.ps1')).Replace('"Version":47','"Version":43')
+$beforeLegacy=Get-FileHash (Join-Path $path 'collect.ps1')
+$legacyResult=Invoke-Command -Session $Session -ScriptBlock {param($s);& ([ScriptBlock]::Create($s))} -ArgumentList $legacy -ErrorAction Stop|ConvertFrom-Json
+if($legacyResult.Status -ne 'Blocked' -or (Get-FileHash (Join-Path $path 'collect.ps1')).Hash -ne $beforeLegacy.Hash){throw 'Older package request changed newer collector'}
 # Stop and remove a real unresponsive read-only supervisor; preserve unrelated job data.
 $sentinel=Join-Path (Split-Path $path) ('fixture-preserve43-'+[Guid]::NewGuid().ToString('N'));New-Item $sentinel -ItemType Directory|Out-Null;Set-Content (Join-Path $sentinel 'status.json') 'do not remove'
 try{

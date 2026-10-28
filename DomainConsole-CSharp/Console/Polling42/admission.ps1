@@ -36,7 +36,7 @@ try{
  $installed=Read-Json 'package43.json'
  if($mode -eq 'Inspect'){@{Status='Inspected';Reason=$(if($differences.Count){'Конфигурация отличается: '+($differences -join '; ')}elseif(!$task){'Задача сборщика не установлена'}else{'Конфигурация задачи проверена'});TaskPresent=[bool]$task;ExpectedTask=@{Actions=1;Execute=$exe;Arguments=$arguments;PrincipalSid='S-1-5-18';MultipleInstances='IgnoreNew';ExecutionTimeLimitSeconds=60;CompatibleLegacyLimitSeconds=40};ActualTask=$(if($task){@{Actions=@($task.Actions).Count;Execute=[string]$task.Actions[0].Execute;Arguments=[string]$task.Actions[0].Arguments;Principal=[string]$task.Principal.UserId;PrincipalSid=$sid;MultipleInstances=[string]$task.Settings.MultipleInstances;ExecutionTimeLimitSeconds=$seconds}}else{$null});Expected=$package;Installed=$installed;Differences=@($differences);Disabled=(Test-Path -LiteralPath $disabled);TaskState=[string]$task.State;State=(Read-Json 'state.json');Run=(Read-Json 'run.json')}|ConvertTo-Json -Depth 12 -Compress;return}
  if(Test-Path -LiteralPath $disabled){Reply 'Disabled' 'Сборщик удалён или отключён; включите его явно в настройках' 0;return}
- if($installed -and ([int]$installed.Protocol -ne 1 -or [int]$installed.Version -gt 43)){Reply 'Blocked' 'На клиенте более новая или несовместимая версия сборщика; откат не выполнен' 0;return}
+ if($installed -and ([int]$installed.Protocol -ne 1 -or [int]$installed.Version -gt [int]$package.Version)){Reply 'Blocked' 'На клиенте более новая или несовместимая версия сборщика; откат не выполнен' 0;return}
  if($differences.Count){Reply 'Blocked' ('Конфигурация задачи отличается; запуск не выполнен: '+($differences -join '; ')) 0;return}
  $run=Read-Json 'run.json';$snapshot=Read-Json 'result.json';$state=Read-Json 'state.json'
  $running=$task -and $task.State -in @('Running','Queued')
@@ -56,7 +56,7 @@ try{
   if($workers.Count){Reply 'Unknown' 'Процесс предыдущего сборщика ещё существует; требуется сверка' 120;return}
   if($mode -eq 'Inspect'){Reply 'Inspected' $(if($run){[string]$run.Error}else{'Сборщик не запускался этой версией'}) 0 $snapshot;return}
   if($mode -eq 'Stop'){Reply 'Stopped' 'Остановка служебного сборщика подтверждена' 120 $snapshot;return}
-  if($mode -eq 'Reset'){if(!$run){$run=@{Id='';StartedUtc=[DateTime]::UtcNow.ToString('o');Failures=0;NextUtc='';Error='';Accounted=$true;Version=43}};if($run){$run.Failures=0;$run.NextUtc=[DateTime]::UtcNow.AddSeconds(120).ToString('o');$run.Error='Предыдущий сборщик остановлен; повторная проверка после паузы';$run.Accounted=$true;Save-Run};Remove-Item -LiteralPath (Join-Path $path 'result.json') -Force -ErrorAction SilentlyContinue;Reply 'Cooldown' 'Остановка сборщика подтверждена; повторная проверка через 2 минуты' 120;return}
+  if($mode -eq 'Reset'){if(!$run){$run=@{Id='';StartedUtc=[DateTime]::UtcNow.ToString('o');Failures=0;NextUtc='';Error='';Accounted=$true;Version=[int]$package.Version}};if($run){$run.Failures=0;$run.NextUtc=[DateTime]::UtcNow.AddSeconds(120).ToString('o');$run.Error='Предыдущий сборщик остановлен; повторная проверка после паузы';$run.Accounted=$true;Save-Run};Remove-Item -LiteralPath (Join-Path $path 'result.json') -Force -ErrorAction SilentlyContinue;Reply 'Cooldown' 'Остановка сборщика подтверждена; повторная проверка через 2 минуты' 120;return}
   if($mode -eq 'Recover'){
    if($run){$run.Failures=0;$run.NextUtc='';$run.Error='';$run.Accounted=$true;Save-Run}
    Remove-Item -LiteralPath (Join-Path $path 'blocked.flag'),(Join-Path $path 'result.json') -Force -ErrorAction SilentlyContinue
@@ -87,10 +87,10 @@ try{
   foreach($file in @('result.json','state.json','cancel.flag','error.txt','Reboot.json','Activity.json','Reboot.error','Activity.error','Reboot.cancel','Activity.cancel','blocked.flag')){Remove-Item -LiteralPath (Join-Path $path $file) -Force -ErrorAction SilentlyContinue}
   if($run){$history=@(Read-Json 'history.json')|Where-Object {$_};$history=@($history|Select-Object -Last 15)+@($run);ConvertTo-Json -InputObject @($history) -Depth 8 -Compress|Set-Content -LiteralPath (Join-Path $path 'history.json') -Encoding UTF8}
   $failures=if($run){[int]$run.Failures}else{0}
-  $run=@{Id=[Guid]::NewGuid().ToString();StartedUtc=[DateTime]::UtcNow.ToString('o');Failures=$failures;NextUtc='';Error='';Accounted=$false;Version=43};Save-Run
+  $run=@{Id=[Guid]::NewGuid().ToString();StartedUtc=[DateTime]::UtcNow.ToString('o');Failures=$failures;NextUtc='';Error='';Accounted=$false;Version=[int]$package.Version};Save-Run
   $package|ConvertTo-Json -Depth 6 -Compress|Set-Content -LiteralPath (Join-Path $path 'package43.tmp') -Encoding UTF8
   Move-Item -LiteralPath (Join-Path $path 'package43.tmp') -Destination (Join-Path $path 'package43.json') -Force
-  if(!$task -or $seconds -ne 60){$action=New-ScheduledTaskAction -Execute $exe -Argument $arguments;$principal=New-ScheduledTaskPrincipal -UserId SYSTEM -LogonType ServiceAccount -RunLevel Highest;$settings=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::FromSeconds(60)) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries;Register-ScheduledTask -TaskName $name -TaskPath '\' -Action $action -Principal $principal -Settings $settings -Description 'DomainConsole bounded read-only supervisor 43; no update actions' -Force|Out-Null}
+  if(!$task -or $seconds -ne 60){$action=New-ScheduledTaskAction -Execute $exe -Argument $arguments;$principal=New-ScheduledTaskPrincipal -UserId SYSTEM -LogonType ServiceAccount -RunLevel Highest;$settings=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::FromSeconds(60)) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries;Register-ScheduledTask -TaskName $name -TaskPath '\' -Action $action -Principal $principal -Settings $settings -Description 'DomainConsole bounded read-only supervisor 47; no update actions' -Force|Out-Null}
   Start-ScheduledTask -TaskName $name -TaskPath '\'
   Reply 'Busy' 'Сборщик запущен; ожидается результат' 10
  }finally{if($execution){$execution.Dispose()}}
