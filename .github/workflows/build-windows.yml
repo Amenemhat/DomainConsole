@@ -487,6 +487,10 @@ jobs:
             if(!(Get-ChildItem (Split-Path $download) -Filter 'Download.DomainConsoleBackup_*')){throw 'Backup missing'}
             if(@('UsoSvc','wuauserv','bits','cryptsvc'|Where-Object {$states[$_] -ne 'Running'}).Count){throw 'Not all update services were started'}
           } finally {$env:windir=$oldWindir}
+      - name: Verify cache failure boundaries in Windows PowerShell without real service changes
+        shell: powershell
+        run: |
+          & .github/scripts/test_cache47.ps1 -Template (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/cache-cleanup.ps1') -Root (Join-Path $env:RUNNER_TEMP ('DomainConsole-cache47-'+[guid]::NewGuid()))
       - name: Verify automatic queue recovery without touching real services
         shell: pwsh
         run: |

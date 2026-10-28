@@ -15,7 +15,7 @@ $paths=if($mode -eq 'Download'){@(Join-Path $root 'Download')}elseif($mode -eq '
 if($catroot){$paths+=Join-Path $env:windir 'System32\catroot2'}
 $services=@('UsoSvc','wuauserv','bits','cryptsvc')
 $services=@($services|Where-Object {Get-Service $_ -ErrorAction SilentlyContinue})
-$stage='Проверка корневых путей';$currentPath='';$primary=$null;$restoreErrors=@();$detached=@()
+$stage='Проверка корневых путей';$currentPath='';$primary=$null;$restoreErrors=@();$detached=@();$restoreServices=New-Object 'System.Collections.Generic.List[string]'
 function Register-OldCache34([string]$path){
  $manifest=Join-Path $env:ProgramData 'DomainConsoleCSharp\pending-cache-cleanup.jsonl'
  try{[IO.Directory]::CreateDirectory((Split-Path $manifest))|Out-Null;(@{Path=$path;CreatedUtc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json -Compress)|Add-Content -LiteralPath $manifest -Encoding UTF8}
@@ -25,7 +25,7 @@ function Register-OldCache34([string]$path){
 try {
  foreach($p in $paths){$currentPath=$p;if(Test-Path -LiteralPath $p){if((Get-Item -LiteralPath $p -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Корневой путь кэша является ссылкой'}}}
  $stage='Остановка служб';$currentPath=''
- foreach($name in $services){$currentPath=$name;Stop-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(20))}
+ foreach($name in $services){$currentPath=$name;$restoreServices.Add($name);Stop-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(20))}
  foreach($p in $paths){$stage='Изоляция старого кэша';$currentPath=$p
   if(Test-Path -LiteralPath $p){
    $suffix=if($backup){'.DomainConsoleBackup_'}else{'.DomainConsolePendingDelete_'}
@@ -45,7 +45,7 @@ try {
  'Позиция: '+$_.InvocationInfo.PositionMessage
  if($_.Exception.InnerException){'Вложенная ошибка: '+$_.Exception.InnerException.ToString()}
 } finally {
- foreach($name in $services){try{Start-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus('Running',[TimeSpan]::FromSeconds(20))}catch{$restoreErrors+=$name+': '+$_.Exception.Message}}
+ foreach($name in $restoreServices){try{Start-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus('Running',[TimeSpan]::FromSeconds(20))}catch{$restoreErrors+=$name+': '+$_.Exception.Message}}
 }
 
 if($primary){if($restoreErrors.Count){'Дополнительный сбой восстановления служб: '+($restoreErrors -join '; ')};throw $primary}
