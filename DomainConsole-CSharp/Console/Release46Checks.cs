@@ -18,6 +18,9 @@ public partial class MainWindow {
   if(StopPolicy47.For(stopJob47,stopState47).Immediate)throw new Exception("Old executor exposed WUA cancel");
   stopState47.Step=0;
   if(StopPolicy47.For(stopJob47,stopState47)!=new StopPolicy47(false,false,false,false)||StopPolicy47.For(null,stopState47).Force)throw new Exception("Unknown step inferred from future updates");
+  var cleanupRows47=new List<ComputerRow>{new(new TargetRecord{Host="first.cleanup.invalid",ConnectionSnapshot=true,ConnectionAddress="192.0.2.1"}),new(new TargetRecord{Host="second.cleanup.invalid",ConnectionSnapshot=true,ConnectionAddress="192.0.2.2"})};
+  var cleanupTargets47=CaptureCollectorTargets47(cleanupRows47);cleanupRows47[1].Target.ConnectionAddress="192.0.2.99";cleanupRows47.Clear();
+  if(cleanupTargets47.Count!=2||cleanupTargets47[0].Target.ConnectionAddress!="192.0.2.1"||cleanupTargets47[1].Target.ConnectionAddress!="192.0.2.2")throw new Exception("Confirmed collector cleanup targets changed during sequential work");
   AwaitUi39(VerifySubmission47());
   AwaitUi39(VerifyRecoveryPipeline47());
   string shellError47="Внутренняя ошибка Windows PowerShell. Ошибка 80070570 при загрузке управляемой оболочки Windows PowerShell.";
