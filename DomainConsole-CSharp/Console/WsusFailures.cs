@@ -63,7 +63,8 @@ public static class WsusFailurePresentation {
 public partial class MainWindow {
  readonly Dictionary<string,string> wsusFailureDetails=new(StringComparer.OrdinalIgnoreCase);
  readonly HashSet<string> failureReading=new(StringComparer.OrdinalIgnoreCase);
- async Task ExplainServerFailures(ComputerRow row,WsusReport report){
+ async Task ExplainServerFailures(ComputerRow row,WsusReport report,Func<WsusSettings,string,List<WsusFailedUpdate>,Task<WsusEventReply>>? events47=null,Func<TargetRecord,List<WsusFailedUpdate>,Task<string>>? history47=null){
+  var target47=ConnectionStore.Capture(row.Target);var current47=ReportObservationCurrent47(target47,report);if(!current47())return;
   if(report.FailedCount<=0){wsusFailureDetails.Remove(row.Host);report.FailureContext="";report.FailureSummary="";if(IsCurrent(row))ShowCurrent();return;}
   if(!failureReading.Add(row.Host))return;
   try{
@@ -72,8 +73,8 @@ public partial class MainWindow {
    if(report.FailureDetailsError.Length>0)lines.Add("Список обновлений неполный: "+report.FailureDetailsError);
    var history=new List<ClientUpdateHistory>();
    if(report.FailedUpdates.Count>0){
-    try{var reply=await remote.WsusFailureEvents(settings,ConnectionStore.WsusName(row.Host),report.FailedUpdates);foreach(var u in report.FailedUpdates)u.Events=reply.Events.Where(e=>e.UpdateId.Equals(u.Id,StringComparison.OrdinalIgnoreCase)).ToList();if(reply.Error.Length>0)lines.Add("События WSUS недоступны: "+reply.Error);if(reply.Truncated)lines.Add("История событий WSUS ограничена 300 записями за 14 дней.");}catch(Exception ex){lines.Add("События WSUS недоступны: "+ex.Message);}
-    try{var reply=JsonSerializer.Deserialize<FailureHistoryReply>(await remote.FailureHistory(row.Target,report.FailedUpdates),Store.Options);history=reply?.History??new();if(reply!=null&&reply.Total>reply.Limit)lines.Add("Проверено последних записей клиентской истории: "+reply.Limit+" из "+reply.Total+".");}catch(Exception ex){lines.Add("Клиентская история недоступна: "+ex.Message);}
+    try{var reply=await (events47??remote.WsusFailureEvents)(settings,ConnectionStore.WsusName(row.Host),report.FailedUpdates);if(!current47())return;foreach(var u in report.FailedUpdates)u.Events=reply.Events.Where(e=>e.UpdateId.Equals(u.Id,StringComparison.OrdinalIgnoreCase)).ToList();if(reply.Error.Length>0)lines.Add("События WSUS недоступны: "+reply.Error);if(reply.Truncated)lines.Add("История событий WSUS ограничена 300 записями за 14 дней.");}catch(Exception ex){if(!current47())return;lines.Add("События WSUS недоступны: "+ex.Message);}
+    try{var reply=JsonSerializer.Deserialize<FailureHistoryReply>(await (history47??remote.FailureHistory)(target47,report.FailedUpdates),Store.Options);if(!current47())return;history=reply?.History??new();if(reply!=null&&reply.Total>reply.Limit)lines.Add("Проверено последних записей клиентской истории: "+reply.Limit+" из "+reply.Total+".");}catch(Exception ex){if(!current47())return;lines.Add("Клиентская история недоступна: "+ex.Message);}
     foreach(var update in report.FailedUpdates){update.Detail=WsusFailurePresentation.Describe(update,history,RebootReason(row).Length>0);lines.Add(update.Detail);}
    }else lines.Add("WSUS сообщает ошибки, но список обновлений недоступен. Причина не установлена.");
    if(!reportCache.TryGetValue(row.Host,out var cached)||!ReferenceEquals(cached.Report,report)||cached.Server!=server||server!=OverviewServer)return;
