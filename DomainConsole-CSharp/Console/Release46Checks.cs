@@ -55,6 +55,9 @@ public partial class MainWindow {
    if(next47.Steps.Single().Kind!="UpdateScan"||!plan47.Install||plan47.RecoveryCheck47)throw new Exception("Interrupted installation replayed instead of a fresh search");
    FinishPlan44(interrupted47.Targets[0].Host);History.Remove(next47);
   }finally{maintenancePlans.Remove(interrupted47.Targets[0].Host);SaveMaintenance();}
+  var collectorRow47=Current();repairingCollectors47.Add(collectorRow47.Host);
+  try{RefreshCollector44(collectorRow47.Host);if(CollectorRepair47.IsEnabled||PollReset44.IsEnabled)throw new Exception("Collector reset and reinstall allow competing UI recovery actions");}
+  finally{repairingCollectors47.Remove(collectorRow47.Host);RefreshCollector44(collectorRow47.Host);}
   if(EventFilter47.Items.Count!=4||CollectorRepair47==null)throw new Exception("Collector repair/history filter controls absent");
   var error47=new ClientEvent31{Kind="Error"};var warning47=new ClientEvent31{Kind="Warning"};var success47=new ClientEvent31{Kind="Success"};
   if(!EventMatches47(error47,1)||!EventMatches47(warning47,1)||EventMatches47(success47,1)||EventMatches47(error47,3)||EventMatches47(warning47,2)||!EventMatches47(success47,0))throw new Exception("History filters lose or include wrong event kinds");
