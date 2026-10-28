@@ -39,6 +39,13 @@ jobs:
           New-Item Publish/Agent -ItemType Directory -Force | Out-Null
           Copy-Item DomainConsole-CSharp/Agent/bin/Release/net462/DomainConsole.Agent.exe Publish/Agent/
           Copy-Item DomainConsole-CSharp/README.txt Publish/README-source.txt
+      - name: Verify recovery after killing the agent process
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'DomainConsole-interruption47'
+          & ./Publish/Agent/DomainConsole.Agent.exe interruption-smoke47 $root
+          if ($LASTEXITCODE -ne 0) { throw 'Abrupt agent termination recovery failed' }
+          "DOMAINCONSOLE_INTERRUPTION47=$root" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
       - name: Verify window and history after restart
         shell: pwsh
         run: |

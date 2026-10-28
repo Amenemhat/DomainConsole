@@ -1,6 +1,13 @@
 using System;
 namespace DomainConsole.Shared {
  public static class ExecutionDiagnosis {
+  public static bool PowerShellShellLoadFailure47(string text)=>System.Text.RegularExpressions.Regex.IsMatch(text??"",@"(?is)(?:ошибка\s+[0-9a-fx]+\s+при загрузке управляемой оболочки Windows PowerShell|error\s+[0-9a-fx]+\s+(?:occurred\s+)?(?:while loading|loading) (?:the )?managed Windows PowerShell)");
+  public static string PowerShellProcessFailure47(int exit,bool entered,string stderr,string prefix){
+   bool shell=!entered&&PowerShellShellLoadFailure47(stderr);
+   string phase=shell?"Не удалось запустить оболочку Windows PowerShell; команда не выполнялась":entered?"PowerShell завершился без итогового результата команды":"PowerShell не подтвердил начало выполнения команды";
+   string explanation=shell&&System.Text.RegularExpressions.Regex.IsMatch(stderr??"",@"(?i)\b(?:0x)?80070570\b")?" Внутренняя ошибка 0x80070570: файл или каталог повреждён и нечитаем; конкретный файл этим сообщением не указан. Проверьте запуск PowerShell и системные журналы клиента.":"";
+   return phase+". Код процесса: "+Code(exit)+"."+explanation+" Это не подтверждение повреждения кэша. Подробности: "+prefix+".err и "+prefix+".command.txt."+(string.IsNullOrWhiteSpace(stderr)?" Системное сообщение отсутствует.":Environment.NewLine+stderr);
+  }
   public static bool MemoryError(string text)=>System.Text.RegularExpressions.Regex.IsMatch(text??"",@"(?i)8007000e|800705aa|800705af|файл.*подкач|paging file.*small");
   public static string ExplainWin32(int code)=>Explain(code==0?0:unchecked((int)(0x80070000u|(unchecked((uint)code)&0xffffu))));
   public static string Code(int code)=>code+" (0x"+unchecked((uint)code).ToString("X8")+")";

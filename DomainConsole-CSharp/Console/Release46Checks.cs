@@ -5,6 +5,27 @@ namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease46(){
   AwaitUi39(VerifySubmission47());
+  string shellError47="Внутренняя ошибка Windows PowerShell. Ошибка 80070570 при загрузке управляемой оболочки Windows PowerShell.";
+  string diagnosed47=ExecutionDiagnosis.PowerShellProcessFailure47(-65536,false,shellError47,"step-1");
+  if(!diagnosed47.Contains("команда не выполнялась")||!diagnosed47.Contains("0x80070570")||!diagnosed47.Contains(shellError47)||ResultPresentation36.BriefFailure(diagnosed47)!="PowerShell не запускается · 0x80070570")throw new Exception("PowerShell startup failure lost original cause");
+  if(ExecutionDiagnosis.PowerShellProcessFailure47(-65536,true,shellError47,"step-1").Contains("команда не выполнялась"))throw new Exception("Script stderr mistaken for shell startup failure");
+  if(ExecutionDiagnosis.PowerShellProcessFailure47(-65536,false,"","step-1").Contains("0x80070570"))throw new Exception("Unknown exit assigned invented cause");
+  var killRoot47=Environment.GetEnvironmentVariable("DOMAINCONSOLE_INTERRUPTION47");
+  if(!string.IsNullOrEmpty(killRoot47)){
+   var killed47=System.Text.Json.JsonSerializer.Deserialize<List<RemoteState>>(System.IO.File.ReadAllText(System.IO.Path.Combine(killRoot47,"recovered-states47.json")))!;
+   if(killed47.Count!=4)throw new Exception("Abrupt-process results missing");
+   foreach(var state47 in killed47){
+    var fixture47=new RemoteJob{Targets=new(){new(){Host="killed47.fixture.invalid"}}};BeginMaintenance(fixture47);
+    try{var data47=new PollResult{AgentAlive=false,TaskState="Missing",BootUtc=DateTimeOffset.UtcNow.AddDays(-1).ToString("o"),State=state47};
+     ReconcilePlan44(fixture47.Targets[0].Host,fixture47.Id,data47);var plan47=maintenancePlans[fixture47.Targets[0].Host];
+     if(!plan47.RecoveryCheck47||plan47.Done)throw new Exception("Killed same-boot worker did not schedule reconciliation");
+     plan47.JobId="";plan47.PlanId37="";QueueMaintenanceJob(plan47,fixture47.Targets[0]);var next47=History.First(j=>j.Id==plan47.JobId);
+     if(next47.Steps.Single().Kind!="UpdateScan")throw new Exception("Killed worker resumed installation directly");
+     FinishPlan44(fixture47.Targets[0].Host);History.Remove(next47);
+    }finally{maintenancePlans.Remove(fixture47.Targets[0].Host);SaveMaintenance();}
+   }
+  }
+
   var interrupted47=new RemoteJob{Targets=new(){new(){Host="restart47.fixture.invalid"}}};BeginMaintenance(interrupted47);
   try{var data47=new PollResult{AgentAlive=false,TaskState="Ready",BootUtc=DateTimeOffset.UtcNow.AddMinutes(-5).ToString("o"),State=new(){Status="InterventionRequired",HasUpdateSteps=true,Started=DateTimeOffset.UtcNow.AddHours(-1).ToString("o")}};
    ReconcilePlan44(interrupted47.Targets[0].Host,interrupted47.Id,data47);

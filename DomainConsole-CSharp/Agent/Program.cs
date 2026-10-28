@@ -54,9 +54,8 @@ namespace DomainConsole.Agent {
    var exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),@"WindowsPowerShell\v1.0\powershell.exe");
    int exit47=Run(exe,"-NoLogo -NoProfile -NonInteractive -EncodedCommand "+Convert.ToBase64String(Encoding.Unicode.GetBytes(loader)),prefix,diagnosticTimeout);
    if(exit47!=0&&!File.Exists(FilePath(prefix+".failure.txt"))){
-    string phase47=File.Exists(FilePath(prefix+".powershell-started.txt"))?"PowerShell завершился без итогового результата команды":"PowerShell не подтвердил начало выполнения команды";
     string detail47="";if(File.Exists(FilePath(prefix+".err"))){using(var source47=new FileStream(FilePath(prefix+".err"),FileMode.Open,FileAccess.Read,FileShare.ReadWrite)){source47.Seek(Math.Max(0,source47.Length-8192),SeekOrigin.Begin);using(var reader47=new StreamReader(source47,Encoding.UTF8))detail47=reader47.ReadToEnd();}}
-    File.WriteAllText(FilePath(prefix+".failure.txt"),phase47+". Код процесса: "+ExecutionDiagnosis.Code(exit47)+". Это не подтверждение повреждения кэша. Подробности: "+prefix+".err и "+prefix+".command.txt."+(detail47.Length>0?Environment.NewLine+detail47:" Системное сообщение отсутствует."));
+    File.WriteAllText(FilePath(prefix+".failure.txt"),ExecutionDiagnosis.PowerShellProcessFailure47(exit47,File.Exists(FilePath(prefix+".powershell-started.txt")),detail47,prefix));
    }
    return exit47;
   }
@@ -144,6 +143,8 @@ namespace DomainConsole.Agent {
    if(args.Length==2&&args[0]=="stop-fixture"){Console.CancelKeyPress+=(s,e)=>e.Cancel=args[1]=="ignore";Console.WriteLine("READY");Thread.Sleep(60000);return 0;}
    if(args.Length==1&&args[0]=="command-stop-smoke")return CommandStopSmoke();
    if(args.Length==1&&args[0]=="emit-encoding-fixture"){EmitEncodingFixture();return 0;}
+   if(args.Length==2&&args[0]=="interruption-smoke47")return InterruptionSmoke47(args[1]);
+   if(args.Length==2&&args[0]=="interruption-worker47")return InterruptionWorker47(args[1]);
    if(args.Length==2&&args[0]=="update-smoke")return UpdateSmoke(args[1]);
    if(args.Length==2&&args[0]=="cleanup-smoke")return ClientCleanup.Smoke(args[1]);
    if(args.Length==2&&args[0]=="cache-smoke34")return CacheCleanup31.Smoke34(args[1]);
