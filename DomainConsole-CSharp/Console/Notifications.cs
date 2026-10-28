@@ -20,8 +20,13 @@ public partial class MainWindow {
  }
  void ShowToastDetails47(object sender,RoutedEventArgs e){if(ToastInfo47.ToolTip is ToolTip tip){tip.PlacementTarget=ToastInfo47;tip.IsOpen=true;}}
  void HideToast(object? sender,EventArgs e){toastTimer?.Stop();if(ToastInfo47?.ToolTip is ToolTip tip)tip.IsOpen=false;Toast.Visibility=Visibility.Collapsed;}
- void VerifyToastPlacement47(){
-  ArrangeToast47(null,EventArgs.Empty);UpdateLayout();
+ void VerifyToastPlacement47(bool updateWindow=true){
+  ArrangeToast47(null,EventArgs.Empty);
+  if(updateWindow)UpdateLayout();
+  else { // Offscreen fixture: updating Window layout would restore its on-screen size.
+   Toast.Measure(new Size(Toast.Width,Toast.Height));
+   Toast.Arrange(new Rect(Canvas.GetLeft(Toast),Canvas.GetTop(Toast),Toast.Width,Toast.Height));
+  }
   var bounds=new Rect(Toast.TranslatePoint(new Point(),ToastLayer47),new Size(Toast.ActualWidth,Toast.ActualHeight));
   if(HeaderOccupied47().Any(r=>r.IntersectsWith(bounds)))throw new Exception("Notification overlaps client header facts/actions");
   if(bounds.Top<0||bounds.Bottom>CompactHeader32.ActualHeight||bounds.Left<0||bounds.Right>CompactHeader32.ActualWidth)throw new Exception("Notification escapes fixed header area");
