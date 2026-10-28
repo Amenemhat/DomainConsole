@@ -9,7 +9,7 @@ namespace DomainConsole;
 public sealed class LogViewer:UserControl {
  public static readonly DependencyProperty TextProperty=DependencyProperty.Register(nameof(Text),typeof(string),typeof(LogViewer),new PropertyMetadata("",(d,e)=>((LogViewer)d).ScheduleRender()));
  public string Text {get=>(string)GetValue(TextProperty);set=>SetValue(TextProperty,value);}
- public static readonly DependencyProperty CaptionProperty=DependencyProperty.Register(nameof(Caption),typeof(string),typeof(LogViewer),new PropertyMetadata("",(d,e)=>{var v=(LogViewer)d;v.caption.Text=(string)e.NewValue;v.caption.SetResourceReference(TextBlock.ForegroundProperty,v.caption.Text.Contains("WSUS")?"SuccessText":"InfoText");v.caption.Visibility=string.IsNullOrEmpty((string)e.NewValue)?Visibility.Collapsed:Visibility.Visible;v.arrangeToolbar33?.Invoke();}));
+ public static readonly DependencyProperty CaptionProperty=DependencyProperty.Register(nameof(Caption),typeof(string),typeof(LogViewer),new PropertyMetadata("",(d,e)=>{var v=(LogViewer)d;v.caption.Text=(string)e.NewValue;v.caption.SetResourceReference(TextBlock.ForegroundProperty,v.caption.Text.Contains("WSUS")?"SuccessText":"InfoText");v.caption.Visibility=string.IsNullOrEmpty((string)e.NewValue)?Visibility.Collapsed:Visibility.Visible;v.ApplyHeader47();v.arrangeToolbar33?.Invoke();}));
  public string Caption{get=>(string)GetValue(CaptionProperty);set=>SetValue(CaptionProperty,value);}
  readonly TextBlock caption=new(){FontSize=14,FontWeight=FontWeights.SemiBold,VerticalAlignment=VerticalAlignment.Center,Margin=new(0,0,8,0),Visibility=Visibility.Collapsed};
  readonly StackPanel groups=new();readonly ScrollViewer scroll=new(){VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled};
@@ -17,14 +17,16 @@ public sealed class LogViewer:UserControl {
  readonly List<Button> commandOnlyButtons31=new();readonly Dictionary<string,bool> expanded=new();readonly List<(Run Run,RichTextBox Box,Expander Group)> hits=new();int currentHit=-1;string? clearedText;bool renderPending;
  Action? arrangeToolbar33;
  string shellMode="";public string ShellMode {get=>shellMode;set{if(shellMode==value)return;shellMode=value;foreach(var button in commandOnlyButtons31)button.Visibility=value=="Report"?Visibility.Collapsed:Visibility.Visible;ApplyPalette32();arrangeToolbar33?.Invoke();}}Brush BodyBrush=>Theme.Brush(shellMode=="Report"?"ReportSurface":"EditorSurface");
- void ApplyPalette32(){groups.Background=BodyBrush;scroll.Background=BodyBrush;scroll.Resources.Remove("ScrollTrack");scroll.Resources.Remove("ScrollThumb");ScheduleRender();}
+ readonly Grid header47=new();
+ void ApplyHeader47(){header47.SetResourceReference(Panel.BackgroundProperty,Caption.Contains("WSUS")?"ReportHeader47":"OperationHeader47");}
+ void ApplyPalette32(){ApplyHeader47();groups.Background=BodyBrush;scroll.Background=BodyBrush;scroll.Resources.Remove("ScrollTrack");scroll.Resources.Remove("ScrollThumb");ScheduleRender();}
 
  public bool OmitMain46 {get;set;}
  public bool AutoScroll {get;set;}
  public event EventHandler? SystemLogsRequested;public event EventHandler? CopyRequested;public event EventHandler? DownloadRequested;public event EventHandler? LocalEventsRequested40;public event EventHandler? RefreshRequested;
  public LogViewer(){
   SetResourceReference(ForegroundProperty,"TextPrimary");
-  var dock=new DockPanel();var tools=new Grid();
+  var dock=new DockPanel();var tools=header47;tools.Margin=new(0,0,0,4);
   foreach(var width in new[]{GridLength.Auto,new GridLength(1,GridUnitType.Star),GridLength.Auto,GridLength.Auto})tools.ColumnDefinitions.Add(new(){Width=width});
   tools.RowDefinitions.Add(new(){Height=GridLength.Auto});tools.RowDefinitions.Add(new(){Height=GridLength.Auto});
   caption.MaxWidth=170;caption.TextTrimming=TextTrimming.CharacterEllipsis;caption.SetBinding(ToolTipProperty,new System.Windows.Data.Binding(nameof(Caption)){Source=this});tools.Children.Add(caption);

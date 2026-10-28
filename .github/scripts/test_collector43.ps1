@@ -5,6 +5,11 @@ foreach($file in @('collector43-remove.ps1','collector43-enable.ps1')){$t=$null;
 $task='DomainConsoleCSharp-Snapshot41';$path=Join-Path $env:ProgramData 'DomainConsoleCSharp\Snapshot41'
 # Existing real SYSTEM collector installed by previous suite. Native SID / translated name accepted.
 $inspect=Run 'probe42-Inspect.ps1';if($inspect.Status -ne 'Inspected' -or $inspect.Differences.Count){throw 'Inspection failed for real SYSTEM principal'}
+$beforeInspect=@(Get-ChildItem $path -File|ForEach-Object { $_.Name+':'+$_.LastWriteTimeUtc.Ticks+':'+$_.Length }) -join '|'
+$aclBefore=(Get-Acl $path).Sddl
+$null=Run 'probe42-Inspect.ps1'
+$afterInspect=@(Get-ChildItem $path -File|ForEach-Object { $_.Name+':'+$_.LastWriteTimeUtc.Ticks+':'+$_.Length }) -join '|'
+if($beforeInspect -ne $afterInspect -or $aclBefore -ne (Get-Acl $path).Sddl){throw 'Read-only inspection changed collector files or ACL'}
 $original=Export-ScheduledTask $task
 try{
  $wrong=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::FromSeconds(90)) -MultipleInstances IgnoreNew

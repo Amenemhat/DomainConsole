@@ -71,9 +71,9 @@ public partial class MainWindow {
  void RefreshEventHistory32(string host){RefreshCollector44(host);
   var all=AllEvents32(host);EventHeader46.Text="История событий · "+all.Count;
   var selected36=EventList32.SelectedItems.Cast<ClientEvent31>().Select(EventGroupKey36).ToHashSet();
-  var items=all.Where(x=>EventErrors32.IsChecked!=true||x.Kind is "Error" or "Warning").ToList();
+  var items=all.Where(x=>EventMatches47(x,EventFilter47.SelectedIndex)).ToList();
   foreach(var item in items)item.Selected36=selected36.Contains(EventGroupKey36(item));
-  var key=host+EventErrors32.IsChecked+string.Join("|",items.Select(x=>EventKey32(x)+"|"+x.Repeats));bool reset=historyReset35||historyHost35!=host;if(key==historyEventsKey32&&!reset)return;
+  var key=host+EventFilter47.SelectedIndex+string.Join("|",items.Select(x=>EventKey32(x)+"|"+x.Repeats));bool reset=historyReset35||historyHost35!=host;if(key==historyEventsKey32&&!reset)return;
  var viewer=Visual33<ScrollViewer>(EventList32).FirstOrDefault();
   if(!reset&&viewer?.VerticalOffset>1){historyPending35=items;var previous=EventList32.Items.Cast<ClientEvent31>().Select(EventKey32).ToHashSet();int count=items.Count(x=>!previous.Contains(EventKey32(x)));NewEvents35.Content=count>0?"Новых событий: "+count+" ↑":"События обновлены ↑";NewEvents35.Visibility=Visibility.Visible;return;}
   historyEventsKey32=key;historyHost35=host;historyReset35=false;historyPending35=null;NewEvents35.Visibility=Visibility.Collapsed;EventList32.ItemsSource=items;foreach(var item in items.Where(x=>x.Selected36))EventList32.SelectedItems.Add(item);EventSelection36_Changed(this,new RoutedEventArgs());
@@ -93,7 +93,7 @@ public partial class MainWindow {
  void CopyEventOne36_Click(object sender,RoutedEventArgs e){if(EventList32.SelectedItem is ClientEvent31 item)Clipboard.SetText(EventCopyText36(new[]{item}));}
  void CopyEventSelected36_Click(object sender,RoutedEventArgs e){var items=EventList32.SelectedItems.Cast<ClientEvent31>().ToList();if(items.Count>0)Clipboard.SetText(EventCopyText36(items));}
  async void CopyEventAll36_Click(object sender,RoutedEventArgs e)=>await Guard(CopyAllEvents39);
- async Task CopyAllEvents39(){if(ComputerGrid.SelectedItem is ComputerRow row){bool errors=EventErrors32.IsChecked==true;if(eventWrites39.TryGetValue(row.Host,out var write))await write;await LoadEvents39(row.Host);Clipboard.SetText(EventCopyText36(AllEvents32(row.Host).Where(x=>!errors||x.Kind is "Error" or "Warning")));}}
+ async Task CopyAllEvents39(){if(ComputerGrid.SelectedItem is ComputerRow row){int filter47=EventFilter47.SelectedIndex;if(eventWrites39.TryGetValue(row.Host,out var write))await write;await LoadEvents39(row.Host);Clipboard.SetText(EventCopyText36(AllEvents32(row.Host).Where(x=>EventMatches47(x,filter47))));}}
  void CopyEvents32_Click(object sender,RoutedEventArgs e){var selected=EventList32.SelectedItems.Cast<ClientEvent31>().ToList();if(selected.Count>0)Clipboard.SetText(EventCopyText36(selected));else CopyEventAll36_Click(sender,e);}
 }
 

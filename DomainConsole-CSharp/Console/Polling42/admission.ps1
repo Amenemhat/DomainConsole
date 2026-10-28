@@ -4,18 +4,20 @@ $package=@@PACKAGE@@
 $disabled=Join-Path $env:ProgramData 'DomainConsoleCSharp\collector-disabled43.json'
 $path=Join-Path $env:ProgramData 'DomainConsoleCSharp\Snapshot41'
 foreach($check in @((Split-Path $path),$path)){if((Test-Path -LiteralPath $check) -and ((Get-Item -LiteralPath $check -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Ссылка вместо каталога сборщика; запуск запрещён'}}
+if($mode -ne 'Inspect'){
 New-Item -Path $path -ItemType Directory -Force|Out-Null
 $acl=New-Object Security.AccessControl.DirectorySecurity
 $acl.SetAccessRuleProtection($true,$false)
 foreach($sid in @('S-1-5-18','S-1-5-32-544')){$acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule((New-Object Security.Principal.SecurityIdentifier($sid)),'FullControl','ContainerInherit,ObjectInherit','None','Allow')))}
 Set-Acl -LiteralPath $path -AclObject $acl
+}
 function Read-Json($name){$f=Join-Path $path $name;if(Test-Path -LiteralPath $f){if((Get-Item -LiteralPath $f -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Ссылка вместо данных сборщика'};if((Get-Item -LiteralPath $f).Length -gt 1048576){throw 'Снимок служебного опроса превышает 1 МБ'};try{return Get-Content -LiteralPath $f -Raw -Encoding UTF8|ConvertFrom-Json -ErrorAction Stop}catch{return $null}};return $null}
 function Reply($status,$reason,$seconds,$snapshot=$null){@{Status=$status;Reason=$reason;RetrySeconds=$seconds;Snapshot=$snapshot;Run=$run;State=(Read-Json 'state.json')}|ConvertTo-Json -Depth 28 -Compress}
 function Save-Run{$run|ConvertTo-Json -Depth 6 -Compress|Set-Content -LiteralPath (Join-Path $path 'run.tmp') -Encoding UTF8;Move-Item -LiteralPath (Join-Path $path 'run.tmp') -Destination (Join-Path $path 'run.json') -Force}
 $lock=$null;$run=$null
 try{
- try{$lock=[IO.File]::Open((Join-Path $path 'admission.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}catch{Reply 'Busy' 'Проверку уже координирует другая консоль' 10;return}
- foreach($file in @(Get-ChildItem -LiteralPath $path -Force)){if($file.Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Ссылка внутри каталога сборщика; запуск запрещён'}}
+ if($mode -ne 'Inspect'){try{$lock=[IO.File]::Open((Join-Path $path 'admission.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}catch{Reply 'Busy' 'Проверку уже координирует другая консоль' 10;return}}
+ foreach($file in @(Get-ChildItem -LiteralPath $path -Force -ErrorAction SilentlyContinue)){if($file.Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Ссылка внутри каталога сборщика; запуск запрещён'}}
  $name='DomainConsoleCSharp-Snapshot41';$exe=Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe';$script=Join-Path $path 'collect.ps1'
  $arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$script+'"'
  $task=Get-ScheduledTask -TaskName $name -TaskPath '\' -ErrorAction SilentlyContinue
@@ -73,6 +75,8 @@ try{
   $upgrade=(!$installed -or $installed.Version -ne $package.Version -or $installed.Collector -ne $package.Collector -or $installed.Reboot -ne $package.Reboot -or $installed.Activity -ne $package.Activity)
   foreach($part in @(@('collect.ps1','Collector'),@('Reboot.ps1','Reboot'),@('Activity.ps1','Activity'))){$file=Join-Path $path $part[0];if(!(Test-Path -LiteralPath $file)){$upgrade=$true;continue};if((Get-Item -LiteralPath $file -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){Reply 'Blocked' 'Ссылка вместо файла сборщика; автоматическая замена запрещена' 0;return};$bytes=[Text.Encoding]::UTF8.GetBytes([IO.File]::ReadAllText($file));$sha=[Security.Cryptography.SHA256]::Create();try{$hash=([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()};if($hash -ne [string]$package.($part[1])){$upgrade=$true}}
   if(($mode -eq 'Read' -or !$upgrade) -and $snapshot -and $run -and $snapshot.Id -eq $run.Id){$at=[DateTime]::Parse($snapshot.CollectedUtc).ToUniversalTime();if(([DateTime]::UtcNow-$at).TotalSeconds -ge 0 -and ([DateTime]::UtcNow-$at).TotalSeconds -lt 45){Reply 'Ready' '' 0 $snapshot;return}}
+  # A new verified package gets one bounded migration, never a repeated retry of the same failed package.
+  if($upgrade -and $mode -eq 'Get' -and $run){$run.Failures=0;$run.NextUtc='';$run.Error='';Save-Run}
   if($run -and [int]$run.Failures -ge 3){Reply 'Blocked' ('Три сбоя сборщика подряд: '+$run.Error) 0;return}
   if($run -and $run.NextUtc){$left=([DateTime]::Parse($run.NextUtc).ToUniversalTime()-[DateTime]::UtcNow).TotalSeconds;if($left -gt 0){Reply 'Cooldown' $run.Error ([int][Math]::Ceiling($left));return}}
   if($mode -eq 'Read'){Reply 'Idle' 'Предыдущий запуск завершён; новый не создавался' 0;return}
