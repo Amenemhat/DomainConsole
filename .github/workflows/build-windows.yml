@@ -817,7 +817,7 @@ jobs:
            if($result.Files.Count -ne 0){throw 'Background poll needlessly reads full output'}
            [IO.File]::WriteAllText((Join-Path $p 'step-1.updates.json'),'.')
            $result=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
-           if($result.State.Status -ne 'Running' -or !$result.Output.Contains('DC_DATA_ERROR|step-1.updates.json|')){throw 'Optional snapshot failure erased primary status'}
+           if($result.State.Status -ne 'Running' -or !$result.Output.Contains('DC_DATA_ERROR|step-1.updates.json|') -or !(($result.ReadWarnings47 -join ';').Contains('DC_DATA_ERROR|step-1.updates.json|'))){throw 'Optional snapshot failure erased primary status'}
            [IO.File]::WriteAllText($status,(@{Id='wrong';Status='Completed'}|ConvertTo-Json));$rejected=$false
            try{& ([ScriptBlock]::Create($body))}catch{$rejected=$_.Exception.Message.Contains('DC_DATA_ERROR|status.json|')}
            if(!$rejected){throw 'Snapshot from wrong job accepted'}

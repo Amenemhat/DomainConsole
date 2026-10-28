@@ -35,7 +35,7 @@ if($client){$quality=@(Get-ChildItem -LiteralPath $p -Filter '*.quality.log');$e
 $boot='';try{$boot=(Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).LastBootUpTime.ToUniversalTime().ToString('o')}catch{}
 $plan=$null;try{$plan=Read-DcJson34 (Join-Path $p 'reboot-plan.json')}catch{$warnings+=$_.Exception.Message}
 if($warnings.Count){$text+=([Environment]::NewLine+'Ограничения дополнительного чтения: '+($warnings -join '; '))}
-@{RebootPlan=$plan;ClientUtc=[DateTime]::UtcNow.ToString('o');BootUtc=$boot;Client=$client;State=$state;Output=$text;Files=@($files);Updates=@($updates);TaskState=$taskState;TaskResult=$taskResult;AgentAlive=$alive}|ConvertTo-Json -Depth 25 -Compress
+@{ReadWarnings47=@($warnings);RebootPlan=$plan;ClientUtc=[DateTime]::UtcNow.ToString('o');BootUtc=$boot;Client=$client;State=$state;Output=$text;Files=@($files);Updates=@($updates);TaskState=$taskState;TaskResult=$taskResult;AgentAlive=$alive}|ConvertTo-Json -Depth 25 -Compress
 """;
 }
 public partial class MainWindow {
