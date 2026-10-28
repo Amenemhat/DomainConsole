@@ -14,7 +14,9 @@ public sealed partial class RemoteService {
   return flight.Value;
  }
  async Task<string> RepairCore47(TargetRecord target,string key){
+  using var read=PollingControl43.Read();
   using var deadline=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);deadline.CancelAfter(TimeSpan.FromSeconds(150));
+  try{
   if(snapshotCancellation47.TryGetValue(key,out var oldCancel)){try{oldCancel.Cancel();}catch(ObjectDisposedException){}}
   if(snapshotFlights42.TryGetValue(key,out var old)&&old.IsValueCreated){try{await old.Value.WaitAsync(TimeSpan.FromSeconds(15),deadline.Token);}catch(TimeoutException){throw new IOException("Прежнее подключение ещё не завершено. Второй сборщик не запущен; повторите после освобождения подключения.");}catch(OperationCanceledException) when(!deadline.IsCancellationRequested){}catch(PollWait42){} }
   async Task Execute(bool enable){
@@ -28,6 +30,7 @@ public sealed partial class RemoteService {
   using var parsed=JsonDocument.Parse(bundle);
   if(!parsed.RootElement.GetProperty("Healthy").GetBoolean()||!parsed.RootElement.GetProperty("Complete").GetBoolean())throw new IOException("Сборщик установлен, но полный свежий результат не получен.");
   return "Сборщик восстановлен · свежий снимок получен: "+Display36.Date(parsed.RootElement.GetProperty("CollectedUtc").GetString()??"");
+  }catch(Exception ex){snapshotCache42.TryRemove(key,out _);snapshotWait42[key]=new PollWait42("RepairFailed","Восстановление не подтверждено: "+MainWindow.ShortConnectionError(ex.Message),0);throw;}
  }
 }
 public partial class MainWindow {
