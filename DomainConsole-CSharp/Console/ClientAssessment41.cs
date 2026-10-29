@@ -5,8 +5,8 @@ using System.Windows.Controls;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed record ClientAssessment41(string Kind,string Title,string Details){
- public string Tone=>Kind switch{"Success"=>"Success","Error" or "SyncError"=>"Error","Needed" or "Working"=>"Info",_=>"Warning"};
- public string Glyph=>Kind switch{"Success"=>"Success","Error" or "SyncError"=>"Error","Reboot"=>"Reboot","Working"=>"Working","Needed"=>"Info",_=>"Warning"};
+ public string Tone=>Kind switch{"Success"=>"Success","Error" or "SyncError"=>"Error","Needed" or "Working"=>"Info","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Warning"};
+ public string Glyph=>Kind switch{"Success"=>"Success","Error" or "SyncError"=>"Error","Reboot"=>"Reboot","Working"=>"Working","Needed"=>"Info","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Warning"};
 }
 public static class ClientReadiness41 {
  public static string IPv4(string value){if(!IPAddress.TryParse(value,out var ip))return "";if(ip.IsIPv4MappedToIPv6)ip=ip.MapToIPv4();return ip.AddressFamily==AddressFamily.InterNetwork?ip.ToString():"";}

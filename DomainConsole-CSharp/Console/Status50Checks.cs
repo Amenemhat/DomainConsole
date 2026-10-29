@@ -17,6 +17,7 @@ public partial class MainWindow {
    Check(result.Kind==expected,flag+"/"+server+"/active="+active);
    var criteria=Criteria45.Build(result,report,reboot,done,active,scan,0,false,"",boot);
    Check(criteria.Count==3&&criteria[2].Action==(!active&&!reboot.Fresh&&result.Kind!="Success"),"action "+flag+"/"+server+"/"+active);
+   Check(criteria[2].Glyph==(flag=="required"?"Reboot":flag=="clear"?"Success":flag=="old-clear"?"Stale":"Unknown"),"reboot glyph "+flag+"/"+server+"/"+active);
    Check(report.LastReportedUtc==(server=="old"?now.AddDays(-3).ToString("o"):now.AddMinutes(-1).ToString("o")),"report provenance "+flag+"/"+server+"/"+active);
   }
   foreach(string stamp in new[]{"invalid",now.AddHours(1).ToString("o")}){
