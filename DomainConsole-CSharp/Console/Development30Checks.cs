@@ -31,7 +31,7 @@ public partial class MainWindow {
     Task<RebootSnapshot?> Probe(ComputerRow _)=>Task.FromResult<RebootSnapshot?>(new(){BootUtc=boot,CollectedUtc=now,Required=false});
     Task<LiveUpdateActivity> Ready(TargetRecord _)=>Task.FromResult(new LiveUpdateActivity());
     AdvanceMaintenance(Probe,Ready,false).GetAwaiter().GetResult();if(flow.Phase!="После перезагрузки: ожидание готовности")throw new Exception("Confirmed return did not advance scenario");flow.Next=default;flow.ReadyAfter=default;
-    AdvanceMaintenance(Probe,Ready,false).GetAwaiter().GetResult();if(flow.JobId==update.Id||History.First(j=>j.Id==flow.JobId).Steps.Single().Kind!="Updates")throw new Exception("Full scenario failed to continue without selected computer");
+    AdvanceMaintenance(Probe,Ready,false).GetAwaiter().GetResult();if(flow.JobId==update.Id||History.First(j=>j.Id==flow.JobId).Steps.Single().Kind!="UpdateScan")throw new Exception("Full scenario failed to continue without selected computer");
     var follow=History.First(j=>j.Id==flow.JobId).Targets.Single();follow.Status="Completed";follow.State=new(){Status="Completed",Ended=now,UpdatesRemaining=0};flow.Next=default;
     AdvanceMaintenance(Probe,Ready,false).GetAwaiter().GetResult();if(!flow.Done||flow.Phase!="Обслуживание завершено")throw new Exception("Scenario loops after successful zero-remaining install");
     flow.Done=false;flow.Next=default;follow.Status="Failed";var count=History.Count;AdvanceMaintenance(Probe,Ready,false).GetAwaiter().GetResult();if(!flow.Done||flow.Phase!="Требуется действие"||History.Count!=count)throw new Exception("Failed scenario repeats installation");

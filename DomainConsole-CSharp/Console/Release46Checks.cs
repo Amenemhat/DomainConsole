@@ -28,6 +28,7 @@ public partial class MainWindow {
   AwaitUi39(VerifyObsoleteReportDetails47());
   AwaitUi39(VerifySubmission47());
   AwaitUi39(VerifyRecoveryPipeline47());
+  AwaitUi39(VerifyMaintenance49());
   string shellError47="Внутренняя ошибка Windows PowerShell. Ошибка 80070570 при загрузке управляемой оболочки Windows PowerShell.";
   string diagnosed47=ExecutionDiagnosis.PowerShellProcessFailure47(-65536,false,shellError47,"step-1");
   if(!diagnosed47.Contains("команда не выполнялась")||!diagnosed47.Contains("0x80070570")||!diagnosed47.Contains(shellError47)||ResultPresentation36.BriefFailure(diagnosed47)!="PowerShell не запускается · 0x80070570")throw new Exception("PowerShell startup failure lost original cause");

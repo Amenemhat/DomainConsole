@@ -14,7 +14,7 @@ namespace DomainConsole.Agent {
   [ThreadStatic] static bool controlHeld46;
   static T ControlGate37<T>(Func<T> action){using(var mutex=new Mutex(false,@"Global\DomainConsoleCSharp.Coordination37")){bool owns=false;try{try{owns=mutex.WaitOne(10000);}catch(AbandonedMutexException){owns=true;}if(!owns)throw new TimeoutException("Проверка владельца клиента занята; действие не начато.");bool previous=controlHeld46;controlHeld46=true;try{return action();}finally{controlHeld46=previous;}}finally{if(owns)mutex.ReleaseMutex();}}}
   static bool JobFinished37(string id){
-   Guid guid;if(!Guid.TryParse(id,out guid))return false;var file=Path.Combine(Path.GetDirectoryName(Folder),id,"status.json");if(!File.Exists(file))return false;
+   Guid guid;if(!Guid.TryParse(id,out guid))return false;var file=Path.Combine(Path.GetDirectoryName(Folder),id,"status.json");if(!File.Exists(file)&&!RecoverMissingResult49(file,id))return false;
    RemoteState state;try{state=Json.Deserialize<RemoteState>(File.ReadAllText(file));}catch{return false;}
    if(state!=null&&string.IsNullOrEmpty(state.Ended)&&RecoverInterrupted46(file,state))state=Json.Deserialize<RemoteState>(File.ReadAllText(file));
    if(state==null||string.IsNullOrEmpty(state.Ended)||state.RestoreStatus=="Pending"||state.RestoreStatus=="InterventionRequired"||state.DiagnosticStatus=="Pending"||state.DiagnosticStatus=="Running")return false;

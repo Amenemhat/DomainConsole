@@ -13,6 +13,7 @@ function Register-DcServiceRestore47([string]$name){
  [IO.Directory]::CreateDirectory($dcServiceRecovery47)|Out-Null
  if([IO.File]::GetAttributes($dcServiceRecovery47) -band [IO.FileAttributes]::ReparsePoint){throw 'Каталог восстановления служб является ссылкой'}
  $path=Join-Path $dcServiceRecovery47 ($name+'.pending')
+ if((Test-Path -LiteralPath $path) -and ((Get-Item -LiteralPath $path -Force -ErrorAction Stop).Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Запись восстановления служб является ссылкой'}
  [IO.File]::WriteAllText($path,[DateTime]::UtcNow.ToString('o'))
 }
 function Complete-DcServiceRestore47([string]$name){
@@ -30,6 +31,15 @@ if($catroot){$paths+=Join-Path $env:windir 'System32\catroot2'}
 $services=@('UsoSvc','wuauserv','bits','cryptsvc')
 $services=@($services|Where-Object {Get-Service $_ -ErrorAction SilentlyContinue})
 $stage='Проверка корневых путей';$currentPath='';$primary=$null;$restoreErrors=@();$detached=@();$restoreServices=New-Object 'System.Collections.Generic.List[string]'
+function Assert-DcCachePath49([string]$path){
+ # Validate every existing ancestor: Download can be ordinary while its parent is a junction.
+ for($part=[IO.Path]::GetFullPath($path);$part;$part=[IO.Path]::GetDirectoryName($part)){
+  if(Test-Path -LiteralPath $part){$entry=Get-Item -LiteralPath $part -Force -ErrorAction Stop
+   if(!$entry.PSIsContainer){throw ('Путь кэша не является каталогом: '+$part)}
+   if($entry.Attributes -band [IO.FileAttributes]::ReparsePoint){throw ('Ссылка в пути кэша: '+$part)}
+  }
+ }
+}
 function Register-OldCache34([string]$path){
  $manifest=Join-Path $env:ProgramData 'DomainConsoleCSharp\pending-cache-cleanup.jsonl'
  try{[IO.Directory]::CreateDirectory((Split-Path $manifest))|Out-Null;(@{Path=$path;CreatedUtc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json -Compress)|Add-Content -LiteralPath $manifest -Encoding UTF8}
@@ -37,14 +47,14 @@ function Register-OldCache34([string]$path){
 }
 
 try {
- foreach($p in $paths){$currentPath=$p;if(Test-Path -LiteralPath $p){$entry=Get-Item -LiteralPath $p -Force;if(!$entry.PSIsContainer){throw 'Путь кэша не является каталогом'};if($entry.Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Корневой путь кэша является ссылкой'}}}
+ foreach($p in $paths){$currentPath=$p;Assert-DcCachePath49 $p}
  $stage='Остановка служб';$currentPath=''
  foreach($name in $services){$currentPath=$name;Register-DcServiceRestore47 $name;$restoreServices.Add($name);Stop-Service $name -ErrorAction Stop;(Get-Service $name).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(20))}
- foreach($p in $paths){$stage='Изоляция старого кэша';$currentPath=$p
+ foreach($p in $paths){$stage='Изоляция старого кэша';$currentPath=$p;Assert-DcCachePath49 $p
   if(Test-Path -LiteralPath $p){
    $suffix=if($backup){'.DomainConsoleBackup_'}else{'.DomainConsolePendingDelete_'}
    $dest=$p+$suffix+(Get-Date -Format 'yyyyMMdd_HHmmss')+'_'+[Guid]::NewGuid().ToString('N').Substring(0,6)
-   [IO.Directory]::Move($p,$dest)
+   try{[IO.Directory]::Move($p,$dest)}catch [IO.DirectoryNotFoundException]{if(!(Test-Path -LiteralPath $p) -and !(Test-Path -LiteralPath $dest)){'Каталог исчез до изоляции: '+$p;continue};throw}
    if((Test-Path -LiteralPath $p) -or !(Test-Path -LiteralPath $dest)){throw 'Перенос каталога не подтверждён'}
    $detached+=@{Original=$p;Detached=$dest;Backup=$backup};if(!$backup){Register-OldCache34 $dest}
    if($backup){'Резервная копия: '+$dest}else{'Старый кэш изолирован: '+$dest}
@@ -64,9 +74,11 @@ try {
 
 if($primary){if($restoreErrors.Count){'Дополнительный сбой восстановления служб: '+($restoreErrors -join '; ')};throw $primary}
 if($restoreErrors.Count){throw ('Не восстановлены службы: '+($restoreErrors -join '; '))}
-try{Start-ScheduledTask -TaskName 'DomainConsoleCSharp-Maintenance' -ErrorAction Stop;'Фоновая очистка старых кэшей запущена.'}catch{'WARNING: Кэш сброшен, но запуск фоновой очистки не подтверждён: '+$_.Exception.Message+'; используйте «Удалить старые кэши».'}
+if(@($detached|Where-Object {!$_.Backup}).Count){
+ try{Start-ScheduledTask -TaskName 'DomainConsoleCSharp-Maintenance' -ErrorAction Stop;'Фоновая очистка изолированных кэшей запущена.'}catch{'WARNING: Изоляция кэша выполнена, но запуск фоновой очистки не подтверждён: '+$_.Exception.Message+'; используйте «Удалить старые кэши».'}
+}
 # Logical reset is complete. Removing detached files is a separate, bounded cleanup task.
-'Кэш сброшен; службы запущены. Физическое удаление старых файлов выполняется отдельно и не меняет результат сброса.'
+if($detached.Count){'Кэш сброшен; службы запущены. Резервные копии сохранены; физическое удаление остальных старых файлов выполняется отдельно.'}else{'Каталоги для изоляции отсутствуют; службы запущены. Данные кэша не переносились.'}
 
 """;
 }

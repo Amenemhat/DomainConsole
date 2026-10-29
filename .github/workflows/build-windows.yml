@@ -133,6 +133,25 @@ jobs:
           $value = & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $probe | ConvertFrom-Json
           if (!$value.Complete) { throw 'Native WTS session reader did not complete' }
           Write-Output 'Native session enumeration succeeded; no user identifiers are exported.'
+      - name: Verify structured Russian admission messages in Windows PowerShell 5.1 cultures
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          if($PSVersionTable.PSVersion.Major -ne 5){throw 'Expected Windows PowerShell 5.1'}
+          $expectedOwner=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('0KDQsNCx0L7Rh9Cw0Y8g0LrQvtC90YHQvtC70Yw='))
+          $oldCulture=[Threading.Thread]::CurrentThread.CurrentCulture;$oldUi=[Threading.Thread]::CurrentThread.CurrentUICulture
+          try {
+            foreach($culture in @('ru-RU','en-US')){
+              [Threading.Thread]::CurrentThread.CurrentCulture=[Globalization.CultureInfo]::GetCultureInfo($culture)
+              [Threading.Thread]::CurrentThread.CurrentUICulture=[Globalization.CultureInfo]::GetCultureInfo($culture)
+              $root=Join-Path $env:RUNNER_TEMP ('DomainConsole-coordination37/admission38-'+$culture)
+              $records=@(Get-ChildItem $root -Recurse -Filter admission38.json|ForEach-Object {Get-Content $_.FullName -Raw -Encoding UTF8|ConvertFrom-Json})
+              $foreign=@($records|Where-Object {$_.ReasonCode -eq 'other_console'})
+              if($foreign.Count -ne 1 -or !$foreign[0].Message.Contains($expectedOwner) -or $foreign[0].Message.Contains([char]0xFFFD)){throw ('UTF8 admission message lost in PS5.1; matches='+$foreign.Count+'; reason codes='+($records.ReasonCode -join ','))}
+              if(!($records|Where-Object {$_.Allowed -eq $true})){throw 'Accepted admission missing'}
+              Write-Output ('Verified PS5.1 UTF8 structured admission under '+$culture)
+            }
+          } finally {[Threading.Thread]::CurrentThread.CurrentCulture=$oldCulture;[Threading.Thread]::CurrentThread.CurrentUICulture=$oldUi}
       - name: Verify parallel command and WSUS queues
         shell: pwsh
         run: |
@@ -726,19 +745,26 @@ jobs:
           $text=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/force-services-apply.ps1'))
           $text=[regex]::Replace($text,"(?m)^Add-Type -TypeDefinition .*",'')
           Add-Type 'using System;public static class DcCriticalService { public static bool Critical=false;public static bool IsProcessCritical(IntPtr p,out bool c){c=Critical;return true;} }'
-          $script:kills=0;$script:started=0;$script:wrong=$false;$script:other=$false
-          function Get-Process {param($Id,$ErrorAction) $p=[pscustomobject]@{Handle=[IntPtr]1;Path=(Join-Path $env:windir 'System32/svchost.exe');StartTime=[DateTime]::SpecifyKind([DateTime]'2026-01-01',[DateTimeKind]::Utc)};if($script:wrong){$p.StartTime=$p.StartTime.AddMinutes(1)};$p|Add-Member ScriptMethod Kill {$script:kills++};$p|Add-Member ScriptMethod WaitForExit {param($ms) return $true};$p|Add-Member ScriptMethod Dispose {};return $p}
+          $script:kills=0;$script:started=0;$script:wrong=$false;$script:other=$false;$script:scenario='success'
+          function Get-Process {param($Id,$ErrorAction) if($script:scenario -eq 'missing'){throw 'fixture process missing'};$p=[pscustomobject]@{Handle=[IntPtr]1;Path=(Join-Path $env:windir 'System32/svchost.exe');StartTime=[DateTime]::SpecifyKind([DateTime]'2026-01-01',[DateTimeKind]::Utc)};if($script:wrong){$p.StartTime=$p.StartTime.AddMinutes(1)};if($script:scenario -eq 'path'){$p.Path='C:\fixture\other.exe'};$p|Add-Member ScriptMethod Kill {if($script:scenario -eq 'denied'){throw 'fixture access denied'};$script:kills++};$p|Add-Member ScriptMethod WaitForExit {param($ms) return ($script:scenario -ne 'exit-timeout')};$p|Add-Member ScriptMethod Dispose {};return $p}
           function Get-CimInstance {param($ClassName,$Filter,$ErrorAction) @([pscustomobject]@{Name='bits';State='Running'});if($script:other){[pscustomobject]@{Name='WinRM';State='Running'}}}
-          function Get-Service {param($Name,$ErrorAction) $s=[pscustomobject]@{DependentServices=@()};$s|Add-Member ScriptMethod WaitForStatus {param($state,$wait)};return $s}
-          function Start-Service {param($Name,$ErrorAction) $script:started++}
+          function Get-Service {param($Name,$ErrorAction) $s=[pscustomobject]@{DependentServices=@()};if($script:scenario -eq 'dependencies'){$s.DependentServices=@([pscustomobject]@{Status='Running';ServiceName='fixtureDependent'})};$s|Add-Member ScriptMethod WaitForStatus {param($state,$wait)};return $s}
+          function Start-Service {param($Name,$ErrorAction) $script:started++;if($script:scenario -eq 'restore-failure'){throw 'fixture service start denied'}}
           & ([ScriptBlock]::Create($text))
           if($script:kills -ne 1 -or $script:started -ne 1){throw 'Confirmed fixture did not restore service'}
-          foreach($scenario in @('identity','shared','critical')){
+          foreach($script:scenario in @('identity','shared','critical','missing','path','dependencies','denied')){
             $script:wrong=$scenario -eq 'identity';$script:other=$scenario -eq 'shared';[DcCriticalService]::Critical=$scenario -eq 'critical';$blocked=$false
             try{& ([ScriptBlock]::Create($text))}catch{$blocked=$true}
             if(!$blocked -or $script:kills -ne 1){throw 'Unsafe fixture allowed termination'}
           }
-          Write-Output 'Verified confirmed PID, reused PID, shared host and critical-process guards; no real process killed.'
+          $script:wrong=$false;$script:other=$false;[DcCriticalService]::Critical=$false
+          foreach($script:scenario in @('exit-timeout','restore-failure')){
+            $beforeKill=$script:kills;$beforeStart=$script:started;$blocked=$false
+            try{& ([ScriptBlock]::Create($text))}catch{$blocked=$true;if($script:scenario -eq 'restore-failure' -and !$_.ToString().Contains('fixture service start denied')){throw 'Primary service restoration evidence missing'}}
+            if(!$blocked -or $script:kills -ne $beforeKill+1){throw 'Unconfirmed exit/restore failure was hidden or kill retried'}
+            if($script:scenario -eq 'exit-timeout' -and $script:started -ne $beforeStart){throw 'Restarted service before confirming process exit'}
+          }
+          Write-Output 'Verified PID/time/path/composition/dependency/critical guards, missing process, AccessDenied, unconfirmed exit and restoration failure; no real process killed.'
       - name: Verify guided IP trust check without changing Windows settings
         shell: powershell
         run: |
