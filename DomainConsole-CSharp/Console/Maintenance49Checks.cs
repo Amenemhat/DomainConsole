@@ -6,6 +6,7 @@ public partial class MainWindow {
   bool auto=AutoServiceEnabled,tick=timer.IsEnabled,paused=TransportBudget41.Paused;timer.Stop();
   var row=new ComputerRow(new(){Host="maintenance49.fixture.invalid",Name="Maintenance fixture"});Computers.Add(row);
   try{
+   await VerifyEndpointDiagnostics49();
    PollingControl43.Resume();AutoServiceEnabled=true;
    var candidate=new ServiceProcessCandidate{Pid=99999,CreatedUtc=DateTimeOffset.UtcNow.ToString("o"),Path="fixture",Services=new(){"bits"}};
    if(ForcedServiceSteps36(new[]{candidate,Store.Clone(candidate)}).Count!=1)throw new Exception("Same process was scheduled twice");
@@ -30,6 +31,13 @@ public partial class MainWindow {
     plan.Next=default;await AdvanceMaintenance(Snapshot,_=>throw new Exception("Duplicate readiness call"),false);
     if(queue.Count!=1)throw new Exception("Post-boot search duplicated");
    }
+   var savedWatches49=rebootWatches.ToList();var toggle49=AutoServiceToggle.IsChecked;
+   try{
+    rebootWatches.Clear();rebootWatches[row.Host]=new(){Scan=true,Done=false};rebootWatches[row.Host+".old"]=new(){Scan=true,Done=true};
+    AutoServiceToggle.IsChecked=false;AutoService_Changed(AutoServiceToggle,new System.Windows.RoutedEventArgs());
+    var persisted49=Store.Read("reboot-watches.json",new Dictionary<string,RebootWatch>());
+    if(persisted49.Count!=2||persisted49.Values.Any(w=>w.Scan))throw new Exception("Auto OFF lost reboot cancellation across restart");
+   }finally{rebootWatches.Clear();foreach(var w in savedWatches49)rebootWatches[w.Key]=w.Value;Store.Write("reboot-watches.json",rebootWatches);AutoServiceToggle.IsChecked=toggle49;}
    foreach(string change in new[]{"auto","endpoint","generation","plan","none"}){
     maintenancePlans.Clear();History.Clear();queue.Clear();AutoServiceEnabled=true;PollingControl43.Resume();ConnectionStore.Profiles.Remove(row.Host);
     var target=ConnectionStore.Capture(row.Target);target.Status="Completed";target.State=new(){Status="Completed",Ended=DateTimeOffset.UtcNow.ToString("o"),UpdatesRemaining=1};

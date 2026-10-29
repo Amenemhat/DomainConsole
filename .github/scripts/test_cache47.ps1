@@ -20,7 +20,7 @@ function Start-Service($Name){
 }
 function Start-ScheduledTask($TaskName){$script:maintenance++;if($script:case -eq 'MaintenanceMissing'){throw 'fixture maintenance missing'}}
 try {
- foreach($script:case in @('Busy','InvalidRoot','ParentLink','InvalidFile','JournalLink','StopFailure','StopWaitTimeout','StartFailure','PrimaryAndRestore','MoveFailure','MaintenanceMissing','Success')){
+ foreach($script:case in @('Busy','InvalidRoot','ParentLink','InvalidFile','JournalLink','StopFailure','StopWaitTimeout','StartFailure','PrimaryAndRestore','MoveFailure','Missing','Disappeared','PartialIsolation','MaintenanceMissing','Success')){
   $env:windir=Join-Path $Root $script:case;$env:ProgramData=Join-Path $env:windir 'ProgramData'
   $dcServiceRecovery47=Join-Path $env:windir 'service-recovery'
   $download=Join-Path $env:windir 'SoftwareDistribution\Download'
@@ -48,10 +48,17 @@ try {
    New-Item $dcServiceRecovery47 -ItemType Junction -Value $elsewhere|Out-Null
   }
   if($script:case -eq 'MoveFailure'){$code=$text.Replace('[IO.Directory]::Move($p,$dest)',"throw 'fixture move failure'")}
+  if($script:case -eq 'Missing'){Remove-Item $download -Recurse -Force}
+  if($script:case -eq 'Disappeared'){$code=$text.Replace('[IO.Directory]::Move($p,$dest)',"Remove-Item -LiteralPath `$p -Recurse -Force;[IO.Directory]::Move(`$p,`$dest)")}
+  if($script:case -eq 'PartialIsolation'){
+   $first=Join-Path (Split-Path $download) 'EventCache';$second=Join-Path (Split-Path $download) 'EventCache.v2'
+   New-Item $first,$second -ItemType Directory|Out-Null;Set-Content (Join-Path $first 'event.bin') 'fixture'
+   $code=$text.Replace("$"+"mode='Download'","$"+"mode='Queue'").Replace('$backup=$true','$backup=$false').Replace('[IO.Directory]::Move($p,$dest)',"if(`$p.EndsWith('EventCache.v2')){throw 'fixture second isolation denied'};[IO.Directory]::Move(`$p,`$dest)")
+  }
   $lines=New-Object 'System.Collections.Generic.List[string]' ;$failed=$false;$errorText=''
   try{& ([ScriptBlock]::Create($code))|ForEach-Object {$lines.Add([string]$_)}}catch{$failed=$true;$errorText=$_.ToString()}
   $output=$lines -join "`n"
-  $success=$script:case -in @('Success','MaintenanceMissing')
+  $success=$script:case -in @('Success','MaintenanceMissing','Missing','Disappeared')
   if($failed -eq $success){throw "Unexpected result: $script:case; $errorText"}
   if(!$success -and ($output.Contains('Кэш сброшен') -or $script:maintenance)){throw "False cache success/cleanup launch: $script:case"}
   if($script:case -in @('Busy','InvalidRoot','ParentLink','InvalidFile','JournalLink') -and ($script:stops.Count -or $script:starts.Count)){throw "Validation failure changed services: $script:case"}
@@ -62,6 +69,13 @@ try {
   if($script:case -eq 'MaintenanceMissing' -and (!(Get-ChildItem (Split-Path $download) -Filter 'Download.DomainConsolePendingDelete_*') -or $script:maintenance -ne 1)){throw 'Actual isolated cache was not scheduled for cleanup'}
   if($script:case -eq 'ParentLink' -and !(Test-Path (Join-Path $elsewhere 'Download/keep.bin'))){throw 'Parent junction changed external cache'}
   if($script:case -eq 'MaintenanceMissing' -and !$output.Contains('запуск фоновой очистки не подтверждён')){throw 'Missing cleanup task was hidden'}
+  if($script:case -in @('Missing','Disappeared') -and ($script:maintenance -ne 0 -or $output.Contains('Кэш сброшен'))){throw 'Absent cache reported as isolated or scheduled'}
+  if($script:case -eq 'PartialIsolation'){
+   $manifest=Join-Path $env:ProgramData 'DomainConsoleCSharp/pending-cache-cleanup.jsonl'
+   $entries=@(Get-Content $manifest|ForEach-Object {$_|ConvertFrom-Json})
+   if($entries.Count -ne 1 -or !(Test-Path $entries[0].Path) -or !(Test-Path $second) -or !(Test-Path (Join-Path $download 'keep.bin'))){throw 'Partial isolation lost registration or changed another cache'}
+   if(!$errorText.Contains('fixture second isolation denied')){throw 'Partial isolation lost primary failure'}
+  }
   $pending=@(Get-ChildItem $dcServiceRecovery47 -Filter '*.pending' -ErrorAction SilentlyContinue)
   if($script:case -in @('StartFailure','PrimaryAndRestore')){if($pending.Count -ne 1 -or $pending[0].BaseName -ne 'bits'){throw 'Failed restoration did not retain exactly its intent'}}
   elseif($pending.Count){throw 'Completed/untouched service retains pending intent'}
