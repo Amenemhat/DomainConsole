@@ -88,6 +88,9 @@ public partial class MainWindow {
   Check(RebootHeadline51(watch51,now).EndsWith("01:05"),"51 confirmed reboot countdown");
   Check(RebootHeadline51(watch51,now.AddSeconds(66))=="Ожидается ответ после перезагрузки","51 due time is not reboot success");
   watch51.ReadyAfter=now.AddMinutes(2);Check(RebootHeadline51(watch51,now.AddSeconds(66)).StartsWith("Новая загрузка подтверждена"),"51 returned boot awaits state verification");
+  try{RemoteService.ParseData34<RebootSnapshot>(new string('x',2000),"fixture");throw new Exception("51 malformed data accepted");}catch(RemoteDataException ex51){Check(ex51.SourceLength51==2000&&ex51.Fragment51.Length<=1030&&!ex51.Message.Contains(new string('x',512)),"51 bounded JSON evidence stays out of user-facing message");}
+  var pollEvent51=new ClientEvent31{Operation36="poll42",Kind="Warning",Text="Состояние клиента не обновлено",Details="WinRM fixture: private details"};
+  Check(!EventMatches47(pollEvent51,0)&&pollEvent51.Body38=="Ошибка WinRM/аутентификации","51 routine polling stays in service history with concise transport label");
   string context51=new string('x',90);
   string journal51=CompactJournal31("## Диагностика · попытка 1\n"+context51+"\n\n## Диагностика · попытка 2\n"+context51);
   Check(journal51.Split(context51).Length==3,"51 equal diagnostic text retains separate attempt context");
