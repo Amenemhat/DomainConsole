@@ -8,12 +8,20 @@ public partial class MainWindow {
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-enable.ps1"),RemoteService.RemoveCollectorScript43("Enable"),new UTF8Encoding(true));
   AwaitUi39(VerifyCollectorBatch48());
   AwaitUi39(VerifyPausedCollector48());
+  VerifyCollectorFailures48();
   AwaitUi39(VerifyPause43());
   AwaitUi39(VerifyOverviewCancellation47());
   var current43=Current();current43.SetService43("Чтение состояния задания");CaptureContent38("release43-service",1000,640);current43.SetService43("");
   var row=Current();var old=readyProofs43.GetValueOrDefault(row.Host);CachedWsusReport? cache=null;var now=DateTimeOffset.UtcNow;var reboot=new RebootView40(false,true,now.ToString("o"),Array.Empty<string>(),"");
   try{readyProofs43.Remove(row.Host);var warning=new ClientAssessment41("Warning","Проверка неполная","");if(PreserveReady43(row,warning,false,null,cache,reboot,"").Kind=="Success")throw new Exception("Unknown result became success");PreserveReady43(row,new("Success","Проверено", ""),false,null,cache,reboot,"scan");var held=PreserveReady43(row,new("Stale","Снимок устарел", ""),false,null,cache,reboot with{Fresh=false},"scan");if(held.Kind!="Success")throw new Exception("Clock aging erased successful proof");if(PreserveReady43(row,new("Needed","К установке: 1", ""),false,null,cache,reboot,"scan").Kind!="Needed")throw new Exception("New update hidden by saved green");}
   finally{if(old==null)readyProofs43.Remove(row.Host);else readyProofs43[row.Host]=old;Store.Write("ready-proofs43.json",readyProofs43);}
+ }
+ static void VerifyCollectorFailures48(){
+  foreach(var error in new Exception[]{new System.Text.Json.JsonException("broken"),new KeyNotFoundException("field"),new FormatException("timestamp")}){
+   var wait=RemoteService.CollectorFailure48(error,1);if(wait.Kind!="InvalidResult"||wait.Next!=DateTimeOffset.MaxValue)throw new Exception("Malformed collector response classified as network outage");
+  }
+  var denied=RemoteService.CollectorFailure48(new IOException("0x80070005"),1);if(denied.Kind!="AccessDenied"||denied.Next!=DateTimeOffset.MaxValue)throw new Exception("Access refusal classification lost");
+  foreach(var sample in new[]{(1,120),(2,300),(3,900),(100,900)}){var now=DateTimeOffset.UtcNow;var wait=RemoteService.CollectorFailure48(new TimeoutException("network"),sample.Item1);var delay=(wait.Next-now).TotalSeconds;if(wait.Kind!="Unreachable"||delay<sample.Item2-1||delay>sample.Item2+1)throw new Exception("Network backoff not bounded");}
  }
  async Task VerifyPausedCollector48(){
   bool paused=TransportBudget41.Paused;PollingControl43.Pause();

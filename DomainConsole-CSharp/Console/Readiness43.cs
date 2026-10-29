@@ -8,7 +8,7 @@ public partial class MainWindow {
  readonly HashSet<string> scheduledPoll46=new(StringComparer.OrdinalIgnoreCase);
  Task PollRows43(){
   var generation=PollingControl43.Token;
-  foreach(var row in ActivePollRows().Where(JobPollDue42).ToList()){
+  foreach(var row in ActivePollRows().Where(JobPollDue42).OrderByDescending(IsCurrent).ToList()){
    string key=row.JobId+"|"+row.Host;if(!scheduledPoll46.Add(key))continue;
    _=PollOne46(row,key,generation);
   }
