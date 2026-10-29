@@ -5,6 +5,8 @@ using System.Windows.Controls;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed record ClientAssessment41(string Kind,string Title,string Details){
+ public bool InstallationSucceeded51 {get;init;}
+ public string HeadlineTone51=>InstallationSucceeded51?"Success":Tone;
  public string Tone=>Kind switch{"Success"=>"Success","Error" or "SyncError"=>"Error","Needed" or "Working"=>"Info","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Warning"};
  public string Glyph=>Kind switch{"Success"=>"Success","Error" or "SyncError"=>"Error","Reboot"=>"Reboot","Working"=>"Working","Needed"=>"Info","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Warning"};
 }
@@ -15,8 +17,8 @@ public static class ClientReadiness41 {
   ClientAssessment41 Result(string k,string title,string detail)=>new(k,title,detail+(dates.Length>0?"\n"+dates:""));
   if(active){string concern=report?.FailedCount>0?"Ошибок по отчёту WSUS: "+report.FailedCount:report!=null&&ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"?"Отчёт WSUS устарел":"";if(reboot.Required==true)concern+=(concern.Length>0?"\n":"")+"Требуется перезагрузка";return Result("Working",state?.Stage.Length>0?state.Stage:"Выполняется задание",concern);}
   if(reboot.Required==true){
-   bool installed45=state?.Results.Any(x=>x.Kind=="Updates"&&x.ExitCode==0&&DateTimeOffset.TryParse(x.Ended,out _))==true&&state.InstalledCount38>0;
-   return Result("Reboot",installed45?"Установка успешна · требуется перезагрузка":reboot.Title,reboot.Details+(report?.FailedCount>0?"\nОшибок по сохранённому отчёту WSUS: "+report.FailedCount:"")+(state?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired"?"\nЕсть ошибка задания; подробности в критерии обновлений":""));
+   bool installed45=(state?.Status is "Completed" or "AwaitingReboot" or "RebootScheduled" or "VerifiedAfterReboot")&&state.Results.Any(x=>x.Kind=="Updates"&&x.ExitCode==0&&DateTimeOffset.TryParse(x.Ended,out _))==true&&state.InstalledCount38>0;
+   return Result("Reboot",installed45?"Установка успешна":reboot.Title,reboot.Details+(report?.FailedCount>0?"\nОшибок по сохранённому отчёту WSUS: "+report.FailedCount:"")+(state?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired"?"\nЕсть ошибка задания; подробности в критерии обновлений":"")) with {InstallationSucceeded51=installed45};
   }
   if(report!=null&&Criteria45.Resolved45(report,state)&&state?.Status is "Completed" or "VerifiedAfterReboot")return Result("Warning","Ожидается отчёт WSUS после успешной установки","Прежняя ошибка сопоставлена с успешной установкой того же обновления; серверное подтверждение ещё не получено");
   if(state?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired" or "SubmissionUnknown")return Result("Error","Ошибка · "+ResultPresentation36.BriefFailure(state.Error.Length>0?state.Error:ComputerRow.StatusText(state.Status)),"Проверьте причину в журнале задания"+(reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
