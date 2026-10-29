@@ -29,6 +29,10 @@ public partial class MainWindow {
   Assert51(step.Kind=="PowerShell"&&step.Code==script,"import/roundtrip PS normalization preserves script timestamps and paths");
   string raw="## Вывод команды\n"+script+"\n2026-01-01T23:59:00+03:00\n";
   Assert51(Display36.Text(raw)==raw,"raw command output timestamps are not rewritten");
+  foreach(string cause in new[]{"WUA: HRESULT 0x80070020",@"Запись C:\fixture51\status.json: 0x80070020"}){
+   var card=FailureCard31(new(){State=new(){Status="Failed",Error=cause}});
+   Assert51(card.Contains(cause)&&card.Contains("0x80070020")&&(cause.Contains("status.json")||!card.Contains("status.json")),"sharing violation preserves actual source: "+cause);
+  }
   VerifyOutputMatrix51();
   await VerifyLogDownload51();
   await VerifyRebootFlow51();

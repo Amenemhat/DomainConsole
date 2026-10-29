@@ -6,7 +6,8 @@ using System.Text.RegularExpressions;
 namespace DomainConsole.Shared {
  public static class LogPresentation {
   static string Signature(string line){var s=Regex.Replace(line,@"^\s*\d{4}[-.]\d{2}[-.]\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:\d{2})?\s*","");s=Regex.Replace(s,@"^\d+\s+\d+\s+","");return Regex.Replace(s,@"\b(?:PID|TID)=\d+\s*","").Trim();}
-  public static string PreserveCommandOutput51(string text,Func<string,string> format)=>string.Concat(Regex.Split(text,@"(?m)(?=^## )").Select(part=>(part.StartsWith("## Вывод команды",StringComparison.Ordinal)||part.StartsWith("## Технические подробности · вывод операции",StringComparison.Ordinal))?part:format(part)));
+  public static string PreserveCommandOutput51(string text,Func<string,string> format)=>string.Concat(Regex.Split(text,@"(?m)(?=^## )").Select(part=>(part.StartsWith("## Вывод команды",StringComparison.Ordinal)||part.StartsWith("## Технические подробности · вывод операции",StringComparison.Ordinal))?part:FormatPart51(part,format)));
+  static string FormatPart51(string part,Func<string,string> format){var result=format(part);return part.EndsWith("\n",StringComparison.Ordinal)&&!result.EndsWith("\n",StringComparison.Ordinal)?result+"\n":result;}
   public static string Compact(string text)=>PreserveCommandOutput51(text,CompactCore51);
   static string CompactCore51(string text){
    text=text.Replace("\r\n","\n").Replace("\r","\n");text=Regex.Replace(text,@"(?m)(^[^\n]*\S[^\n]*\n)\s*\n(?=\s*[\p{L}_][\p{L}\p{N}_ ]{0,35}\s*:)","$1");text=CompactEventBlocks(text);var raw=text.Replace("\r\n","\n").Split('\n');int undecoded=raw.Count(line=>line.Contains("No Format Information")||line.Contains("Unknown("));
