@@ -29,17 +29,18 @@ public static class Criteria45 {
   if(reportFailure)updates.Add(new(resolved?"Прежние ошибки сопоставлены с успешной установкой тех же ID и ревизий":afterInstall?"В старом отчёте есть ошибки: "+r!.FailedCount+" · их снятие сервером ещё не подтверждено":"Ошибок по отчёту WSUS: "+r!.FailedCount,resolved||afterInstall?"Warning":"Error",resolved||afterInstall?"Warning":"Error"));
   if(!active&&!ready){if(updates.Any(c=>c.Tone=="Error"))updateTone="Error";else if(updates.Any(c=>c.Tone=="Warning"))updateTone="Warning";}
   string rt=r==null?"Не получен":afterInstall?"До повторной установки · ожидается новый отчёт":Display36.Date(r.LastReportedUtc)+" · "+ReportPresentation35.Age(r.LastReportedUtc);
+  if(reportFailure)rt="Ошибок: "+r!.FailedCount+" · "+rt;
   string reportTone=r?.FailedCount>0&&!resolved&&!afterInstall||(r?.LastSyncResult is "Failed" or "FailedWithErrors")&&!afterInstall?"Error":r==null||afterInstall||beforeBoot45||r.LastSyncResult!="Succeeded"||error.Length>0||saved&&!ready?"Warning":ready?"Success":ReportPresentation35.Tone(r.LastReportedUtc,DateTimeOffset.UtcNow,ReportPresentation35.FreshHours);
   var reports=new List<Check45>{new(r==null?"Клиент на сервере не подтверждён":"Запись клиента на выбранном сервере найдена",r==null?"Warning":"Success",r==null?"Warning":"Success"),new(error.Length>0?"Чтение сервера не удалось · сохранены прежние данные":saved?"Сохранённый снимок сервера":"Данные сервера прочитаны",error.Length>0||saved&&!ready?"Warning":"Success",error.Length>0||saved&&!ready?"Warning":"Success")};
   if(beforeBoot45)reports.Add(new("Отчёт получен до последней загрузки · нужен новый отчёт","Warning","Warning"));
   if(r!=null){reports.Add(new("Отчёт: "+Display36.Date(r.LastReportedUtc)+(afterInstall?" · предшествует установке":""),afterInstall?"Warning":ready?"Success":ReportPresentation35.Tone(r.LastReportedUtc,DateTimeOffset.UtcNow,ReportPresentation35.FreshHours),afterInstall?"Warning":"Info"));reports.Add(new("Последнее соединение с WSUS: "+Display36.Date(r.LastSyncUtc)+" · "+WsusReport.SyncLabel(r.LastSyncResult),r.LastSyncResult=="Succeeded"?"Success":"Warning",r.LastSyncResult=="Succeeded"?"Success":"Warning"));}
   string bt=reboot.Required==true?"Подтверждена · "+reboot.Sources.Length+" источн. · "+string.Join(", ",reboot.Sources):reboot.Required==false?(ready||reboot.Fresh?"Не требуется":"По последней проверке не требовалась"):"Результат не подтверждён";
   bt+=" · "+Display36.Date(reboot.Stamp);
-  string rebootTone=reboot.Required==true?"Warning":reboot.Required==false&&(ready||reboot.Fresh)?"Success":"Stale";
-  var reboots=new List<Check45>{new(reboot.Required==true?"Положительные источники: "+string.Join(", ",reboot.Sources):reboot.Required==false?"Полная проверка WUA / Windows Update / CBS — флаги отсутствуют":"Полная отрицательная проверка не получена",rebootTone,reboot.Required==true?"Reboot":rebootTone=="Success"?"Success":"Info"),new("Проверено: "+Display36.Date(reboot.Stamp),"Info","Info")};
+  string rebootTone=reboot.Required==true?"Warning":reboot.Required==false&&(ready||reboot.Fresh)?"Success":reboot.Required==null?"Unknown":"Stale";
+  var reboots=new List<Check45>{new(reboot.Required==true?"Положительные источники: "+string.Join(", ",reboot.Sources):reboot.Required==false?"Полная проверка WUA / Windows Update / CBS — флаги отсутствуют":"Полная отрицательная проверка не получена",rebootTone,reboot.Required==true?"Reboot":StatusGlyph.ForTone50(rebootTone)),new("Проверено: "+Display36.Date(reboot.Stamp),"Info","Info")};
   if(reboot.Limitation.Length>0)reboots.Add(new(reboot.Limitation,"Warning","Warning"));
-  bool action=!active&&!reboot.Fresh&&(reboot.Required==true||reboot.Limitation.Contains("Перезагрузка выполнена")||status.Kind=="Warning"&&status.Title.Contains("флаги перезагрузки"));
-  return new(){new("updates","Обновления · "+ut,updateTone,active?"Working":updateTone=="Success"?"Success":updateTone=="Error"?"Error":"Info",updates),new("report","Отчёт WSUS · "+rt,reportTone,reportTone=="Success"?"Success":reportTone=="Error"?"Error":"Warning",reports),new("reboot","Перезагрузка · "+bt,rebootTone,reboot.Required==true?"Reboot":rebootTone=="Success"?"Success":"Info",reboots,action)};
+  bool action=!active&&!reboot.Fresh&&status.Kind!="Success";
+  return new(){new("updates","Обновления · "+ut,updateTone,active?StatusGlyph.ForOperation50(state?.Stage??""):StatusGlyph.ForTone50(updateTone),updates),new("report","Отчёт WSUS · "+rt,reportTone,StatusGlyph.ForTone50(reportTone),reports),new("reboot","Перезагрузка · "+bt,rebootTone,reboot.Required==true?"Reboot":StatusGlyph.ForTone50(rebootTone),reboots,action)};
  }
 }
 public partial class MainWindow {
@@ -48,7 +49,6 @@ public partial class MainWindow {
  readonly HashSet<string> seenProblems45=new(StringComparer.OrdinalIgnoreCase);
  string rendered45="";bool rendering45;
  ClientAssessment41 ExplainAssessment45(ComputerRow row,ClientAssessment41 a,CachedWsusReport? cache,RebootView40 reboot,RemoteState? state,bool active,string scan,int? remaining){
-  if(!IsCurrent(row))return a;
   if(a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var ready45)){if(scan.Length==0){scan=ready45.Scan;remaining=0;}}
   var list=a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var complete45)?Criteria45.Confirmed(complete45):Criteria45.Build(a,cache?.Found==true?cache.Report:null,reboot,state,active,scan,remaining,cache!=null&&!liveReports.Contains(row.Host),overviewErrors.GetValueOrDefault(row.Host,""),rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"");criteria45[row.Host]=list;
   if(a.Kind=="Warning"&&list.Count(g=>g.Tone is "Warning" or "Error")>1)a=a with{Title="Готовность не подтверждена · несколько условий не выполнены"};

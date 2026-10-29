@@ -20,9 +20,10 @@ function Start-Service($Name){
 }
 function Start-ScheduledTask($TaskName){$script:maintenance++;if($script:case -eq 'MaintenanceMissing'){throw 'fixture maintenance missing'}}
 try {
- foreach($script:case in @('Busy','InvalidRoot','ParentLink','InvalidFile','JournalLink','StopFailure','StopWaitTimeout','StartFailure','PrimaryAndRestore','MoveFailure','Missing','Disappeared','PartialIsolation','MaintenanceMissing','Success')){
+ foreach($script:case in @('Busy','InvalidRoot','ParentLink','InvalidFile','JournalLink','StopFailure','StopWaitTimeout','StartFailure','PrimaryAndRestore','MoveFailure','Missing','Disappeared','PartialIsolation','MaintenanceMissing','PendingSuccess','Success')){
   $env:windir=Join-Path $Root $script:case;$env:ProgramData=Join-Path $env:windir 'ProgramData'
   $dcServiceRecovery47=Join-Path $env:windir 'service-recovery'
+  $dcCacheResult50=Join-Path $env:windir 'cache-result50.json'
   $download=Join-Path $env:windir 'SoftwareDistribution\Download'
   New-Item $download -ItemType Directory -Force|Out-Null;Set-Content (Join-Path $download 'keep.bin') 'fixture'
   $script:states=@{UsoSvc='Running';wuauserv='Running';bits='Running';cryptsvc='Stopped'}
@@ -41,7 +42,7 @@ try {
    Set-Content (Join-Path $elsewhere 'Download/keep.bin') 'fixture'
    New-Item $parent -ItemType Junction -Value $elsewhere|Out-Null
   }
-  if($script:case -eq 'MaintenanceMissing'){$code=$text.Replace('$backup=$true','$backup=$false')}
+  if($script:case -in @('MaintenanceMissing','PendingSuccess')){$code=$text.Replace('$backup=$true','$backup=$false')}
   if($script:case -eq 'InvalidFile'){Remove-Item $download -Recurse -Force;Set-Content $download 'not a directory'}
   if($script:case -eq 'JournalLink'){
    $elsewhere=Join-Path $env:windir 'journal-outside';New-Item $elsewhere -ItemType Directory|Out-Null
@@ -58,7 +59,14 @@ try {
   $lines=New-Object 'System.Collections.Generic.List[string]' ;$failed=$false;$errorText=''
   try{& ([ScriptBlock]::Create($code))|ForEach-Object {$lines.Add([string]$_)}}catch{$failed=$true;$errorText=$_.ToString()}
   $output=$lines -join "`n"
-  $success=$script:case -in @('Success','MaintenanceMissing','Missing','Disappeared')
+  $success=$script:case -in @('Success','MaintenanceMissing','PendingSuccess','Missing','Disappeared')
+  if($success){
+   $summary50=Get-Content $dcCacheResult50 -Raw|ConvertFrom-Json
+   if($script:case -in @('Missing','Disappeared') -and $summary50.Isolated -ne 0){throw 'Absent cache reported as isolated'}
+   if($script:case -eq 'PendingSuccess' -and ($summary50.PendingDelete -ne 1 -or !$summary50.CleanupStarted -or $summary50.Backups -ne 0 -or $output.Contains('Резервная копия сохранена.'))){throw 'Successful delayed deletion summary incorrect'}
+   if($script:case -eq 'Success' -and ($summary50.Backups -ne 1 -or $summary50.PendingDelete -ne 0 -or !$output.Contains('Резервная копия сохранена.'))){throw 'Backup summary incorrect'}
+   if($script:case -eq 'MaintenanceMissing' -and ($summary50.PendingDelete -ne 1 -or $summary50.CleanupStarted -or $output.Contains('Резервная копия сохранена.'))){throw 'Pending deletion reported as backup/completed cleanup'}
+  }elseif(Test-Path $dcCacheResult50){throw 'Failed cleanup wrote success summary'}
   if($failed -eq $success){throw "Unexpected result: $script:case; $errorText"}
   if(!$success -and ($output.Contains('Кэш сброшен') -or $script:maintenance)){throw "False cache success/cleanup launch: $script:case"}
   if($script:case -in @('Busy','InvalidRoot','ParentLink','InvalidFile','JournalLink') -and ($script:stops.Count -or $script:starts.Count)){throw "Validation failure changed services: $script:case"}

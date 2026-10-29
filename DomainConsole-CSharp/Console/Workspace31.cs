@@ -29,9 +29,9 @@ public partial class MainWindow {
  bool checkingLinks31;readonly HashSet<string> manualLinkReads31=new(StringComparer.OrdinalIgnoreCase);
  int LinkMinutes31=>Math.Clamp(Store.Read("link-interval31.json",15),1,1440);
  static string EventFolder31(string host)=>Path.Combine(Store.Root,"Events",Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(host.ToUpperInvariant()))));
- void Event31(string host,string category,string signature,string text,string kind="Info",string details="",string at=""){
-  var key=host.ToUpperInvariant()+"|"+category;if(eventSignatures31.GetValueOrDefault(key)==signature)return;eventSignatures31[key]=signature;
-  var entry=new ClientEvent31{Operation36=category=="job"?category+"|"+signature.Split('|')[0]:category,Kind=kind,Text=text,Details=details==text?"":details,At=DateTimeOffset.TryParse(at,out var observed)?observed.ToUniversalTime().ToString("o"):DateTime.UtcNow.ToString("o")};if(!recentEvents31.TryGetValue(host,out var list)){list=SafeEvents32(host,3);recentEvents31[host]=list;}list=CompactEvents34(list.Concat(memoryEvents32.GetValueOrDefault(host)??new()).Append(entry));recentEvents31[host]=list;list.Sort((a,b)=>string.CompareOrdinal(b.At,a.At));if(list.Count>3)list.RemoveRange(3,list.Count-3);
+ void Event31(string host,string category,string signature,string text,string kind="Info",string details="",string at="",string scope=""){
+  var key=host.ToUpperInvariant()+"|"+category+(scope.Length>0?"|"+scope:"");if(eventSignatures31.GetValueOrDefault(key)==signature)return;eventSignatures31[key]=signature;
+  var entry=new ClientEvent31{Operation36=scope.Length>0?category+"|"+scope:category=="job"?category+"|"+signature.Split('|')[0]:category,Kind=kind,Text=text,Details=details==text?"":details,At=DateTimeOffset.TryParse(at,out var observed)?observed.ToUniversalTime().ToString("o"):DateTime.UtcNow.ToString("o")};if(!recentEvents31.TryGetValue(host,out var list)){list=SafeEvents32(host,3);recentEvents31[host]=list;}list=CompactEvents34(list.Concat(memoryEvents32.GetValueOrDefault(host)??new()).Append(entry));recentEvents31[host]=list;list.Sort((a,b)=>string.CompareOrdinal(b.At,a.At));if(list.Count>3)list.RemoveRange(3,list.Count-3);
   if(!memoryEvents32.TryGetValue(host,out var memory)){memory=new();memoryEvents32[host]=memory;}groupedEvents39.Remove(host);memory.Insert(0,entry);if(memory.Count>500)memory.RemoveRange(500,memory.Count-500);
   if(!pendingEvents32.TryGetValue(host,out var pending)){pending=new();pendingEvents32[host]=pending;}pending.Add(entry);
   var batch=pending.ToList();pending.Clear();eventWrites39[host]=WriteEvents39(host,batch,eventWrites39.GetValueOrDefault(host)??Task.CompletedTask,Math.Clamp(Store.Read("event-days31.json",30),1,365));
@@ -73,12 +73,12 @@ public partial class MainWindow {
  List<ClientEvent31> SafeEvents32(string host,int limit){if(!diskReadAt39.TryGetValue(host,out var at)||DateTimeOffset.UtcNow-at>TimeSpan.FromMinutes(1))_=LoadEvents39(host);return diskEvents39.GetValueOrDefault(host)?.Take(limit).ToList()??new();}
  static string EventKey32(ClientEvent31 item)=>item.At+"|"+item.Kind+"|"+item.Text+"|"+item.Details;
  List<ClientEvent31> AllEvents32(string host){if(!diskReadAt39.TryGetValue(host,out var read39)||DateTimeOffset.UtcNow-read39>TimeSpan.FromMinutes(1))_=LoadEvents39(host);var disk=diskEvents39.GetValueOrDefault(host);var memory=memoryEvents32.GetValueOrDefault(host);var recent=recentEvents31.GetValueOrDefault(host);int count=memory?.Count??0;if(groupedEvents39.TryGetValue(host,out var old)&&ReferenceEquals(old.Disk,disk)&&ReferenceEquals(old.Memory,memory)&&ReferenceEquals(old.Recent,recent)&&old.Count==count)return old.Result;var result=CompactEvents34((disk??new()).Concat(memory??new()).Concat(recent??new()).DistinctBy(e=>EventKey32(e)+"|"+e.Operation36));groupedEvents39[host]=(disk,memory,recent,count,result);return result;}
- static string EventGroupKey36(ClientEvent31 e)=>e.Kind+"|"+e.Operation36+"|"+e.Text+"|"+e.Details;
+ static string EventGroupKey36(ClientEvent31 e)=>e.FirstAt+"|"+e.Kind+"|"+e.Operation36+"|"+e.Text+"|"+e.Details;
  bool historyReset35=true;string historyHost35="";List<ClientEvent31>? historyPending35;
  void RefreshEventHistory32(string host){RefreshCollector44(host);
-  var all=AllEvents32(host);EventHeader46.Text="История событий · "+all.Count;
+  var all=AllEvents32(host);
   var selected36=EventList32.SelectedItems.Cast<ClientEvent31>().Select(EventGroupKey36).ToHashSet();
-  var items=all.Where(x=>EventMatches47(x,EventFilter47.SelectedIndex)).ToList();
+  var items=all.Where(x=>EventMatches47(x,EventFilter47.SelectedIndex)).ToList();EventHeader46.Text="История событий · "+items.Count;
   foreach(var item in items)item.Selected36=selected36.Contains(EventGroupKey36(item));
   var key=host+EventFilter47.SelectedIndex+string.Join("|",items.Select(x=>EventKey32(x)+"|"+x.Repeats));bool reset=historyReset35||historyHost35!=host;if(key==historyEventsKey32&&!reset)return;
  var viewer=Visual33<ScrollViewer>(EventList32).FirstOrDefault();
@@ -91,7 +91,7 @@ public partial class MainWindow {
  void EventCopy35_KeyDown(object sender,System.Windows.Input.KeyEventArgs e){if(e.Key==System.Windows.Input.Key.A&&System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control)){EventList32.SelectAll();e.Handled=true;return;}if(e.Key==System.Windows.Input.Key.C&&System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control)&&System.Windows.Input.Keyboard.FocusedElement is not TextBox){CopyEvents32_Click(sender,new RoutedEventArgs());e.Handled=true;}}
  void EventHistory_Click(object sender,RoutedEventArgs e)=>EventHistoryGroup32.IsExpanded=!EventHistoryGroup32.IsExpanded;
  void EventHistory32_Changed(object sender,RoutedEventArgs e){if(!IsLoaded||e.OriginalSource!=EventHistoryGroup32)return;Store.Write("event-history-expanded38.json",EventHistoryGroup32.IsExpanded);ArrangeIdentity34();HeaderRecent31.Visibility=Visibility.Collapsed;historyReset35=true;if(ComputerGrid.SelectedItem is ComputerRow row)RefreshEventHistory32(row.Host);}
- void EventFilter32_Changed(object sender,RoutedEventArgs e){if(IsLoaded&&ComputerGrid.SelectedItem is ComputerRow row){historyEventsKey32="";historyReset35=true;RefreshEventHistory32(row.Host);}}
+ void EventFilter32_Changed(object sender,RoutedEventArgs e){if(IsLoaded)Store.Write("event-filter50.json",Math.Clamp(EventFilter47.SelectedIndex,0,3));if(IsLoaded&&ComputerGrid.SelectedItem is ComputerRow row){historyEventsKey32="";historyReset35=true;RefreshEventHistory32(row.Host);}}
  static string EventCopyText36(IEnumerable<ClientEvent31> items)=>string.Join(Environment.NewLine+Environment.NewLine,items.Select(x=>Display36.Text(x.Display)+(!x.ShortTransport40&&x.Details.Length>0?"\n"+Display36.Text(x.Details):"")+(x.Repeats>1?"\nПовторения:\n"+x.OccurrenceText36:"")));
  void EventSelection36_Changed(object sender,RoutedEventArgs e){if(EventCopySelected36==null)return;int count=EventList32.SelectedItems.Count;EventCopySelected36.ToolTip="Копировать выбранные события ("+count+")";EventCopySelected36.IsEnabled=count>0;}
 

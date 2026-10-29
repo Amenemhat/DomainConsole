@@ -42,7 +42,7 @@ public sealed partial class RemoteService {
 }
 public partial class MainWindow {
  readonly HashSet<string> repairingCollectors47=new(StringComparer.OrdinalIgnoreCase);
- static bool EventMatches47(ClientEvent31 item,int filter)=>filter switch{1=>item.Kind is "Error" or "Warning",2=>item.Kind=="Error",3=>item.Kind=="Warning",_=>true};
+ static bool EventMatches47(ClientEvent31 item,int filter)=>filter switch{1=>item.Kind is "Error" or "Warning",2=>ServiceEvent50(item),3=>true,_=>!ServiceEvent50(item)};
  async Task<bool> CompleteCollectorRepair47(TargetRecord target,CancellationToken generation,Task<string> repair,Func<Task> refresh,Action<string> publish){
   bool Current()=>!closing&&!TransportBudget41.Paused&&!generation.IsCancellationRequested&&CurrentEndpoint(target);
   var result=await repair;if(!Current())return false;

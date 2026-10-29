@@ -4,6 +4,8 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease46(){
+  VerifyEventHistory50();
+  VerifyStatus50();
   System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(),"maintenance47.ps1"),MaintenanceRegistration47.Script,new System.Text.UTF8Encoding(true));
   var stopJob47=new RemoteJob{OutputChannel="WSUS",Steps=new(){new(){Kind="CacheCleanup"},new(){Kind="PowerShell"},new(){Kind="Updates"}}};
   var stopState47=new RemoteState{Step=1,SupportsImmediateStop=true,SupportsWuaCancel=true,StopStatus="ForceRequired",Stage="Preparation KB890830"};
@@ -64,7 +66,7 @@ public partial class MainWindow {
   finally{repairingCollectors47.Remove(collectorRow47.Host);RefreshCollector44(collectorRow47.Host);}
   if(EventFilter47.Items.Count!=4||CollectorRepair47==null)throw new Exception("Collector repair/history filter controls absent");
   var error47=new ClientEvent31{Kind="Error"};var warning47=new ClientEvent31{Kind="Warning"};var success47=new ClientEvent31{Kind="Success"};
-  if(!EventMatches47(error47,1)||!EventMatches47(warning47,1)||EventMatches47(success47,1)||EventMatches47(error47,3)||EventMatches47(warning47,2)||!EventMatches47(success47,0))throw new Exception("History filters lose or include wrong event kinds");
+  if(!EventMatches47(error47,1)||!EventMatches47(warning47,1)||EventMatches47(success47,1)||!EventMatches47(error47,3)||EventMatches47(warning47,2)||!EventMatches47(success47,0))throw new Exception("History filters lose or include wrong event kinds");
   if(CollectorNotice43.BorderThickness!=new Thickness(0))throw new Exception("Collector disclosure retained outer border");
 
   if(!Application.Current.Resources.Contains("ReadinessDisclosure46"))throw new Exception("Borderless readiness template missing");

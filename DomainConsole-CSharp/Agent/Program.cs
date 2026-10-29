@@ -191,10 +191,14 @@ namespace DomainConsole.Agent {
          State.Step++;CurrentKind=step.Kind;Stage(step.Name);var prefix="step-"+State.Step;var stepResult=new StepResult{Kind=step.Kind,Name=step.Name,Started=DateTime.UtcNow.ToString("o")};
          try{
           if(step.Kind=="Updates"){State.UpdateOperationStarted=true;Save();stepResult.ExitCode=Updates(prefix);}
-          else if(step.Kind=="UpdateScan"){State.UpdateOperationStarted=true;Save();stepResult.ExitCode=Updates(prefix,true);}
+          else if(step.Kind=="UpdateScan"){State.UpdateOperationStarted=true;Save();stepResult.ExitCode=Updates(prefix,true);if(stepResult.ExitCode==0)stepResult.UpdatesFound50=State.UpdateTotal38;}
           else if(step.Kind=="Diagnostics")stepResult.ExitCode=PowerShell(UpdateLogCode(prefix),prefix,300000);
           else if(step.Kind=="CacheResidueCleanup")stepResult.ExitCode=Run(typeof(Program).Assembly.Location,"cache-cleanup \""+Path.GetDirectoryName(Folder)+"\"",prefix,300000);
-          else if(step.Kind=="CacheCleanup")stepResult.ExitCode=PowerShell(step.Code,prefix,300000);
+          else if(step.Kind=="CacheCleanup"){
+           var cacheFile50=FilePath(prefix+".cache-result50.json");if(File.Exists(cacheFile50))File.Delete(cacheFile50);
+           stepResult.ExitCode=PowerShell("$dcCacheResult50='"+cacheFile50.Replace("'","''")+"';"+step.Code,prefix,300000);
+           if(stepResult.ExitCode==0&&File.Exists(cacheFile50)){try{stepResult.Cache50=Json.Deserialize<CacheResult50>(File.ReadAllText(cacheFile50));}catch(Exception ex){Log("Не удалось прочитать сводку очистки: "+ex.Message);}}
+          }
           else if(step.Kind=="ReportRecovery")stepResult.ExitCode=PowerShell(step.Code,prefix,120000);
           else if(step.Kind=="ClientDiagnostics")stepResult.ExitCode=PowerShell("$dcFolder='"+Folder.Replace("'","''")+"';"+step.Code,prefix,120000);
           else if(step.Kind=="DeliveryDiagnostics"){stepResult.ExitCode=PowerShell("$dcFolder='"+Folder.Replace("'","''")+"';"+step.Code,prefix,300000);if(stepResult.ExitCode==0){Report();PowerShell("Get-Service wuauserv,bits,cryptsvc,UsoSvc | Select-Object Name,Status,StartType | Format-Table | Out-String",prefix+"-after-report");}}

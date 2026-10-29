@@ -41,8 +41,12 @@ public partial class MainWindow {
   bool preserved44=proof.Required==null&&proof.PreservedRequired==true&&DateTimeOffset.TryParse(proof.PreservedUtc,out var kept45)&&(!DateTimeOffset.TryParse(boot,out var boot45)||kept45>=boot45);bool? required=preserved44?true:QueueOnly32(proof.Sources)?null:proof.Required;if(preserved44){fresh=false;sources=proof.PreservedSources45.Select(ShortRebootSource).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();}
   // A false value with a failed source check is not a complete negative result.
   if(proof.Error.Length>0&&required==false)required=null;if(!afterBoot)required=null;
-  string limit=proof.Error.Length>0?"Проверка неполная; подробности в журнале":!afterBoot?"Перезагрузка выполнена · требуется повторная проверка флагов":"";
-  return new(required,fresh,preserved44?proof.PreservedUtc:proof.CollectedUtc,required==true?sources:Array.Empty<string>(),preserved44?"Последняя проверка неполная; прежнее требование сохраняется до уточнения":limit);
+  string stamp50=preserved44?proof.PreservedUtc:proof.CollectedUtc;
+  bool validTime50=DateTimeOffset.TryParse(stamp50,out var measured50)&&measured50<=now.AddMinutes(1);
+  if(!validTime50)required=null;
+  fresh=fresh&&required.HasValue&&proof.Error.Length==0&&validTime50;
+  string limit=!validTime50?"Время проверки не подтверждено; нужна повторная проверка":proof.Error.Length>0?"Проверка неполная; подробности в журнале":!afterBoot?"Перезагрузка выполнена · требуется повторная проверка флагов":"";
+  return new(required,fresh,stamp50,required==true?sources:Array.Empty<string>(),preserved44&&validTime50?"Последняя проверка неполная; прежнее требование сохраняется до уточнения":limit);
  }
  RebootView40 RebootViewFor40(ComputerRow row){
   rebootSnapshots.TryGetValue(row.Host,out var current);RebootSnapshot? latest=current;
@@ -53,7 +57,7 @@ public partial class MainWindow {
   }
   var view=DescribeReboot40(latest,current?.BootUtc??"",DateTimeOffset.UtcNow);
   if(view.Required==null){
-   var prior45=HostJobs39(row.Host).Where(x=>CurrentIdentity(x.Target)).Select(x=>x.Target.State?.RebootEvidence).Where(x=>x?.Required==true&&DateTimeOffset.TryParse(x.CollectedUtc,out _)).OrderByDescending(x=>x!.CollectedUtc).FirstOrDefault();
+   var prior45=HostJobs39(row.Host).Where(x=>CurrentIdentity(x.Target)).Select(x=>x.Target.State?.RebootEvidence).Where(x=>x?.Required==true&&DateTimeOffset.TryParse(x.CollectedUtc,out var positiveTime50)&&positiveTime50<=DateTimeOffset.UtcNow.AddMinutes(1)).OrderByDescending(x=>x!.CollectedUtc).FirstOrDefault();
    if(prior45!=null&&DateTimeOffset.TryParse(prior45.CollectedUtc,out var positive45)&&(!DateTimeOffset.TryParse(current?.BootUtc,out var boot45)||boot45<=positive45)&&!(latest?.Required==false&&latest.Error.Length==0&&DateTimeOffset.TryParse(latest.CollectedUtc,out var negative45)&&negative45>positive45))view=new(true,false,prior45.CollectedUtc,prior45.Sources.Select(ShortRebootSource).ToArray(),"Последняя проверка неполная; прежнее требование сохраняется до уточнения");
   }
   if(view.Required!=true&&reportCache.TryGetValue(row.Host,out var cache)&&CacheMatches(cache)&&cache.Found&&cache.Report.InstalledPendingRebootCount>0&&DateTimeOffset.TryParse(cache.Report.LastReportedUtc,out var report)&&(!DateTimeOffset.TryParse(latest?.CollectedUtc,out var checkedAt)||report>checkedAt)&&(!DateTimeOffset.TryParse(current?.BootUtc,out var boot)||report>=boot))return new(null,false,cache.Report.LastReportedUtc,Array.Empty<string>(),"Требование сохранено в отчёте WSUS. Нужна проверка флагов на клиенте.");
