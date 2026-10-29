@@ -38,7 +38,7 @@ public static class Criteria45 {
   string rebootTone=reboot.Required==true?"Warning":reboot.Required==false&&(ready||reboot.Fresh)?"Success":"Stale";
   var reboots=new List<Check45>{new(reboot.Required==true?"Положительные источники: "+string.Join(", ",reboot.Sources):reboot.Required==false?"Полная проверка WUA / Windows Update / CBS — флаги отсутствуют":"Полная отрицательная проверка не получена",rebootTone,reboot.Required==true?"Reboot":rebootTone=="Success"?"Success":"Info"),new("Проверено: "+Display36.Date(reboot.Stamp),"Info","Info")};
   if(reboot.Limitation.Length>0)reboots.Add(new(reboot.Limitation,"Warning","Warning"));
-  bool action=!active&&!reboot.Fresh&&(reboot.Required==true||reboot.Limitation.Contains("Перезагрузка выполнена")||status.Kind=="Warning"&&status.Title.Contains("флаги перезагрузки"));
+  bool action=!active&&!reboot.Fresh&&status.Kind!="Success";
   return new(){new("updates","Обновления · "+ut,updateTone,active?"Working":updateTone=="Success"?"Success":updateTone=="Error"?"Error":"Info",updates),new("report","Отчёт WSUS · "+rt,reportTone,reportTone=="Success"?"Success":reportTone=="Error"?"Error":"Warning",reports),new("reboot","Перезагрузка · "+bt,rebootTone,reboot.Required==true?"Reboot":rebootTone=="Success"?"Success":"Info",reboots,action)};
  }
 }
@@ -48,7 +48,6 @@ public partial class MainWindow {
  readonly HashSet<string> seenProblems45=new(StringComparer.OrdinalIgnoreCase);
  string rendered45="";bool rendering45;
  ClientAssessment41 ExplainAssessment45(ComputerRow row,ClientAssessment41 a,CachedWsusReport? cache,RebootView40 reboot,RemoteState? state,bool active,string scan,int? remaining){
-  if(!IsCurrent(row))return a;
   if(a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var ready45)){if(scan.Length==0){scan=ready45.Scan;remaining=0;}}
   var list=a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var complete45)?Criteria45.Confirmed(complete45):Criteria45.Build(a,cache?.Found==true?cache.Report:null,reboot,state,active,scan,remaining,cache!=null&&!liveReports.Contains(row.Host),overviewErrors.GetValueOrDefault(row.Host,""),rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"");criteria45[row.Host]=list;
   if(a.Kind=="Warning"&&list.Count(g=>g.Tone is "Warning" or "Error")>1)a=a with{Title="Готовность не подтверждена · несколько условий не выполнены"};
