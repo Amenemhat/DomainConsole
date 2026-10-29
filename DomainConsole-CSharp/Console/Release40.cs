@@ -89,7 +89,7 @@ public partial class MainWindow {
   RefreshRebootCard40(row);RebootVerify44.Visibility=Visibility.Collapsed;ReadinessTree45.Visibility=Visibility.Collapsed;if(MainTabs.SelectedItem!=WsusTab)return;
   var status=AssessClient41(row);
   RenderCriteria45(row,status,active);
-  if(active&&!LostObservation51(row.Host)&&!ObservationStopped51(OperationRow38(row)))return;
+  if(active&&!LostObservation51(row.Host)&&(stoppedObservations51.Count==0||!ObservationStopped51(OperationRow38(row))))return;
   CurrentStage.Text=status.Title;CurrentStage.Foreground=Theme.Tone(status.Tone);OperationGlyph38.Kind=status.Glyph;OperationGlyph38.Tint=Theme.Tone(status.Tone);OperationDetail38.Text=status.Details;OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=Visibility.Collapsed;
 
  }

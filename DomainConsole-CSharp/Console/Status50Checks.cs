@@ -70,6 +70,16 @@ public partial class MainWindow {
   Check(ObservationExpired51(now.AddDays(-2).ToString("o"),now)&&ObservationExpired51(now.AddDays(-3).ToString("o"),now),"51 observation deadline is stable after restart");
   Check(ObservationExpired51("invalid",now),"51 malformed observation start does not grant indefinite waiting");
   Check(StatusGlyph.Shape("Working")=="M 5,2 L 16,9 L 5,16 Z","51 generic execution glyph is not a gear");
+  string host51="checkpoint51.fixture.invalid";
+  var savedPlan51=maintenancePlans.GetValueOrDefault(host51);var savedWatch51=rebootWatches.GetValueOrDefault(host51);
+  try{
+   var p51=new MaintenancePlan{Host=host51,Phase="Ожидается перезагрузка",BootUtc=boot};maintenancePlans[host51]=p51;
+   var w51=new RebootWatch{Confirmed=true,RequestedUtc=now.AddMinutes(-20).ToString("o"),BeforeBootUtc=boot};rebootWatches[host51]=w51;
+   ObserveRebootCheckpoint51(host51,new(){BootUtc=now.AddMinutes(-10).ToString("o"),CollectedUtc=at,Required=false});
+   Check(p51.SearchAfterBoot49&&p51.Phase=="После перезагрузки: ожидание готовности"&&w51.ReadyAfter!=default,"51 collector return advances both reboot checkpoints");
+   var ready51=p51.ReadyAfter;ObserveRebootCheckpoint51(host51,new(){BootUtc=now.AddMinutes(-10).ToString("o"),CollectedUtc=at,Required=false});
+   Check(p51.ReadyAfter==ready51,"51 duplicate snapshot does not restart settling delay");
+  }finally{if(savedPlan51==null)maintenancePlans.Remove(host51);else maintenancePlans[host51]=savedPlan51;if(savedWatch51==null)rebootWatches.Remove(host51);else rebootWatches[host51]=savedWatch51;SaveMaintenance();Store.Write("reboot-watches.json",rebootWatches);}
   var waiting51=new MaintenancePlan{Phase="Ожидается перезагрузка",BootUtc=boot,Cycles=1};
   var signature51=MaintenanceEventSignature51(waiting51);
   for(int i51=0;i51<10;i51++){waiting51.Detail=i51%2==0?"Клиент пока не ответил; повторный опрос запланирован":"Перезагрузите компьютер";Check(signature51==MaintenanceEventSignature51(waiting51),"51 polling detail is not a phase transition "+i51);}
@@ -78,6 +88,11 @@ public partial class MainWindow {
   Check(RebootHeadline51(watch51,now).EndsWith("01:05"),"51 confirmed reboot countdown");
   Check(RebootHeadline51(watch51,now.AddSeconds(66))=="Ожидается ответ после перезагрузки","51 due time is not reboot success");
   watch51.ReadyAfter=now.AddMinutes(2);Check(RebootHeadline51(watch51,now.AddSeconds(66)).StartsWith("Новая загрузка подтверждена"),"51 returned boot awaits state verification");
+  string context51=new string('x',90);
+  string journal51=CompactJournal31("## Диагностика · попытка 1\n"+context51+"\n\n## Диагностика · попытка 2\n"+context51);
+  Check(journal51.Split(context51).Length==3,"51 equal diagnostic text retains separate attempt context");
+  string duplicate51=CompactJournal31("## Диагностика\n"+context51+"\n\n## Диагностика\n"+context51);
+  Check(duplicate51.Split(context51).Length==2,"51 exact duplicate diagnostic section compacted");
   // 0.51: connectivity changes must invalidate every list presentation without
   // changing the saved result or creating any remote work.
   var row51=new ComputerRow(new(){Status="Running",State=new(){Stage="Скачивание · fixture"}});
