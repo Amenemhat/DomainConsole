@@ -8,6 +8,7 @@ public partial class MainWindow {
   try{
    await VerifyEndpointDiagnostics49();
    PollingControl43.Resume();AutoServiceEnabled=true;
+   if(!ForcedServiceActivity49(new(){InstallerBusy=true,CollectedUtc=DateTimeOffset.UtcNow.ToString("o")}).Contains("есть признаки установки")||!ForcedServiceActivity49(null).Contains("не подтверждена"))throw new Exception("Forced-service confirmation hid known/unknown installation activity");
    var candidate=new ServiceProcessCandidate{Pid=99999,CreatedUtc=DateTimeOffset.UtcNow.ToString("o"),Path="fixture",Services=new(){"bits"}};
    if(ForcedServiceSteps36(new[]{candidate,Store.Clone(candidate)}).Count!=1)throw new Exception("Same process was scheduled twice");
    var changed=Store.Clone(candidate);changed.Services.Add("wuauserv");bool rejected=false;
@@ -31,6 +32,11 @@ public partial class MainWindow {
     plan.Next=default;await AdvanceMaintenance(Snapshot,_=>throw new Exception("Duplicate readiness call"),false);
     if(queue.Count!=1)throw new Exception("Post-boot search duplicated");
    }
+   maintenancePlans.Clear();History.Clear();queue.Clear();
+   var incompatible49=new RemoteJob{Steps=new(){new(){Kind="Updates"}},Targets=new(){new(){Host=row.Host,Status="Queued"}}};History.Add(incompatible49);
+   var checkpoint49=new MaintenancePlan{Host=row.Host,Install=true,SearchAfterBoot49=true,NextJobId=incompatible49.Id};maintenancePlans[row.Host]=checkpoint49;
+   QueueMaintenanceJob(checkpoint49,ConnectionStore.Capture(row.Target));
+   if(queue.Count!=0||!checkpoint49.Done||!checkpoint49.Detail.Contains("контрольной точке"))throw new Exception("Post-boot checkpoint reused a saved installation instead of a search");
    var savedWatches49=rebootWatches.ToList();var toggle49=AutoServiceToggle.IsChecked;
    try{
     rebootWatches.Clear();rebootWatches[row.Host]=new(){Scan=true,Done=false};rebootWatches[row.Host+".old"]=new(){Scan=true,Done=true};

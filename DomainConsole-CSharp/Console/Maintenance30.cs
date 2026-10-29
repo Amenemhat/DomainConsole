@@ -76,6 +76,7 @@ public partial class MainWindow {
   if(p.PlanId37.Length==0)p.PlanId37=p.JobId.Length>0?p.JobId:p.NextJobId;
   var job=History.FirstOrDefault(j=>j.Id==p.NextJobId);
   bool install47=p.Install&&!p.RecoveryCheck47&&!p.SearchAfterBoot49;
+  if(job!=null&&(job.Steps.Count!=1||job.Steps[0].Kind!=(install47?"Updates":"UpdateScan"))){p.Done=true;p.Phase="Требуется действие";p.Detail="Сохранённый следующий шаг не соответствует текущей контрольной точке. Он не перезапущен; проверьте результат прежнего задания перед новым обслуживанием.";SaveMaintenance();return;}
   if(job==null){var t=Store.Clone(captured);t.Status="Queued";t.State=null;t.Output="";job=new(){PlanId37=p.PlanId37,SearchTimeoutMinutes37=Store.Read("search-minutes37.json",20),AutomaticChild31=true,Id=p.NextJobId,Name=install47?"Полное обслуживание · продолжение":"Проверка результата · поиск и отчёт",OutputChannel="WSUS",Steps=new(){new(){Kind=install47?"Updates":"UpdateScan",Name=install47?"WSUS · установка и запрос отчёта":"WSUS · проверка и запрос отчёта"}},Targets=new(){t}};History.Insert(0,job);Save();}
   if(p.JobId!=job.Id)p.Cycles++;p.JobId=job.Id;p.RecoveryCheck47=false;p.SearchAfterBoot49=false;p.NextJobId="";p.ReadyAfter=default;p.Phase="Выполняется обслуживание";p.Detail="";SaveMaintenance();
   foreach(var t in job.Targets.Where(t=>t.Status=="Queued"&&t.State==null))if(!queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host==t.Host))queue.Enqueue((job,t));
