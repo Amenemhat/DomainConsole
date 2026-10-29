@@ -17,7 +17,7 @@ public partial class MainWindow {
    string name=step.Name.Contains("Download")?"Кэш скачивания очищен":step.Name.Contains("Queue")?"Очередь отчётности очищена":"Кэш обновлений очищен";
    string detail="Службы запущены.";
    if(c.Backups>0)detail+=" Резервная копия сохранена.";
-   if(c.PendingDelete>0)detail+=c.CleanupStarted?" Старые файлы переданы на фоновое удаление.":"Старые файлы изолированы; запуск фонового удаления не подтверждён.";
+   if(c.PendingDelete>0)detail+=c.CleanupStarted?" Старые файлы переданы на фоновое удаление.":" Старые файлы изолированы; запуск фонового удаления не подтверждён.";
    return (name,c.PendingDelete>0&&!c.CleanupStarted?"Warning":"Success",detail);
   }
   if(step.Kind=="UpdateScan")return (step.UpdatesFound50.HasValue?"Поиск завершён · найдено обновлений: "+step.UpdatesFound50:"Поиск обновлений завершён","Success","Установка в этом шаге не выполнялась.");
