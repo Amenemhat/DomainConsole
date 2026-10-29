@@ -40,9 +40,7 @@ public partial class MainWindow {
    OperationGlyph38.Kind=clientConnections.GetValueOrDefault(row.Host)?.Lost38==true?"Unreachable":"Stale";OperationGlyph38.Tint=Theme.Tone(TransportBudget41.Paused?"Stale":"Warning");CurrentStage.Foreground=OperationGlyph38.Tint;
    CurrentStage.Text=observation;OperationDetail38.Text="Последний этап: "+(state?.Stage??row.Target.Status)+" · "+Display36.Date(state?.Updated??"");OperationDetail38.Visibility=Visibility.Visible;CurrentProgress.IsIndeterminate=false;CurrentProgress.Visibility=Visibility.Collapsed;
   }
-  if(active&&CurrentStage.Text.StartsWith("Установка"))OperationGlyph38.Kind="Install";
-  else if(active&&CurrentStage.Text.StartsWith("Скачивание"))OperationGlyph38.Kind="Download";
-  else if(active&&CurrentStage.Text.Contains("поиск",StringComparison.OrdinalIgnoreCase))OperationGlyph38.Kind="Search";
+  if(active&&OperationGlyph38.Kind=="Working")OperationGlyph38.Kind=StatusGlyph.ForOperation50(CurrentStage.Text);
   RefreshMode39();
   RefreshHeader31(selected);
  }

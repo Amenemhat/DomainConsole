@@ -40,7 +40,7 @@ public static class Criteria45 {
   var reboots=new List<Check45>{new(reboot.Required==true?"Положительные источники: "+string.Join(", ",reboot.Sources):reboot.Required==false?"Полная проверка WUA / Windows Update / CBS — флаги отсутствуют":"Полная отрицательная проверка не получена",rebootTone,reboot.Required==true?"Reboot":rebootTone=="Success"?"Success":"Info"),new("Проверено: "+Display36.Date(reboot.Stamp),"Info","Info")};
   if(reboot.Limitation.Length>0)reboots.Add(new(reboot.Limitation,"Warning","Warning"));
   bool action=!active&&!reboot.Fresh&&status.Kind!="Success";
-  return new(){new("updates","Обновления · "+ut,updateTone,active?"Working":updateTone=="Success"?"Success":updateTone=="Error"?"Error":"Info",updates),new("report","Отчёт WSUS · "+rt,reportTone,reportTone=="Success"?"Success":reportTone=="Error"?"Error":"Warning",reports),new("reboot","Перезагрузка · "+bt,rebootTone,reboot.Required==true?"Reboot":rebootTone=="Success"?"Success":"Info",reboots,action)};
+  return new(){new("updates","Обновления · "+ut,updateTone,active?StatusGlyph.ForOperation50(state?.Stage??""):StatusGlyph.ForTone50(updateTone),updates),new("report","Отчёт WSUS · "+rt,reportTone,StatusGlyph.ForTone50(reportTone),reports),new("reboot","Перезагрузка · "+bt,rebootTone,reboot.Required==true?"Reboot":StatusGlyph.ForTone50(rebootTone),reboots,action)};
  }
 }
 public partial class MainWindow {

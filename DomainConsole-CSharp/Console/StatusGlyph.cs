@@ -6,6 +6,16 @@ public sealed class StatusGlyph:FrameworkElement {
  public static readonly DependencyProperty TintProperty=DependencyProperty.Register(nameof(Tint),typeof(Brush),typeof(StatusGlyph),new FrameworkPropertyMetadata(Brushes.LightSlateGray,FrameworkPropertyMetadataOptions.AffectsRender));
  public string Kind{get=>(string)GetValue(KindProperty);set=>SetValue(KindProperty,value);}public Brush Tint{get=>(Brush)GetValue(TintProperty);set=>SetValue(TintProperty,value);}
  public StatusGlyph(){Width=20;Height=20;VerticalAlignment=VerticalAlignment.Center;SnapsToDevicePixels=true;}
+ public static string ForTone50(string tone)=>tone switch {"Success"=>"Success","Error" or "SyncError"=>"Error","Warning"=>"Warning","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Info"};
+ public static string ForOperation50(string stage){
+  if(stage.StartsWith("Установка",StringComparison.OrdinalIgnoreCase))return "Install";
+  if(stage.StartsWith("Скачивание",StringComparison.OrdinalIgnoreCase))return "Download";
+  if(stage.Contains("ожидани",StringComparison.OrdinalIgnoreCase)||stage.Contains("ожидает",StringComparison.OrdinalIgnoreCase))return "Stale";
+  if(stage.Contains("перезагруз",StringComparison.OrdinalIgnoreCase))return "Reboot";
+  if(stage.Contains("поиск",StringComparison.OrdinalIgnoreCase)||stage.Contains("диагност",StringComparison.OrdinalIgnoreCase)||stage.Contains("проверк",StringComparison.OrdinalIgnoreCase))return "Search";
+  if(stage.Contains("восстанов",StringComparison.OrdinalIgnoreCase)||stage.Contains("очистк",StringComparison.OrdinalIgnoreCase))return "Repair";
+  return "Info";
+ }
  public static string Shape(string kind)=>kind switch {
  "Computer"=>"M 1,2 L 17,2 L 17,12 L 1,12 Z M 9,12 L 9,16 M 5,16 L 13,16",
  "Server"=>"M 3,1 L 15,1 L 15,17 L 3,17 Z M 6,5 L 12,5 M 6,9 L 12,9 M 6,13 L 7,13",
@@ -14,6 +24,7 @@ public sealed class StatusGlyph:FrameworkElement {
  "Download"=>"M 9,1 L 9,12 M 4,8 L 9,13 L 14,8 M 2,14 L 2,17 L 16,17 L 16,14",
  "Search"=>"M 12,7 A 5,5 0 1 0 2,7 A 5,5 0 1 0 12,7 M 11,11 L 17,17",
  "Install"=>"M 2,5 L 9,1 L 16,5 L 16,14 L 9,18 L 2,14 Z M 2,5 L 9,9 L 16,5 M 9,9 L 9,18",
+ "Repair"=>"M 12,1 L 9,4 L 12,7 L 16,3 C 19,10 13,12 10,10 L 4,17 L 1,14 L 8,8 C 5,4 8,0 12,1 Z",
  "Working"=>"M 7,1 L 11,1 L 12,4 L 15,3 L 17,6 L 15,8 L 17,11 L 15,14 L 12,13 L 11,17 L 7,17 L 6,14 L 3,15 L 1,12 L 3,10 L 1,7 L 3,4 L 6,5 Z M 12,9 A 3,3 0 1 0 6,9 A 3,3 0 1 0 12,9",
  "Success" or "Needed"=>"M 2,9 L 7,14 L 16,3",
  "Stale"=>"M 9,1 A 8,8 0 1 1 8.99,1 M 9,4 L 9,9 L 13,11",

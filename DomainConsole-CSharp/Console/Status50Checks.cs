@@ -49,6 +49,8 @@ public partial class MainWindow {
   Check(ClientReadiness41.Evaluate(historical,false,true,clean,done,false,true,0,scan,"",now,24).Kind=="Warning","matching newer installation waits for report");
   done.InstalledUpdates45[0].Revision=4;
   Check(ClientReadiness41.Evaluate(historical,false,true,clean,done,false,true,0,scan,"",now,24).Kind=="Error","different revision does not clear failure");
+  foreach(var pair in new[]{("Установка · KB", "Install"),("Скачивание · KB", "Download"),("WSUS · поиск", "Search"),("Диагностика", "Search"),("Очистка кэша", "Repair"),("Ожидание результата", "Stale"),("Неизвестный этап", "Info")})Check(StatusGlyph.ForOperation50(pair.Item1)==pair.Item2,"operation glyph "+pair.Item1);
+  foreach(string tone in new[]{"Success","Error","Warning","Stale","Unknown"})Check(StatusGlyph.ForTone50(tone)==tone,"criterion glyph "+tone);
   var restored=Store.Clone(historical);Check(restored.LastReportedUtc==historical.LastReportedUtc&&restored.FailedUpdates[0].Revision==3,"report cache preserves timestamp and revision");
   // Cached synthetic names keep this session-selection test entirely offline.
   string userHost="users50.fixture.invalid",accountA="FIXTURE50\\a",accountB="FIXTURE50\\b";
