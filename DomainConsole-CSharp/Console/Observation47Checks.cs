@@ -20,6 +20,10 @@ public partial class MainWindow {
    PollingControl43.Pause();await TryResetRebootPoll51(host,watch51,target,Reset51);if(resets51!=0||watch51.PollResetAttempted51)throw new Exception("51 reset bypassed master OFF");PollingControl43.Resume();
    await TryResetRebootPoll51(host,watch51,target,Reset51);watch51=Store.Clone(watch51);rebootWatches[host]=watch51;await TryResetRebootPoll51(host,watch51,target,Reset51);
    if(resets51!=1||watch51.Done||!watch51.LastError.Contains("пока не получен")||watch51.Next<=DateTimeOffset.UtcNow)throw new Exception("51 reset repeated after restart or claimed a fresh result");
+   bool published51=false,rejected51=false;
+   try{await CompleteCollectorRepair47(target,PollingControl43.Token,Task.FromResult("remote repaired"),()=>throw new System.IO.IOException("fresh result not applied"),_=>published51=true);}catch(System.IO.IOException){rejected51=true;}
+   if(published51||!rejected51)throw new Exception("51 collector success published without applied snapshot");
+
 
   }finally{
    rebootWatches.Remove(host);Store.Write("reboot-watches.json",rebootWatches);stoppedObservations51.Remove(ObservationKey51(row));History.Remove(job);clientConnections.Remove(host);liveConnections.Remove(host);polling.Remove(job.Id+host);readFailures34.Remove(host+"|результат задания");
