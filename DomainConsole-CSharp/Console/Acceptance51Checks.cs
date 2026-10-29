@@ -133,14 +133,18 @@ public partial class MainWindow {
   }
  }
  void VerifyScale51(){
-  var root=(FrameworkElement)Content;var old=root.LayoutTransform;double width=Width,height=Height;int theme=Theme.Current;var tab=MainTabs.SelectedItem;
+  var root=(FrameworkElement)Content;int theme=Theme.Current;var tab=MainTabs.SelectedItem;var old=new Size(root.ActualWidth,root.ActualHeight);
   try{
-   Width=1480;Height=940;
    foreach(double scale in new[]{1.25,1.5})foreach(int palette in new[]{0,1,2})foreach(var mode in new[]{WsusTab,CommandsTab,HistoryTab,SettingsTab}){
-    Theme.Apply(palette,false);root.LayoutTransform=new ScaleTransform(scale,scale);MainTabs.SelectedItem=mode;ShowCurrent();UpdateLayout();
-    Assert51(CompactHeader32.ActualWidth>0&&CompactHeader32.TranslatePoint(new Point(CompactHeader32.ActualWidth,CompactHeader32.ActualHeight),this).X<=ActualWidth+2,"scaled header within window "+scale+"/"+palette+"/"+mode.Name);
-    Capture32("acceptance51-scale-"+scale.ToString(CultureInfo.InvariantCulture)+"-"+palette+"-"+mode.Name);
+    Theme.Apply(palette,false);MainTabs.SelectedItem=mode;ShowCurrent();UpdateLayout();HideToast(null,EventArgs.Empty);
+    double width=1480/scale,height=940/scale;root.Measure(new Size(width,height));root.Arrange(new Rect(0,0,width,height));
+    Assert51(CompactHeader32.ActualWidth>0&&CompactHeader32.TranslatePoint(new Point(CompactHeader32.ActualWidth,CompactHeader32.ActualHeight),root).X<=width+2,"scaled header within viewport "+scale+"/"+palette+"/"+mode.Name);
+    Assert51(HeaderActions34.TranslatePoint(new Point(HeaderActions34.ActualWidth,0),root).X<=width+2,"scaled actions within viewport "+scale+"/"+palette+"/"+mode.Name);
+    var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap(1480,940,96*scale,96*scale,PixelFormats.Pbgra32);var visual=new DrawingVisual();
+    using(var context=visual.RenderOpen()){context.DrawRectangle(Theme.Brush("AppSurface"),null,new Rect(0,0,width,height));context.DrawRectangle(new VisualBrush(root){Stretch=Stretch.None,AlignmentX=AlignmentX.Left,AlignmentY=AlignmentY.Top},null,new Rect(0,0,width,height));}
+    bitmap.Render(visual);var encoder=new System.Windows.Media.Imaging.PngBitmapEncoder();encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+    using var file=File.Create(Path.Combine(Path.GetTempPath(),"ui-acceptance51-scale-"+scale.ToString(CultureInfo.InvariantCulture)+"-"+palette+"-"+mode.Name+".png"));encoder.Save(file);
    }
-  }finally{root.LayoutTransform=old;Theme.Apply(theme,false);Width=width;Height=height;MainTabs.SelectedItem=tab;ShowCurrent();}
+  }finally{Theme.Apply(theme,false);MainTabs.SelectedItem=tab;root.Measure(old);root.Arrange(new Rect(old));ShowCurrent();}
  }
 }
