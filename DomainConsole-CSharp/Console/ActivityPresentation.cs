@@ -9,6 +9,7 @@ public partial class MainWindow {
  public static string DownloadSource(BackgroundDownload download,LiveUpdateActivity live)=>Uri.TryCreate(download.RemoteName,UriKind.Absolute,out var source)&&Uri.TryCreate(live.PolicySource,UriKind.Absolute,out var policy)&&source.Host.Equals(policy.Host,StringComparison.OrdinalIgnoreCase)&&source.Port==policy.Port&&source.AbsolutePath.StartsWith("/Content/",StringComparison.OrdinalIgnoreCase)?"Источник совпадает с WSUS из политики клиента":"Связь источника с настроенным WSUS не установлена";
  void UpdateWsusStage(){if(ComputerGrid.SelectedItem is not ComputerRow selected){CurrentStage.Text="Выберите компьютер.";CurrentProgress.Visibility=Visibility.Collapsed;BackgroundGroup.Visibility=Visibility.Collapsed;RecommendationButton.Visibility=Visibility.Collapsed;return;}
   var row=OperationRow38(selected);var state=row.Target.State;bool active=IsCurrentExecution(row.Target.Status);bool fresh=ConnectionFresh(row.Host)&&StateFresh(state);bool terminal=state!=null&&!active;
+  OperationDetail38.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty,"TextMuted");
   RefreshCollector44(selected.Host);
   RefreshControl37(selected);RefreshUser37(selected);CurrentComputer.Text=row.Name;CurrentDetails.Text=row.OS;CurrentDetails.ToolTip=row.OS+"\n"+row.Host+ConnectionStore.Description(row.Host);
 
@@ -19,8 +20,9 @@ public partial class MainWindow {
   bool failed=row.Target.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired";CurrentStage.Foreground=reboot35?Theme.Tone("Warning"):failed?Theme.Tone("Error"):active?Theme.Tone("Info"):Theme.Brush("TextPrimary");CurrentStage.ToolTip=state?.Stage.Length>0?state.Stage+"\n"+CurrentStage.Text:CurrentStage.Text;
 
   if(RebootReason(selected).Length>0)RecommendationButton.Visibility=Visibility.Collapsed;
-  CurrentProgress.Visibility=active?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=active&&(fresh||deploying.Contains(row.JobId+row.Host))&&state?.Progress==null;CurrentProgress.Value=state?.Progress??0;WsusProgress.IsIndeterminate=CurrentProgress.IsIndeterminate;WsusStage.Text=CurrentStage.Text;
-  RecommendationButton.Visibility=RecommendationRelevant(state,row.Target.Status)&&RebootReason(selected).Length==0?Visibility.Visible:Visibility.Collapsed;RecommendationButton.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty,"ButtonSurface");RecommendationButton.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty,"WarningText");RecommendationButton.ToolTip=state?.Recommendation;
+  bool progress47=active&&(state?.Progress!=null||state?.Stage.StartsWith("Установка",StringComparison.Ordinal)==true||state?.Stage.StartsWith("Скачивание",StringComparison.Ordinal)==true||state?.Stage.Contains("поиск обновлений",StringComparison.OrdinalIgnoreCase)==true);
+  CurrentProgress.Visibility=progress47?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=progress47&&fresh&&state?.Progress==null;CurrentProgress.Value=state?.Progress??0;WsusProgress.IsIndeterminate=CurrentProgress.IsIndeterminate;WsusStage.Text=CurrentStage.Text;
+  RecommendationButton.Visibility=Visibility.Collapsed;RecommendationButton.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty,"ButtonSurface");RecommendationButton.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty,"WarningText");RecommendationButton.ToolTip=state?.Recommendation;
   DiagnosticStage.Text=state==null?"":"Диагностика: "+DiagnosticLabel(state);DiagnosticStage.Visibility=state!=null&&(state.DiagnosticStatus is "Pending" or "Running" or "LegacyRunning")?Visibility.Visible:Visibility.Collapsed;
   BackgroundGroup.Visibility=Visibility.Collapsed;BackgroundProgress.Visibility=Visibility.Collapsed;DownloadPriorityButton.Visibility=Visibility.Collapsed;
   if(backgroundUpdates.TryGetValue(row.Host,out var live)&&(live.Downloads.Count>0||live.InstallerBusy||live.Limitation.Length>0)){
@@ -35,7 +37,8 @@ public partial class MainWindow {
   OperationGlyph38.Kind=active?"Working":failed?"Error":reboot35?"Reboot":row.Target.Status=="RebootObserved"?"Warning":row.Target.Status is "Completed" or "VerifiedAfterReboot"?"Success":"Info";OperationGlyph38.Tint=row.Target.Status=="RebootObserved"?Theme.Tone("Warning"):CurrentStage.Foreground;ApplyStatus40(selected,active);
   if(active&&(TransportBudget41.Paused||(DateTimeOffset.TryParse(state?.Updated,out var observed46)&&DateTimeOffset.UtcNow-observed46>TimeSpan.FromSeconds(90))||clientConnections.GetValueOrDefault(row.Host)?.Lost38==true)){
    string observation=TransportBudget41.Paused?"Опрос выключен · сохранённый результат":row.Target.Status=="SubmissionUnknown"?"Передача задания не подтверждена":clientConnections.GetValueOrDefault(row.Host)?.Lost38==true?"Связь потеряна · состояние установки неизвестно":"Нет свежего статуса задания";
-   CurrentStage.Text=observation;OperationDetail38.Text="Последний этап: "+(state?.Stage??row.Target.Status)+" · "+Display36.Date(state?.Updated??"");OperationDetail38.Visibility=Visibility.Visible;CurrentProgress.IsIndeterminate=false;
+   OperationGlyph38.Kind=clientConnections.GetValueOrDefault(row.Host)?.Lost38==true?"Unreachable":"Stale";OperationGlyph38.Tint=Theme.Tone(TransportBudget41.Paused?"Stale":"Warning");CurrentStage.Foreground=OperationGlyph38.Tint;
+   CurrentStage.Text=observation;OperationDetail38.Text="Последний этап: "+(state?.Stage??row.Target.Status)+" · "+Display36.Date(state?.Updated??"");OperationDetail38.Visibility=Visibility.Visible;CurrentProgress.IsIndeterminate=false;CurrentProgress.Visibility=Visibility.Collapsed;
   }
   if(active&&CurrentStage.Text.StartsWith("Установка"))OperationGlyph38.Kind="Install";
   else if(active&&CurrentStage.Text.StartsWith("Скачивание"))OperationGlyph38.Kind="Download";

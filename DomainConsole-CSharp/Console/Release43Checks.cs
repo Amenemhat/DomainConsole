@@ -3,14 +3,60 @@ using System.Text;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
- void VerifyRelease43(){VerifyRelease44();VerifyRelease45();VerifyRelease46();
+ void VerifyRelease43(){File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector48-history.ps1"),RemoteService.FailureHistoryScript48(new()),new UTF8Encoding(true));File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector48-repair.ps1"),RemoteService.RepairScript48(),new UTF8Encoding(true));VerifyRelease44();VerifyRelease45();VerifyRelease46();
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-remove.ps1"),RemoteService.RemoveCollectorScript43(),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-enable.ps1"),RemoteService.RemoveCollectorScript43("Enable"),new UTF8Encoding(true));
+  AwaitUi39(VerifyCollectorBatch48());
+  AwaitUi39(VerifyPausedCollector48());
+  VerifyCollectorFailures48();
   AwaitUi39(VerifyPause43());
+  AwaitUi39(VerifyOverviewCancellation47());
   var current43=Current();current43.SetService43("Чтение состояния задания");CaptureContent38("release43-service",1000,640);current43.SetService43("");
   var row=Current();var old=readyProofs43.GetValueOrDefault(row.Host);CachedWsusReport? cache=null;var now=DateTimeOffset.UtcNow;var reboot=new RebootView40(false,true,now.ToString("o"),Array.Empty<string>(),"");
   try{readyProofs43.Remove(row.Host);var warning=new ClientAssessment41("Warning","Проверка неполная","");if(PreserveReady43(row,warning,false,null,cache,reboot,"").Kind=="Success")throw new Exception("Unknown result became success");PreserveReady43(row,new("Success","Проверено", ""),false,null,cache,reboot,"scan");var held=PreserveReady43(row,new("Stale","Снимок устарел", ""),false,null,cache,reboot with{Fresh=false},"scan");if(held.Kind!="Success")throw new Exception("Clock aging erased successful proof");if(PreserveReady43(row,new("Needed","К установке: 1", ""),false,null,cache,reboot,"scan").Kind!="Needed")throw new Exception("New update hidden by saved green");}
   finally{if(old==null)readyProofs43.Remove(row.Host);else readyProofs43[row.Host]=old;Store.Write("ready-proofs43.json",readyProofs43);}
+ }
+ static void VerifyCollectorFailures48(){
+  foreach(var error in new Exception[]{new System.Text.Json.JsonException("broken"),new KeyNotFoundException("field"),new FormatException("timestamp")}){
+   var wait=RemoteService.CollectorFailure48(error,1);if(wait.Kind!="InvalidResult"||wait.Next!=DateTimeOffset.MaxValue)throw new Exception("Malformed collector response classified as network outage");
+  }
+  var denied=RemoteService.CollectorFailure48(new IOException("0x80070005"),1);if(denied.Kind!="AccessDenied"||denied.Next!=DateTimeOffset.MaxValue)throw new Exception("Access refusal classification lost");
+  foreach(var sample in new[]{(1,120),(2,300),(3,900),(100,900)}){var now=DateTimeOffset.UtcNow;var wait=RemoteService.CollectorFailure48(new TimeoutException("network"),sample.Item1);var delay=(wait.Next-now).TotalSeconds;if(wait.Kind!="Unreachable"||delay<sample.Item2-1||delay>sample.Item2+1)throw new Exception("Network backoff not bounded");}
+ }
+ async Task VerifyPausedCollector48(){
+  bool paused=TransportBudget41.Paused;PollingControl43.Pause();
+  try{
+   foreach(Func<Task<string>> action in new Func<Task<string>>[]{()=>remote.InspectSnapshot42(new(){Host="paused.fixture.invalid"}),()=>remote.ProbeInventory41(new(){Host="paused.fixture.invalid"}),()=>remote.FailureHistory(new(){Host="paused.fixture.invalid"},new())}){
+    bool denied=false;try{await action();}catch(OperationCanceledException){denied=true;}
+    if(!denied)throw new Exception("Collector inspection bypassed master OFF");
+   }
+  }finally{if(!paused)PollingControl43.Resume();}
+ }
+ static async Task VerifyCollectorBatch48(){
+  var batch=new CollectorBatch48();var entered=new TaskCompletionSource();var finish=new TaskCompletionSource();var visited=new List<int>();
+  var pending=batch.Run(new[]{1,2,3},()=>true,async n=>{visited.Add(n);entered.SetResult();await finish.Task;});
+  await entered.Task;batch.Stop();if(pending.IsCompleted)throw new Exception("Cancellation abandoned admitted cleanup");finish.SetResult();await pending;
+  if(!visited.SequenceEqual(new[]{1})||batch.Started!=1||batch.Finished!=1)throw new Exception("Cancelled cleanup admitted another endpoint");
+  var normal=new CollectorBatch48();visited.Clear();await normal.Run(new[]{1,2,3},()=>true,n=>{visited.Add(n);return Task.CompletedTask;});
+  if(!visited.SequenceEqual(new[]{1,2,3})||normal.Finished!=3)throw new Exception("Cleanup order changed");
+  var closed=new CollectorBatch48();await closed.Run(new[]{1,2},()=>false,n=>throw new Exception("Closed queue dispatched"));
+  if(closed.Started!=0)throw new Exception("Closed queue created work");
+ }
+ static async Task VerifyOverviewCancellation47(){
+  bool paused=TransportBudget41.Paused;
+  try{
+   foreach(bool resume in new[]{false,true}){
+    PollingControl43.Resume();using var cancel=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);
+    var source=new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var pending=AwaitOverviewResult47(source.Task,cancel.Token);PollingControl43.Pause();if(resume)PollingControl43.Resume();source.SetResult(7);
+    bool rejected=false;try{await pending;}catch(OperationCanceledException){rejected=true;}
+    if(!rejected)throw new Exception("Old overview result applied after OFF or OFF/ON");
+   }
+   PollingControl43.Resume();using var fresh=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);
+   if(await AwaitOverviewResult47(Task.FromResult(9),fresh.Token)!=9)throw new Exception("Fresh overview response discarded");
+   fresh.Cancel();bool stopped=false;try{await AwaitOverviewResult47(Task.FromResult(11),fresh.Token);}catch(OperationCanceledException){stopped=true;}
+   if(!stopped)throw new Exception("Stopped overview response applied");
+  }finally{if(paused)PollingControl43.Pause();else PollingControl43.Resume();}
  }
  static async Task VerifyPause43(){bool paused=TransportBudget41.Paused;try{PollingControl43.Resume();using(var read=PollingControl43.Read()){var token=PollingControl43.Token;PollingControl43.Pause();if(!token.IsCancellationRequested)throw new Exception("Pause did not cancel read token");int calls=0;bool blocked=false;try{await PowerShellBridge.Execute("throw 'must not execute'");}catch(OperationCanceledException){blocked=true;}if(!blocked||calls!=0)throw new Exception("Paused read reached PowerShell");PollingControl43.Resume();if(!PollingControl43.Token.IsCancellationRequested)throw new Exception("Old read generation revived on resume");}PollingControl43.Resume();using(PollingControl43.Read()){if(PollingControl43.Token.IsCancellationRequested)throw new Exception("Resume reused cancelled generation");}PollingControl43.Pause();bool denied=false;try{using var read=PollingControl43.Read();}catch(OperationCanceledException){denied=true;}if(!denied)throw new Exception("Read scope admitted during OFF");}finally{if(paused)PollingControl43.Pause();else PollingControl43.Resume();}}
 }

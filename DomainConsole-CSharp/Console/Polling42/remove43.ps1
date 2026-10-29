@@ -10,13 +10,15 @@ foreach($id in @('S-1-5-18','S-1-5-32-544')){$acl.AddAccessRule((New-Object Secu
 Set-Acl -LiteralPath $root -AclObject $acl
 
 PlainPath $disabled
-if($mode -ne 'Enable'){[IO.File]::WriteAllText($disabled,'{"Disabled":true,"Protocol":1}',(New-Object Text.UTF8Encoding($false)))}
-$lock=$null;$gate=$null;$removed=@();$skipped=@()
+
+$repairGate=$null;$lock=$null;$gate=$null;$removed=@();$skipped=@()
 try{
+ if(!@@INTERNAL_REPAIR@@){PlainPath (Join-Path $root 'repair48.lock');try{$repairGate=[IO.File]::Open((Join-Path $root 'repair48.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}catch{throw 'Восстановление сборщика выполняется другой консолью; повторите после получения результата'}}
+ if($mode -ne 'Enable'){[IO.File]::WriteAllText($disabled,'{"Disabled":true,"Protocol":1}',(New-Object Text.UTF8Encoding($false)))}
  if(!(Test-Path -LiteralPath $path)){New-Item -ItemType Directory -Path $path -Force|Out-Null}
  PlainPath (Join-Path $path 'admission.lock')
  try{$lock=[IO.File]::Open((Join-Path $path 'admission.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}catch{throw 'Допуск сборщика занят; повторите очистку после завершения текущего подключения. Запрет новых запусков сохранён'}
- if($mode -eq 'Enable'){Remove-Item -LiteralPath $disabled -Force -ErrorAction SilentlyContinue;@{Status='Enabled';Reason='Запрет установки снят; сборщик будет проверен и установлен при следующем разрешённом опросе'}|ConvertTo-Json -Compress;return}
+ if($mode -eq 'Enable'){if(Test-Path -LiteralPath $disabled){Remove-Item -LiteralPath $disabled -Force -ErrorAction Stop};if(Test-Path -LiteralPath $disabled){throw 'Запрет установки не снят'};@{Status='Enabled';Reason='Запрет установки снят; сборщик будет проверен и установлен при следующем разрешённом опросе'}|ConvertTo-Json -Compress;return}
  $name='DomainConsoleCSharp-Snapshot41';$task=Get-ScheduledTask -TaskName $name -TaskPath '\' -ErrorAction SilentlyContinue
  $exe=Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe';$script=Join-Path $path 'collect.ps1'
  if(!$task -and (Test-Path -LiteralPath (Join-Path $path 'collect.ps1'))){$body=[IO.File]::ReadAllText((Join-Path $path 'collect.ps1'));if($body -notlike '*DcReadJob42*' -and $body -notlike '*$dcRebootJobId*'){throw 'Принадлежность файлов без задачи не подтверждена; сохранены'}}
@@ -52,5 +54,5 @@ try{
  # Keep admission.lock while held so another console cannot create a second lock inode.
  foreach($f in @(Get-ChildItem -LiteralPath $path -Force|Where-Object {$_.Name -notin @('admission.lock','execution.lock')})){$skipped+=$f.Name}
  @{Status=$(if($skipped.Count){'Partial'}else{'Removed'});Reason='Сборщик удалён и повторный запуск запрещён. Задания обновлений и системные службы сохранены. Сохранены минимальный запрет установки и файлы блокировки.';Removed=@($removed);Unknown=@($skipped)}|ConvertTo-Json -Depth 6 -Compress
-}catch{@{Status='Partial';Reason=$_.Exception.Message;Removed=@($removed);Disabled=$true}|ConvertTo-Json -Depth 6 -Compress}
-finally{if($gate){$gate.Dispose()};if($lock){$lock.Dispose()}}
+}catch{@{Status='Partial';Reason=$_.Exception.Message;Removed=@($removed);Disabled=(Test-Path -LiteralPath $disabled)}|ConvertTo-Json -Depth 6 -Compress}
+finally{if($gate){$gate.Dispose()};if($lock){$lock.Dispose()};if($repairGate){$repairGate.Dispose()}}

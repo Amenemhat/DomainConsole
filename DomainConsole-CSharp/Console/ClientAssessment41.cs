@@ -57,8 +57,8 @@ public partial class MainWindow {
   if(scan.Step!=null&&DateTimeOffset.TryParse(lastInstall,out var installed)&&DateTimeOffset.TryParse(scan.Step.Ended,out var scanned)&&scanned<installed)scan=default;
   bool active=operation.Target!=null;var proof=RebootViewFor40(row);
   var assessment=ClientReadiness41.Evaluate(cache?.Found==true?cache.Report:null,cache!=null&&!liveReports.Contains(row.Host),cache?.Found??false,proof,state,active,scan.Step!=null,scan.State?.UpdatesRemaining,scan.Step?.Ended??"",overviewErrors.GetValueOrDefault(row.Host,""),DateTimeOffset.UtcNow,ReportPresentation35.FreshHours,rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"");
-  if(!active&&backgroundUpdates.TryGetValue(row.Host,out var live)&&FreshActivity(live)&&(live.InstallerBusy||live.Jobs.Count>0))return new("Working","На клиенте выполняется операция",assessment.Title+"\n"+assessment.Details);
-  if(!active&&cache?.Found==false&&assessment.Kind!="Error")assessment=new("NoWsus","Клиент не найден в WSUS","Проверьте регистрацию клиента");
+  if(!active&&backgroundUpdates.TryGetValue(row.Host,out var live)&&FreshActivity(live)&&(live.InstallerBusy||live.Jobs.Count>0)){assessment=new("Working","На клиенте выполняется операция",assessment.Title+"\n"+assessment.Details);active=true;}
+  if(!active&&cache?.Found==false&&assessment.Kind is not ("Error" or "SyncError" or "Reboot"))assessment=new("NoWsus","Клиент не найден в WSUS","Проверьте регистрацию клиента");
   if(HeaderRebootJob(row)!=null&&assessment.Kind is not ("Error" or "SyncError"))assessment=new("Reboot","Перезагрузка назначена",assessment.Title+"\n"+assessment.Details);
   assessment=PreserveReady43(row,assessment,active,state,cache,proof,scan.Step?.Ended??"");if(assessment.Kind=="Success"&&rebootWatches.TryGetValue(row.Host,out var watch43)&&!watch43.Done&&rebootSnapshots.TryGetValue(row.Host,out var snap43)&&RebootReturned(watch43,snap43)&&ObservedAfter(snap43,watch43.RequestedUtc)&&snap43.Required==false){watch43.Done=true;watch43.Phase="Перезагрузка и готовность подтверждены";Store.Write("reboot-watches.json",rebootWatches);}
   assessment=ExplainAssessment45(row,assessment,cache,proof,state,active,scan.Step?.Ended??"",scan.State?.UpdatesRemaining);
@@ -73,7 +73,13 @@ public partial class MainWindow {
   bool busy=false;async Task Run(Func<Task<string>> action){if(busy)return;busy=true;foreach(var button in new[]{inspect,stop,resume,preview,clean})button.IsEnabled=false;try{text.Text=await action();}catch(Exception ex){text.Text="Не удалось прочитать состояние опроса\n"+ex.Message;}finally{busy=false;foreach(var button in new[]{inspect,stop,resume,preview,clean})button.IsEnabled=true;}}
   inspect.Click+=async(s,args)=>await Run(()=>remote.InspectSnapshot42(row.Target));
   stop.Click+=async(s,args)=>await Run(()=>remote.InspectSnapshot42(row.Target,"Stop"));
-  resume.Click+=async(s,args)=>await Run(async()=>{var result=await remote.InspectSnapshot42(row.Target,"Recover");if(result.Contains("Recovered")){ReadSucceeded34(row.Host,"флаги и аптайм");ReadSucceeded34(row.Host,"фоновая активность");}return result;});
+  resume.Click+=async(s,args)=>await Run(async()=>{
+   var target=ConnectionStore.Capture(row.Target);var generation=PollingControl43.Token;
+   string result="Ответ восстановления устарел: профиль или режим опроса изменился. Повторный запуск не создавался.";
+   await CompleteCollectorRepair47(target,generation,remote.RepairCollector47(target),()=>{
+    ReadSucceeded34(row.Host,"флаги и аптайм");ReadSucceeded34(row.Host,"фоновая активность");return Task.CompletedTask;
+   },value=>result=value);return result;
+  });
   preview.Click+=async(s,args)=>await Run(async()=>ProbeInventoryText41(await remote.ProbeInventory41(row.Target)));
   clean.Click+=async(s,args)=>{if(MessageBox.Show(window,"Удалить подтверждённые завершённые старые Probe? Рабочие задания сохраняются.","Очистка Probe",MessageBoxButton.YesNo)==MessageBoxResult.Yes)await Run(async()=>ProbeInventoryText41(await remote.ProbeInventory41(row.Target,true)));};window.ShowDialog();
  });

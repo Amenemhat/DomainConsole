@@ -39,6 +39,18 @@ jobs:
           New-Item Publish/Agent -ItemType Directory -Force | Out-Null
           Copy-Item DomainConsole-CSharp/Agent/bin/Release/net462/DomainConsole.Agent.exe Publish/Agent/
           Copy-Item DomainConsole-CSharp/README.txt Publish/README-source.txt
+      - name: Verify recovery after killing the agent process
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'DomainConsole-interruption47'
+          & ./Publish/Agent/DomainConsole.Agent.exe interruption-smoke47 $root
+          if ($LASTEXITCODE -ne 0) { throw 'Abrupt agent termination recovery failed' }
+          "DOMAINCONSOLE_INTERRUPTION47=$root" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Verify service restoration after hard PowerShell timeout without touching services
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe service-recovery-smoke47 (Join-Path $env:RUNNER_TEMP 'service-recovery47')
+          if ($LASTEXITCODE -ne 0) { throw 'Service recovery fault injection failed' }
       - name: Verify window and history after restart
         shell: pwsh
         run: |
@@ -74,6 +86,10 @@ jobs:
             $null=[Management.Automation.Language.Parser]::ParseFile($file.FullName,[ref]$tokens,[ref]$errors)
             if($errors){throw ($file.Name+': '+($errors|Out-String))}
           }
+      - name: Verify safe maintenance executor upgrades
+        shell: powershell
+        run: |
+          & ./.github/scripts/test_maintenance47.ps1 -Template (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/maintenance47.ps1') -Root (Join-Path $env:RUNNER_TEMP 'DomainConsole-maintenance47')
       - name: Verify persisted master OFF before startup timers
         shell: pwsh
         run: |
@@ -98,7 +114,7 @@ jobs:
         shell: pwsh
         run: |
           $p = Start-Process ./Publish/DomainConsole.exe -ArgumentList 'local-smoke' -PassThru
-          if (!$p.WaitForExit(90000)) { Stop-Process -Id $p.Id; throw 'Local transport timeout' }
+          if (!$p.WaitForExit(240000)) { Stop-Process -Id $p.Id; throw 'Local transport and collector repair timeout' }
           if ($p.ExitCode -ne 0 -or !(Test-Path Publish/local-smoke-ok.txt)) { if (Test-Path Publish/local-smoke-error.txt) { Get-Content Publish/local-smoke-error.txt }; throw 'Local transport failed' }
           Get-Content Publish/local-smoke-ok.txt
           Remove-Item Publish/local-smoke-*.txt
@@ -487,6 +503,10 @@ jobs:
             if(!(Get-ChildItem (Split-Path $download) -Filter 'Download.DomainConsoleBackup_*')){throw 'Backup missing'}
             if(@('UsoSvc','wuauserv','bits','cryptsvc'|Where-Object {$states[$_] -ne 'Running'}).Count){throw 'Not all update services were started'}
           } finally {$env:windir=$oldWindir}
+      - name: Verify cache failure boundaries in Windows PowerShell without real service changes
+        shell: powershell
+        run: |
+          & .github/scripts/test_cache47.ps1 -Template (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/cache-cleanup.ps1') -Root (Join-Path $env:RUNNER_TEMP ('DomainConsole-cache47-'+[guid]::NewGuid()))
       - name: Verify automatic queue recovery without touching real services
         shell: pwsh
         run: |
@@ -536,18 +556,20 @@ jobs:
           $text=$text.Replace('$keepBackup=$false;','')
           function New-Object {param($ComObject) if($ComObject -ne 'Microsoft.Update.Installer'){throw 'Unexpected COM'};[pscustomobject]@{IsBusy=$script:busy}}
           function Get-Service {param($Name) $s=[pscustomobject]@{Status=$script:service};$s|Add-Member ScriptMethod WaitForStatus {param($state,$timeout) if($script:service -ne $state){throw 'Service state mismatch'}};$s}
-          function Stop-Service {param($Name,$ErrorAction) $script:service='Stopped'}
+          function Stop-Service {param($Name,$ErrorAction) $script:service='Stopped';if($script:stopFail){throw 'Primary stop fixture failure'}}
           function Start-Service {param($Name,$ErrorAction) if($script:restartFail){throw 'Restart fixture failure'};$script:service='Running'}
-          foreach($mode in @('delete','backup','busy','restart-failure')){
+          foreach($mode in @('delete','backup','busy','restart-failure','primary-and-restore')){
             $fixture=Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS ('recovery-'+$mode)
-            $env:windir=$fixture;$env:ProgramData=$fixture
+            $env:windir=$fixture;$env:ProgramData=$fixture;$dcServiceRecovery47=Join-Path $fixture 'service-recovery'
             $source=Join-Path $fixture 'SoftwareDistribution/EventCache.v2'
             $null=[IO.Directory]::CreateDirectory($source)
             $null=[IO.Directory]::CreateDirectory((Join-Path $fixture 'DomainConsoleCSharp'))
             [IO.File]::WriteAllText((Join-Path $source 'event.bin'),'KEEP_FOR_BACKUP')
-            $script:service='Running';$script:busy=$mode -eq 'busy';$script:restartFail=$mode -eq 'restart-failure';$keepBackup=$mode -eq 'backup';$failed=$false
-            try {$null=& ([ScriptBlock]::Create($text))}catch{$failed=$true}
+            $script:service='Running';$script:busy=$mode -eq 'busy';$script:restartFail=$mode -in @('restart-failure','primary-and-restore');$script:stopFail=$mode -eq 'primary-and-restore';$keepBackup=$mode -eq 'backup';$failed=$false
+            $errorText='';$lines=@();try {$lines=& ([ScriptBlock]::Create($text))}catch{$failed=$true;$errorText=$_.ToString()}
             $copies=@(Get-ChildItem (Join-Path $fixture 'DomainConsoleCSharp') -Directory -Filter 'ReportQueue_*')
+            if($mode -eq 'primary-and-restore' -and (!$failed -or !$errorText.Contains('Primary stop fixture failure') -or !(Test-Path (Join-Path $dcServiceRecovery47 'wuauserv.pending')))){throw 'Primary error or pending service intent lost'}
+            if($mode -in @('delete','backup','busy') -and @(Get-ChildItem $dcServiceRecovery47 -Filter '*.pending' -ErrorAction SilentlyContinue).Count){throw 'Unexpected pending service intent'}
             if($mode -eq 'delete' -and ((Test-Path $source) -or $copies.Count -or $failed -or $script:service -ne 'Running')){throw 'Delete recovery failed'}
             if($mode -eq 'backup' -and ($copies.Count -ne 1 -or $failed -or !(Test-Path (Join-Path $copies[0].FullName 'event.bin')))){throw 'Backup recovery failed'}
             if($mode -eq 'busy' -and (!$failed -or !(Test-Path (Join-Path $source 'event.bin')))){throw 'Busy installer protection failed'}
@@ -783,11 +805,19 @@ jobs:
            [IO.File]::WriteAllText((Join-Path $p 'step-1.out'),('FIRST44'+[Environment]::NewLine+(('middle'+[Environment]::NewLine)*200)+'LAST44'))
            $full=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
            if(!$full.Files[0].Body.Contains('FIRST44') -or !$full.Files[0].Body.Contains('LAST44')){throw 'Earlier commands lost by tail truncation'}
+           2..40|ForEach-Object {[IO.File]::WriteAllText((Join-Path $p ('step-'+$_.ToString()+'.out')),('STEP-'+$_))}
+           [IO.File]::WriteAllText((Join-Path $p 'step-2.err'),'INTERMEDIATE ERROR')
+           $ordered=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
+           if($ordered.Files.Count -ne 41 -or $ordered.Files[-1].Name -ne 'step-40.out' -or ($ordered.Files|Where-Object Name -eq 'step-2.err').Body -ne 'INTERMEDIATE ERROR'){throw 'Sequential files silently truncated or intermediate stderr lost'}
+           $names=@($ordered.Files.Name);if([Array]::IndexOf($names,'step-10.out') -lt [Array]::IndexOf($names,'step-2.out')){throw 'Step files sorted lexicographically'}
+           [IO.File]::WriteAllText((Join-Path $p 'step-1.out'),('Z'*1200000))
+           $limited=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
+           if(!($limited.Files|Where-Object Name -eq 'output-limit.out') -or !$limited.Output.Contains('1 МиБ')){throw 'Output budget hidden from structured result'}
            $includeOutput34=$false;$result=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
            if($result.Files.Count -ne 0){throw 'Background poll needlessly reads full output'}
            [IO.File]::WriteAllText((Join-Path $p 'step-1.updates.json'),'.')
            $result=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
-           if($result.State.Status -ne 'Running' -or !$result.Output.Contains('DC_DATA_ERROR|step-1.updates.json|')){throw 'Optional snapshot failure erased primary status'}
+           if($result.State.Status -ne 'Running' -or !$result.Output.Contains('DC_DATA_ERROR|step-1.updates.json|') -or !(($result.ReadWarnings47 -join ';').Contains('DC_DATA_ERROR|step-1.updates.json|'))){throw 'Optional snapshot failure erased primary status'}
            [IO.File]::WriteAllText($status,(@{Id='wrong';Status='Completed'}|ConvertTo-Json));$rejected=$false
            try{& ([ScriptBlock]::Create($body))}catch{$rejected=$_.Exception.Message.Contains('DC_DATA_ERROR|status.json|')}
            if(!$rejected){throw 'Snapshot from wrong job accepted'}
@@ -812,3 +842,11 @@ jobs:
 
 
 
+
+      - name: Save service recovery fault-injection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DomainConsole-service-recovery47
+          path: ${{ runner.temp }}/service-recovery47/**
+          if-no-files-found: warn

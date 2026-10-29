@@ -8,7 +8,7 @@ public partial class MainWindow {
  readonly HashSet<string> scheduledPoll46=new(StringComparer.OrdinalIgnoreCase);
  Task PollRows43(){
   var generation=PollingControl43.Token;
-  foreach(var row in ActivePollRows().Where(JobPollDue42).ToList()){
+  foreach(var row in ActivePollRows().Where(JobPollDue42).OrderByDescending(IsCurrent).ToList()){
    string key=row.JobId+"|"+row.Host;if(!scheduledPoll46.Add(key))continue;
    _=PollOne46(row,key,generation);
   }
@@ -23,7 +23,7 @@ public partial class MainWindow {
   finally{if(entered)pollQueue43.Release();scheduledPoll46.Remove(key);}
  }
 
- void PollActivity43(string key,string label){if(closing)return;Dispatcher.BeginInvoke(()=>{if(closing)return;foreach(var row in Computers)if(TransportBudget41.Key(ConnectionStore.Capture(row.Target))==key)row.SetService43(TransportBudget41.Paused?"":label);});}
+ void PollActivity43(string key,string label){if(closing)return;var generation48=PollingControl43.Token;Dispatcher.BeginInvoke(()=>{if(closing||generation48.IsCancellationRequested)return;foreach(var row in Computers)if(TransportBudget41.Key(ConnectionStore.Capture(row.Target))==key)row.SetService43(TransportBudget41.Paused?"":label);});}
  ClientAssessment41 PreserveReady43(ComputerRow row,ClientAssessment41 assessment,bool active,RemoteState? state,CachedWsusReport? cache,RebootView40 reboot,string scan){
   string key=Identity40.EndpointKey(ConnectionStore.Capture(row.Target))+"|"+OverviewServer+"|ssl="+(WsusSsl.IsChecked==true)+"|"+row.Target.DirectoryId;
   string job=HostJobs39(row.Host).FirstOrDefault(x=>IsWsusJob(x.Job)&&CurrentIdentity(x.Target)).Job?.Id??"";

@@ -46,7 +46,7 @@ try{
  $result.@@KIND@@|ConvertTo-Json -Depth 12 -Compress
 }finally{if($lock){$lock.Dispose()}}
 """;
- public async Task<string> ProbeInventory41(TargetRecord target,bool clean=false){using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(60));return await PowerShellBridge.Execute("# DC-MANUAL41\n"+Invoke(target,LegacyProbeInventory41.Replace("@@CLEAN@@",clean?"$true":"$false")),timeout.Token);}
+ public async Task<string> ProbeInventory41(TargetRecord target,bool clean=false){using var read48=clean?null:PollingControl43.Read();using var timeout=CancellationTokenSource.CreateLinkedTokenSource(clean?CancellationToken.None:PollingControl43.Token);timeout.CancelAfter(TimeSpan.FromSeconds(60));return await PowerShellBridge.Execute("# DC-MANUAL41\n"+Invoke(target,LegacyProbeInventory41.Replace("@@CLEAN@@",clean?"$true":"$false")),timeout.Token);}
  public const string LegacyProbeInventory41="""
 $clean=@@CLEAN@@
 $root=Join-Path $env:ProgramData 'DomainConsoleCSharp';$base=Join-Path $root 'Probes'
@@ -88,6 +88,6 @@ public static class TransportBudget41 {
   if(Paused&&!manual&&(PollingControl43.IsRead||code.Contains("# DC-READ42",StringComparison.Ordinal)))throw new IOException("DC_PROBE_PAUSED: служебные подключения приостановлены в этой консоли");
   string dir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"DomainConsole","Transport41");Directory.CreateDirectory(dir);string path=Path.Combine(dir,match.Groups[1].Value);FileStream gate;
   try{gate=new FileStream(path+".lock",FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);}catch(IOException){throw new PollWait42("Busy","Подключение к клиенту уже выполняется; повтор не создан",10);}
-  using(gate){await slots.WaitAsync(token);try{token.ThrowIfCancellationRequested();if(Paused&&!manual&&PollingControl43.IsRead)throw new OperationCanceledException("Опрос выключен");string label=code.Contains("$dcJobId34=")?"Чтение состояния задания":code.Contains("# DC-READ42")?"Чтение флагов и активности":code.Contains("whoami;hostname")?"Проверка связи":"Получение данных WSUS";if(PollingControl43.IsRead)PollingControl43.Show(match.Groups[1].Value,label);return await execute(token);}finally{if(PollingControl43.IsRead)PollingControl43.Show(match.Groups[1].Value,"");slots.Release();}}
+  using(gate){await slots.WaitAsync(token);try{token.ThrowIfCancellationRequested();if(Paused&&!manual&&PollingControl43.IsRead)throw new OperationCanceledException("Опрос выключен");string label=code.Contains("# DC-HISTORY48")?"Чтение истории Windows Update":code.Contains("$dcJobId34=")?"Чтение состояния задания":code.Contains("# DC-READ42")?"Чтение флагов и активности":code.Contains("whoami;hostname")?"Проверка связи":"Получение данных WSUS";if(PollingControl43.IsRead)PollingControl43.Show(match.Groups[1].Value,label);return await execute(token);}finally{if(PollingControl43.IsRead)PollingControl43.Show(match.Groups[1].Value,"");slots.Release();}}
  }
 }

@@ -22,10 +22,10 @@ function Read-DcTail34([string]$file,[int]$limit){
 }
 $text='';$files=@();$remaining=if($includeOutput34){1048576}else{65536}
 if($includeOutput34 -or ($state -and $state.Ended)){
- foreach($file in @(Get-ChildItem -LiteralPath $p -File -ErrorAction SilentlyContinue|Where-Object {$_.Name -match '\.(log|out|err)$'}|Sort-Object @{Expression={if($_.Name -match '^step-(\d+)\.(out|err)$'){0}else{1}}},@{Expression={if($_.Name -match '^step-(\d+)'){[int]$Matches[1]}else{999}}},Name|Select-Object -First 32)){
+ foreach($file in @(Get-ChildItem -LiteralPath $p -File -ErrorAction SilentlyContinue|Where-Object {$_.Name -match '\.(log|out|err)$'}|Sort-Object @{Expression={if($_.Name -match '^step-(\d+)\.(out|err)$'){0}else{1}}},@{Expression={if($_.Name -match '^step-(\d+)'){[int]$Matches[1]}else{999}}},Name)){
   if($remaining -le 0){break};try{$body=Read-DcTail34 $file.FullName $remaining}catch{$warnings+=('Не удалось прочитать '+$file.Name+': '+$_.Exception.Message);continue};if($body.Length -gt $remaining){$body=$body.Substring(0,[Math]::Max(0,$remaining-100))+"`n… Вывод ограничен; полный файл — кнопка «Журналы»."};$remaining-=$body.Length;$files+=@{Name=$file.Name;Body=$body};$text+=('--- '+$file.Name+' ---'+[Environment]::NewLine+$body+[Environment]::NewLine)
  }
- if($remaining -le 0){$text+='Объём чтения ограничен. Полные исходные журналы доступны кнопкой «Журналы».'}
+ if($remaining -le 0){$notice='Объём чтения ограничен (1 МиБ для полного вывода). Полные исходные журналы доступны кнопкой «Журналы».';$text+=$notice;$files+=@{Name='output-limit.out';Body=$notice}}
 }
 $taskState='Unknown';$taskResult=$null;$alive=$true
 try{$task=Get-ScheduledTask -TaskName ('DomainConsoleCSharp-'+$dcJobId34) -ErrorAction SilentlyContinue;$taskState='Missing';if($task){$taskState=[string]$task.State;$taskResult=(Get-ScheduledTaskInfo -InputObject $task -ErrorAction Stop).LastTaskResult};$alive=@(Get-CimInstance Win32_Process -Filter "Name='DomainConsole.Agent.exe'"|Where-Object {$_.CommandLine -and $_.CommandLine.IndexOf($p,[StringComparison]::OrdinalIgnoreCase) -ge 0}).Count -gt 0}catch{$taskState='Unknown';$warnings+='Проверка исполнителя недоступна: '+$_.Exception.Message}
@@ -35,7 +35,7 @@ if($client){$quality=@(Get-ChildItem -LiteralPath $p -Filter '*.quality.log');$e
 $boot='';try{$boot=(Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).LastBootUpTime.ToUniversalTime().ToString('o')}catch{}
 $plan=$null;try{$plan=Read-DcJson34 (Join-Path $p 'reboot-plan.json')}catch{$warnings+=$_.Exception.Message}
 if($warnings.Count){$text+=([Environment]::NewLine+'Ограничения дополнительного чтения: '+($warnings -join '; '))}
-@{RebootPlan=$plan;ClientUtc=[DateTime]::UtcNow.ToString('o');BootUtc=$boot;Client=$client;State=$state;Output=$text;Files=@($files);Updates=@($updates);TaskState=$taskState;TaskResult=$taskResult;AgentAlive=$alive}|ConvertTo-Json -Depth 25 -Compress
+@{ReadWarnings47=@($warnings);RebootPlan=$plan;ClientUtc=[DateTime]::UtcNow.ToString('o');BootUtc=$boot;Client=$client;State=$state;Output=$text;Files=@($files);Updates=@($updates);TaskState=$taskState;TaskResult=$taskResult;AgentAlive=$alive}|ConvertTo-Json -Depth 25 -Compress
 """;
 }
 public partial class MainWindow {

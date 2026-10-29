@@ -21,7 +21,10 @@ $jobs=@();try{foreach($n in 1..6){$jobs+=Invoke-Command -ComputerName localhost 
 if((Get-ScheduledTaskInfo $task).LastRunTime -ne $registered){throw 'Cache/concurrency restarted collector'}
 # Failure reason, bounded cooldown, three errors then explicit recovery.
 $null=Query 'Recover'
-foreach($n in 1..3){Admit-Next;$start=Invoke-Probe (Code 'error')|ConvertFrom-Json;if($start.Status -ne 'Busy'){throw 'Fixture start rejected'};$r=Await-Result;if($r.Status -ne 'Ready' -or $r.Snapshot.Complete -or $r.Snapshot.Error -notlike '*FIXTURE_REBOOT_ERROR42*' -or !$r.Snapshot.Activity.CollectedUtc){throw 'Partial result/reason lost'};Expire-Cache;$state=Query 'Get';$expected=if($n -lt 3){'Cooldown'}else{'Blocked'};if($state.Status -ne $expected){throw "Expected $expected, got $($state.Status)"};$last=(Get-ScheduledTaskInfo $task).LastRunTime;foreach($repeat in 1..4){$null=Query 'Get'};if((Get-ScheduledTaskInfo $task).LastRunTime -ne $last){throw 'Cooldown restarted collector'}}
+foreach($n in 1..3){Admit-Next;$start=Invoke-Probe (Code 'error')|ConvertFrom-Json;if($start.Status -ne 'Busy'){throw 'Fixture start rejected'};$r=Await-Result;if($r.Status -ne 'Ready' -or $r.Snapshot.Complete -or $r.Snapshot.Error -notlike '*FIXTURE_REBOOT_ERROR42*' -or !$r.Snapshot.Activity.CollectedUtc){throw 'Partial result/reason lost'};Expire-Cache;$state=Query 'error';$expected=if($n -lt 3){'Cooldown'}else{'Blocked'};if($state.Status -ne $expected){throw "Expected $expected, got $($state.Status)"};$last=(Get-ScheduledTaskInfo $task).LastRunTime;foreach($repeat in 1..4){$null=Query 'error'};if((Get-ScheduledTaskInfo $task).LastRunTime -ne $last){throw 'Cooldown restarted collector'}}
+# A genuinely changed package can migrate after three failures, once. The same failed package above stays blocked.
+if((Query 'Get').Status -ne 'Busy'){throw 'New collector package remained blocked by old failures'}
+if((Await-Result).Status -ne 'Ready'){throw 'Migrated collector failed to return a snapshot'}
 if((Query 'Recover').Status -ne 'Recovered'){throw 'Verified recovery failed'}
 # Non-cooperating read worker is bounded, its sibling result retained.
 Admit-Next;$null=Invoke-Probe (Code 'slow');$r=Await-Result;if($r.Status -ne 'Ready' -or $r.Snapshot.Complete -or !$r.Snapshot.Reboot.CollectedUtc){throw 'Hung optional source destroyed reboot result'}
@@ -62,5 +65,9 @@ try{
 }finally{foreach($name in $created){Stop-ScheduledTask $name -ErrorAction SilentlyContinue;Unregister-ScheduledTask $name -Confirm:$false -ErrorAction SilentlyContinue}}
 $until42=[DateTime]::UtcNow.AddSeconds(70)
 while(@(Get-Process wsmprovhost -ErrorAction SilentlyContinue).Count -gt $baseline42 -and [DateTime]::UtcNow -lt $until42){Start-Sleep -Seconds 1}
-if(@(Get-Process wsmprovhost -ErrorAction SilentlyContinue).Count -gt $baseline42){throw 'WinRM processes did not return to baseline'}
+$finalHosts42=@(Get-Process wsmprovhost -ErrorAction SilentlyContinue).Count
+if($finalHosts42 -gt $baseline42){throw 'WinRM processes did not return to baseline'}
+$collectorCount42=@(Get-ScheduledTask -TaskName $task -ErrorAction Stop).Count
+if($collectorCount42 -ne 1){throw 'Expected exactly one fixed collector task'}
+[pscustomobject]@{ConcurrentReaders=6;CachedSequentialReads=12;WinRMHostsBefore=$baseline42;WinRMHostsAfter=$finalHosts42;CollectorTasksAfter=$collectorCount42;HungActivityWorkersAfter=$left.Count;AutonomousDeadlineSeconds=60}|ConvertTo-Json -Compress|Write-Output
 Write-Output 'Probe42: real SYSTEM single-flight/cache, six WinRM readers, partial failures, cooldown/circuit breaker, non-cooperating worker termination, autonomous scheduler deadline, verified recovery and legacy cleanup passed.'

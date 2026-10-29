@@ -26,6 +26,7 @@ namespace DomainConsole.Agent {
     }
    }
    if(state.ExecutorPid37>0){try{using(var p=Process.GetProcessById(state.ExecutorPid37)){if(!p.HasExited&&p.StartTime.ToUniversalTime().ToString("o")==state.ExecutorStarted37)return false;}}catch(ArgumentException){}catch{return false;}}
+   if(!string.IsNullOrEmpty(state.ServiceRecoveryError47)&&!RecoverTerminalServices47(file,state))return false;
    return true;
   }
   static bool NoActiveJobs37(ControlRecord37 record)=>record.JobIds.All(JobFinished37);

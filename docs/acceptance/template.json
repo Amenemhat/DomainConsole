@@ -5,6 +5,7 @@
   "run_id": 0,
   "sha256": "REPLACE",
   "registry_sha256": "REPLACE",
+  "batch_plan_sha256": "REPLACE",
   "reviewer": "",
   "reviewed_at": "",
   "issues": [
@@ -20,7 +21,8 @@
           "actual": "",
           "result": "pending",
           "commit": "",
-          "evidence": ""
+          "evidence": "",
+          "condition_id": ""
         }
       ]
     }
