@@ -38,6 +38,20 @@ public partial class MainWindow {
     var persisted49=Store.Read("reboot-watches.json",new Dictionary<string,RebootWatch>());
     if(persisted49.Count!=2||persisted49.Values.Any(w=>w.Scan))throw new Exception("Auto OFF lost reboot cancellation across restart");
    }finally{rebootWatches.Clear();foreach(var w in savedWatches49)rebootWatches[w.Key]=w.Value;Store.Write("reboot-watches.json",rebootWatches);AutoServiceToggle.IsChecked=toggle49;}
+   var preservedWatches49=rebootWatches.ToList();
+   try{
+    foreach(string change in new[]{"disabled","replaced","generation","none"}){
+     maintenancePlans.Clear();History.Clear();queue.Clear();AutoServiceEnabled=false;PollingControl43.Resume();
+     var watch49=new RebootWatch{Scan=true};rebootWatches[row.Host]=watch49;
+     var ready49=new TaskCompletionSource<LiveUpdateActivity>(TaskCreationOptions.RunContinuationsAsynchronously);
+     var pending49=ContinueAfterReboot(row.Host,watch49,ConnectionStore.Capture(row.Target),_=>ready49.Task);
+     if(change=="disabled")watch49.Scan=false;
+     if(change=="replaced")rebootWatches[row.Host]=new(){Scan=true};
+     if(change=="generation"){PollingControl43.Pause();PollingControl43.Resume();}
+     ready49.SetResult(new());await pending49;
+     if(queue.Count!=(change=="none"?1:0))throw new Exception("Obsolete reboot readiness dispatched follow-up: "+change);
+    }
+   }finally{rebootWatches.Clear();foreach(var w in preservedWatches49)rebootWatches[w.Key]=w.Value;Store.Write("reboot-watches.json",rebootWatches);}
    foreach(string change in new[]{"auto","endpoint","generation","plan","none"}){
     maintenancePlans.Clear();History.Clear();queue.Clear();AutoServiceEnabled=true;PollingControl43.Resume();ConnectionStore.Profiles.Remove(row.Host);
     var target=ConnectionStore.Capture(row.Target);target.Status="Completed";target.State=new(){Status="Completed",Ended=DateTimeOffset.UtcNow.ToString("o"),UpdatesRemaining=1};

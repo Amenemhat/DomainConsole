@@ -133,6 +133,24 @@ jobs:
           $value = & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $probe | ConvertFrom-Json
           if (!$value.Complete) { throw 'Native WTS session reader did not complete' }
           Write-Output 'Native session enumeration succeeded; no user identifiers are exported.'
+      - name: Verify structured Russian admission messages in Windows PowerShell 5.1 cultures
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          if($PSVersionTable.PSVersion.Major -ne 5){throw 'Expected Windows PowerShell 5.1'}
+          $oldCulture=[Threading.Thread]::CurrentThread.CurrentCulture;$oldUi=[Threading.Thread]::CurrentThread.CurrentUICulture
+          try {
+            foreach($culture in @('ru-RU','en-US')){
+              [Threading.Thread]::CurrentThread.CurrentCulture=[Globalization.CultureInfo]::GetCultureInfo($culture)
+              [Threading.Thread]::CurrentThread.CurrentUICulture=[Globalization.CultureInfo]::GetCultureInfo($culture)
+              $root=Join-Path $env:RUNNER_TEMP ('DomainConsole-coordination37/admission38-'+$culture)
+              $records=@(Get-ChildItem $root -Recurse -Filter admission38.json|ForEach-Object {Get-Content $_.FullName -Raw -Encoding UTF8|ConvertFrom-Json})
+              $foreign=@($records|Where-Object {$_.ReasonCode -eq 'other_console'})
+              if($foreign.Count -ne 1 -or !$foreign[0].Message.Contains('Рабочая консоль') -or $foreign[0].Message.Contains([char]0xFFFD)){throw 'UTF8 admission message lost in PS5.1'}
+              if(!($records|Where-Object {$_.Allowed -eq $true})){throw 'Accepted admission missing'}
+              Write-Output ('Verified PS5.1 UTF8 structured admission under '+$culture)
+            }
+          } finally {[Threading.Thread]::CurrentThread.CurrentCulture=$oldCulture;[Threading.Thread]::CurrentThread.CurrentUICulture=$oldUi}
       - name: Verify parallel command and WSUS queues
         shell: pwsh
         run: |
