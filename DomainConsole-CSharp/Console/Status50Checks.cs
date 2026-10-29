@@ -19,6 +19,12 @@ public partial class MainWindow {
    Check(criteria.Count==3&&criteria[2].Action==(!active&&!reboot.Fresh&&result.Kind!="Success"),"action "+flag+"/"+server+"/"+active);
    Check(report.LastReportedUtc==(server=="old"?now.AddDays(-3).ToString("o"):now.AddMinutes(-1).ToString("o")),"report provenance "+flag+"/"+server+"/"+active);
   }
+  foreach(string stamp in new[]{"invalid",now.AddHours(1).ToString("o")}){
+   var invalid=DescribeReboot40(new(){Required=true,CollectedUtc=stamp},"",now);
+   Check(invalid.Required==null&&!invalid.Fresh,"invalid reboot timestamp "+stamp);
+  }
+  var incomplete=DescribeReboot40(new(){Required=false,CollectedUtc=at,Error="CBS unavailable"},boot,now);
+  Check(incomplete.Required==null&&!incomplete.Fresh,"freshly received partial flags are not complete");
   // Identical facts must yield identical text and evidence even off selection.
   var current=Current();var other=new ComputerRow(new(){Host="status50.fixture.invalid",Name="STATUS50"});
   var oldCurrent=criteria45.GetValueOrDefault(current.Host);var oldOther=criteria45.GetValueOrDefault(other.Host);
