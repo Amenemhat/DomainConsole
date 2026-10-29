@@ -40,9 +40,10 @@ public partial class MainWindow {
   foreach(var operation in new[]{("CMD","Команда CMD"),("PowerShell","Команда PowerShell"),("PowerShell","Перезапуск служб"),("CacheCleanup","Очистка кэша"),("Diagnostics","Диагностика"),("UpdateScan","Поиск обновлений"),("Updates","Установка обновлений")})foreach(string status in new[]{"Completed","Failed","CompletedWithErrors","InterventionRequired"}){
    bool failed=status!="Completed";
    var state=new RemoteState{Status=status,Started=DateTimeOffset.UtcNow.AddMinutes(-1).ToString("o"),Ended=DateTimeOffset.UtcNow.ToString("o"),Error=failed?"fixture primary cause 0x80070020":"",Results=new(){new(){Kind=operation.Item1,Name=operation.Item2,ExitCode=failed?1:0}},RebootEvidence=new(){Required=false,CollectedUtc=DateTimeOffset.UtcNow.ToString("o")}};
-   var result=PresentResult("matrix51.fixture.invalid",new(){State=state,Files=new(){new(){Name="step-1.out",Body="FIRST51\nrepeat\nrepeat\nLAST51"}}});
+   var result=PresentResult("matrix51.fixture.invalid",new(){State=state,Files=new(){new(){Name="step-1.out",Body="FIRST51\nrepeat\nrepeat\nrepeat\nrepeat\n2026-01-01T23:59:00+03:00\nLAST51"}}});
    Assert51(result.Contains("FIRST51")&&result.Contains("LAST51")&&result.Contains("repeat\nrepeat"),"output preserved "+operation.Item2+"/"+status);
    Assert51(!failed||result.Contains("0x80070020"),"primary code retained "+operation.Item2+"/"+status);
+   foreach(bool wsus in new[]{false,true}){var visible=Display36.Text(ResultPresentation36.Format(CommandOutput(result,wsus)));Assert51(visible.Contains("repeat\nrepeat\nrepeat\nrepeat")&&visible.Contains("2026-01-01T23:59:00+03:00"),"channel preserves literal output "+operation.Item2+"/"+status+"/"+wsus);}
    var formatted=ResultPresentation36.Format(result);var parts=LogViewer.Sections(formatted);
    Assert51(parts.Count>0&&parts[0].Title=="Главное"&&parts[^1].Title=="Сведения о задании","summary/details order "+operation.Item2+"/"+status);
    var viewer=new LogViewer{Text=formatted};viewer.SetExpanded("Вывод команды",true);viewer.SetExpanded("Технические подробности · вывод операции",true);
