@@ -3,7 +3,7 @@ using System.Text;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
- void VerifyRelease43(){File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector48-repair.ps1"),RemoteService.RepairScript48(),new UTF8Encoding(true));VerifyRelease44();VerifyRelease45();VerifyRelease46();
+ void VerifyRelease43(){File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector48-history.ps1"),RemoteService.FailureHistoryScript48(new()),new UTF8Encoding(true));File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector48-repair.ps1"),RemoteService.RepairScript48(),new UTF8Encoding(true));VerifyRelease44();VerifyRelease45();VerifyRelease46();
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-remove.ps1"),RemoteService.RemoveCollectorScript43(),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-enable.ps1"),RemoteService.RemoveCollectorScript43("Enable"),new UTF8Encoding(true));
   AwaitUi39(VerifyCollectorBatch48());
@@ -26,7 +26,7 @@ public partial class MainWindow {
  async Task VerifyPausedCollector48(){
   bool paused=TransportBudget41.Paused;PollingControl43.Pause();
   try{
-   foreach(Func<Task<string>> action in new Func<Task<string>>[]{()=>remote.InspectSnapshot42(new(){Host="paused.fixture.invalid"}),()=>remote.ProbeInventory41(new(){Host="paused.fixture.invalid"})}){
+   foreach(Func<Task<string>> action in new Func<Task<string>>[]{()=>remote.InspectSnapshot42(new(){Host="paused.fixture.invalid"}),()=>remote.ProbeInventory41(new(){Host="paused.fixture.invalid"}),()=>remote.FailureHistory(new(){Host="paused.fixture.invalid"},new())}){
     bool denied=false;try{await action();}catch(OperationCanceledException){denied=true;}
     if(!denied)throw new Exception("Collector inspection bypassed master OFF");
    }

@@ -70,3 +70,11 @@ try{
  if((Get-ScheduledTaskInfo $task).LastRunTime -ne $registered){throw 'Second recovery restarted the collector'}
  Write-Output 'Collector48: two independent WinRM shells share one recovery and one fresh snapshot; repeated recovery does not reinstall.'
 }finally{$repairJobs|Remove-Job -Force -ErrorAction SilentlyContinue;Remove-PSSession $second}
+
+# Read WUA history directly: no legacy Snapshot wrapper and no task mutation.
+$historyBefore=(Get-ScheduledTaskInfo $task).LastRunTime
+$packageBefore=(Get-FileHash (Join-Path $path 'collect.ps1')).Hash
+$history=Run 'collector48-history.ps1'
+if($null -eq $history.Limit -or $null -eq $history.Total -or $null -ne $history.Reboot -or $history.Limit -gt 500){throw 'History read returned collector data or exceeded its budget'}
+if((Get-ScheduledTaskInfo $task).LastRunTime -ne $historyBefore -or (Get-FileHash (Join-Path $path 'collect.ps1')).Hash -ne $packageBefore){throw 'History query mutated the collector'}
+Write-Output 'Collector48: bounded WUA history query returns history schema without restarting or replacing collector.'
