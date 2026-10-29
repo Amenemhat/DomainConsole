@@ -28,13 +28,19 @@ public partial class MainWindow {
   // Identical facts must yield identical text and evidence even off selection.
   var current=Current();var other=new ComputerRow(new(){Host="status50.fixture.invalid",Name="STATUS50"});
   var oldCurrent=criteria45.GetValueOrDefault(current.Host);var oldOther=criteria45.GetValueOrDefault(other.Host);
+  var oldSnapshots=new[]{current.Host,other.Host}.ToDictionary(h=>h,h=>rebootSnapshots.GetValueOrDefault(h));
+  var oldErrors=new[]{current.Host,other.Host}.ToDictionary(h=>h,h=>overviewErrors.GetValueOrDefault(h));
+  var oldLive=new[]{current.Host,other.Host}.ToDictionary(h=>h,h=>liveReports.Contains(h));
   try{
+   foreach(string host in oldSnapshots.Keys){rebootSnapshots.Remove(host);overviewErrors.Remove(host);liveReports.Remove(host);}
    var report=Report();report.RequiredComplete=false;var cache=new CachedWsusReport{Found=true,Server=OverviewServer,Report=report};
    var unknown=clean with{Required=null,Fresh=false};var a=ClientReadiness41.Evaluate(report,false,true,unknown,done,false,false,null,"","",now,24);
    var selected=ExplainAssessment45(current,a,cache,unknown,done,false,"",null);var background=ExplainAssessment45(other,a,cache,unknown,done,false,"",null);
    Check(selected==background,"selected and background assessment identical");
    Check(criteria45[other.Host].Count==3&&criteria45[other.Host][2].Action,"background criteria and contextual action present");
-  }finally{if(oldCurrent==null)criteria45.Remove(current.Host);else criteria45[current.Host]=oldCurrent;if(oldOther==null)criteria45.Remove(other.Host);else criteria45[other.Host]=oldOther;}
+  }finally{if(oldCurrent==null)criteria45.Remove(current.Host);else criteria45[current.Host]=oldCurrent;if(oldOther==null)criteria45.Remove(other.Host);else criteria45[other.Host]=oldOther;
+   foreach(string host in oldSnapshots.Keys){if(oldSnapshots[host]==null)rebootSnapshots.Remove(host);else rebootSnapshots[host]=oldSnapshots[host]!;if(oldErrors[host]==null)overviewErrors.Remove(host);else overviewErrors[host]=oldErrors[host]!;if(oldLive[host])liveReports.Add(host);else liveReports.Remove(host);}
+  }
   // Administrative reread cannot freshen LastReported, nor old failure become a new attempt.
   var historical=Report();historical.LastReportedUtc=now.AddDays(-2).ToString("o");historical.ReceivedUtc41=at;
   Check(ClientReadiness41.Evaluate(historical,false,true,clean,done,false,true,0,scan,"",now,24).Kind=="Stale","old report with fresh administrative read");
@@ -44,6 +50,19 @@ public partial class MainWindow {
   done.InstalledUpdates45[0].Revision=4;
   Check(ClientReadiness41.Evaluate(historical,false,true,clean,done,false,true,0,scan,"",now,24).Kind=="Error","different revision does not clear failure");
   var restored=Store.Clone(historical);Check(restored.LastReportedUtc==historical.LastReportedUtc&&restored.FailedUpdates[0].Revision==3,"report cache preserves timestamp and revision");
+  // Cached synthetic names keep this session-selection test entirely offline.
+  string userHost="users50.fixture.invalid",accountA="FIXTURE50\\a",accountB="FIXTURE50\\b";
+  var savedUser=users37.GetValueOrDefault(userHost);var savedA=userNames37.GetValueOrDefault(accountA);var savedB=userNames37.GetValueOrDefault(accountB);
+  try{
+   userNames37[accountA]=new(){Name="Первый Пользователь",CheckedUtc=at};userNames37[accountB]=new(){Name="Второй Пользователь",CheckedUtc=at};users37.Remove(userHost);
+   ObserveUsers37(userHost,new(){UsersComplete37=true,CollectedUtc=at,Users37=new(){new(){Account=accountA,Active=true},new(){Account=accountB}}});
+   Check(users37[userHost].Account==accountA,"active session chosen initially");
+   ObserveUsers37(userHost,new(){UsersComplete37=true,CollectedUtc=at,Users37=new(){new(){Account=accountB,Active=true},new(){Account=accountA}}});
+   Check(users37[userHost].Account==accountA,"existing session stable when another becomes active");
+   ObserveUsers37(userHost,new(){UsersComplete37=false,CollectedUtc=at});Check(users37[userHost].Current,"partial session read preserves current observation");
+   ObserveUsers37(userHost,new(){UsersComplete37=true,CollectedUtc=at});Check(!users37[userHost].Current&&users37[userHost].SeenUtc==at&&users37[userHost].Name=="Первый Пользователь","logout preserves last name and observation time");
+   ObserveUsers37(userHost,new(){UsersComplete37=true,CollectedUtc=at,Users37=new(){new(){Account=accountB,Active=true}}});Check(users37[userHost].Name=="Второй Пользователь","new session resolves its own cached name");
+  }finally{if(savedUser==null)users37.Remove(userHost);else users37[userHost]=savedUser;if(savedA==null)userNames37.Remove(accountA);else userNames37[accountA]=savedA;if(savedB==null)userNames37.Remove(accountB);else userNames37[accountB]=savedB;Store.Write("client-users37.json",users37);}
   File.WriteAllLines(Path.Combine(Path.GetTempPath(),"ui-status50-matrix.txt"),observations);
  }
 }
