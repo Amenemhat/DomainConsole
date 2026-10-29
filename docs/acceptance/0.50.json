@@ -1,0 +1,1832 @@
+{
+  "schema": 1,
+  "version": "0.50",
+  "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+  "run_id": 40863919605,
+  "sha256": "ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45",
+  "registry_sha256": "cd37a7d08a157f2d0b52ea96f1af6710e0810b8c1b98efb67de530fb72f858b6",
+  "batch_plan_sha256": "1705434d29d231cad9a917979d9a14fcbecb3cb6227913360812d6f83bab6b38",
+  "reviewer": "Codex: per-condition source review, Windows CI, downloaded PE/ZIP and actual WPF screenshots",
+  "reviewed_at": "2026-10-29T11:27:55.884441+00:00",
+  "issues": [
+    {
+      "issue": 1,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "1.independent",
+          "requirement": "Результат WSUS независим от последней произвольной команды и выбранной вкладки.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease28",
+          "expected": "Результат WSUS независим от последней произвольной команды и выбранной вкладки.",
+          "actual": "Основная оценка берёт текущую операцию и последний WSUS-контекст; завершённая произвольная команда не доказывает готовность.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Readiness43.cs; Console/ClientStatus28.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "1.retention",
+          "requirement": "Последняя полная готовность сохраняется до следующей проверки; возраст сам по себе не отменяет успех (#112/#115 заменяют раннее правило синего статуса).",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease28",
+          "expected": "Последняя полная готовность сохраняется до следующей проверки; возраст сам по себе не отменяет успех (#112/#115 заменяют раннее правило синего статуса).",
+          "actual": "PreserveReady43 хранит полный результат; старение без новых противоречий не снимает Success. Needed/новый boot/identity отменяют доказательство.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Readiness43.cs; Console/ClientStatus28.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "1.meaning",
+          "requirement": "Оранжевый статус имеет причину, красный обозначает подтверждённую ошибку; reboot/нет записи/неизвестность/связь различимы.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease28",
+          "expected": "Оранжевый статус имеет причину, красный обозначает подтверждённую ошибку; reboot/нет записи/неизвестность/связь различимы.",
+          "actual": "Матрица clear/required/unknown/partial/old × clean/failed/sync-failed/old/partial/needed × active сохраняет разные Kind и три критерия.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Readiness43.cs; Console/ClientStatus28.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "1.access",
+          "requirement": "Отказ доступа WinRM не означает выключенный компьютер.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease28",
+          "expected": "Отказ доступа WinRM не означает выключенный компьютер.",
+          "actual": "Access и Lost38 отделены от результата WSUS; timeout не превращается в выключенный компьютер.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Readiness43.cs; Console/ClientStatus28.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "1.failure",
+          "requirement": "Известная ошибка сохраняет источник и дату, не исчезает из-за возраста.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease28",
+          "expected": "Известная ошибка сохраняет источник и дату, не исчезает из-за возраста.",
+          "actual": "Failed проверяется до возраста отчёта; ошибка остаётся в истории с источником и временем.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Readiness43.cs; Console/ClientStatus28.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "1.timestamps",
+          "requirement": "Подсказка разделяет время чтения WSUS и время отчёта клиента.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease28",
+          "expected": "Подсказка разделяет время чтения WSUS и время отчёта клиента.",
+          "actual": "LastReportedUtc и ReceivedUtc41 выводятся отдельно; новое административное чтение старого отчёта сохраняет Stale.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Readiness43.cs; Console/ClientStatus28.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 2,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "2.startup",
+          "requirement": "При открытии восстанавливаются сохранённые данные с датой получения.",
+          "scenario": "VerifyRelease25; VerifyRelease43; Verify WSUS overview identity and partial failure handling",
+          "expected": "При открытии восстанавливаются сохранённые данные с датой получения.",
+          "actual": "reportCache загружается из wsus-report-cache.json; liveReports не восстанавливается как новый ответ.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/StatusOverview.cs; Console/WsusOverviewTransport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "2.scheduler",
+          "requirement": "Обзор обновляется порциями с ограниченной параллельностью, приоритетом компьютеров в работе и переиспользованием подключения.",
+          "scenario": "VerifyRelease25; VerifyRelease43; Verify WSUS overview identity and partial failure handling",
+          "expected": "Обзор обновляется порциями с ограниченной параллельностью, приоритетом компьютеров в работе и переиспользованием подключения.",
+          "actual": "Один обход; порции по 10; порядок активных/недавних; объект WSUS переиспользуется внутри запроса.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/StatusOverview.cs; Console/WsusOverviewTransport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "2.control",
+          "requirement": "Прогресс и остановка обхода доступны; период повторного обхода примерно сутки настраивается.",
+          "scenario": "VerifyRelease25; VerifyRelease43; Verify WSUS overview identity and partial failure handling",
+          "expected": "Прогресс и остановка обхода доступны; период повторного обхода примерно сутки настраивается.",
+          "actual": "OverviewProgress и отмена отдельны; интервал OverviewSettings сохраняется, default 24 часа.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/StatusOverview.cs; Console/WsusOverviewTransport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "2.provenance",
+          "requirement": "Время чтения отдельно от времени отчёта; отсутствие записи отличается от ошибки сервера.",
+          "scenario": "VerifyRelease25; VerifyRelease43; Verify WSUS overview identity and partial failure handling",
+          "expected": "Время чтения отдельно от времени отчёта; отсутствие записи отличается от ошибки сервера.",
+          "actual": "Неоднозначное/отсутствующее точное FQDN отделено от исключения сервера; клиентская дата не заменяется ReceivedUtc.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/StatusOverview.cs; Console/WsusOverviewTransport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "2.readonly",
+          "requirement": "Обзор не запускает клиентский поиск/установку/ремонт/reboot и не выводит доступность из WSUS.",
+          "scenario": "VerifyRelease25; VerifyRelease43; Verify WSUS overview identity and partial failure handling",
+          "expected": "Обзор не запускает клиентский поиск/установку/ремонт/reboot и не выводит доступность из WSUS.",
+          "actual": "Серверный сценарий вызывает чтение API; последующая клиентская часть читает снимок, без Updates/CacheCleanup/reboot.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/StatusOverview.cs; Console/WsusOverviewTransport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "2.master",
+          "requirement": "Обзор соблюдает поздний общий выключатель опроса #118.",
+          "scenario": "VerifyRelease25; VerifyRelease43; Verify WSUS overview identity and partial failure handling",
+          "expected": "Обзор соблюдает поздний общий выключатель опроса #118.",
+          "actual": "Отменённое поколение обзора не применяется после OFF и OFF/ON; новые чтения запрещены.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/StatusOverview.cs; Console/WsusOverviewTransport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 4,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "4.reason",
+          "requirement": "Reboot имеет понятный значок, причины и источник; требование и назначенный reboot различаются.",
+          "scenario": "VerifyRelease25; VerifyRelease28; Verify cancellation of a scheduled header reboot without rebooting; Verify reboot dispatch receipts without rebooting",
+          "expected": "Reboot имеет понятный значок, причины и источник; требование и назначенный reboot различаются.",
+          "actual": "RebootViewFor40 даёт источники/время; назначенное действие имеет отдельный HeaderRebootJob.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/StatusOverview.cs; Console/RebootMonitor.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "4.target",
+          "requirement": "Кнопка в шапке относится к текущему явно названному компьютеру; цель фиксируется перед отправкой.",
+          "scenario": "VerifyRelease25; VerifyRelease28; Verify cancellation of a scheduled header reboot without rebooting; Verify reboot dispatch receipts without rebooting",
+          "expected": "Кнопка в шапке относится к текущему явно названному компьютеру; цель фиксируется перед отправкой.",
+          "actual": "Диалог и SubmitHeaderReboot используют захваченный row; остальные отмеченные компьютеры не попадают в Targets.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/StatusOverview.cs; Console/RebootMonitor.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "4.confirm",
+          "requirement": "Подтверждаются имя, задержка и сообщение; приложения не закрываются принудительно, задержка не сокращается молча.",
+          "scenario": "VerifyRelease25; VerifyRelease28; Verify cancellation of a scheduled header reboot without rebooting; Verify reboot dispatch receipts without rebooting",
+          "expected": "Подтверждаются имя, задержка и сообщение; приложения не закрываются принудительно, задержка не сокращается молча.",
+          "actual": "Диалог содержит имя/0–86400 секунд/сообщение; force выключен; агент ждёт сам и вызывает shutdown /t 0 без неявного /f.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/StatusOverview.cs; Console/RebootMonitor.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "4.lane",
+          "requirement": "Управляющая команда не ждёт зависшей обычной очереди и не дублируется.",
+          "scenario": "VerifyRelease25; VerifyRelease28; Verify cancellation of a scheduled header reboot without rebooting; Verify reboot dispatch receipts without rebooting",
+          "expected": "Управляющая команда не ждёт зависшей обычной очереди и не дублируется.",
+          "actual": "IndependentControl использует отдельную полосу; существующий HeaderRebootJob отклоняет второй запуск.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/StatusOverview.cs; Console/RebootMonitor.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "4.cancel",
+          "requirement": "Назначенный reboot можно отменить; после подтверждённого нового boot требуется свежая проверка флагов.",
+          "scenario": "VerifyRelease25; VerifyRelease28; Verify cancellation of a scheduled header reboot without rebooting; Verify reboot dispatch receipts without rebooting",
+          "expected": "Назначенный reboot можно отменить; после подтверждённого нового boot требуется свежая проверка флагов.",
+          "actual": "Собственный cancel-флаг предотвращает dispatch; новый BootUtc запускает проверку, а не объявляет чистые флаги.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/StatusOverview.cs; Console/RebootMonitor.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 9,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "9.label",
+          "requirement": "Последняя синхронизация клиента с WSUS содержит время и результат; время чтения серверных данных отдельно.",
+          "scenario": "VerifyRelease26; VerifyStatus50; VerifyRelease41",
+          "expected": "Последняя синхронизация клиента с WSUS содержит время и результат; время чтения серверных данных отдельно.",
+          "actual": "LastSyncUtc/SyncLabel названы соединением клиента с WSUS, ReceivedUtc41 остаётся временем чтения.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "9.states",
+          "requirement": "Неудача поиска, ошибка установки, ошибка чтения сервера, недоступность клиента и непроверенная связь различаются.",
+          "scenario": "VerifyRelease26; VerifyStatus50; VerifyRelease41",
+          "expected": "Неудача поиска, ошибка установки, ошибка чтения сервера, недоступность клиента и непроверенная связь различаются.",
+          "actual": "SyncError, Error, Stale/Warning чтения и LinkKind различаются в общей модели.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "9.unknown-code",
+          "requirement": "Failed без HRESULT явно не содержит кода, предлагает события вокруг времени сбоя.",
+          "scenario": "VerifyRelease26; VerifyStatus50; VerifyRelease41",
+          "expected": "Failed без HRESULT явно не содержит кода, предлагает события вокруг времени сбоя.",
+          "actual": "SyncExplanation прямо говорит об отсутствии кода в LastSyncResult; рекомендует журнал вокруг времени сбоя.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "9.read-vs-scan",
+          "requirement": "Обновление статусов читает сохранённые сведения; повторный клиентский поиск запускается отдельно на выбранных целях.",
+          "scenario": "VerifyRelease26; VerifyStatus50; VerifyRelease41",
+          "expected": "Обновление статусов читает сохранённые сведения; повторный клиентский поиск запускается отдельно на выбранных целях.",
+          "actual": "Обзор получает API-снимок; клиентский UpdateScan создаётся отдельным подтверждённым действием.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "9.history",
+          "requirement": "Возраст и рестарт WSUS не стирают исторический Failed; более свежие подтверждённые факты влияют на общий статус без подмены отчёта (#112).",
+          "scenario": "VerifyRelease26; VerifyStatus50; VerifyRelease41",
+          "expected": "Возраст и рестарт WSUS не стирают исторический Failed; более свежие подтверждённые факты влияют на общий статус без подмены отчёта (#112).",
+          "actual": "Старый Failed не удаляется при старении; новая подтверждённая установка учитывается по ID/ревизии.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "9.matrix",
+          "requirement": "Проверена последовательность сервер недоступен → сервер вернулся без нового отчёта → успешный поиск → новый отчёт.",
+          "scenario": "VerifyRelease26; VerifyStatus50; VerifyRelease41",
+          "expected": "Проверена последовательность сервер недоступен → сервер вернулся без нового отчёта → успешный поиск → новый отчёт.",
+          "actual": "Старый Failed сохраняется при чтении; свежее успешное серверное состояние/поиск меняют оценку; active не наследует ошибку предыдущей попытки.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 10,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "10.success",
+          "requirement": "ResultCode=2/HResult=0 обозначается успехом, не причиной серверного Failed.",
+          "scenario": "VerifyRelease26; VerifyObsoleteReportDetails47; Verify WSUS event details and unknown message handling",
+          "expected": "ResultCode=2/HResult=0 обозначается успехом, не причиной серверного Failed.",
+          "actual": "ResultCode2/HResult0 выводится успешно и зелёным, расхождение со сводкой названо отдельно.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusFailures.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "10.evidence",
+          "requirement": "Для обновления отдельно показаны серверное состояние и успешная/неудачная клиентские попытки с временем, операцией, ревизией и источником.",
+          "scenario": "VerifyRelease26; VerifyObsoleteReportDetails47; Verify WSUS event details and unknown message handling",
+          "expected": "Для обновления отдельно показаны серверное состояние и успешная/неудачная клиентские попытки с временем, операцией, ревизией и источником.",
+          "actual": "Сводка, последнее серверное событие, последняя клиентская попытка и прежний отказ имеют отдельные подписи.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusFailures.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "10.match",
+          "requirement": "RevisionNumber сохраняется; совпадение только UpdateID не доказывает связь исторического кода с текущим Failed.",
+          "scenario": "VerifyRelease26; VerifyObsoleteReportDetails47; Verify WSUS event details and unknown message handling",
+          "expected": "RevisionNumber сохраняется; совпадение только UpdateID не доказывает связь исторического кода с текущим Failed.",
+          "actual": "История фильтруется по UpdateID и Revision, другое совпадение только справочное; текущая причинность не заявляется.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusFailures.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "10.detail",
+          "requirement": "Реальный HRESULT имеет hex/объяснение/рекомендацию и краткую детализацию в отчёте с подписью по данным клиента.",
+          "scenario": "VerifyRelease26; VerifyObsoleteReportDetails47; Verify WSUS event details and unknown message handling",
+          "expected": "Реальный HRESULT имеет hex/объяснение/рекомендацию и краткую детализацию в отчёте с подписью по данным клиента.",
+          "actual": "Ненулевой код реального события имеет hex/справочник; серверный блок краткий, полная история отдельно.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusFailures.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "10.unknown",
+          "requirement": "При отсутствии соответствующего сбоя расхождение явно не разрешено, код не придумывается.",
+          "scenario": "VerifyRelease26; VerifyObsoleteReportDetails47; Verify WSUS event details and unknown message handling",
+          "expected": "При отсутствии соответствующего сбоя расхождение явно не разрешено, код не придумывается.",
+          "actual": "Неизвестное описание Event167 не превращается в HRESULT; нет совпадений не означает отсутствие сбоя.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusFailures.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "10.diagnosis",
+          "requirement": "Сбор событий ограничен временем, неполнота обозначена; установка/сброс не запускаются автоматически.",
+          "scenario": "VerifyRelease26; VerifyObsoleteReportDetails47; Verify WSUS event details and unknown message handling",
+          "expected": "Сбор событий ограничен временем, неполнота обозначена; установка/сброс не запускаются автоматически.",
+          "actual": "События ограничены 14 днями/300, клиентская история 500; ограничения названы; чтение не запускает ремонт.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusFailures.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "10.refresh",
+          "requirement": "Новые данные обновляют детализацию; задержка, недоступность и отсутствие совпадений различаются.",
+          "scenario": "VerifyRelease26; VerifyObsoleteReportDetails47; Verify WSUS event details and unknown message handling",
+          "expected": "Новые данные обновляют детализацию; задержка, недоступность и отсутствие совпадений различаются.",
+          "actual": "ReportObservationCurrent47 отвергает старый endpoint/отчёт/поколение; ошибки источников и отсутствие записей различаются.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusFailures.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "10.matrix",
+          "requirement": "Проверены только успех/старый сбой затем успех/разные ревизии/очищенная история/недоступность/неизвестный HRESULT.",
+          "scenario": "VerifyRelease26; VerifyObsoleteReportDetails47; Verify WSUS event details and unknown message handling",
+          "expected": "Проверены только успех/старый сбой затем успех/разные ревизии/очищенная история/недоступность/неизвестный HRESULT.",
+          "actual": "Проверки успеха, прежнего отказа, иной ревизии, пустой истории, неизвестного EventID/кода и запоздалого ответа.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusFailures.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 14,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "14.priority",
+          "requirement": "Подтверждённый reboot имеет приоритет над сопутствующими ошибками, не переписывая счётчики WSUS.",
+          "scenario": "VerifyStatus50; VerifyRelease45; VerifyRelease28; Verify read-only reboot state probe",
+          "expected": "Подтверждённый reboot имеет приоритет над сопутствующими ошибками, не переписывая счётчики WSUS.",
+          "actual": "Неактивный подтверждённый reboot выигрывает у Failed; активная операция остаётся видима; исходный FailedCount не изменён.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Shared/RebootEvidence.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "14.evidence",
+          "requirement": "После задания сохраняются источники WUA/WU/CBS/общих файловых операций, время и полнота; общие операции сами по себе не подтверждают reboot обновлений (#50).",
+          "scenario": "VerifyStatus50; VerifyRelease45; VerifyRelease28; Verify read-only reboot state probe",
+          "expected": "После задания сохраняются источники WUA/WU/CBS/общих файловых операций, время и полнота; общие операции сами по себе не подтверждают reboot обновлений (#50).",
+          "actual": "Collect сохраняет WUA/WU/CBS, Error и PendingFileOperations отдельно; общие файловые операции не положительные источники.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Shared/RebootEvidence.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "14.refresh",
+          "requirement": "Флаги выбранного клиента и после reboot перечитываются в рамках общего ограниченного опроса.",
+          "scenario": "VerifyStatus50; VerifyRelease45; VerifyRelease28; Verify read-only reboot state probe",
+          "expected": "Флаги выбранного клиента и после reboot перечитываются в рамках общего ограниченного опроса.",
+          "actual": "ReadClientStatus использует общий semaphore/single-flight; после задания и нового boot применяется новый снимок.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Shared/RebootEvidence.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "14.errors",
+          "requirement": "Ошибка остаётся в журнале; reboot не объявляется причиной всех ошибок и не запускает принудительное вмешательство.",
+          "scenario": "VerifyStatus50; VerifyRelease45; VerifyRelease28; Verify read-only reboot state probe",
+          "expected": "Ошибка остаётся в журнале; reboot не объявляется причиной всех ошибок и не запускает принудительное вмешательство.",
+          "actual": "Ошибка задания остаётся подкритерием/историей; наличие reboot не вызывает автоматического ремонта.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Shared/RebootEvidence.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "14.report-time",
+          "requirement": "Отчёт до завершения установки не подтверждает её результат; старый сбой не предлагает очистку при новой попытке/reboot.",
+          "scenario": "VerifyStatus50; VerifyRelease45; VerifyRelease28; Verify read-only reboot state probe",
+          "expected": "Отчёт до завершения установки не подтверждает её результат; старый сбой не предлагает очистку при новой попытке/reboot.",
+          "actual": "Resolved45 требует тот же ID/Revision и более поздний успешный результат; старый отчёт остаётся ожиданием подтверждения.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Shared/RebootEvidence.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "14.details",
+          "requirement": "Подробности истории не дублируются в сводке; проверены Reboot/Error/unknown и неизменность исходного отчёта.",
+          "scenario": "VerifyStatus50; VerifyRelease45; VerifyRelease28; Verify read-only reboot state probe",
+          "expected": "Подробности истории не дублируются в сводке; проверены Reboot/Error/unknown и неизменность исходного отчёта.",
+          "actual": "Три критерия с источниками; подробная серверная история не повторяется в основном заголовке. Проверены required/error/unknown.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Shared/RebootEvidence.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 18,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "18.actual",
+          "requirement": "Ожидание отчёта определяется фактически выполненными действиями/запросом, а не наличием Updates в плане; старый агент даёт unknown.",
+          "scenario": "VerifyRelease28; VerifyStatus50",
+          "expected": "Ожидание отчёта определяется фактически выполненными действиями/запросом, а не наличием Updates в плане; старый агент даёт unknown.",
+          "actual": "ShouldWaitReport использует ReportRequested и фактические поля нового SchemaVersion, а не будущий шаг Updates.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/MainWindow.xaml.cs; Console/WsusFailures.cs; Console/ResultPresentation36.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "18.preparation",
+          "requirement": "Провал подготовки до поиска не запускает ожидание отчёта и не говорит о завершении установки.",
+          "scenario": "VerifyRelease28; VerifyStatus50",
+          "expected": "Провал подготовки до поиска не запускает ожидание отчёта и не говорит о завершении установки.",
+          "actual": "Ошибка cryptsvc до поиска не запускает ожидание и выводит, что поиск/установка не запускались.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/MainWindow.xaml.cs; Console/WsusFailures.cs; Console/ResultPresentation36.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "18.wording",
+          "requirement": "Различаются не выполнялось и не подтверждено; ручное чтение WSUS доступно, reboot описывается независимо.",
+          "scenario": "VerifyRelease28; VerifyStatus50",
+          "expected": "Различаются не выполнялось и не подтверждено; ручное чтение WSUS доступно, reboot описывается независимо.",
+          "actual": "Старые отсутствующие поля не выдаются за доказательство запуска; reboot описан независимо от установки.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/MainWindow.xaml.cs; Console/WsusFailures.cs; Console/ResultPresentation36.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "18.timeout",
+          "requirement": "Таймаут доставки отчёта не превращается в новый сбой клиента и не запускает ремонт.",
+          "scenario": "VerifyRelease28; VerifyStatus50",
+          "expected": "Таймаут доставки отчёта не превращается в новый сбой клиента и не запускает ремонт.",
+          "actual": "Ожидание отчёта ограничено; его истечение является неподтверждённым обновлением серверных данных, не командой ремонта.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/MainWindow.xaml.cs; Console/WsusFailures.cs; Console/ResultPresentation36.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "18.matrix",
+          "requirement": "Проверены провал первого шага, поиск/установка с запросом, отсутствие/неизвестность запроса и старая история.",
+          "scenario": "VerifyRelease28; VerifyStatus50",
+          "expected": "Проверены провал первого шага, поиск/установка с запросом, отсутствие/неизвестность запроса и старая история.",
+          "actual": "Подготовка до Updates, фактически начатый поиск/запрос, старый отчёт и свежий отчёт до Ended проверяются раздельно.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/MainWindow.xaml.cs; Console/WsusFailures.cs; Console/ResultPresentation36.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 20,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "20.channels",
+          "requirement": "Обновление статусов отдельно получает серверный отчёт и клиентские флаги/аптайм; назначение кнопки объясняет оба обращения.",
+          "scenario": "VerifyRelease28; VerifyRelease43; VerifyObsoleteRead47; Verify IP session identity and credential isolation",
+          "expected": "Обновление статусов отдельно получает серверный отчёт и клиентские флаги/аптайм; назначение кнопки объясняет оба обращения.",
+          "actual": "Обзор читает WSUS и клиентский снимок отдельно, прогресс считает ошибки/пропуски каждого канала.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "20.facts",
+          "requirement": "Снимок хранит WUA/WU/CBS/общие операции, источники, время, полноту и ошибки; partial не становится false.",
+          "scenario": "VerifyRelease28; VerifyRelease43; VerifyObsoleteRead47; Verify IP session identity and credential isolation",
+          "expected": "Снимок хранит WUA/WU/CBS/общие операции, источники, время, полноту и ошибки; partial не становится false.",
+          "actual": "Снимок содержит BootUtc/CollectedUtc/Required/Error/Sources/PendingFileOperations; частичный false становится unknown.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "20.endpoint",
+          "requirement": "Используется настроенный endpoint с проверкой личности; фон не спрашивает пароль, отсутствие реквизитов обозначается неполной проверкой.",
+          "scenario": "VerifyRelease28; VerifyRelease43; VerifyObsoleteRead47; Verify IP session identity and credential isolation",
+          "expected": "Используется настроенный endpoint с проверкой личности; фон не спрашивает пароль, отсутствие реквизитов обозначается неполной проверкой.",
+          "actual": "ConnectionStore.Capture и CurrentEndpoint проверяют адрес/identity/SSL/auth; нет реквизитов IP — пропуск без фонового диалога.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "20.scheduler",
+          "requirement": "Приоритет текущим/в работе/недавним, ограниченные параллельность/таймаут/отмена/повторы, недоступный не блокирует других.",
+          "scenario": "VerifyRelease28; VerifyRelease43; VerifyObsoleteRead47; Verify IP session identity and credential isolation",
+          "expected": "Приоритет текущим/в работе/недавним, ограниченные параллельность/таймаут/отмена/повторы, недоступный не блокирует других.",
+          "actual": "statusSlots=3, statusReads single-flight; отмена/защитная пауза/ограниченные повторы не создают второй сборщик.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "20.preserve",
+          "requirement": "Положительные флаги сохраняются до подтверждённой смены, WSUS-счётчики не подменяются, WinRM не смешивается с WSUS.",
+          "scenario": "VerifyRelease28; VerifyRelease43; VerifyObsoleteRead47; Verify IP session identity and credential isolation",
+          "expected": "Положительные флаги сохраняются до подтверждённой смены, WSUS-счётчики не подменяются, WinRM не смешивается с WSUS.",
+          "actual": "Merge сохраняет положительные источники при partial; серверные счётчики и LinkKind отдельны.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "20.no-work",
+          "requirement": "Обзор не запускает поиск/установку/ремонт/reboot; прежний запрет постоянной задачи заменён согласованным одиночным сборщиком #113–#118.",
+          "scenario": "VerifyRelease28; VerifyRelease43; VerifyObsoleteRead47; Verify IP session identity and credential isolation",
+          "expected": "Обзор не запускает поиск/установку/ремонт/reboot; прежний запрет постоянной задачи заменён согласованным одиночным сборщиком #113–#118.",
+          "actual": "Сбор статуса не вызывает установку или reboot; постоянный одиночный сборщик соответствует позднему согласованию.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "20.persist",
+          "requirement": "Последние снимки и значки сохраняются между запусками; master OFF соблюдается.",
+          "scenario": "VerifyRelease28; VerifyRelease43; VerifyObsoleteRead47; Verify IP session identity and credential isolation",
+          "expected": "Последние снимки и значки сохраняются между запусками; master OFF соблюдается.",
+          "actual": "reboot-snapshots и clientConnections сохраняются; отменённые чтения после OFF не применяются.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 22,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "22.snapshot",
+          "requirement": "Аптайм получен из boot и времени клиента в одном снимке, не из часов консоли/длительности задания.",
+          "scenario": "VerifyRelease28; VerifyRelease39; VerifyRelease40; Verify read-only reboot state probe",
+          "expected": "Аптайм получен из boot и времени клиента в одном снимке, не из часов консоли/длительности задания.",
+          "actual": "UptimeSeconds/BootUtc/ClientUtc получаются одним снимком; UptimeText использует сохранённую длительность, не часы консоли.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/RebootMonitor.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "22.shared",
+          "requirement": "Использует существующий ограниченный опрос без отдельного секундного WinRM.",
+          "scenario": "VerifyRelease28; VerifyRelease39; VerifyRelease40; Verify read-only reboot state probe",
+          "expected": "Использует существующий ограниченный опрос без отдельного секундного WinRM.",
+          "actual": "ObserveCurrentReboot использует существующий ReadClientStatus; отдельного секундного запроса нет.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/RebootMonitor.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "22.display",
+          "requirement": "Дни/часы/минуты без секунд, точный boot/время/источник в подсказке; недоступный кэш явно снимок.",
+          "scenario": "VerifyRelease28; VerifyRelease39; VerifyRelease40; Verify read-only reboot state probe",
+          "expected": "Дни/часы/минуты без секунд, точный boot/время/источник в подсказке; недоступный кэш явно снимок.",
+          "actual": "Age даёт дни/часы/минуты; старое значение помечено снимком; подсказка содержит загрузку Windows и время сбора.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/RebootMonitor.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "22.identity",
+          "requirement": "Новый boot сбрасывает аптайм; другой клиент не наследует данные, одна смена IP не означает reboot.",
+          "scenario": "VerifyRelease28; VerifyRelease39; VerifyRelease40; Verify read-only reboot state probe",
+          "expected": "Новый boot сбрасывает аптайм; другой клиент не наследует данные, одна смена IP не означает reboot.",
+          "actual": "ApplyClientSnapshot отвергает старый CollectedUtc; endpoint-generation tests отсекают чужие данные; новый boot не наследует старый uptime.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/RebootMonitor.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "22.unknown",
+          "requirement": "Невозможное/отрицательное/непрочитанное время не превращается в нулевой аптайм; загрузка Windows не равна включению питания.",
+          "scenario": "VerifyRelease28; VerifyRelease39; VerifyRelease40; Verify read-only reboot state probe",
+          "expected": "Невозможное/отрицательное/непрочитанное время не превращается в нулевой аптайм; загрузка Windows не равна включению питания.",
+          "actual": "null/отрицательные секунды дают «Аптайм не получен»; сведения называются загрузкой Windows.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/RebootMonitor.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "22.layout",
+          "requirement": "Длинный аптайм не ломает компактную шапку.",
+          "scenario": "VerifyRelease28; VerifyRelease39; VerifyRelease40; Verify read-only reboot state probe",
+          "expected": "Длинный аптайм не ломает компактную шапку.",
+          "actual": "Заполненная шапка отрисовывается в широком и компактном окне трёх тем.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/RebootMonitor.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 23,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "23.separate",
+          "requirement": "Основной результат и связь имеют отдельные фиксированные значки, источники и времена; потеря WinRM не отменяет успех WSUS.",
+          "scenario": "VerifyRelease28; VerifyRelease31; VerifyRelease38; VerifyObsoleteConnection47; VerifyEventHistory50",
+          "expected": "Основной результат и связь имеют отдельные фиксированные значки, источники и времена; потеря WinRM не отменяет успех WSUS.",
+          "actual": "Outcome и LinkKind имеют разные поля, значки, источники и подсказки.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/ConnectionState.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "23.observations",
+          "requirement": "Сохраняются попытка/последний успешный ответ/начало серии неудач/тип; пробел наблюдения не выдаётся за непрерывный офлайн.",
+          "scenario": "VerifyRelease28; VerifyRelease31; VerifyRelease38; VerifyObsoleteConnection47; VerifyEventHistory50",
+          "expected": "Сохраняются попытка/последний успешный ответ/начало серии неудач/тип; пробел наблюдения не выдаётся за непрерывный офлайн.",
+          "actual": "ClientConnectionState хранит LastAttempt/LastSuccess/FailureObservedSince/ошибку и серию; единичный timeout отделён от Lost.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/ConnectionState.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "23.unknown",
+          "requirement": "Без прежнего ответа нет выдуманного времени; нехватка реквизитов означает не проверено.",
+          "scenario": "VerifyRelease28; VerifyRelease31; VerifyRelease38; VerifyObsoleteConnection47; VerifyEventHistory50",
+          "expected": "Без прежнего ответа нет выдуманного времени; нехватка реквизитов означает не проверено.",
+          "actual": "Нет успешного ответа и нет реквизитов не дают фиктивного времени связи.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/ConnectionState.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "23.ad",
+          "requirement": "AD-атрибуты получаются пакетно с точной привязкой объекта; lastLogonTimestamp приблизительный, whenChanged не офлайн, ручной недоменный клиент не наследует AD.",
+          "scenario": "VerifyRelease28; VerifyRelease31; VerifyRelease38; VerifyObsoleteConnection47; VerifyEventHistory50",
+          "expected": "AD-атрибуты получаются пакетно с точной привязкой объекта; lastLogonTimestamp приблизительный, whenChanged не офлайн, ручной недоменный клиент не наследует AD.",
+          "actual": "DirectoryReader читает LDAP пакетно; сопоставление FQDN/DirectoryId; ручные клиенты исключены из AD-обновления.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/ConnectionState.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "23.bounds",
+          "requirement": "Все DC не опрашиваются на каждом обзоре; ошибочные/пустые/будущие AD-времена обозначаются.",
+          "scenario": "VerifyRelease28; VerifyRelease31; VerifyRelease38; VerifyObsoleteConnection47; VerifyEventHistory50",
+          "expected": "Все DC не опрашиваются на каждом обзоре; ошибочные/пустые/будущие AD-времена обозначаются.",
+          "actual": "Один LDAP-запрос, не обход DC; пустая дата не отображается как время отключения, будущая помечена.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/ConnectionState.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "23.endpoint",
+          "requirement": "DNS/маршрут/WinRM/доступ различаются, нет ответа ping не доказывает выключение.",
+          "scenario": "VerifyRelease28; VerifyRelease31; VerifyRelease38; VerifyObsoleteConnection47; VerifyEventHistory50",
+          "expected": "DNS/маршрут/WinRM/доступ различаются, нет ответа ping не доказывает выключение.",
+          "actual": "Endpoint/identity проверяются до применения ответа; WinRM timeout/Access отдельно, ping не определяет выключение.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/ConnectionState.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "23.filters",
+          "requirement": "Результат и связь имеют независимые категории/счётчики и сохранение; подтверждённый reboot сохраняет приоритет.",
+          "scenario": "VerifyRelease28; VerifyRelease31; VerifyRelease38; VerifyObsoleteConnection47; VerifyEventHistory50",
+          "expected": "Результат и связь имеют независимые категории/счётчики и сохранение; подтверждённый reboot сохраняет приоритет.",
+          "actual": "StatusTags содержит независимые результат и связь; reboot сохраняет свой приоритет, коллекции сохраняются.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientStatus28.cs; Console/ConnectionState.cs; Console/StatusOverview.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 38,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "38.last-known",
+          "requirement": "TTL не превращает известный результат в вопрос; был доступен/был недоступен отделены от свежего и никогда не проверенного.",
+          "scenario": "VerifyRelease31; VerifyRelease38; VerifyRelease43",
+          "expected": "TTL не превращает известный результат в вопрос; был доступен/был недоступен отделены от свежего и никогда не проверенного.",
+          "actual": "Успех двухчасовой давности становится SavedConnected, не Unknown; сохранённое состояние не объявляется свежим.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ConnectionState.cs; Console/Workspace31.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "38.poll",
+          "requirement": "Опрос постепенный/ограниченный/настраиваемый, приоритет выбранным/активным, пауза disabledAD, нет тяжёлого SYSTEM на каждый лёгкий запрос.",
+          "scenario": "VerifyRelease31; VerifyRelease38; VerifyRelease43",
+          "expected": "Опрос постепенный/ограниченный/настраиваемый, приоритет выбранным/активным, пауза disabledAD, нет тяжёлого SYSTEM на каждый лёгкий запрос.",
+          "actual": "PollBackgroundLinks31 ограничивает проход двумя, соблюдает периоды/ошибки/disabled/master; полная готовность не опрашивается часто.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ConnectionState.cs; Console/Workspace31.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "38.execution",
+          "requirement": "Внутренняя свежесть для разрешения действий не ослабляется сохранённым значком; WSUS независим.",
+          "scenario": "VerifyRelease31; VerifyRelease38; VerifyRelease43",
+          "expected": "Внутренняя свежесть для разрешения действий не ослабляется сохранённым значком; WSUS независим.",
+          "actual": "ConnectionFresh остаётся отдельным коротким условием; сохранённый значок его не ослабляет.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ConnectionState.cs; Console/Workspace31.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "38.restart",
+          "requirement": "Снимок связи сохраняется при перезапуске, не выдаётся за свежее подтверждение.",
+          "scenario": "VerifyRelease31; VerifyRelease38; VerifyRelease43",
+          "expected": "Снимок связи сохраняется при перезапуске, не выдаётся за свежее подтверждение.",
+          "actual": "Состояние связи читается из Store, liveConnections остаётся отдельным подтверждением текущего запуска.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ConnectionState.cs; Console/Workspace31.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 43,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "43.summary",
+          "requirement": "Отчёт компактно показывает источник/клиента/время, к установке N и подмножества без повторного суммирования; partial не 0.",
+          "scenario": "VerifyRelease31; VerifyRelease37; Verify effective approval count and isolated cache reset; VerifyStatus50",
+          "expected": "Отчёт компактно показывает источник/клиента/время, к установке N и подмножества без повторного суммирования; partial не 0.",
+          "actual": "NeededCount nullable, RequiredComplete и ApprovedUnknownCount; скачано/failed обозначены «из них», не суммируются.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusSummary31.cs; Console/WsusReport.cs; Console/ClientPanel35.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "43.approvals",
+          "requirement": "Счётчик использует эффективный Install данного компьютера, deployable/не declined, правильные состояния и уникальные ID/ревизии; Uninstall/Unknown/reboot отдельно.",
+          "scenario": "VerifyRelease31; VerifyRelease37; Verify effective approval count and isolated cache reset; VerifyStatus50",
+          "expected": "Счётчик использует эффективный Install данного компьютера, deployable/не declined, правильные состояния и уникальные ID/ревизии; Uninstall/Unknown/reboot отдельно.",
+          "actual": "API scope LatestRevisionApproved/Install плюс эффективный UpdateApprovalAction клиента; состояния NotInstalled/Downloaded/Failed, Unknown отдельно. Declined не имеет Install одобрения по контракту API.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusSummary31.cs; Console/WsusReport.cs; Console/ClientPanel35.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "43.bundles",
+          "requirement": "Нет двойного счёта bundle/child/ревизий; superseded не исключается только по флагу.",
+          "scenario": "VerifyRelease31; VerifyRelease37; Verify effective approval count and isolated cache reset; VerifyStatus50",
+          "expected": "Нет двойного счёта bundle/child/ревизий; superseded не исключается только по флагу.",
+          "actual": "API возвращает одну строку на update; GroupBy UpdateId устраняет повторы; дочерние installable items не обходятся и не прибавляются. IsSuperseded не фильтруется.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusSummary31.cs; Console/WsusReport.cs; Console/ClientPanel35.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "43.provenance",
+          "requirement": "WUA-поиск и WSUS-счётчик не смешиваются, времена отчёта/поиска/чтения различаются.",
+          "scenario": "VerifyRelease31; VerifyRelease37; Verify effective approval count and isolated cache reset; VerifyStatus50",
+          "expected": "WUA-поиск и WSUS-счётчик не смешиваются, времена отчёта/поиска/чтения различаются.",
+          "actual": "ClientSearchCount31 подписан отдельным источником; LastReported/LastSync/Received хранятся отдельно.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusSummary31.cs; Console/WsusReport.cs; Console/ClientPanel35.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "43.view",
+          "requirement": "Общая статистика свёрнута, пояснение в подсказке; краткая ошибка без дубля полной причины.",
+          "scenario": "VerifyRelease31; VerifyRelease37; Verify effective approval count and isolated cache reset; VerifyStatus50",
+          "expected": "Общая статистика свёрнута, пояснение в подсказке; краткая ошибка без дубля полной причины.",
+          "actual": "Техническая статистика отдельна от основной сводки; сохранённая ошибка краткая, подробности в журнале.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusSummary31.cs; Console/WsusReport.cs; Console/ClientPanel35.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "43.shared",
+          "requirement": "Шапка/дерево/отчёт используют общую модель, нет тяжёлого WSUS-запроса при перерисовке; кэш/ограниченная параллельность.",
+          "scenario": "VerifyRelease31; VerifyRelease37; Verify effective approval count and isolated cache reset; VerifyStatus50",
+          "expected": "Шапка/дерево/отчёт используют общую модель, нет тяжёлого WSUS-запроса при перерисовке; кэш/ограниченная параллельность.",
+          "actual": "Отчёт/шапка/дерево читают один cached.Report; перерисовка не вызывает WSUS API.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusSummary31.cs; Console/WsusReport.cs; Console/ClientPanel35.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "43.copy",
+          "requirement": "Копирование видимого и полного отчёта сохраняет данные; проверены 0/N/partial/ревизии/группы/старый сбой/свежий успех.",
+          "scenario": "VerifyRelease31; VerifyRelease37; Verify effective approval count and isolated cache reset; VerifyStatus50",
+          "expected": "Копирование видимого и полного отчёта сохраняет данные; проверены 0/N/partial/ревизии/группы/старый сбой/свежий успех.",
+          "actual": "LogViewer сохраняет полный текст/видимые раскрытия; RequiredUpdates проверен для 0/2/старого кэша/partial, revision в истории отдельно.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusSummary31.cs; Console/WsusReport.cs; Console/ClientPanel35.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 50,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "50.separate",
+          "requirement": "WUA/WU/CBS подтверждение отделено от общих PendingFileRenameOperations, пары путей доступны подробно.",
+          "scenario": "VerifyRelease32; VerifyRelease45; Verify read-only reboot state probe",
+          "expected": "WUA/WU/CBS подтверждение отделено от общих PendingFileRenameOperations, пары путей доступны подробно.",
+          "actual": "PendingFileOperations сохраняет пары путей отдельно от положительных WUA/WU/CBS Sources.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Shared/RebootEvidence.cs; Console/RebootPolicy30.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "50.policy",
+          "requirement": "Общие операции сами не ставят AwaitingReboot и не останавливают обслуживание, старые снимки обработаны.",
+          "scenario": "VerifyRelease32; VerifyRelease45; Verify read-only reboot state probe",
+          "expected": "Общие операции сами не ставят AwaitingReboot и не останавливают обслуживание, старые снимки обработаны.",
+          "actual": "QueueOnly32 не подтверждает reboot обновлений; старые снимки нормализуются, общие операции не переводят план в AwaitingReboot.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Shared/RebootEvidence.cs; Console/RebootPolicy30.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "50.readonly",
+          "requirement": "Записи реестра автоматически не удаляются.",
+          "scenario": "VerifyRelease32; VerifyRelease45; Verify read-only reboot state probe",
+          "expected": "Записи реестра автоматически не удаляются.",
+          "actual": "Collect использует OpenSubKey/GetValue; удаления ключей в проверке нет.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Shared/RebootEvidence.cs; Console/RebootPolicy30.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 59,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "59.current",
+          "requirement": "Старую ошибку сменяет реально начавшаяся операция, ошибка остаётся в истории; старый Failed не становится ошибкой текущей загрузки.",
+          "scenario": "VerifyRelease36; VerifyRelease39; VerifyStatus50",
+          "expected": "Старую ошибку сменяет реально начавшаяся операция, ошибка остаётся в истории; старый Failed не становится ошибкой текущей загрузки.",
+          "actual": "Active даёт Working независимо от старого WSUS Failed; факты Failed остаются в критерии.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ActivityPresentation.cs; Console/Presentation34.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "59.space",
+          "requirement": "Этапу доступна вся ширина без дублирующего выполнения, краткое состояние плана в шапке, не у Авто.",
+          "scenario": "VerifyRelease36; VerifyRelease39; VerifyStatus50",
+          "expected": "Этапу доступна вся ширина без дублирующего выполнения, краткое состояние плана в шапке, не у Авто.",
+          "actual": "Главному этапу отдана ширина; состояние плана в HeaderNext31, отдельной правой строки у этапа нет.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ActivityPresentation.cs; Console/Presentation34.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "59.failure",
+          "requirement": "Настоящий текущий сбой имеет короткую причину и согласованное остановленное/ожидающее состояние плана.",
+          "scenario": "VerifyRelease36; VerifyRelease39; VerifyStatus50",
+          "expected": "Настоящий текущий сбой имеет короткую причину и согласованное остановленное/ожидающее состояние плана.",
+          "actual": "Неактивный Failed содержит BriefFailure; история и план не меняют его на фиктивное выполнение.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ActivityPresentation.cs; Console/Presentation34.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "59.metrics",
+          "requirement": "Действие+полное название, отдельно процент/длительность/объём/скорость; неизвестные показатели не 0, приблизительность указана.",
+          "scenario": "VerifyRelease36; VerifyRelease39; VerifyStatus50",
+          "expected": "Действие+полное название, отдельно процент/длительность/объём/скорость; неизвестные показатели не 0, приблизительность указана.",
+          "actual": "StageText34 сохраняет название, отдельный detail содержит известные процент/длительность/передачу; неизвестный progress nullable.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ActivityPresentation.cs; Console/Presentation34.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "59.wrap",
+          "requirement": "Длинное название переносится, полный текст доступен; узкое окно не теряет данные.",
+          "scenario": "VerifyRelease36; VerifyRelease39; VerifyStatus50",
+          "expected": "Длинное название переносится, полный текст доступен; узкое окно не теряет данные.",
+          "actual": "Длинный заголовок виден с переносом, проверен на фактической WPF-отрисовке 1000×640 и 1480×940.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ActivityPresentation.cs; Console/Presentation34.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 63,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "63.later-colors",
+          "requirement": "Ранние золотистые кандидаты заменены #98: оранжевый текст, жёлтый warning значок, красная ошибка; разные формы сохраняются.",
+          "scenario": "VerifyRelease38; VerifyRelease39; Windows UI screenshots; VerifyStatus50",
+          "expected": "Ранние золотистые кандидаты заменены #98: оранжевый текст, жёлтый warning значок, красная ошибка; разные формы сохраняются.",
+          "actual": "Общие ресурсы AttentionIcon39/WarningText/ErrorText используются вместо прежних золотистых кандидатов текста; формы Warning/Reboot/Error разные.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Theme.cs; Console/StatusGlyph.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "63.contrast",
+          "requirement": "Значок и текст читаемы на обычных/активных/выбранных строках трёх тем, сопоставлены рядом.",
+          "scenario": "VerifyRelease38; VerifyRelease39; Windows UI screenshots",
+          "expected": "Значок и текст читаемы на обычных/активных/выбранных строках трёх тем, сопоставлены рядом.",
+          "actual": "Три темы, выделенные строки и основной значок проверяются на реальных WPF-снимках, включая compact.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Theme.cs; Console/StatusGlyph.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 69,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "69.report",
+          "requirement": "Первые строки отчёта: нужныеодобренные, отчётсдавностью, соединение; partial≥N не 0, время чтения отдельно, пороги настраиваемы.",
+          "scenario": "VerifyRelease35; VerifyRelease36; VerifyEventHistory50; VerifyRelease40",
+          "expected": "Первые строки отчёта: нужныеодобренные, отчётсдавностью, соединение; partial≥N не 0, время чтения отдельно, пороги настраиваемы.",
+          "actual": "Первые строки Needed/LastReported/LastSync; unknown не 0; порог берётся из общего ReportPresentation35.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/Workspace31.cs; Console/EventHistory50.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "69.header",
+          "requirement": "Единая шапка, копирование имени, раздельные WSUS/WinRM/аптайм; вкладки Команды→WSUS→История справа по позднему макету.",
+          "scenario": "VerifyRelease35; VerifyRelease36; VerifyEventHistory50; VerifyRelease40",
+          "expected": "Единая шапка, копирование имени, раздельные WSUS/WinRM/аптайм; вкладки Команды→WSUS→История справа по позднему макету.",
+          "actual": "Общая шапка/копирование ShortName/IPv4 и отдельные связь/аптайм; вкладки Команды, WSUS, История.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/Workspace31.cs; Console/EventHistory50.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "69.history",
+          "requirement": "Раскрытие истории включает последние события без Skip, новые не сбрасывают чтение старых; копирование сохраняет даты/подробности.",
+          "scenario": "VerifyRelease35; VerifyRelease36; VerifyEventHistory50; VerifyRelease40",
+          "expected": "Раскрытие истории включает последние события без Skip, новые не сбрасывают чтение старых; копирование сохраняет даты/подробности.",
+          "actual": "Раскрытие не Skip последних событий; выбор и копирование сохраняют подробности/время, новые результаты не вытесняются служебными.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/Workspace31.cs; Console/EventHistory50.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "69.result",
+          "requirement": "Краткая фактическая причина/код/KB и следующее действие, не последний технический этап; reboot приоритет, старая ошибка не исчезает и не красит успешную команду.",
+          "scenario": "VerifyRelease35; VerifyRelease36; VerifyEventHistory50; VerifyRelease40",
+          "expected": "Краткая фактическая причина/код/KB и следующее действие, не последний технический этап; reboot приоритет, старая ошибка не исчезает и не красит успешную команду.",
+          "actual": "StepEvent50 сохраняет фактический результат каждого основного шага; последний Report не переименовывает успешную очистку.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/Workspace31.cs; Console/EventHistory50.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 74,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "74.counts",
+          "requirement": "После трёх основных строк ненулевые Failed и PendingReboot, ноль скрыт, unknown не 0, общий Failed не заменяет ApprovedFailed.",
+          "scenario": "VerifyRelease36; VerifyRelease40; VerifyStatus50",
+          "expected": "После трёх основных строк ненулевые Failed и PendingReboot, ноль скрыт, unknown не 0, общий Failed не заменяет ApprovedFailed.",
+          "actual": "Ненулевые общие Failed и InstalledPendingReboot показаны; ApprovedFailed остаётся отдельным подмножеством.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/ClientPanel35.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "74.header",
+          "requirement": "Ошибок WSUSN только N>0, подсказкадата/причина, клик раскрывает соответствующую ошибку.",
+          "scenario": "VerifyRelease36; VerifyRelease40; VerifyStatus50",
+          "expected": "Ошибок WSUSN только N>0, подсказкадата/причина, клик раскрывает соответствующую ошибку.",
+          "actual": "HeaderErrors36 виден только FailedCount>0, подсказка с датой/кодом, клик раскрывает сохранённые неудачи.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/ClientPanel35.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "74.source",
+          "requirement": "Сохранённая серверная ошибка и reboot отделены от текущего задания и свежего клиентского снимка.",
+          "scenario": "VerifyRelease36; VerifyRelease40; VerifyStatus50",
+          "expected": "Сохранённая серверная ошибка и reboot отделены от текущего задания и свежего клиентского снимка.",
+          "actual": "Серверный InstalledPendingReboot — основание перепроверки, не подмена свежего клиентского отрицательного снимка.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusReport.cs; Console/ClientPanel35.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 77,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "77.row",
+          "requirement": "Структурированная строка клиента показывает главное действие, краткую причину, актуальность и подробности без горизонтальной прокрутки.",
+          "scenario": "VerifyRelease36; VerifyRelease37; VerifyRelease41; VerifyStatus50",
+          "expected": "Структурированная строка клиента показывает главное действие, краткую причину, актуальность и подробности без горизонтальной прокрутки.",
+          "actual": "AttentionEntry36 — отдельные Host/Action/Details/Tone/Required; перенос, раскрытие и tooltip.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Attention36.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "77.priority",
+          "requirement": "Reboot приоритет, прошлая ошибка отдельно; ожидание/нетсвязи не доказывают сбой установки, unknown не выдумывается.",
+          "scenario": "VerifyRelease36; VerifyRelease37; VerifyRelease41; VerifyStatus50",
+          "expected": "Reboot приоритет, прошлая ошибка отдельно; ожидание/нетсвязи не доказывают сбой установки, unknown не выдумывается.",
+          "actual": "Общая оценка применяется к каждой строке; Reboot выигрывает у старой ошибки, неизвестный исход не установка Failed.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Attention36.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "77.counts",
+          "requirement": "Ручное внимание отделено от обычной активности; счётчик соответствует уникальным клиентам списка, разные причины сохранены.",
+          "scenario": "VerifyRelease36; VerifyRelease37; VerifyRelease41; VerifyStatus50",
+          "expected": "Ручное внимание отделено от обычной активности; счётчик соответствует уникальным клиентам списка, разные причины сохранены.",
+          "actual": "Группировка по host сохраняет причины; обычное выполнение не Required; счётчик и список используют одни записи.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Attention36.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "77.actions",
+          "requirement": "Открытие клиента/прекращение будущего продолжения доступны, это не отмена переданного задания; кнопка внимания отделена умеренным отступом.",
+          "scenario": "VerifyRelease36; VerifyRelease37; VerifyRelease41; VerifyStatus50",
+          "expected": "Открытие клиента/прекращение будущего продолжения доступны, это не отмена переданного задания; кнопка внимания отделена умеренным отступом.",
+          "actual": "Открытие и прекращение будущего плана отдельны; оно не останавливает уже переданный агент.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Attention36.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "77.style",
+          "requirement": "Смысловые цвет/значок, темы/выбор/компактное окно проверены.",
+          "scenario": "VerifyRelease36; VerifyRelease37; VerifyRelease41; VerifyStatus50",
+          "expected": "Смысловые цвет/значок, темы/выбор/компактное окно проверены.",
+          "actual": "Реальное окно внимания показано в трёх палитрах; тест сохранения выбора/раскрытия при таймерном обновлении.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Attention36.cs; Console/ClientAssessment41.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 82,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "82.name",
+          "requirement": "Имя/фамилия из givenName/sn или подходящего displayName, без DOMAIN/login/UPN и выдумывания имени из логина.",
+          "scenario": "VerifyRelease37; VerifyRelease39; Verify cross-console ownership and native interactive session reader",
+          "expected": "Имя/фамилия из givenName/sn или подходящего displayName, без DOMAIN/login/UPN и выдумывания имени из логина.",
+          "actual": "AD по SID получает givenName+sn, резерв displayName с пробелом без домена/UPN; логин не конструируется в имя.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/UserObservation37.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "82.sessions",
+          "requirement": "Один стабильный пользователь из WTS, прежний пока присутствует, иначе предпочтительно активный; SYSTEM/профиль не пользователь.",
+          "scenario": "VerifyRelease37; VerifyRelease39; Verify cross-console ownership and native interactive session reader; VerifyStatus50",
+          "expected": "Один стабильный пользователь из WTS, прежний пока присутствует, иначе предпочтительно активный; SYSTEM/профиль не пользователь.",
+          "actual": "WTS исключает session0 и выбирает прежний account, иначе активный; нативное чтение проверяется на Windows.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/UserObservation37.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "82.last",
+          "requirement": "Выход/ошибка не стирают имя и не меняют время достоверного наблюдения; никогда не получено явно указано.",
+          "scenario": "VerifyRelease37; VerifyRelease39; Verify cross-console ownership and native interactive session reader; VerifyStatus50",
+          "expected": "Выход/ошибка не стирают имя и не меняют время достоверного наблюдения; никогда не получено явно указано.",
+          "actual": "Неполный UsersComplete не меняет наблюдение; отсутствие сеанса сохраняет SeenUtc и имя.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/UserObservation37.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "82.display",
+          "requirement": "Позднее правило #91/#96: без Пользователь/Последний, имя жирное, дата/время всегда рядом обычным без секунд; подсказки дерева согласованы, отдельного копирования нет.",
+          "scenario": "VerifyRelease37; VerifyRelease39; Verify cross-console ownership and native interactive session reader",
+          "expected": "Позднее правило #91/#96: без Пользователь/Последний, имя жирное, дата/время всегда рядом обычным без секунд; подсказки дерева согласованы, отдельного копирования нет.",
+          "actual": "Имя жирным, дата обычным рядом; UserLabel37 не включает Account; отдельной кнопки копирования нет.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/UserObservation37.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "82.collection",
+          "requirement": "Сбор вместе с обычным опросом, AD кэш/сохранение между запусками, нет DC запроса на hover/каждый tick и блокировки статуса.",
+          "scenario": "VerifyRelease37; VerifyRelease39; Verify cross-console ownership and native interactive session reader",
+          "expected": "Сбор вместе с обычным опросом, AD кэш/сохранение между запусками, нет DC запроса на hover/каждый tick и блокировки статуса.",
+          "actual": "WTS встроен в общий снимок; AD-разрешение Task.Run с кэшем 24/1 час и single-flight по account, состояние сохраняется.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/UserObservation37.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 83,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "83.list",
+          "requirement": "После основной сводки раскрытый нумерованный список нужных обновлений с KB/названием/скачано/ошибка, перенос и копирование без технических ID.",
+          "scenario": "VerifyRelease37; Verify effective approval count and isolated cache reset",
+          "expected": "После основной сводки раскрытый нумерованный список нужных обновлений с KB/названием/скачано/ошибка, перенос и копирование без технических ID.",
+          "actual": "Нумерованные KB/title/state следуют за сводкой, без GUID; раскрытый LogViewer допускает копирование/перенос.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusSummary31.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "83.zero",
+          "requirement": "При полном нуле блок скрыт, unknown/старыйкэшбезсписка не объявляется пустым.",
+          "scenario": "VerifyRelease37; Verify effective approval count and isolated cache reset",
+          "expected": "При полном нуле блок скрыт, unknown/старыйкэшбезсписка не объявляется пустым.",
+          "actual": "Needed=0 не создаёт пустой блок; неизвестность RequiredComplete=false не зелёная.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusSummary31.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "83.same-set",
+          "requirement": "Список и NeededCount из одного набора/снимка с эффективными одобрениями/ревизиями/дедупликацией, pendingreboot не новое необходимое.",
+          "scenario": "VerifyRelease37; Verify effective approval count and isolated cache reset",
+          "expected": "Список и NeededCount из одного набора/снимка с эффективными одобрениями/ревизиями/дедупликацией, pendingreboot не новое необходимое.",
+          "actual": "Needed и RequiredUpdates формируются из одного $needed; дедупликация UpdateId, названия содержат Revision GetUpdate.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusSummary31.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "83.partial",
+          "requirement": "Неполнота/лимит/недоступные названия явно показаны, WUA список не подменяет серверный.",
+          "scenario": "VerifyRelease37; Verify effective approval count and isolated cache reset",
+          "expected": "Неполнота/лимит/недоступные названия явно показаны, WUA список не подменяет серверный.",
+          "actual": "Лимит200, ошибка названий и старый кэш обозначены как неполный/неполученный список.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusSummary31.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "83.cache",
+          "requirement": "Сводка и детали обновляются/сохраняются вместе, получение списка не запускает клиентскую работу.",
+          "scenario": "VerifyRelease37; Verify effective approval count and isolated cache reset",
+          "expected": "Сводка и детали обновляются/сохраняются вместе, получение списка не запускает клиентскую работу.",
+          "actual": "Список входит в cached.Report и сохраняется вместе со счётчиками; GetUpdate не запускает работу клиента.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/WsusSummary31.cs; Console/WsusReport.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 87,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "87.title",
+          "requirement": "Скачивание/установка показывают полное актуальное название из данных и KB без дублирования; tooltip не единственный источник.",
+          "scenario": "VerifyRelease36; VerifyRelease39",
+          "expected": "Скачивание/установка показывают полное актуальное название из данных и KB без дублирования; tooltip не единственный источник.",
+          "actual": "Регрессионная проверка требует полное название после «Скачивание», а не сокращение до KB.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Presentation34.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "87.detail",
+          "requirement": "Отдельная краткая строка реального прогресса/времени/объёма/скорости, неизвестные показатели не придуманы.",
+          "scenario": "VerifyRelease36; VerifyRelease39; VerifyRelease40",
+          "expected": "Отдельная краткая строка реального прогресса/времени/объёма/скорости, неизвестные показатели не придуманы.",
+          "actual": "Прогресс отдельной строкой, nullable percent и отсутствующие переданные показатели не заменяются выдуманными.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Presentation34.cs; Console/ActivityPresentation.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "87.layout",
+          "requirement": "Название переносится без перекрытия кнопок и чрезмерной высоты; краткие дерево/последние допустимы с подсказкой.",
+          "scenario": "VerifyRelease36; VerifyRelease39; VerifyRelease40",
+          "expected": "Название переносится без перекрытия кнопок и чрезмерной высоты; краткие дерево/последние допустимы с подсказкой.",
+          "actual": "Полное длинное название отрисовано в широком/узком окне; tooltip сохраняет исходное значение.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Presentation34.cs; Console/ActivityPresentation.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "87.transition",
+          "requirement": "Текущее обновление меняется, завершение снимает прежний этап, приоритет ошибок/reboot сохранён, старый тест сокращения обновлён.",
+          "scenario": "VerifyRelease36; VerifyRelease39; VerifyRelease40",
+          "expected": "Текущее обновление меняется, завершение снимает прежний этап, приоритет ошибок/reboot сохранён, старый тест сокращения обновлён.",
+          "actual": "StageText34 использует текущий state.Stage; терминальная оценка снимает активный заголовок, reboot/error отдельно.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Presentation34.cs; Console/ActivityPresentation.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 100,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "100.partial",
+          "requirement": "Подтверждение новой загрузки отделено от флагов. Новая загрузка при отказе WUA не означает безусловный зелёный успех.",
+          "scenario": "VerifyRelease39; VerifyRelease45; VerifyStatus50",
+          "expected": "Подтверждение новой загрузки отделено от флагов. Новая загрузка при отказе WUA не означает безусловный зелёный успех.",
+          "actual": "Новый boot с неполными флагами даёт RebootObserved/unknown, не VerifiedAfterReboot; неполная свежая проверка не Fresh.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/RebootObservation.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "100.time",
+          "requirement": "Источник, время и неполнота видны; старый результат перезагрузки не становится итогом новой установки, ошибка доступа остаётся в подробностях.",
+          "scenario": "VerifyRelease39; VerifyRelease45; VerifyStatus50",
+          "expected": "Источник, время и неполнота видны; старый результат перезагрузки не становится итогом новой установки, ошибка доступа остаётся в подробностях.",
+          "actual": "RebootView содержит исходный stamp, короткие источники и limitation; ошибка чтения сохраняется в подробностях.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/RebootObservation.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "100.refresh",
+          "requirement": "Свежие полные флаги обновляют все индикаторы, неполнота не равна false; чистые, повторно положительные, недоступные и старые данные проверены.",
+          "scenario": "VerifyRelease39; VerifyRelease45; VerifyStatus50",
+          "expected": "Свежие полные флаги обновляют все индикаторы, неполнота не равна false; чистые, повторно положительные, недоступные и старые данные проверены.",
+          "actual": "Полный negative уточняет состояние; positive после нового boot сохраняется; матрица проверяет clean/partial/unknown/old.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/RebootObservation.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 103,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "103.unified",
+          "requirement": "Главная карточка, шапка, дерево, последние и журнал используют общие факты и приоритеты; успех команды не равен готовности клиента.",
+          "scenario": "VerifyRelease41; VerifyRelease43; VerifyStatus50",
+          "expected": "Главная карточка, шапка, дерево, последние и журнал используют общие факты и приоритеты; успех команды не равен готовности клиента.",
+          "actual": "Выбранный и фоновый клиенты теперь получают идентичные Title/Details/критерии; общая оценка питает Overview и главную карточку.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "103.report",
+          "requirement": "Запрос отправки, новый отчёт и чтение старого отчёта различаются; LastReported не подменяется временем чтения.",
+          "scenario": "VerifyRelease41; VerifyRelease43; VerifyStatus50",
+          "expected": "Запрос отправки, новый отчёт и чтение старого отчёта различаются; LastReported не подменяется временем чтения.",
+          "actual": "LastReported не изменяется при ReceivedUtc; свежий отчёт до Ended служебного шага допустим.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "103.active",
+          "requirement": "Текущая установка и прогресс видны, отчётность рядом; старая ошибка не приписывается новой попытке.",
+          "scenario": "VerifyRelease41; VerifyRelease43; VerifyStatus50",
+          "expected": "Текущая установка и прогресс видны, отчётность рядом; старая ошибка не приписывается новой попытке.",
+          "actual": "Рабочий этап остаётся основным, сохранённая ошибка отображается как отдельный источник.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "103.unknown",
+          "requirement": "Старый ноль не подтверждает текущий. Очередь — признак, а не разрешение ремонта ради цвета; полная готовность удерживается по #115.",
+          "scenario": "VerifyRelease41; VerifyRelease43; VerifyStatus50",
+          "expected": "Старый ноль не подтверждает текущий. Очередь — признак, а не разрешение ремонта ради цвета; полная готовность удерживается по #115.",
+          "actual": "Partial/старый ноль без полной готовности не Success; ранее полностью подтверждённый результат удерживается до противоречащих фактов.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 104,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "104.phases",
+          "requirement": "Нужна перезагрузка, назначена, ожидается возврат, готовность и неизвестность различаются по структурированным состояниям, не подстроке.",
+          "scenario": "VerifyRelease40; VerifyRelease45; VerifyRebootObservationFix; VerifyStatus50",
+          "expected": "Нужна перезагрузка, назначена, ожидается возврат, готовность и неизвестность различаются по структурированным состояниям, не подстроке.",
+          "actual": "Назначенный reboot, подтверждённая загрузка и ожидание готовности используют отдельные состояния/наблюдение.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Release40.cs; Console/RebootObservation.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "104.boot",
+          "requirement": "Сбор, получение и загрузка разделены. Новая загрузка не переносит старые флаги; положительный результат той же загрузки не истекает по возрасту.",
+          "scenario": "VerifyRelease40; VerifyRelease45; VerifyRebootObservationFix; VerifyStatus50",
+          "expected": "Сбор, получение и загрузка разделены. Новая загрузка не переносит старые флаги; положительный результат той же загрузки не истекает по возрасту.",
+          "actual": "Новый boot инвалидирует прежние флаги, same-boot positive не истекает по возрасту; Collected/Received/Boot отдельно.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Release40.cs; Console/RebootObservation.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "104.sources",
+          "requirement": "Считаются уникальные положительные источники; короткие имена, время сбора и неполнота видны. Общие файловые операции отдельно, полные пути в техническом журнале.",
+          "scenario": "VerifyRelease40; VerifyRelease45; VerifyRebootObservationFix; VerifyStatus50",
+          "expected": "Считаются уникальные положительные источники; короткие имена, время сбора и неполнота видны. Общие файловые операции отдельно, полные пути в техническом журнале.",
+          "actual": "ShortRebootSource и Distinct сохраняют короткие уникальные источники; PendingFileRename не входит в подтверждение.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Release40.cs; Console/RebootObservation.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "104.consistent",
+          "requirement": "Шапка, подсказка, диалог, внимание и план используют один снимок независимо от загрузки большого журнала.",
+          "scenario": "VerifyRelease40; VerifyRelease45; VerifyRebootObservationFix; VerifyStatus50",
+          "expected": "Шапка, подсказка, диалог, внимание и план используют один снимок независимо от загрузки большого журнала.",
+          "actual": "RebootViewFor40 используется плашкой, header tooltip и диалогом без чтения большого журнала.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Release40.cs; Console/RebootObservation.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "104.check",
+          "requirement": "Проверить сейчас — только чтение с единственным запросом, без передачи управления, перезагрузки и изменений. Старый ответ не выдаётся за новый.",
+          "scenario": "VerifyRelease40; VerifyRelease45; VerifyRebootObservationFix; VerifyStatus50",
+          "expected": "Проверить сейчас — только чтение с единственным запросом, без передачи управления, перезагрузки и изменений. Старый ответ не выдаётся за новый.",
+          "actual": "CheckRebootNow40 и statusReads исключают параллельный запрос; endpoint/generation и Collected отсекают старый ответ.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Release40.cs; Console/RebootObservation.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "104.action-placement",
+          "requirement": "Кнопка у соответствующего критерия при неизвестности или необходимой перепроверке; скрывается после свежего результата. Нет постоянной вложенной карточки по #110/#112.",
+          "scenario": "VerifyRelease40; VerifyRelease45; VerifyRebootObservationFix; VerifyStatus50",
+          "expected": "Кнопка у соответствующего критерия при неизвестности или необходимой перепроверке; скрывается после свежего результата. Нет постоянной вложенной карточки по #110/#112.",
+          "actual": "Кнопка у reboot-критерия при неполных/устаревших данных, скрыта при active/Success/свежей полной проверке; не зависит от текста главной ошибки.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Release40.cs; Console/RebootObservation.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 110,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "110.single",
+          "requirement": "Нет вложенной карточки перезагрузки; подтверждённое требование занимает главный результат с источниками и временем.",
+          "scenario": "VerifyRelease40; VerifyRelease41; VerifyStatus50",
+          "expected": "Нет вложенной карточки перезагрузки; подтверждённое требование занимает главный результат с источниками и временем.",
+          "actual": "RebootCard40 всегда Collapsed; общий основной результат получает Reboot.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Release40.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "110.later-criteria",
+          "requirement": "Поздний #112 заменяет запрет отрицательной строки: подтверждённое отсутствие показывается зелёным в одном из трёх критериев, без отдельной плашки.",
+          "scenario": "VerifyRelease40; VerifyRelease41; VerifyStatus50",
+          "expected": "Поздний #112 заменяет запрет отрицательной строки: подтверждённое отсутствие показывается зелёным в одном из трёх критериев, без отдельной плашки.",
+          "actual": "Отрицательный полный результат зелёный в третьем критерии, без отдельной карточки.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Release40.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "110.evidence",
+          "requirement": "Успех обновлений и отчёта только по фактам; неизвестность и неполнота не false, новая загрузка не отрицательная проверка.",
+          "scenario": "VerifyRelease40; VerifyRelease41; VerifyStatus50",
+          "expected": "Успех обновлений и отчёта только по фактам; неизвестность и неполнота не false, новая загрузка не отрицательная проверка.",
+          "actual": "Успех требует нулевого полного отчёта/поиска/negative; unknown/partial/future stamps не подтверждают готовность.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Release40.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "110.preserve",
+          "requirement": "Активная операция и ошибки не потеряны; проверка доступна там, где нужна, сведения сохранены в подробностях, подсказке и диалоге.",
+          "scenario": "VerifyRelease40; VerifyRelease41; VerifyStatus50",
+          "expected": "Активная операция и ошибки не потеряны; проверка доступна там, где нужна, сведения сохранены в подробностях, подсказке и диалоге.",
+          "actual": "Active имеет приоритет отображения; ошибки сохранены, проверка адресная, tooltip/диалог из одного RebootView.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/Release40.cs; Console/Criteria45.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 112,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "112.facts",
+          "requirement": "Факты содержат источник, идентичность, контекст, время измерения и получения, полноту и ошибку; значения unknown/partial не превращаются в false.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Факты содержат источник, идентичность, контекст, время измерения и получения, полноту и ошибку; значения unknown/partial не превращаются в false.",
+          "actual": "Модели раздельно хранят client/WSUS/boot/endpoint/полноту/ошибки; partial не превращается в false.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.updates",
+          "requirement": "Готовность требует актуального успешного поиска и отсутствия необходимых обновлений по текущим политикам; старый/неполный серверный ноль недостаточен.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Готовность требует актуального успешного поиска и отсутствия необходимых обновлений по текущим политикам; старый/неполный серверный ноль недостаточен.",
+          "actual": "Нулевой полный серверный набор требует успешного клиентского поиска в текущем boot и источнике; remaining>0 блокирует Success.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.report",
+          "requirement": "Использовать реальное LastReportedUtc сервера; административное чтение не освежает отчёт. Свежий отчёт не обязан быть позже Ended последних служебных действий.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Использовать реальное LastReportedUtc сервера; административное чтение не освежает отчёт. Свежий отчёт не обязан быть позже Ended последних служебных действий.",
+          "actual": "LastReported — реальная серверная отметка; свежий отчёт до окончания служебных действий не ложная неисправность.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.reboot",
+          "requirement": "Полная отрицательная проверка подтверждает отсутствие флагов; partial, отказ доступа и новая загрузка сами по себе не подтверждают отрицание.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Полная отрицательная проверка подтверждает отсутствие флагов; partial, отказ доступа и новая загрузка сами по себе не подтверждают отрицание.",
+          "actual": "DescribeReboot40 отвергает partial negative, неполный ответ не Fresh; invalid/future time не подтверждает флаги.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.positive-reboot",
+          "requirement": "Положительное свидетельство сохраняется в той же загрузке до подтверждённой новой проверки; возраст сам по себе не снимает требование. После нового boot нужны новые флаги.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Положительное свидетельство сохраняется в той же загрузке до подтверждённой новой проверки; возраст сам по себе не снимает требование. После нового boot нужны новые флаги.",
+          "actual": "Merge сохраняет same-boot positive при неизвестности; новое boot удаляет прежнее свидетельство до новой проверки.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.priorities",
+          "requirement": "Текущая операция остаётся видимой; подтверждённая перезагрузка имеет приоритет над старой ошибкой отчёта, ошибки сохраняются в истории.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Текущая операция остаётся видимой; подтверждённая перезагрузка имеет приоритет над старой ошибкой отчёта, ошибки сохраняются в истории.",
+          "actual": "60 сочетаний флагов/серверных сведений/active проверяют приоритеты без изменения исходного отчёта.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.ready-retention",
+          "requirement": "Последняя полная готовность сохраняется до следующей запланированной/ручной проверки или новых противоречащих фактов; время само по себе не создаёт новую неисправность.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Последняя полная готовность сохраняется до следующей запланированной/ручной проверки или новых противоречащих фактов; время само по себе не создаёт новую неисправность.",
+          "actual": "ReadyProof43 сохраняется; одно старение не создаёт внимание, новые Needed/Error/boot/identity его отменяют.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.identity-order",
+          "requirement": "Запоздалый ответ старого запроса/endpoint не заменяет новые факты; значимые изменения инвалидируют только затронутые доказательства.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Запоздалый ответ старого запроса/endpoint не заменяет новые факты; значимые изменения инвалидируют только затронутые доказательства.",
+          "actual": "Поздние ответы client/status/job/report/connection отвергаются после смены endpoint/поколения; старый Collected не перетирает новый.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.consumers",
+          "requirement": "Шапка, дерево, последние, главная карточка, журнал, внимание, фильтры и копирование используют один смысл статуса, источников и времени.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Шапка, дерево, последние, главная карточка, журнал, внимание, фильтры и копирование используют один смысл статуса, источников и времени.",
+          "actual": "ExplainAssessment45 теперь общий для выбранных и фоновых клиентов; дерево/главная плашка/внимание/фильтры используют AssessClient41.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.age",
+          "requirement": "Возраст одного источника считается согласованно от исходной отметки, без новой сети на каждую перерисовку; UTC хранится, местное время отображается.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Возраст одного источника считается согласованно от исходной отметки, без новой сети на каждую перерисовку; UTC хранится, местное время отображается.",
+          "actual": "Общий ReportPresentation35 считает возраст исходного UTC; форматирование местное без смещения, будущее время отдельно.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.history",
+          "requirement": "Текущие новые сведения не переписывают прошлые результаты; старый Failed не становится ошибкой новой успешной попытки.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Текущие новые сведения не переписывают прошлые результаты; старый Failed не становится ошибкой новой успешной попытки.",
+          "actual": "История событий хранит первичные эпизоды; Failed не стирается новой успешной попыткой, разные jobID не склеиваются.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.criteria-ui",
+          "requirement": "Три основных критерия без нумерации и рамок; подусловия раскрываются стрелкой, проблемный критерий раскрыт, действия возле соответствующей причины.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Три основных критерия без нумерации и рамок; подусловия раскрываются стрелкой, проблемный критерий раскрыт, действия возле соответствующей причины.",
+          "actual": "Три Expander с ReadinessDisclosure46 без внутренних рамок; локальное раскрытие/адресные действия; старый RebootCard скрыт.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.reboot-action",
+          "requirement": "Проверка перезагрузки предлагается при неполных/устаревших данных, не вместо подтверждённого актуального отрицательного результата и не как отвлекающее действие во время установки.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Проверка перезагрузки предлагается при неполных/устаревших данных, не вместо подтверждённого актуального отрицательного результата и не как отвлекающее действие во время установки.",
+          "actual": "Матрица проверяет наличие кнопки для partial/unknown/old при разных общих проблемах и отсутствие во время active/fresh.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.operation-ui",
+          "requirement": "Крупный смысловой значок и полный заголовок рабочей операции; служебные чтения показываются текстом без анимации установки.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Крупный смысловой значок и полный заголовок рабочей операции; служебные чтения показываются текстом без анимации установки.",
+          "actual": "Крупный OperationGlyph38, единая ForOperation50 для Search/Download/Install/Repair/Wait и Info неизвестного этапа; служебная активность SetService43 текстовая.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs; Console/StatusGlyph.cs; Console/ActivityPresentation.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.journals",
+          "requirement": "Поиск, фильтр и копирование находятся в заголовках; панели имеют различные согласованные поверхности/границы; подробности дополняют, а не дублируют карточку.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Поиск, фильтр и копирование находятся в заголовках; панели имеют различные согласованные поверхности/границы; подробности дополняют, а не дублируют карточку.",
+          "actual": "Общие заголовки содержат поиск/фильтр/copy; разные поверхности и внешний контур; LogViewer.DisplaySections46 убирает дубль «Главное» и объединяет техданные.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs; Console/LogViewer.cs; Console/MainWindow.xaml ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.toasts",
+          "requirement": "Уведомления располагаются в верхней зоне без смещения раскладки и перекрытия действий; исчезают после потери актуальности.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Уведомления располагаются в верхней зоне без смещения раскладки и перекрытия действий; исчезают после потери актуальности.",
+          "actual": "Overlay в верхней зоне, VerifyToastPlacement47 проверяет границы и отсутствие изменения высоты; HideToast закрывает уведомление.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "112.performance",
+          "requirement": "Проверить 400+ клиентов и большую историю, четыре режима/три темы/два размера; сохранять ввод, выделение, прокрутку и раскрытие.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Проверить 400+ клиентов и большую историю, четыре режима/три темы/два размера; сохранять ввод, выделение, прокрутку и раскрытие.",
+          "actual": "Сценарий 450 строк/1006 jobs/10000 events, кэш группировки и отсутствие повторного дискового чтения; четыре режима×три темы×два размера, сохранение выбора/копирования.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/ClientAssessment41.cs; Console/Criteria45.cs; Console/Readiness43.cs; Console/Release40.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    },
+    {
+      "issue": 129,
+      "current_requirement": "Актуальные условия порции 0.50; поздние согласования о сохранении готовности, reboot evidence, дереве критериев и основных/служебных событиях имеют приоритет. Подробности и границы в 0.50-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "129.results",
+          "requirement": "Результаты основных шагов сохраняются отдельно от последнего служебного этапа; поздний сбой не скрывает ранний успех.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Результаты основных шагов сохраняются отдельно от последнего служебного этапа; поздний сбой не скрывает ранний успех.",
+          "actual": "Результат CacheCleanup и последующий поиск имеют отдельные события, поздний failure не скрывает ранний успех.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/EventHistory50.cs; Console/EventHistory50Checks.cs; Console/CacheCleanup.cs; Agent/Program.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "129.cache",
+          "requirement": "Структурированная сводка различает изоляцию, отсутствие каталога, резервную копию, отложенное удаление и неподтверждённый запуск удаления; нет ложного успеха.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Структурированная сводка различает изоляцию, отсутствие каталога, резервную копию, отложенное удаление и неподтверждённый запуск удаления; нет ложного успеха.",
+          "actual": "Cache50 хранит Isolated/Backups/PendingDelete/CleanupStarted; отсутствие, резервная копия и неподтверждённая очистка различаются.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/EventHistory50.cs; Console/EventHistory50Checks.cs; Console/CacheCleanup.cs; Agent/Program.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "129.filter",
+          "requirement": "Основные события по умолчанию; ошибки/предупреждения, служебные и все записи доступны в заголовке, выбор сохранён и копирование учитывает фильтр.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Основные события по умолчанию; ошибки/предупреждения, служебные и все записи доступны в заголовке, выбор сохранён и копирование учитывает фильтр.",
+          "actual": "Четыре режима в заголовке, default основные; Store сохраняет выбор, copy применяет EventMatches47.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/EventHistory50.cs; Console/EventHistory50Checks.cs; Console/CacheCleanup.cs; Agent/Program.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "129.noise",
+          "requirement": "Рутинные чтения/подключения не вытесняют результаты; подтверждённая потеря/восстановление связи и существенные проблемы видны.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Рутинные чтения/подключения не вытесняют результаты; подтверждённая потеря/восстановление связи и существенные проблемы видны.",
+          "actual": "Рутинные link/read/плановые проверки скрыты из основных; подтверждённые потеря/возврат и серия ошибок чтения остаются.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/EventHistory50.cs; Console/EventHistory50Checks.cs; Console/CacheCleanup.cs; Agent/Program.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "129.scope",
+          "requirement": "Разные задания/планы/эпизоды не склеиваются; неизменный повторный опрос не добавляет запись.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Разные задания/планы/эпизоды не склеиваются; неизменный повторный опрос не добавляет запись.",
+          "actual": "Operation36 содержит job/step/plan; эпизоды разделены временем/сменой состояния, повторный Poll дедуплицирован.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/EventHistory50.cs; Console/EventHistory50Checks.cs; Console/CacheCleanup.cs; Agent/Program.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "129.wait",
+          "requirement": "Занятость WUA, признаки установки и неполная проверка названы отдельно; служебные подробности сохраняются.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Занятость WUA, признаки установки и неполная проверка названы отдельно; служебные подробности сохраняются.",
+          "actual": "В фазе ожидания отдельно названы WUA busy, признаки установки и неполная проверка.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/EventHistory50.cs; Console/EventHistory50Checks.cs; Console/CacheCleanup.cs; Agent/Program.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        },
+        {
+          "condition_id": "129.tests",
+          "requirement": "Проверены повторный опрос, сохранение, разные задания, поздняя ошибка поиска, пустой кеш/копия/отложенное удаление/ошибка служб и старые данные.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Проверены повторный опрос, сохранение, разные задания, поздняя ошибка поиска, пустой кеш/копия/отложенное удаление/ошибка служб и старые данные.",
+          "actual": "Новые проверки истории и Windows PowerShell сценарии Missing/Success/PendingSuccess/MaintenanceMissing/PrimaryAndRestore/PartialIsolation; совместимость старого StepResult.",
+          "result": "passed",
+          "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; source at d5776fb85b088f45a675ff913c626466a0adab5e in DomainConsole-CSharp/: Console/EventHistory50.cs; Console/EventHistory50Checks.cs; Console/CacheCleanup.cs; Agent/Program.cs ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+        }
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "single-instance",
+      "scenario": "Concurrent readers, cached reads, hung worker and autonomous task deadline",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "One fixed collector task; no retained hung Activity worker; WinRM process count returned to baseline.",
+      "result": "passed",
+      "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+    },
+    {
+      "id": "two-consoles",
+      "scenario": "Six real WinRM readers; two independent remote recovery shells; cross-console ownership fixture",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Temporary Busy does not latch; recovered snapshot is shared, second repair does not change task LastRunTime; ownership guards pass.",
+      "result": "passed",
+      "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+    },
+    {
+      "id": "reboot-mid-operation",
+      "scenario": "Abruptly terminate owned test agent in four simulated phases; reconcile boot/ownership/result",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Four unknown interrupted outcomes reconciled; live/busy/grace safeguards, backups and one fresh UpdateScan verified. No real CBS installation or physical power loss was tested. New-boot missing result and true/false/null post-boot search checkpoints also verified; incompatible saved installation is not replayed.",
+      "result": "passed",
+      "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+    },
+    {
+      "id": "collector-remove-enable-recover",
+      "scenario": "Real SYSTEM hung supervisor removal, foreign configuration, disabled marker, explicit reinstall",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Owned collector removed; foreign objects/Maintenance preserved; repeated deletion idempotent; fresh complete result required; concurrent repair shared.",
+      "result": "passed",
+      "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+    },
+    {
+      "id": "offline-and-reconnect",
+      "scenario": "Controlled delayed success/failure and endpoint change; old/new polling generation; actual WinRM lifecycle",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Obsolete replies ignored, current positive controls accepted. Physical VPN disruption was not performed; transport failures/reconnect state transitions were injected.",
+      "result": "passed",
+      "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+    },
+    {
+      "id": "polling-master-off",
+      "scenario": "Saved OFF on cold startup and restart; queued reads, OFF/ON; collector inspection/history",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Zero startup transport entries; old generation remains cancelled; explicit read actions respect OFF; installs are not terminated. Endpoint setup stops before network; Auto OFF cancels future reboot follow-ups durably.",
+      "result": "passed",
+      "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+    },
+    {
+      "id": "status-evidence-consistency",
+      "scenario": "Same-boot positive reboot, fresh negative, new boot partial, prior WSUS failure, saved readiness",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "60 combinations of reboot/report/active state pass; selected/background explanations match; invalid/future timestamps remain unknown; matching revision reconciliation and cache timestamps preserved. Earlier same-boot/new-boot and retained readiness regressions also pass.",
+      "result": "passed",
+      "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+    },
+    {
+      "id": "ui-all-modes-themes-sizes",
+      "scenario": "Actual WPF rendering in three themes, compact/wide windows, commands/WSUS/history/settings",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Generated Windows screenshots inspected; common header and poll/auto placement retained; visual tests pass.",
+      "result": "passed",
+      "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+    },
+    {
+      "id": "selection-scroll-preservation",
+      "scenario": "Background completion with A/B/C selections; UI load of 450 computers and 10000 events",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Selection/tab/editor/copy/scroll assertions pass; input dispatcher serviced; no repeated history disk reads or unchanged-row notification storm.",
+      "result": "passed",
+      "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+    },
+    {
+      "id": "full-command-output",
+      "scenario": "Forty output steps, intermediate stderr, repeated lines, 1 MiB notice, reopen/copy",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Numeric step order and earlier output preserved; structured stderr and truncation notice visible; actual PowerShell/CMD execution checks pass.",
+      "result": "passed",
+      "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+    },
+    {
+      "id": "cache-reset-failure-and-restoration",
+      "scenario": "Isolated cache/service adapters and abrupt PowerShell child termination",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Original failure and restoration evidence retained; busy installer and partial restoration prevent false success. Production services and caches were not changed. Parent junction, absent/disappeared directory and partial isolation registration checked. Structured Cache50 distinguishes absent, backup, pending deletion and cleanup-start failure; primary/restore errors do not emit a success summary.",
+      "result": "passed",
+      "commit": "d5776fb85b088f45a675ff913c626466a0adab5e",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40863919605 ; exact ZIP SHA256 ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
+    }
+  ],
+  "close_issues": [
+    1,
+    2,
+    4,
+    9,
+    10,
+    14,
+    18,
+    20,
+    22,
+    23,
+    38,
+    43,
+    50,
+    59,
+    63,
+    69,
+    74,
+    77,
+    82,
+    83,
+    87,
+    100,
+    103,
+    104,
+    110,
+    112,
+    129
+  ]
+}

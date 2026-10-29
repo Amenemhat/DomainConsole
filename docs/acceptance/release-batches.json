@@ -209,7 +209,7 @@
       "version": "0.50",
       "priority": "P1",
       "title": "Достоверные статусы, перезагрузка и отчётность WSUS",
-      "status": "planned",
+      "status": "accepted",
       "issues": [
         1,
         2,
@@ -390,7 +390,10 @@
         "129.scope",
         "129.wait",
         "129.tests"
-      ]
+      ],
+      "source": "d5776fb85b088f45a675ff913c626466a0adab5e",
+      "run": 40863919605,
+      "artifact_sha256": "ae4caf98deb79c8171d0b3252a2faf8e0de92bc6618ee47273c067099c494b45"
     },
     {
       "version": "0.51",
