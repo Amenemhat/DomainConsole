@@ -1,0 +1,525 @@
+{
+  "schema": 1,
+  "version": "0.48",
+  "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+  "run_id": 40833641383,
+  "sha256": "a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5",
+  "registry_sha256": "6f8fab43bc409c973a557ef63e2f523846b339ef4e1305d25852312369bebb16",
+  "batch_plan_sha256": "c1f329afd6b3d514e2944eb25f6e6972bb0ab87015682f1f7218f41c7796bf10",
+  "reviewer": "Codex: source review, Windows CI and actual artifact inspection",
+  "reviewed_at": "2026-10-29T07:25:50.573151+00:00",
+  "issues": [
+    {
+      "issue": 113,
+      "current_requirement": "Актуальные условия согласованной порции 0.48; поздние уточнения имеют приоритет. Историческая причина производственного инцидента не объявляется установленной.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "113.single-flight",
+          "requirement": "Общий ограничитель служебного сбора на клиенте объединяет совместимые запросы и учитывает несколько консолей; одна фиксированная задача вместо GUID-задачи на каждый тик.",
+          "scenario": "test_probe42.ps1; TransportBudget41; admission.ps1",
+          "expected": "Общий ограничитель служебного сбора на клиенте объединяет совместимые запросы и учитывает несколько консолей; одна фиксированная задача вместо GUID-задачи на каждый тик.",
+          "actual": "12 кэшированных чтений и 6 конкурирующих WinRM-читателей: один фиксированный сборщик, без повторного запуска по LastRunTime.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_probe42.ps1; TransportBudget41; admission.ps1 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "113.bounds",
+          "requirement": "Ограничены частота, параллельность, длительность и восстановление; повторные сбои увеличивают паузу и не создают бесконечный запуск.",
+          "scenario": "test_probe42.ps1; VerifyCollectorFailures48; Readiness43",
+          "expected": "Ограничены частота, параллельность, длительность и восстановление; повторные сбои увеличивают паузу и не создают бесконечный запуск.",
+          "actual": "Паузы 120/300/900 с; третья ошибка сборщика блокирует новый сбор; лимит транспорта 3, очередь объединяется по заданию/клиенту.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_probe42.ps1; VerifyCollectorFailures48; Readiness43 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "113.ownership",
+          "requirement": "Уборка проверяет принадлежность и состояние задач независимо от наличия каталога; не затрагивает установки, Maintenance и чужие процессы.",
+          "scenario": "test_probe42.ps1; test_collector43.ps1",
+          "expected": "Уборка проверяет принадлежность и состояние задач независимо от наличия каталога; не затрагивает установки, Maintenance и чужие процессы.",
+          "actual": "Legacy Probe без каталога удаляется после сверки; свежая, чужая и Running сохраняются; Maintenance и посторонние данные не удалены.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_probe42.ps1; test_collector43.ps1 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "113.remote-lifetime",
+          "requirement": "Удалённый срок и штатное/последующее принудительное завершение только своего опроса работают без живой консоли; локальный timeout не оставляет неучтённый цикл.",
+          "scenario": "test_probe42.ps1; collector.ps1",
+          "expected": "Удалённый срок и штатное/последующее принудительное завершение только своего опроса работают без живой консоли; локальный timeout не оставляет неучтённый цикл.",
+          "actual": "Запуск без ожидающей консоли завершается планировщиком; предел 60 с, зависший Activity worker не остаётся; новый запуск до согласования запрещён.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_probe42.ps1; collector.ps1 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "113.diagnostic",
+          "requirement": "Сохранять ограниченные ID/времена/причину/результат сбора и уборки; неизвестность или ошибка уборки препятствует повторному слепому запуску.",
+          "scenario": "admission.ps1; remove43.ps1; repair48.ps1; test_probe42.ps1",
+          "expected": "Сохранять ограниченные ID/времена/причину/результат сбора и уборки; неизвестность или ошибка уборки препятствует повторному слепому запуску.",
+          "actual": "Read-Json ограничен 1 МиБ, история сбора 16 записей; ID/время/ошибка сохраняются. Частичный результат сохраняет полезный источник; неизвестный исполнитель запрещает новый сбор.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: admission.ps1; remove43.ps1; repair48.ps1; test_probe42.ps1 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "113.legacy-cleanup",
+          "requirement": "Предварительный просмотр и повторная проверка старых Probe; раздельно Running/Ready/неизвестное и удалённое/пропущенное.",
+          "scenario": "test_probe42.ps1; LegacyProbeInventory41",
+          "expected": "Предварительный просмотр и повторная проверка старых Probe; раздельно Running/Ready/неизвестное и удалённое/пропущенное.",
+          "actual": "Предпросмотр не меняет задачи; повторная проверка перед удалением, раздельные результаты удалено/пропущено и состояния; Maintenance сохранён.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_probe42.ps1; LegacyProbeInventory41 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "113.real-winrm",
+          "requirement": "Проверить реальные WinRM/SYSTEM процессы/задачи до и после повторов, конкуренции и зависания, а не только текст скрипта; нагрузка 400+ строк.",
+          "scenario": "test_probe42.ps1; test_collector43.ps1; UI performance evidence",
+          "expected": "Проверить реальные WinRM/SYSTEM процессы/задачи до и после повторов, конкуренции и зависания, а не только текст скрипта; нагрузка 400+ строк.",
+          "actual": "Использованы реальные SYSTEM-задачи и независимые WinRM-сеансы; проверены числа процессов и задач. Нагрузка 450 строк проверяется отдельно в WPF, не объявляется испытанием 450 удалённых серверов.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_probe42.ps1; test_collector43.ps1; UI performance evidence ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "113.causality",
+          "requirement": "Не объявлять историческую причину исчерпания ресурсов доказанной симуляцией; производственные процессы не завершать ради испытаний.",
+          "scenario": "docs/releases/0.48.md; review of workflow fixtures",
+          "expected": "Не объявлять историческую причину исчерпания ресурсов доказанной симуляцией; производственные процессы не завершать ради испытаний.",
+          "actual": "Историческая производственная причина не объявляется доказанной. Производственные клиенты не использовались; завершались только собственные процессы изолированного стенда. Расследование #113 остаётся открытым.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: docs/releases/0.48.md; review of workflow fixtures ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        }
+      ],
+      "keep_open": true,
+      "reason": "Функциональные ограничения опроса проверены; историческое расследование производственного инцидента остаётся открытым."
+    },
+    {
+      "issue": 114,
+      "current_requirement": "Актуальные условия согласованной порции 0.48; поздние уточнения имеют приоритет. Историческая причина производственного инцидента не объявляется установленной.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "114.states",
+          "requirement": "Различать Busy, ручной OFF, Cooldown, защитную блокировку, ошибку формата/прав; Busy не становится постоянным Blocked и не означает потерю WinRM.",
+          "scenario": "VerifyCollectorFailures48; test_probe42.ps1; VerifyPause43",
+          "expected": "Различать Busy, ручной OFF, Cooldown, защитную блокировку, ошибку формата/прав; Busy не становится постоянным Blocked и не означает потерю WinRM.",
+          "actual": "Busy не постоянная блокировка; Cooldown/Blocked/Disabled отделены. Проверены отдельные InvalidResult/AccessDenied/Unreachable и ограниченный backoff.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: VerifyCollectorFailures48; test_probe42.ps1; VerifyPause43 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "114.diagnose",
+          "requirement": "Inspect читает ограниченные журналы/метаданные без запуска; действия восстановления остаются доступны при провале inventory.",
+          "scenario": "test_collector43.ps1; ProbeTools41_Click",
+          "expected": "Inspect читает ограниченные журналы/метаданные без запуска; действия восстановления остаются доступны при провале inventory.",
+          "actual": "Inspect сохраняет файлы/ACL без изменений, показывает отличающееся поле. Кнопки создаются до любого чтения; ошибка inventory не удаляет возможность восстановления.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_collector43.ps1; ProbeTools41_Click ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "114.explicit-repair",
+          "requirement": "Явная кнопка включения/восстановления рядом со связью для удалённого/зависшего сборщика, независима от очереди рабочих заданий, но сохраняет проверки владения.",
+          "scenario": "CollectorRepair47; PollRecovery44; Release46Checks; WPF images",
+          "expected": "Явная кнопка включения/восстановления рядом со связью для удалённого/зависшего сборщика, независима от очереди рабочих заданий, но сохраняет проверки владения.",
+          "actual": "Кнопка рядом со связью зависит от состояния сборщика, а не очереди обслуживания; повторные действия UI блокируются на время единственного ремонта.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: CollectorRepair47; PollRecovery44; Release46Checks; WPF images ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "114.repair-sequence",
+          "requirement": "Сначала штатная остановка своего опроса; затем только подтверждённый собственный процесс при необходимости; один новый чистый сборщик после подтверждённого завершения.",
+          "scenario": "test_collector43.ps1; remove43.ps1; repair48.ps1",
+          "expected": "Сначала штатная остановка своего опроса; затем только подтверждённый собственный процесс при необходимости; один новый чистый сборщик после подтверждённого завершения.",
+          "actual": "Штатная отмена, ожидание 5 с, затем точная сверка команды/PID/CreationDate; фактическая остановка проверяется перед удалением. Две удалённые оболочки не выполняют две переустановки.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_collector43.ps1; remove43.ps1; repair48.ps1 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "114.postconditions",
+          "requirement": "Снятие блокировки и успех только после удалённых постусловий и свежего полного снимка; один повторный клик присоединяется к той же работе.",
+          "scenario": "test_collector43.ps1 Collector48; CollectorRepair47",
+          "expected": "Снятие блокировки и успех только после удалённых постусловий и свежего полного снимка; один повторный клик присоединяется к той же работе.",
+          "actual": "Успех требует Healthy/Complete и нового времени снимка; второй запрос получает тот же SnapshotId с Joined=true без изменения LastRunTime задачи.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_collector43.ps1 Collector48; CollectorRepair47 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "114.no-replay",
+          "requirement": "Прерванная установка имеет неизвестный исход; подтверждённое освобождение, свежие факты и однократный поиск предшествуют допустимому продолжению. Не повторять установку с сохранённого процента.",
+          "scenario": "VerifyRecoveryPipeline47; Release46Checks; InterruptionSmoke47",
+          "expected": "Прерванная установка имеет неизвестный исход; подтверждённое освобождение, свежие факты и однократный поиск предшествуют допустимому продолжению. Не повторять установку с сохранённого процента.",
+          "actual": "Неизвестный исход после потери агента не превращается в успех; после проверки освобождения создаётся один UpdateScan, а не повтор установки с прежнего процента.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: VerifyRecoveryPipeline47; Release46Checks; InterruptionSmoke47 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "114.recovery-tests",
+          "requirement": "Резко завершить собственный тестовый агент на поиске/скачивании/установке/перед записью; проверить grace, живого исполнителя, занятый WUA, backup, идемпотентность и отсутствие второго задания.",
+          "scenario": "InterruptionSmoke47; VerifyRecoveryPipeline47",
+          "expected": "Резко завершить собственный тестовый агент на поиске/скачивании/установке/перед записью; проверить grace, живого исполнителя, занятый WUA, backup, идемпотентность и отсутствие второго задания.",
+          "actual": "Реально завершён собственный тестовый процесс в четырёх имитированных фазах; проверены живой исполнитель, grace, занятый WUA, backup, идемпотентность. Реальная установка CBS не прерывалась.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: InterruptionSmoke47; VerifyRecoveryPipeline47 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        }
+      ]
+    },
+    {
+      "issue": 115,
+      "current_requirement": "Актуальные условия согласованной порции 0.48; поздние уточнения имеют приоритет. Историческая причина производственного инцидента не объявляется установленной.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "115.rest",
+          "requirement": "Полностью проверенные успешные клиенты не опрашиваются как активные задания; сохраняются сроки и последняя готовность.",
+          "scenario": "Readiness43; RebootObservation; Workspace31; StatusOverview; VerifyRelease43",
+          "expected": "Полностью проверенные успешные клиенты не опрашиваются как активные задания; сохраняются сроки и последняя готовность.",
+          "actual": "Успешные клиенты исключены из частых проверок связи и выбранного reboot-опроса; Completed не активное задание. Готовность не исчезает от возраста, срок общего обхода сохраняется.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: Readiness43; RebootObservation; Workspace31; StatusOverview; VerifyRelease43 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "115.spread",
+          "requirement": "Проверки распределяются с ограниченной параллельностью/разбросом, приоритетом выбранных/активных; повторный тик не копит очередь.",
+          "scenario": "Readiness43; StatusOverview; VerifyTransportBudget41; VerifyRelease251",
+          "expected": "Проверки распределяются с ограниченной параллельностью/разбросом, приоритетом выбранных/активных; повторный тик не копит очередь.",
+          "actual": "Не больше 3 транспортов; случайная задержка 30–650 мс, HashSet исключает повторную очередь. Выбранный клиент перед остальными, активные задания отдельно от успешных.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: Readiness43; StatusOverview; VerifyTransportBudget41; VerifyRelease251 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "115.separate",
+          "requirement": "Чтение серверных данных WSUS отдельно от клиентского поиска; служебная подготовка/получение результата без анимации рабочей установки.",
+          "scenario": "TransportBudget41; Criteria45; VerifyRelease43; WPF service image; test_collector43.ps1 history schema",
+          "expected": "Чтение серверных данных WSUS отдельно от клиентского поиска; служебная подготовка/получение результата без анимации рабочей установки.",
+          "actual": "Служебное чтение показывает название действия без прогресса установки; серверный WSUS-обзор не запускает клиентский поиск обновлений. История WUA возвращает собственную схему без изменения сборщика.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: TransportBudget41; Criteria45; VerifyRelease43; WPF service image; test_collector43.ps1 history schema ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "115.dates",
+          "requirement": "Показывать фактическое действие/время источника; фоновое чтение не выдумывает новую установку или успех.",
+          "scenario": "Release41Checks; Release46Checks; Readiness43",
+          "expected": "Показывать фактическое действие/время источника; фоновое чтение не выдумывает новую установку или успех.",
+          "actual": "Перерисовка возраста не меняет исходную дату отчёта/поиска/готовности; поздние ответы и необязательные повреждённые данные не заменяют основной результат.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: Release41Checks; Release46Checks; Readiness43 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "115.no-proposal-as-rule",
+          "requirement": "Предварительные предложенные периоды не считать утверждёнными константами; действуют сохранённые настройки и позднее согласованное поведение.",
+          "scenario": "StatusOverview; Workspace31; release-batches.md; review of latest owner decisions",
+          "expected": "Предварительные предложенные периоды не считать утверждёнными константами; действуют сохранённые настройки и позднее согласованное поведение.",
+          "actual": "Обход использует сохранённые настройки (по умолчанию 24 ч), связь — сохранённый интервал; ранние предложения 30–60 мин не навязаны. Позднее согласованное сохранение зелёной готовности действует.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: StatusOverview; Workspace31; release-batches.md; review of latest owner decisions ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        }
+      ]
+    },
+    {
+      "issue": 116,
+      "current_requirement": "Актуальные условия согласованной порции 0.48; поздние уточнения имеют приоритет. Историческая причина производственного инцидента не объявляется установленной.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "116.inspect",
+          "requirement": "Inspect только читает даже при различиях; выводит ожидаемые/фактические поля и реальную причину.",
+          "scenario": "test_collector43.ps1",
+          "expected": "Inspect только читает даже при различиях; выводит ожидаемые/фактические поля и реальную причину.",
+          "actual": "Хеш/размер/время файлов и ACL до/после Inspect совпадают; изменённый ExecutionTimeLimit отражён как конкретное отличие, задача не заменена.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_collector43.ps1 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "116.sid",
+          "requirement": "Principal SYSTEM сравнивается по SID, не по локализованной строке.",
+          "scenario": "test_collector43.ps1; admission.ps1",
+          "expected": "Principal SYSTEM сравнивается по SID, не по локализованной строке.",
+          "actual": "Ожидаемый и фактический PrincipalSid S-1-5-18; имена разрешаются через NTAccount.Translate, не сравнением локализованной строки. Полный RU/EN ОС-стенд не заявляется.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_collector43.ps1; admission.ps1 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "116.upgrade",
+          "requirement": "Заменять только принадлежащий консоли остановленный сборщик; не откатывать более новый пакет и не менять активный.",
+          "scenario": "test_probe42.ps1; test_collector43.ps1",
+          "expected": "Заменять только принадлежащий консоли остановленный сборщик; не откатывать более новый пакет и не менять активный.",
+          "actual": "Миграция 40→60 с и нового пакета после трёх ошибок проходит; пакет Version=99 и запрос старой Version=43 не перезаписывают новый. Живой сборщик возвращает Busy до замены.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_probe42.ps1; test_collector43.ps1 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "116.placement",
+          "requirement": "Проблема сборщика не подменяет факты обновлений/перезагрузки; подробности служебные, восстановление адресное и ограниченное.",
+          "scenario": "ClientAssessment41; Criteria45; Release41Checks; Release46Checks; WPF images",
+          "expected": "Проблема сборщика не подменяет факты обновлений/перезагрузки; подробности служебные, восстановление адресное и ограниченное.",
+          "actual": "Сбой наблюдения отображается служебно, не перекрывает подтверждённую перезагрузку/факты обновлений. Адресное восстановление отделено от рабочего задания.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: ClientAssessment41; Criteria45; Release41Checks; Release46Checks; WPF images ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        }
+      ]
+    },
+    {
+      "issue": 117,
+      "current_requirement": "Актуальные условия согласованной порции 0.48; поздние уточнения имеют приоритет. Историческая причина производственного инцидента не объявляется установленной.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "117.targets",
+          "requirement": "Отдельные/отмеченные/все цели подтверждаются и фиксируются до первого await, включая endpoint и параметры; смена выбора/профиля не перенаправляет очистку.",
+          "scenario": "Release46Checks CaptureCollectorTargets47; CollectorTools43",
+          "expected": "Отдельные/отмеченные/все цели подтверждаются и фиксируются до первого await, включая endpoint и параметры; смена выбора/профиля не перенаправляет очистку.",
+          "actual": "Подтверждённый список и адреса копируются до await; смена исходных строк не меняет вторую цель очистки.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: Release46Checks CaptureCollectorTargets47; CollectorTools43 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "117.disable",
+          "requirement": "Запрет автоматической переустановки сохраняется на клиенте до удаления и действует для совместимых консолей; возврат только явно.",
+          "scenario": "test_collector43.ps1; remove43.ps1",
+          "expected": "Запрет автоматической переустановки сохраняется на клиенте до удаления и действует для совместимых консолей; возврат только явно.",
+          "actual": "Запрет сохраняется на клиенте до удаления; Get после удаления возвращает Disabled. Только явный Enable снимает запрет и подтверждает его отсутствие.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_collector43.ps1; remove43.ps1 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "117.owned-only",
+          "requirement": "Удалять только проверенные задачи, файлы и процессы сборщика; не завершать общие PowerShell/WinRM/службы/установщик и не трогать чужие задания.",
+          "scenario": "test_collector43.ps1; test_probe42.ps1; remove43.ps1",
+          "expected": "Удалять только проверенные задачи, файлы и процессы сборщика; не завершать общие PowerShell/WinRM/службы/установщик и не трогать чужие задания.",
+          "actual": "Неизвестная конфигурация возвращает Partial без удаления; нет массового завершения PowerShell/WinRM/WUA/CBS; точные пути и экземпляры проверяются.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_collector43.ps1; test_probe42.ps1; remove43.ps1 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "117.stop",
+          "requirement": "Штатная остановка, ограниченное ожидание, затем при необходимости точное подтверждение PID+времени запуска перед завершением собственного сборщика.",
+          "scenario": "test_collector43.ps1; remove43.ps1",
+          "expected": "Штатная остановка, ограниченное ожидание, затем при необходимости точное подтверждение PID+времени запуска перед завершением собственного сборщика.",
+          "actual": "Реальный зависший собственный supervisor удалён после штатного запроса и ограниченного ожидания; PID/время/команда перепроверены, остаточные процессы запрещают успех.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_collector43.ps1; remove43.ps1 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "117.preserve",
+          "requirement": "Сохранять рабочие задания, контрольные записи и доказательства обслуживания; полная отдельная очистка иных компонентов требует собственной области.",
+          "scenario": "test_collector43.ps1; remove43.ps1; repair48.ps1",
+          "expected": "Сохранять рабочие задания, контрольные записи и доказательства обслуживания; полная отдельная очистка иных компонентов требует собственной области.",
+          "actual": "Контрольные данные другого задания и Maintenance сохранились. Общая папка и агент установки не удаляются; минимальные маркеры/блокировки и последнее свидетельство восстановления сохраняются.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_collector43.ps1; remove43.ps1; repair48.ps1 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "117.queue",
+          "requirement": "Массовая очередь ограничена/последовательна, отменяются ещё не начатые цели, нет скрытой отложенной очистки offline-клиента.",
+          "scenario": "VerifyCollectorBatch48; CollectorTools43",
+          "expected": "Массовая очередь ограничена/последовательна, отменяются ещё не начатые цели, нет скрытой отложенной очистки offline-клиента.",
+          "actual": "Очередь последовательна. Отмена во время первой операции не обрывает её, но вторую и третью не запускает; закрытая очередь не допускает первую. Недоступная цель не откладывается на возвращение.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: VerifyCollectorBatch48; CollectorTools43 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "117.result",
+          "requirement": "Отчёт различает удалено/пропущено/ошибка/не подтверждено; повторное удаление идемпотентно, повторное включение даёт свежий снимок.",
+          "scenario": "test_collector43.ps1; CollectorTools43; CollectorRepair47",
+          "expected": "Отчёт различает удалено/пропущено/ошибка/не подтверждено; повторное удаление идемпотентно, повторное включение даёт свежий снимок.",
+          "actual": "Partial не становится успехом; подробный структурированный результат сохраняется. Повторное удаление идемпотентно; включение подтверждается свежим полным снимком.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: test_collector43.ps1; CollectorTools43; CollectorRepair47 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        }
+      ]
+    },
+    {
+      "issue": 118,
+      "current_requirement": "Актуальные условия согласованной порции 0.48; поздние уточнения имеют приоритет. Историческая причина производственного инцидента не объявляется установленной.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "118.layout",
+          "requirement": "Опрос и Авто одинакового вида, вертикально рядом, Опрос над Авто; настройки отделены.",
+          "scenario": "MainWindow.xaml; Windows WPF images",
+          "expected": "Опрос и Авто одинакового вида, вертикально рядом, Опрос над Авто; настройки отделены.",
+          "actual": "Одинаковый AutoSwitch: Опрос над Авто, отдельная шестерёнка слева с разделителем; проверена фактическая отрисовка компактного/широкого окна и трёх тем.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: MainWindow.xaml; Windows WPF images ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "118.persist",
+          "requirement": "OFF сохраняется и применяется до стартовых таймеров; выключает все фоновые и служебные чтения текущей консоли.",
+          "scenario": "workflow persisted master OFF; VerifyPausedCollector48",
+          "expected": "OFF сохраняется и применяется до стартовых таймеров; выключает все фоновые и служебные чтения текущей консоли.",
+          "actual": "Сохранённый OFF действует до таймеров; контрольный файл не содержит запусков транспорта. Inspect и preview также отклоняются до сети.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: workflow persisted master OFF; VerifyPausedCollector48 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "118.generation",
+          "requirement": "Очередь и непосредственно исполнение проверяют поколение/отмену; старый ответ/ожидание не возобновляет выключенный опрос.",
+          "scenario": "VerifyPause43; VerifyOverviewCancellation47; VerifyObsoleteRead47/Connection47/JobObservation47/ReportDetails47; MainWindow Poll",
+          "expected": "Очередь и непосредственно исполнение проверяют поколение/отмену; старый ответ/ожидание не возобновляет выключенный опрос.",
+          "actual": "Задержанные успех/ошибка после OFF/ON и смены endpoint не применяются; проверены актуальные положительные ответы. Дополнительные диагностические awaits также проверяют поколение.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: VerifyPause43; VerifyOverviewCancellation47; VerifyObsoleteRead47/Connection47/JobObservation47/ReportDetails47; MainWindow Poll ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "118.scope",
+          "requirement": "OFF не останавливает уже переданные клиентские установки и не управляет другими консолями. Явные рабочие команды сохраняют свой смысл.",
+          "scenario": "VerifyTransportBudget41; VerifyPause43; PollingControl43; CollectorTools43",
+          "expected": "OFF не останавливает уже переданные клиентские установки и не управляет другими консолями. Явные рабочие команды сохраняют свой смысл.",
+          "actual": "Пауза локальна для консоли; явные рабочие команды/аварийное удаление отделены. Выключение не содержит завершения удалённых установок или системных служб.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: VerifyTransportBudget41; VerifyPause43; PollingControl43; CollectorTools43 ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        },
+        {
+          "condition_id": "118.resume",
+          "requirement": "Включение возобновляет ограниченный распределённый опрос без накопленной волны и без стирания подтверждённых статусов.",
+          "scenario": "VerifyPause43; Readiness43; VerifyRelease43; StatusOverview",
+          "expected": "Включение возобновляет ограниченный распределённый опрос без накопленной волны и без стирания подтверждённых статусов.",
+          "actual": "После ON новое поколение, старое остаётся отменённым; очередь ограничена и объединена, есть разброс запуска, подтверждённая готовность сохраняется.",
+          "result": "passed",
+          "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; source at d6680d58966da5cf78737fa2d70a4f2f7aced6a7: VerifyPause43; Readiness43; VerifyRelease43; StatusOverview ; Windows package SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+        }
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "single-instance",
+      "scenario": "Concurrent readers, cached reads, hung worker and autonomous task deadline",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "One fixed collector task; no retained hung Activity worker; WinRM process count returned to baseline.",
+      "result": "passed",
+      "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; exact artifact SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+    },
+    {
+      "id": "two-consoles",
+      "scenario": "Six real WinRM readers; two independent remote recovery shells; cross-console ownership fixture",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Temporary Busy does not latch; recovered snapshot is shared, second repair does not change task LastRunTime; ownership guards pass.",
+      "result": "passed",
+      "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; exact artifact SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+    },
+    {
+      "id": "reboot-mid-operation",
+      "scenario": "Abruptly terminate owned test agent in four simulated phases; reconcile boot/ownership/result",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Four unknown interrupted outcomes reconciled; live/busy/grace safeguards, backups and one fresh UpdateScan verified. No real CBS installation or physical power loss was tested.",
+      "result": "passed",
+      "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; exact artifact SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+    },
+    {
+      "id": "collector-remove-enable-recover",
+      "scenario": "Real SYSTEM hung supervisor removal, foreign configuration, disabled marker, explicit reinstall",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Owned collector removed; foreign objects/Maintenance preserved; repeated deletion idempotent; fresh complete result required; concurrent repair shared.",
+      "result": "passed",
+      "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; exact artifact SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+    },
+    {
+      "id": "offline-and-reconnect",
+      "scenario": "Controlled delayed success/failure and endpoint change; old/new polling generation; actual WinRM lifecycle",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Obsolete replies ignored, current positive controls accepted. Physical VPN disruption was not performed; transport failures/reconnect state transitions were injected.",
+      "result": "passed",
+      "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; exact artifact SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+    },
+    {
+      "id": "polling-master-off",
+      "scenario": "Saved OFF on cold startup and restart; queued reads, OFF/ON; collector inspection/history",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Zero startup transport entries; old generation remains cancelled; explicit read actions respect OFF; installs are not terminated.",
+      "result": "passed",
+      "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; exact artifact SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+    },
+    {
+      "id": "status-evidence-consistency",
+      "scenario": "Same-boot positive reboot, fresh negative, new boot partial, prior WSUS failure, saved readiness",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Status/criteria assertions pass; age alone does not erase confirmed readiness; stale/partial data does not create success.",
+      "result": "passed",
+      "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; exact artifact SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+    },
+    {
+      "id": "ui-all-modes-themes-sizes",
+      "scenario": "Actual WPF rendering in three themes, compact/wide windows, commands/WSUS/history/settings",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Generated Windows screenshots inspected; common header and poll/auto placement retained; visual tests pass.",
+      "result": "passed",
+      "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; exact artifact SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+    },
+    {
+      "id": "selection-scroll-preservation",
+      "scenario": "Background completion with A/B/C selections; UI load of 450 computers and 10000 events",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Selection/tab/editor/copy/scroll assertions pass; input dispatcher serviced; no repeated history disk reads or unchanged-row notification storm.",
+      "result": "passed",
+      "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; exact artifact SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+    },
+    {
+      "id": "full-command-output",
+      "scenario": "Forty output steps, intermediate stderr, repeated lines, 1 MiB notice, reopen/copy",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Numeric step order and earlier output preserved; structured stderr and truncation notice visible; actual PowerShell/CMD execution checks pass.",
+      "result": "passed",
+      "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; exact artifact SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+    },
+    {
+      "id": "cache-reset-failure-and-restoration",
+      "scenario": "Isolated cache/service adapters and abrupt PowerShell child termination",
+      "expected": "Pass the specified bounded regression without touching production clients or services.",
+      "actual": "Original failure and restoration evidence retained; busy installer and partial restoration prevent false success. Production services and caches were not changed.",
+      "result": "passed",
+      "commit": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40833641383 ; exact artifact SHA256 a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
+    }
+  ],
+  "close_issues": [
+    114,
+    115,
+    116,
+    117,
+    118
+  ]
+}

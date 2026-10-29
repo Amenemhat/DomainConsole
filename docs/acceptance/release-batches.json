@@ -16,7 +16,7 @@
       "version": "0.48",
       "priority": "P0",
       "title": "Безопасный опрос и восстановление сборщика",
-      "status": "planned",
+      "status": "accepted",
       "issues": [
         113,
         114,
@@ -62,7 +62,10 @@
         "118.generation",
         "118.scope",
         "118.resume"
-      ]
+      ],
+      "source": "d6680d58966da5cf78737fa2d70a4f2f7aced6a7",
+      "run": 40833641383,
+      "artifact_sha256": "a41147b5ab7b73a1f498da192520496168e5f6438a5dc5a452e3d43448f88af5"
     },
     {
       "version": "0.49",
