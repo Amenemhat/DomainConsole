@@ -66,6 +66,6 @@ public partial class MainWindow {
 }
 public partial class MainWindow {
  readonly Dictionary<string,(DateTimeOffset Next,string Signature)> jobPoll42=new();
- bool JobPollDue42(ComputerRow row)=>!jobPoll42.TryGetValue(row.JobId+row.Host,out var value)||DateTimeOffset.UtcNow>=value.Next;
+ bool JobPollDue42(ComputerRow row)=>!ObservationStopped51(row)&&!LostObservation51(row.Host)&&(!jobPoll42.TryGetValue(row.JobId+row.Host,out var value)||DateTimeOffset.UtcNow>=value.Next);
  void JobPollObserved42(ComputerRow row,PollResult data,TimeSpan elapsed){string key=row.JobId+row.Host;string signature=data.State==null?"":data.State.Status+"|"+data.State.Stage+"|"+data.State.Progress;int seconds=row.Target.Status is "AwaitingReboot" or "RebootScheduled"?120:row.Target.State?.Ended.Length>0?120:elapsed.TotalSeconds>5?30:jobPoll42.TryGetValue(key,out var old)&&old.Signature==signature?20:10;jobPoll42[key]=(DateTimeOffset.UtcNow.AddSeconds(seconds),signature);}
 }

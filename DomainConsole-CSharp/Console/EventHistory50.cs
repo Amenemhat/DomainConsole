@@ -31,6 +31,11 @@ public partial class MainWindow {
    // WUA failure already has a precise per-update title (KB, download vs installation).
    if(step.ExitCode!=0&&step.Kind is "Updates" or "UpdateScan")continue;
    var entry=StepEvent50(step);string title=entry.Title;
+   if(step.Name=="Перезагрузка текущего компьютера"&&step.ExitCode==0){
+    var receipt=data.RebootPlan;
+    entry=receipt?.Cancelled==true?("Перезагрузка отменена","Info","Команда отменена до перезапуска."):receipt?.DispatchExitCode==0?("Команда перезагрузки принята Windows","Info","Новая загрузка и флаги проверяются отдельно."):("Команда назначения перезагрузки завершена","Info","Отправка shutdown и новая загрузка ещё требуют подтверждения.");title=entry.Title;
+   }
+
    if(cache&&step.Kind=="UpdateScan"&&step.ExitCode==0)title=step.UpdatesFound50.HasValue?"После очистки найдено обновлений: "+step.UpdatesFound50:"Поиск после очистки завершён";
    Event31(host,step.Name.Contains("запрос отправки отчёта")&&step.Kind!="UpdateScan"&&step.ExitCode==0?"job-service50":"job-result50",step.ExitCode+"|"+step.Ended,title,entry.Kind,entry.Detail,step.Ended,scope:id+"|step-"+(i+1));
   }

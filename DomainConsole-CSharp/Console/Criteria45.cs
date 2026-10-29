@@ -50,7 +50,7 @@ public partial class MainWindow {
  string rendered45="";bool rendering45;
  ClientAssessment41 ExplainAssessment45(ComputerRow row,ClientAssessment41 a,CachedWsusReport? cache,RebootView40 reboot,RemoteState? state,bool active,string scan,int? remaining){
   if(a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var ready45)){if(scan.Length==0){scan=ready45.Scan;remaining=0;}}
-  var list=a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var complete45)?Criteria45.Confirmed(complete45):Criteria45.Build(a,cache?.Found==true?cache.Report:null,reboot,state,active,scan,remaining,cache!=null&&!liveReports.Contains(row.Host),overviewErrors.GetValueOrDefault(row.Host,""),rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"");criteria45[row.Host]=list;
+  var list=a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var complete45)?Criteria45.Confirmed(complete45):Criteria45.Build(a,cache?.Found==true?cache.Report:null,reboot,state,active,scan,remaining,cache!=null&&!liveReports.Contains(row.Host),overviewErrors.GetValueOrDefault(row.Host,""),rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"");if(LostObservation51(row.Host)&&active)list[0]=list[0] with{Text="Обновления · связь потеряна, результат неизвестен",Tone="Unknown",Glyph="Unknown"};criteria45[row.Host]=list;
   if(a.Kind=="Warning"&&list.Count(g=>g.Tone is "Warning" or "Error")>1)a=a with{Title="Готовность не подтверждена · несколько условий не выполнены"};
   return a with{Details=string.Join("\n",list.Select(g=>(g.Tone=="Success"?"✓ ":g.Tone=="Error"?"✕ ":g.Tone is "Warning" or "Stale" or "Unknown"?"⚠ ":"• ")+g.Text))+"\n"+(a.Kind=="Success"?a.Details:reboot.Limitation)};
  }

@@ -50,7 +50,7 @@ public partial class MainWindow {
   Check(ClientReadiness41.Evaluate(historical,false,true,clean,done,false,true,0,scan,"",now,24).Kind=="Warning","matching newer installation waits for report");
   done.InstalledUpdates45[0].Revision=4;
   Check(ClientReadiness41.Evaluate(historical,false,true,clean,done,false,true,0,scan,"",now,24).Kind=="Error","different revision does not clear failure");
-  foreach(var pair in new[]{("Установка · KB", "Install"),("Скачивание · KB", "Download"),("WSUS · поиск", "Search"),("Диагностика", "Search"),("Очистка кэша", "Repair"),("Ожидание результата", "Stale"),("Неизвестный этап", "Info")})Check(StatusGlyph.ForOperation50(pair.Item1)==pair.Item2,"operation glyph "+pair.Item1);
+  foreach(var pair in new[]{("Установка · KB", "Install"),("Скачивание · KB", "Download"),("WSUS · поиск", "Search"),("Диагностика", "Search"),("Очистка кэша", "Repair"),("Ожидание результата", "Stale"),("Неизвестный этап", "Working")})Check(StatusGlyph.ForOperation50(pair.Item1)==pair.Item2,"operation glyph "+pair.Item1);
   foreach(string tone in new[]{"Success","Error","Warning","Stale","Unknown"})Check(StatusGlyph.ForTone50(tone)==tone,"criterion glyph "+tone);
   var restored=Store.Clone(historical);Check(restored.LastReportedUtc==historical.LastReportedUtc&&restored.FailedUpdates[0].Revision==3,"report cache preserves timestamp and revision");
   // Cached synthetic names keep this session-selection test entirely offline.
@@ -66,6 +66,10 @@ public partial class MainWindow {
    ObserveUsers37(userHost,new(){UsersComplete37=true,CollectedUtc=at});Check(!users37[userHost].Current&&users37[userHost].SeenUtc==at&&users37[userHost].Name=="Первый Пользователь","logout preserves last name and observation time");
    ObserveUsers37(userHost,new(){UsersComplete37=true,CollectedUtc=at,Users37=new(){new(){Account=accountB,Active=true}}});Check(users37[userHost].Name=="Второй Пользователь","new session resolves its own cached name");
   }finally{if(savedUser==null)users37.Remove(userHost);else users37[userHost]=savedUser;if(savedA==null)userNames37.Remove(accountA);else userNames37[accountA]=savedA;if(savedB==null)userNames37.Remove(accountB);else userNames37[accountB]=savedB;Store.Write("client-users37.json",users37);}
+  Check(!ObservationExpired51(now.AddHours(-47).ToString("o"),now),"51 observation before absolute deadline");
+  Check(ObservationExpired51(now.AddDays(-2).ToString("o"),now)&&ObservationExpired51(now.AddDays(-3).ToString("o"),now),"51 observation deadline is stable after restart");
+  Check(ObservationExpired51("invalid",now),"51 malformed observation start does not grant indefinite waiting");
+  Check(StatusGlyph.Shape("Working")=="M 5,2 L 16,9 L 5,16 Z","51 generic execution glyph is not a gear");
   var waiting51=new MaintenancePlan{Phase="Ожидается перезагрузка",BootUtc=boot,Cycles=1};
   var signature51=MaintenanceEventSignature51(waiting51);
   for(int i51=0;i51<10;i51++){waiting51.Detail=i51%2==0?"Клиент пока не ответил; повторный опрос запланирован":"Перезагрузите компьютер";Check(signature51==MaintenanceEventSignature51(waiting51),"51 polling detail is not a phase transition "+i51);}

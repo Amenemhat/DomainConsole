@@ -10,7 +10,7 @@ public partial class MainWindow {
  void UpdateWsusStage(){if(ComputerGrid.SelectedItem is not ComputerRow selected){CurrentStage.Text="Выберите компьютер.";CurrentProgress.Visibility=Visibility.Collapsed;BackgroundGroup.Visibility=Visibility.Collapsed;RecommendationButton.Visibility=Visibility.Collapsed;return;}
   var row=OperationRow38(selected);var state=row.Target.State;bool active=IsCurrentExecution(row.Target.Status);bool fresh=ConnectionFresh(row.Host)&&StateFresh(state);bool terminal=state!=null&&!active;
   OperationDetail38.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty,"TextMuted");
-  RefreshCollector44(selected.Host);
+  RefreshCollector44(selected.Host);RefreshObservation51(selected);
   RefreshControl37(selected);RefreshUser37(selected);CurrentComputer.Text=row.Name;CurrentDetails.Text=row.OS;CurrentDetails.ToolTip=row.OS+"\n"+row.Host+ConnectionStore.Description(row.Host);
 
   CurrentStage.Text=StageText34(row,state,active,fresh);if(readFailures34.TryGetValue(row.Host+"|результат задания",out var readFailure))CurrentStage.Text+="\nСтатус не обновлён · повтор после "+readFailure.Next.ToLocalTime().ToString("HH:mm:ss");
