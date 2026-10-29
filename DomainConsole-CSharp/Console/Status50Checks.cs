@@ -66,6 +66,32 @@ public partial class MainWindow {
    ObserveUsers37(userHost,new(){UsersComplete37=true,CollectedUtc=at});Check(!users37[userHost].Current&&users37[userHost].SeenUtc==at&&users37[userHost].Name=="Первый Пользователь","logout preserves last name and observation time");
    ObserveUsers37(userHost,new(){UsersComplete37=true,CollectedUtc=at,Users37=new(){new(){Account=accountB,Active=true}}});Check(users37[userHost].Name=="Второй Пользователь","new session resolves its own cached name");
   }finally{if(savedUser==null)users37.Remove(userHost);else users37[userHost]=savedUser;if(savedA==null)userNames37.Remove(accountA);else userNames37[accountA]=savedA;if(savedB==null)userNames37.Remove(accountB);else userNames37[accountB]=savedB;Store.Write("client-users37.json",users37);}
+  var waiting51=new MaintenancePlan{Phase="Ожидается перезагрузка",BootUtc=boot,Cycles=1};
+  var signature51=MaintenanceEventSignature51(waiting51);
+  for(int i51=0;i51<10;i51++){waiting51.Detail=i51%2==0?"Клиент пока не ответил; повторный опрос запланирован":"Перезагрузите компьютер";Check(signature51==MaintenanceEventSignature51(waiting51),"51 polling detail is not a phase transition "+i51);}
+  waiting51.Cycles++;Check(signature51!=MaintenanceEventSignature51(waiting51),"51 next cycle gets separate history event");
+  var watch51=new RebootWatch{Confirmed=true,ExpectedUtc=now.AddSeconds(65)};
+  Check(RebootHeadline51(watch51,now).EndsWith("01:05"),"51 confirmed reboot countdown");
+  Check(RebootHeadline51(watch51,now.AddSeconds(66))=="Ожидается ответ после перезагрузки","51 due time is not reboot success");
+  watch51.ReadyAfter=now.AddMinutes(2);Check(RebootHeadline51(watch51,now.AddSeconds(66)).StartsWith("Новая загрузка подтверждена"),"51 returned boot awaits state verification");
+  // 0.51: connectivity changes must invalidate every list presentation without
+  // changing the saved result or creating any remote work.
+  var row51=new ComputerRow(new(){Status="Running",State=new(){Stage="Скачивание · fixture"}});
+  var changed51=new HashSet<string>();row51.PropertyChanged+=(sender,args)=>changed51.Add(args.PropertyName??"");
+  row51.SetConnection("Connected", "fresh");row51.SetOutcome("Working","saved running");row51.SetActivity(true,null,"running",false);
+  Check(row51.DisplayOutcome51=="Download"&&row51.Working,"51 connected operation uses stage glyph");
+  foreach(var outcome51 in new[]{"Working","Success","Error","Reboot"}){
+   row51.SetOutcome(outcome51,"saved "+outcome51);row51.SetConnection("Unreachable","last response: fixture");
+   Check(row51.DeviceBrush39.ToString()==Theme.Brush("TextMuted").ToString()&&!row51.Working&&!row51.WorkBusy&&row51.DisplayOutcome51=="Unknown","51 offline "+outcome51);
+   Check(row51.Outcome==outcome51,"51 saved outcome preserved "+outcome51);
+   row51.SetConnection("Connected","returned");Check(row51.Working,"51 presentation resumes after response "+outcome51);
+  }
+  Check(new[]{"DeviceBrush39","DisplayOutcome51","Working","ActivityVisibility"}.All(changed51.Contains),"51 link changes notify list bindings");
+  var installed51=new RemoteState{Status="AwaitingReboot",InstalledCount38=1,Results=new(){new(){Kind="Updates",ExitCode=0,Ended=at}}};
+  var old51=Report();old51.NeededCount=1;old51.FailedCount=1;
+  var criteria51=Criteria45.Build(new("Reboot","",""),old51,clean with{Required=true},installed51,false,scan,1,false,"",boot);
+  Check(criteria51[0].Tone=="Success"&&criteria51[0].Glyph=="Success","51 installation success stays green independently of old report");
+  Check(CollectorNotice43.Parent==IdentityHeader34,"51 collector details belong to header");
   File.WriteAllLines(Path.Combine(Path.GetTempPath(),"ui-status50-matrix.txt"),observations);
  }
 }

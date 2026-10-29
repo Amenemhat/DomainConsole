@@ -71,7 +71,7 @@ public partial class MainWindow {
  async Task CheckRebootNow40(ComputerRow row){if(TransportBudget41.Paused){Notify("Опрос выключен. Включите его рядом с настройками.");return;}
   if(!rebootChecks40.Add(row.Host))return;
   try{RefreshRebootCard40(row);var result=await ReadClientStatus(row,force:true);if(result==null)rebootProbeFailures40.Add(row.Host);RefreshOutcomes();if(IsCurrent(row))ShowCurrent();}
-  finally{rebootChecks40.Remove(row.Host);if(IsCurrent(row))RefreshRebootCard40(row);}
+  finally{rebootChecks40.Remove(row.Host);if(IsCurrent(row)){rendered45="";RefreshRebootCard40(row);ShowCurrent();}}
  }
  async void RebootCheck40_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{if(ComputerGrid.SelectedItem is ComputerRow row)await CheckRebootNow40(row);});
  FrameworkElement RebootDialogEvidence40(ComputerRow row){

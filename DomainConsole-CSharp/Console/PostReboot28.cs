@@ -14,8 +14,31 @@ public partial class MainWindow {
   if(watch.Confirmed){Store.Write("reboot-watches.json",rebootWatches);return;}if(!DateTimeOffset.TryParse(plan.RequestedUtc,out _)||!DateTimeOffset.TryParse(plan.DueUtc,out var due)||!DateTimeOffset.TryParse(data.ClientUtc,out var now))return;
   watch.RequestedUtc=plan.RequestedUtc;watch.BeforeBootUtc=plan.BeforeBootUtc;watch.ExpectedUtc=DateTimeOffset.UtcNow.AddSeconds((due-now).TotalSeconds);watch.Confirmed=true;watch.Scan=job.ScanAfterReboot;watch.Phase="Ожидается назначенная перезагрузка";watch.Next=watch.ExpectedUtc.AddSeconds(Math.Max(15,postReboot.ProbeSeconds));watch.Until=watch.ExpectedUtc.AddDays(2);Store.Write("reboot-watches.json",rebootWatches);
  }
+ static string RebootHeadline51(RebootWatch w,DateTimeOffset now){
+  if(!w.Confirmed)return "Назначение перезагрузки ещё не подтверждено клиентом";
+  if(w.ExpectedUtc>now){var left=w.ExpectedUtc-now;return "Перезагрузка назначена · через "+(left.TotalHours>=1?((int)left.TotalHours).ToString("00")+":":"")+left.Minutes.ToString("00")+":"+left.Seconds.ToString("00");}
+  if(w.ReadyAfter!=default)return "Новая загрузка подтверждена · проверка состояния";
+  return w.Overdue?w.Phase:"Ожидается ответ после перезагрузки";
+ }
+ // Fresh snapshots from either manual recovery or the normal poll advance the
+ // same checkpoint. No new remote work is launched from snapshot presentation.
+ void ObserveRebootCheckpoint51(string host,RebootSnapshot snapshot){
+  var now=DateTimeOffset.UtcNow;
+  if(!DateTimeOffset.TryParse(snapshot.BootUtc,out var boot)||!DateTimeOffset.TryParse(snapshot.CollectedUtc,out var at)||at<boot||at>now.AddMinutes(1)||now-at>TimeSpan.FromMinutes(5))return;
+  bool returned=false;
+  if(rebootWatches.TryGetValue(host,out var watch)&&!watch.Done&&watch.Confirmed&&RebootReturned(watch,snapshot)){
+   returned=true;ObserveWatchBoot(watch,snapshot,now);
+   if(watch.ReadyAfter==default)watch.ReadyAfter=now.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));
+   watch.Phase="Новая загрузка подтверждена · проверка состояния";watch.Next=watch.ReadyAfter>now?watch.ReadyAfter:now;
+   Store.Write("reboot-watches.json",rebootWatches);
+  }
+  if(maintenancePlans.TryGetValue(host,out var p)&&!p.Done&&p.Phase=="Ожидается перезагрузка"&&(RebootSnapshotPolicy.NewBoot(new(){BootUtc=p.BootUtc},snapshot)||returned)){
+   p.BootUtc=snapshot.BootUtc;p.SearchAfterBoot49=true;p.Phase="После перезагрузки: ожидание готовности";p.Detail="";
+   p.ReadyAfter=now.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));p.Next=p.ReadyAfter;SaveMaintenance();
+  }
+ }
  string PostRebootText(string host){if(!rebootWatches.TryGetValue(host,out var w))return "";if(w.Done)return "";if(!w.Confirmed)return "Назначение перезагрузки ещё не подтверждено клиентом";
-  var text=w.ExpectedUtc>DateTimeOffset.UtcNow?"Перезагрузка назначена на "+w.ExpectedUtc.ToLocalTime().ToString("HH:mm:ss")+" · через "+Age(w.ExpectedUtc-DateTimeOffset.UtcNow):w.Phase;
+  var text=RebootHeadline51(w,DateTimeOffset.UtcNow);
   text+="\nКоманда shutdown: "+(w.DispatchExitCode==0?"принята (код 0); завершение перезагрузки проверяется отдельно":w.DispatchUtc.Length>0?"вызвана; результат отправки не получен":"результат отправки ещё не получен");
   if(w.LastResponseUtc.Length>0)text+="\nПоследний ответ клиента: "+LocalDateConverter.Format(w.LastResponseUtc)+"; загрузка Windows: "+LocalDateConverter.Format(w.LastBootUtc);
   if(DateTimeOffset.TryParse(w.LastProbeUtc,out var attempted)&&(!DateTimeOffset.TryParse(w.LastResponseUtc,out var responded)||attempted>responded))text+="\nПоследняя попытка опроса: "+LocalDateConverter.Format(w.LastProbeUtc);

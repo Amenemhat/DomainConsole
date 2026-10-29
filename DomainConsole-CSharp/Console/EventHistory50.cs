@@ -4,6 +4,7 @@ public partial class MainWindow {
  static bool ServiceEvent50(ClientEvent31 e){
   string category=e.Operation36.Split('|')[0];
   if(category is "job-service50" or "link"||category.StartsWith("read-"))return true;
+  if(category=="maintenance"&&e.Text=="Ожидается перезагрузка"&&(e.Details.Contains("Клиент пока не ответил")||e.Details.Contains("повторный опрос")))return true;
   if(category=="maintenance")return e.Text is not ("Ожидается перезагрузка" or "Обслуживание завершено" or "Обслуживание остановлено" or "Автоматическое продолжение выключено" or "Требуется действие")||e.Details.Contains("См. результат задания.");
   // Existing history is retained, with its old final-report labels treated as service information.
   return category=="job"&&(e.Text.Contains("запрос отправки отчёта")||e.Text.StartsWith("Выполняется"));
