@@ -7,6 +7,11 @@ public partial class MainWindow {
   var row=new ComputerRow(new(){Host="maintenance49.fixture.invalid",Name="Maintenance fixture"});Computers.Add(row);
   try{
    PollingControl43.Resume();AutoServiceEnabled=true;
+   var candidate=new ServiceProcessCandidate{Pid=99999,CreatedUtc=DateTimeOffset.UtcNow.ToString("o"),Path="fixture",Services=new(){"bits"}};
+   if(ForcedServiceSteps36(new[]{candidate,Store.Clone(candidate)}).Count!=1)throw new Exception("Same process was scheduled twice");
+   var changed=Store.Clone(candidate);changed.Services.Add("wuauserv");bool rejected=false;
+   try{ForcedServiceSteps36(new[]{candidate,changed});}catch(InvalidOperationException){rejected=true;}
+   if(!rejected)throw new Exception("Conflicting process snapshots were silently merged");
    foreach(bool? required in new bool?[]{true,false,null}){
     maintenancePlans.Clear();History.Clear();queue.Clear();
     var target=ConnectionStore.Capture(row.Target);target.Status="Completed";target.State=new(){Status="Completed",Ended=DateTimeOffset.UtcNow.AddHours(-1).ToString("o"),UpdatesRemaining=1};

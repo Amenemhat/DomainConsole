@@ -20,7 +20,7 @@ function Start-Service($Name){
 }
 function Start-ScheduledTask($TaskName){$script:maintenance++;if($script:case -eq 'MaintenanceMissing'){throw 'fixture maintenance missing'}}
 try {
- foreach($script:case in @('Busy','InvalidRoot','InvalidFile','JournalLink','StopFailure','StopWaitTimeout','StartFailure','PrimaryAndRestore','MoveFailure','MaintenanceMissing','Success')){
+ foreach($script:case in @('Busy','InvalidRoot','ParentLink','InvalidFile','JournalLink','StopFailure','StopWaitTimeout','StartFailure','PrimaryAndRestore','MoveFailure','MaintenanceMissing','Success')){
   $env:windir=Join-Path $Root $script:case;$env:ProgramData=Join-Path $env:windir 'ProgramData'
   $dcServiceRecovery47=Join-Path $env:windir 'service-recovery'
   $download=Join-Path $env:windir 'SoftwareDistribution\Download'
@@ -35,6 +35,13 @@ try {
    $elsewhere=Join-Path $env:windir 'outside';New-Item $elsewhere -ItemType Directory|Out-Null;Set-Content (Join-Path $elsewhere 'keep.bin') 'fixture'
    New-Item $download -ItemType Junction -Value $elsewhere|Out-Null
   }
+  if($script:case -eq 'ParentLink'){
+   $parent=Split-Path $download;Remove-Item $parent -Recurse -Force
+   $elsewhere=Join-Path $env:windir 'outside';New-Item (Join-Path $elsewhere 'Download') -ItemType Directory -Force|Out-Null
+   Set-Content (Join-Path $elsewhere 'Download/keep.bin') 'fixture'
+   New-Item $parent -ItemType Junction -Value $elsewhere|Out-Null
+  }
+  if($script:case -eq 'MaintenanceMissing'){$code=$text.Replace('$backup=$true','$backup=$false')}
   if($script:case -eq 'InvalidFile'){Remove-Item $download -Recurse -Force;Set-Content $download 'not a directory'}
   if($script:case -eq 'JournalLink'){
    $elsewhere=Join-Path $env:windir 'journal-outside';New-Item $elsewhere -ItemType Directory|Out-Null
@@ -47,11 +54,13 @@ try {
   $success=$script:case -in @('Success','MaintenanceMissing')
   if($failed -eq $success){throw "Unexpected result: $script:case; $errorText"}
   if(!$success -and ($output.Contains('Кэш сброшен') -or $script:maintenance)){throw "False cache success/cleanup launch: $script:case"}
-  if($script:case -in @('Busy','InvalidRoot','InvalidFile','JournalLink') -and ($script:stops.Count -or $script:starts.Count)){throw "Validation failure changed services: $script:case"}
+  if($script:case -in @('Busy','InvalidRoot','ParentLink','InvalidFile','JournalLink') -and ($script:stops.Count -or $script:starts.Count)){throw "Validation failure changed services: $script:case"}
   if($script:case -in @('StopFailure','StopWaitTimeout','PrimaryAndRestore') -and ($script:starts.Contains('cryptsvc') -or $script:states.cryptsvc -ne 'Stopped')){throw 'Untouched service changed after early stop failure'}
   if($script:case -in @('StopFailure','StopWaitTimeout','MoveFailure') -and @($script:starts|Where-Object {$script:states[$_] -ne 'Running'}).Count){throw "Restoration skipped: $script:case"}
   if($script:case -eq 'PrimaryAndRestore' -and (!$errorText.Contains('fixture primary stop failure') -or !$output.Contains('fixture restore failure'))){throw 'Restoration replaced primary failure'}
-  if($success -and (!(Get-ChildItem (Split-Path $download) -Filter 'Download.DomainConsoleBackup_*') -or $script:maintenance -ne 1)){throw 'Successful reset lost backup or duplicated cleanup request'}
+  if($script:case -eq 'Success' -and (!(Get-ChildItem (Split-Path $download) -Filter 'Download.DomainConsoleBackup_*') -or $script:maintenance -ne 0)){throw 'Backup was lost or incorrectly scheduled for physical cleanup'}
+  if($script:case -eq 'MaintenanceMissing' -and (!(Get-ChildItem (Split-Path $download) -Filter 'Download.DomainConsolePendingDelete_*') -or $script:maintenance -ne 1)){throw 'Actual isolated cache was not scheduled for cleanup'}
+  if($script:case -eq 'ParentLink' -and !(Test-Path (Join-Path $elsewhere 'Download/keep.bin'))){throw 'Parent junction changed external cache'}
   if($script:case -eq 'MaintenanceMissing' -and !$output.Contains('запуск фоновой очистки не подтверждён')){throw 'Missing cleanup task was hidden'}
   $pending=@(Get-ChildItem $dcServiceRecovery47 -Filter '*.pending' -ErrorAction SilentlyContinue)
   if($script:case -in @('StartFailure','PrimaryAndRestore')){if($pending.Count -ne 1 -or $pending[0].BaseName -ne 'bits'){throw 'Failed restoration did not retain exactly its intent'}}
