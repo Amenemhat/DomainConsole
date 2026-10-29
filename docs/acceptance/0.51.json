@@ -1,0 +1,1405 @@
+{
+  "schema": 1,
+  "version": "0.51",
+  "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+  "run_id": 40946218625,
+  "sha256": "792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898",
+  "reviewer": "Codex: source/requirements review, isolated Windows execution and rendered UI inspection",
+  "reviewed_at": "2026-10-29T20:20:49.191606+00:00",
+  "issues": [
+    {
+      "issue": 7,
+      "current_requirement": "Вывод выполненных команд пропадает при объединении файлов удалённого журнала; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "7.framing",
+          "requirement": "Файлы вывода разделены независимо от наличия завершающего перевода строки.",
+          "scenario": "VerifyRelease26; VerifyRelease46; VerifyOutputMatrix51; SYSTEM LocalSmoke; bounded polling workflow",
+          "expected": "Файлы вывода разделены независимо от наличия завершающего перевода строки.",
+          "actual": "Structured Files bypass text delimiter ambiguity; no-newline stdout and marker-like lines remain distinct.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "7.matrix",
+          "requirement": "Пустой stderr, несколько шагов/файлов, кириллица, reg.exe и PowerShell сохраняют весь вывод в правильном порядке.",
+          "scenario": "VerifyRelease26; VerifyRelease46; VerifyOutputMatrix51; SYSTEM LocalSmoke; bounded polling workflow",
+          "expected": "Пустой stderr, несколько шагов/файлов, кириллица, reg.exe и PowerShell сохраняют весь вывод в правильном порядке.",
+          "actual": "Russian text, empty CLIXML stderr, numeric step ordering and real PowerShell/native execution retain output; 40-file fixture exceeds former 32-file cap.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "7.end-to-end",
+          "requirement": "Сохранность проверяется от файлов агента через чтение до отображения и копирования, не только по exit code.",
+          "scenario": "VerifyRelease26; VerifyRelease46; VerifyOutputMatrix51; SYSTEM LocalSmoke; bounded polling workflow",
+          "expected": "Сохранность проверяется от файлов агента через чтение до отображения и копирования, не только по exit code.",
+          "actual": "Real SYSTEM execution/log export plus PollResult presentation, channel rendering and VisibleText assertions cover files through copy.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "7.limits",
+          "requirement": "Ограничение объёма явно сообщается; полный stdout не заменяется тихо хвостом 80 строк.",
+          "scenario": "VerifyRelease26; VerifyRelease46; VerifyOutputMatrix51; SYSTEM LocalSmoke; bounded polling workflow",
+          "expected": "Ограничение объёма явно сообщается; полный stdout не заменяется тихо хвостом 80 строк.",
+          "actual": "1 MiB cap emits output-limit.out; UI limit is explicit; raw downloadable files remain available.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 8,
+      "current_requirement": "0x80070020: различать блокировку файла Windows Update и запись status.json агента; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "8.generic",
+          "requirement": "0x80070020 означает занятый файл; без фактов не назначается путь или владелец.",
+          "scenario": "VerifyRelease26; VerifyOutputMatrix51; WsusFailurePresentation and ExecutionDiagnosis source review",
+          "expected": "0x80070020 означает занятый файл; без фактов не назначается путь или владелец.",
+          "actual": "Generic ERROR_SHARING_VIOLATION explanation does not invent status.json or lock owner.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "8.source",
+          "requirement": "Показывается источник WUA/файловая операция/клиентская история/сервер; status.json называется причиной только при исключении соответствующего пути.",
+          "scenario": "VerifyRelease26; VerifyOutputMatrix51; WsusFailurePresentation and ExecutionDiagnosis source review",
+          "expected": "Показывается источник WUA/файловая операция/клиентская история/сервер; status.json называется причиной только при исключении соответствующего пути.",
+          "actual": "WUA outcome, client history, server event and operation message are distinct; known operation message is retained in failure card.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "8.action",
+          "requirement": "Для WUA предлагаются события вокруг сбоя, без автоматического сброса и убийства процессов по одному коду.",
+          "scenario": "VerifyRelease26; VerifyOutputMatrix51; WsusFailurePresentation and ExecutionDiagnosis source review",
+          "expected": "Для WUA предлагаются события вокруг сбоя, без автоматического сброса и убийства процессов по одному коду.",
+          "actual": "Recommendation requires path/owner evidence; no reset or process termination is dispatched by rendering an HRESULT.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "8.partial",
+          "requirement": "Частичный результат разделяет установленные, нескачанные, reboot и прежние ошибки.",
+          "scenario": "VerifyRelease26; VerifyOutputMatrix51; WsusFailurePresentation and ExecutionDiagnosis source review",
+          "expected": "Частичный результат разделяет установленные, нескачанные, reboot и прежние ошибки.",
+          "actual": "UpdateSummary separates download/install/cancel outcomes; old failed revision does not override newer successful matching revision.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "8.matrix",
+          "requirement": "Одинаковый HRESULT проверен в разных источниках с известным и неизвестным путём.",
+          "scenario": "VerifyRelease26; VerifyOutputMatrix51; WsusFailurePresentation and ExecutionDiagnosis source review",
+          "expected": "Одинаковый HRESULT проверен в разных источниках с известным и неизвестным путём.",
+          "actual": "0x80070020 is exercised in operation failure, client history and WSUS event; unknown path explanation remains generic.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 17,
+      "current_requirement": "Сделать журнал сбоя служб кратким: явная причина, без повторов и посторонней диагностики CBS; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "17.primary",
+          "requirement": "При отказе подготовительной остановки указаны служба и фактическая причина; неисполненные поиск/установка не объявляются выполненными.",
+          "scenario": "VerifyRelease28; VerifyRelease46; VerifyOutputMatrix51; test_cache47.ps1; hard-timeout/service restoration workflow",
+          "expected": "При отказе подготовительной остановки указаны служба и фактическая причина; неисполненные поиск/установка не объявляются выполненными.",
+          "actual": "Preparation Stop-Service failure names service/cause and explicitly states search and installation did not run.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "17.codes",
+          "requirement": "Код оболочки отделён от NativeErrorCode/InnerException, неизвестная первопричина не придумывается.",
+          "scenario": "VerifyRelease28; VerifyRelease46; VerifyOutputMatrix51; test_cache47.ps1; hard-timeout/service restoration workflow",
+          "expected": "Код оболочки отделён от NativeErrorCode/InnerException, неизвестная первопричина не придумывается.",
+          "actual": "Native process exit is separate from shell exit; preserved primary stderr remains distinguishable from wrapper failure.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "17.services",
+          "requirement": "Результат остановки/восстановления/итог службы раздельны; Running не доказывает перезапуск, finally не теряет первичную ошибку.",
+          "scenario": "VerifyRelease28; VerifyRelease46; VerifyOutputMatrix51; test_cache47.ps1; hard-timeout/service restoration workflow",
+          "expected": "Результат остановки/восстановления/итог службы раздельны; Running не доказывает перезапуск, finally не теряет первичную ошибку.",
+          "actual": "Fault injection checks restoration/final status separately and keeps primary failure after finally; Running alone does not claim a restart.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "17.concise",
+          "requirement": "Краткие причины reboot WUA/WU/CBS в основном выводе, пути/ID в техническом.",
+          "scenario": "VerifyRelease28; VerifyRelease46; VerifyOutputMatrix51; test_cache47.ps1; hard-timeout/service restoration workflow",
+          "expected": "Краткие причины reboot WUA/WU/CBS в основном выводе, пути/ID в техническом.",
+          "actual": "Reboot source labels are short WUA/WU/CBS; paths and identifiers remain technical details.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "17.scheduler",
+          "requirement": "Внутренний scheduler success скрыт, ошибка видна; пользовательский stdout сохраняется.",
+          "scenario": "VerifyRelease28; VerifyRelease46; VerifyOutputMatrix51; test_cache47.ps1; hard-timeout/service restoration workflow",
+          "expected": "Внутренний scheduler success скрыт, ошибка видна; пользовательский stdout сохраняется.",
+          "actual": "scheduler.out is excluded, scheduler.err participates in error context; step stdout remains present.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "17.diagnostics",
+          "requirement": "Автодиагностика соответствует реально упавшему этапу; сбой Stop-Service не вызывает CBS/DISM без основания, ручной сбор доступен.",
+          "scenario": "VerifyRelease28; VerifyRelease46; VerifyOutputMatrix51; test_cache47.ps1; hard-timeout/service restoration workflow",
+          "expected": "Автодиагностика соответствует реально упавшему этапу; сбой Stop-Service не вызывает CBS/DISM без основания, ручной сбор доступен.",
+          "actual": "ShouldCollectServicing rejects failed preparation and ordinary commands; actual update/servicing operation admits diagnostics.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "17.dedupe",
+          "requirement": "Нет повторов шапки/generic ошибки/пустых NotRequested; различаются сбор агента и консоли.",
+          "scenario": "VerifyRelease28; VerifyRelease46; VerifyOutputMatrix51; test_cache47.ps1; hard-timeout/service restoration workflow",
+          "expected": "Нет повторов шапки/generic ошибки/пустых NotRequested; различаются сбор агента и консоли.",
+          "actual": "Empty NotRequested sections and scheduler success omitted; diagnostic/source sections retain meaningful errors without duplicate header paragraphs.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "17.history",
+          "requirement": "Прежний WSUS сбой отделён от текущего; исходный код скачивания не теряется за общим HRESULT.",
+          "scenario": "VerifyRelease28; VerifyRelease46; VerifyOutputMatrix51; test_cache47.ps1; hard-timeout/service restoration workflow",
+          "expected": "Прежний WSUS сбой отделён от текущего; исходный код скачивания не теряется за общим HRESULT.",
+          "actual": "WSUS historical attempts remain separate; update outcome HRESULT is used before generic shell status.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 40,
+      "current_requirement": "Журнал: основная причина сбоя сразу в итогах, устранение дублей между разделами; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "40.primary",
+          "requirement": "Одна главная причина содержит обновление/этап/исходный HRESULT/символ/контекст/время/действие; exit1 не заменяет HRESULT.",
+          "scenario": "VerifyRelease26/28/36/40/45/46; FailureCard31 and WsusFailurePresentation source review; VerifyOutputMatrix51",
+          "expected": "Одна главная причина содержит обновление/этап/исходный HRESULT/символ/контекст/время/действие; exit1 не заменяет HRESULT.",
+          "actual": "Failure card prioritizes update outcome HRESULT and stage; details retain operation message, job times and next action instead of substituting exit 1.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "40.sources",
+          "requirement": "Проверенный каталог и системное сообщение отделены от гипотезы, контекст CBS не превращается в сетевой сбой.",
+          "scenario": "VerifyRelease26/28/36/40/45/46; FailureCard31 and WsusFailurePresentation source review; VerifyOutputMatrix51",
+          "expected": "Проверенный каталог и системное сообщение отделены от гипотезы, контекст CBS не превращается в сетевой сбой.",
+          "actual": "Catalog meaning, possible causes and operation message are labeled separately; system-log codes are explicitly contextual.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "40.unknown",
+          "requirement": "Неизвестный код явно неизвестен, поиск передаёт только hex без личных данных, онлайн-текст не исполняется.",
+          "scenario": "VerifyRelease26/28/36/40/45/46; FailureCard31 and WsusFailurePresentation source review; VerifyOutputMatrix51",
+          "expected": "Неизвестный код явно неизвестен, поиск передаёт только hex без личных данных, онлайн-текст не исполняется.",
+          "actual": "Unknown code stays unknown; lookup URL contains only matched hex plus Microsoft Learn domain, and never executes retrieved text.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "40.dedupe",
+          "requirement": "Одна модель причины в итогах/журнале/WSUS/истории, нет повторных абзацев и пустых секций.",
+          "scenario": "VerifyRelease26/28/36/40/45/46; FailureCard31 and WsusFailurePresentation source review; VerifyOutputMatrix51",
+          "expected": "Одна модель причины в итогах/журнале/WSUS/истории, нет повторных абзацев и пустых секций.",
+          "actual": "Shared diagnosis and presentation helpers feed views; duplicate sections and repeated definitions removed while operation output remains literal.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "40.correlation",
+          "requirement": "Разные попытки/времена/ревизии/пути не сливаются, совпадение источников подтверждается, полные журналы доступны.",
+          "scenario": "VerifyRelease26/28/36/40/45/46; FailureCard31 and WsusFailurePresentation source review; VerifyOutputMatrix51",
+          "expected": "Разные попытки/времена/ревизии/пути не сливаются, совпадение источников подтверждается, полные журналы доступны.",
+          "actual": "Update ID/revision and attempt dates distinguish old failures, new success and mismatches; full logs remain downloadable.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "40.secondary",
+          "requirement": "Error0 не ошибка; wrapper коды не подменяют первичный, фоновые коды не назначаются причиной без связи.",
+          "scenario": "VerifyRelease26/28/36/40/45/46; FailureCard31 and WsusFailurePresentation source review; VerifyOutputMatrix51",
+          "expected": "Error0 не ошибка; wrapper коды не подменяют первичный, фоновые коды не назначаются причиной без связи.",
+          "actual": "Error 0 is not an anomaly; event ID is not an HRESULT; native/shell exit and primary code remain separate.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 41,
+      "current_requirement": "Подготовить расширенный справочник HRESULT: техническое значение, русское объяснение и диагностика; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "41.catalog",
+          "requirement": "Версионируемый справочник имеет официальное происхождение Microsoft/SDK, символ/русское значение/условия ОС и карточки частых ошибок.",
+          "scenario": "docs/error-reference/test_reference.py; deterministic catalog build; VerifyRelease45; ExecutionDiagnosis review",
+          "expected": "Версионируемый справочник имеет официальное происхождение Microsoft/SDK, символ/русское значение/условия ОС и карточки частых ошибок.",
+          "actual": "Versioned Microsoft SDK inputs, hashes, symbol/meaning and Russian contextual cards are present and validated.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "41.domains",
+          "requirement": "HRESULT/Win32/exit/ResultCode/EventID, success/pending и unknown различаются; ремонт не запускается по одному коду.",
+          "scenario": "docs/error-reference/test_reference.py; deterministic catalog build; VerifyRelease45; ExecutionDiagnosis review",
+          "expected": "HRESULT/Win32/exit/ResultCode/EventID, success/pending и unknown различаются; ремонт не запускается по одному коду.",
+          "actual": "Code namespace and signed/unsigned conversions checked; pending, success, event number and unknown distinguished; catalog is descriptive.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "41.validation",
+          "requirement": "Данные воспроизводимо собираются и проверяются, гипотезы/решения отделены от точного определения.",
+          "scenario": "docs/error-reference/test_reference.py; deterministic catalog build; VerifyRelease45; ExecutionDiagnosis review",
+          "expected": "Данные воспроизводимо собираются и проверяются, гипотезы/решения отделены от точного определения.",
+          "actual": "Five reference tests and reproducible regeneration compare data/hashes; exact definition separated from cause/action guidance.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 48,
+      "current_requirement": "История событий пуста: отделить данные от оформления и сохранять ошибки записи; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "48.persistence",
+          "requirement": "Вычисляемое оформление не сериализуется; текущие и дисковые события объединяются без потери.",
+          "scenario": "VerifyRelease32; VerifyRelease39; workflow launches UI twice",
+          "expected": "Вычисляемое оформление не сериализуется; текущие и дисковые события объединяются без потери.",
+          "actual": "JSON contains event data rather than Brush/Dispatcher; seven disk events reload after clearing in-memory caches.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "48.error",
+          "requirement": "Ошибка сохранения видна в диагностике, не глотается.",
+          "scenario": "VerifyRelease32; VerifyRelease39; workflow launches UI twice",
+          "expected": "Ошибка сохранения видна в диагностике, не глотается.",
+          "actual": "A file blocking event directory forces write failure; error remains visible, next successful write flushes both pending events.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "48.roundtrip",
+          "requirement": "Проверен фактический roundtrip и повторный запуск, не только данные в памяти.",
+          "scenario": "VerifyRelease32; VerifyRelease39; workflow launches UI twice",
+          "expected": "Проверен фактический roundtrip и повторный запуск, не только данные в памяти.",
+          "actual": "Second process launch reads the persisted marker from first launch; serialization and disk reload are exercised.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 49,
+      "current_requirement": "Журналы задания: после скачивания открыть сохранённую папку; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "49.target",
+          "requirement": "Скачивание журналов относится к зафиксированному выбранному заданию текущего канала.",
+          "scenario": "VerifyLogDownload51; SYSTEM LocalSmoke Logs export; Logs_Click/DownloadJobLogs51 review",
+          "expected": "Скачивание журналов относится к зафиксированному выбранному заданию текущего канала.",
+          "actual": "Endpoint and job captured before await; later target mutation cannot redirect download; active channel row is selected before entering helper.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "49.folder",
+          "requirement": "После сохранения открывается каталог, прогресс и успех/ошибка явно показаны.",
+          "scenario": "VerifyLogDownload51; SYSTEM LocalSmoke Logs export; Logs_Click/DownloadJobLogs51 review",
+          "expected": "После сохранения открывается каталог, прогресс и успех/ошибка явно показаны.",
+          "actual": "Successful returned folder invokes open once; injected download failure invokes none and propagates to Guard; production callback uses shell Process.Start.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 62,
+      "current_requirement": "Критично: выбор PS передаёт неподдерживаемый тип вместо PowerShell; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "62.kind",
+          "requirement": "PowerShell указан полностью, внутренний Kind берётся из идентификатора, не подписи; CMD сохранён.",
+          "scenario": "VerifyRelease34; VerifyAcceptance51; real SYSTEM ALIAS_PS_OK; native PowerShell exit workflow",
+          "expected": "PowerShell указан полностью, внутренний Kind берётся из идентификатора, не подписи; CMD сохранён.",
+          "actual": "Editor selection uses internal PowerShell identifier; CMD remains supported independently.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "62.legacy",
+          "requirement": "Псевдоним PS нормализуется при истории/импорте без изменения сценария.",
+          "scenario": "VerifyRelease34; VerifyAcceptance51; real SYSTEM ALIAS_PS_OK; native PowerShell exit workflow",
+          "expected": "Псевдоним PS нормализуется при истории/импорте без изменения сценария.",
+          "actual": "PS normalizes during submit/import/history; serialized script timestamps/path text stay unchanged.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "62.validate",
+          "requirement": "Неподдерживаемый тип отклоняется до отправки с фактическим значением, ошибка приложения не называется WindowsUpdateHRESULT.",
+          "scenario": "VerifyRelease34; VerifyAcceptance51; real SYSTEM ALIAS_PS_OK; native PowerShell exit workflow",
+          "expected": "Неподдерживаемый тип отклоняется до отправки с фактическим значением, ошибка приложения не называется WindowsUpdateHRESULT.",
+          "actual": "Unknown Kind rejected before transport with actual unsupported value; failure card calls it an application command type, not WU HRESULT.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "62.execution",
+          "requirement": "Настоящая короткая PowerShell-команда и повтор PS проверены, первичный вывод не теряется.",
+          "scenario": "VerifyRelease34; VerifyAcceptance51; real SYSTEM ALIAS_PS_OK; native PowerShell exit workflow",
+          "expected": "Настоящая короткая PowerShell-команда и повтор PS проверены, первичный вывод не теряется.",
+          "actual": "Actual SYSTEM PowerShell alias emits ALIAS_PS_OK; native exit/primary output retained by execution tests.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 64,
+      "current_requirement": "Ошибки JSON при опросе: отделить чтение статуса от связи и убрать повторяющийся технический шум; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "64.domains",
+          "requirement": "Транспорт/аутентификация, чтение/формат, локальная ошибка и ресурсы различаются; плохой JSON не объявляет потерю рабочей связи.",
+          "scenario": "VerifyRelease34/46; VerifyObsoleteJobObservation47; RemoteData34; bounded polling/malformed snapshot workflow",
+          "expected": "Транспорт/аутентификация, чтение/формат, локальная ошибка и ресурсы различаются; плохой JSON не объявляет потерю рабочей связи.",
+          "actual": "RemoteDataException marks snapshot data errors separately from link/authentication errors and preserves working connectivity.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "64.preserve",
+          "requirement": "При ошибке наблюдения предыдущие данные с датой сохраняются, операция не отменяется и не объявляется ошибочной.",
+          "scenario": "VerifyRelease34/46; VerifyObsoleteJobObservation47; RemoteData34; bounded polling/malformed snapshot workflow",
+          "expected": "При ошибке наблюдения предыдущие данные с датой сохраняются, операция не отменяется и не объявляется ошибочной.",
+          "actual": "Late/malformed observations do not replace retained state/output or mark client operation failed.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "64.atomic",
+          "requirement": "Снимки атомарны, проверены тип/личность/пустота/отсутствие, повторы ограничены.",
+          "scenario": "VerifyRelease34/46; VerifyObsoleteJobObservation47; RemoteData34; bounded polling/malformed snapshot workflow",
+          "expected": "Снимки атомарны, проверены тип/личность/пустота/отсутствие, повторы ограничены.",
+          "actual": "Agent atomic status writer and shared-read retry exercised; missing/empty/invalid/wrong-ID snapshots rejected or classified; attempts bounded.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "64.evidence",
+          "requirement": "Технический журнал содержит операцию/источник/исключение/позицию/размер/актуальность/ограниченный фрагмент; данные не публикуются автоматически.",
+          "scenario": "VerifyRelease34/46; VerifyObsoleteJobObservation47; RemoteData34; bounded polling/malformed snapshot workflow",
+          "expected": "Технический журнал содержит операцию/источник/исключение/позицию/размер/актуальность/ограниченный фрагмент; данные не публикуются автоматически.",
+          "actual": "Malformed status fixture writes bounded snapshot-read-error.json with source, size, modified/read UTC, exception and fragment; local parse diagnostics retain bounded context.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "64.events",
+          "requirement": "Повторы сгруппированы, восстановление относится к тому же виду проверки, заголовок и подробность не дублируются.",
+          "scenario": "VerifyRelease34/46; VerifyObsoleteJobObservation47; RemoteData34; bounded polling/malformed snapshot workflow",
+          "expected": "Повторы сгруппированы, восстановление относится к тому же виду проверки, заголовок и подробность не дублируются.",
+          "actual": "Failure key includes observation operation; restored reading clears corresponding limitation; repeats grouped.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "64.streams",
+          "requirement": "CLIXMLprogress не ошибка, реальные ошибки и кодировка сохранены, сырой XML/служебныйскрипт не в истории.",
+          "scenario": "VerifyRelease34/46; VerifyObsoleteJobObservation47; RemoteData34; bounded polling/malformed snapshot workflow",
+          "expected": "CLIXMLprogress не ошибка, реальные ошибки и кодировка сохранены, сырой XML/служебныйскрипт не в истории.",
+          "actual": "Empty CLIXML progress does not manufacture stderr; real messages/Russian text survive; visible transport summary does not expose raw XML.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "64.bounds",
+          "requirement": "Опрос/размер журналов/параллельность/повтор после серии сбоев ограничены; нехватка памяти не маскируется отменой задания.",
+          "scenario": "VerifyRelease34/46; VerifyObsoleteJobObservation47; RemoteData34; bounded polling/malformed snapshot workflow",
+          "expected": "Опрос/размер журналов/параллельность/повтор после серии сбоев ограничены; нехватка памяти не маскируется отменой задания.",
+          "actual": "8 MiB JSON and 1 MiB output bounds, three read attempts, single-flight/circuit breaker and master-OFF verified; data failure does not cancel remote work.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 70,
+      "current_requirement": "История: группировка повторов всех типов и три действия копирования; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "70.grouping",
+          "requirement": "Повторы всех типов группируются по типу/операции/коду/смыслу с количеством и первым/последним временем, разные сбои не сливаются.",
+          "scenario": "VerifyRelease35/36/39; EventHistory50Checks; VerifyHistoryInput51; Workspace31 review",
+          "expected": "Повторы всех типов группируются по типу/операции/коду/смыслу с количеством и первым/последним временем, разные сбои не сливаются.",
+          "actual": "Same semantic cause groups with count and timestamps; job scope, operation and original error distinguish different attempts.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "70.selection",
+          "requirement": "Ранние галочки заменены Ctrl/Shift выделением #93; раскрытие/текст не мешают выбору.",
+          "scenario": "VerifyRelease35/36/39; EventHistory50Checks; VerifyHistoryInput51; Workspace31 review",
+          "expected": "Ранние галочки заменены Ctrl/Shift выделением #93; раскрытие/текст не мешают выбору.",
+          "actual": "Native mouse, Shift range and Ctrl toggle select expected rows; Ctrl+A and Ctrl+C use the actual focused history list.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "70.copy",
+          "requirement": "Три действия записи/выбранных/всех, активность по выбору; все учитывает фильтр и сохраняет время/подробности, значки в заголовке.",
+          "scenario": "VerifyRelease35/36/39; EventHistory50Checks; VerifyHistoryInput51; Workspace31 review",
+          "expected": "Три действия записи/выбранных/всех, активность по выбору; все учитывает фильтр и сохраняет время/подробности, значки в заголовке.",
+          "actual": "Current/selected/all actions tested; filters limit copy-all; icons and enabled states remain in header.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "70.position",
+          "requirement": "Выбор/прокрутка сохраняются при событиях, переход к новым явный; мышь/клавиатура проверяются отдельно от SelectedItems.",
+          "scenario": "VerifyRelease35/36/39; EventHistory50Checks; VerifyHistoryInput51; Workspace31 review",
+          "expected": "Выбор/прокрутка сохраняются при событиях, переход к новым явный; мышь/клавиатура проверяются отдельно от SelectedItems.",
+          "actual": "New events do not move reading viewport; explicit new-events action advances it; native input confirms selection behavior.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 71,
+      "current_requirement": "Даты интерфейса: единый краткий формат без смещений часового пояса; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "71.format",
+          "requirement": "Сегодня/дата текущего года/дата с годом и полная местная подсказка без offset, включая старые результаты и копирование.",
+          "scenario": "VerifyAcceptance51; VerifyOutputMatrix51; VerifyRelease35/36; Display36/LogPresentation review",
+          "expected": "Сегодня/дата текущего года/дата с годом и полная местная подсказка без offset, включая старые результаты и копирование.",
+          "actual": "Current day, other date in same year, prior year and full local timestamp follow shared format; metadata uses local time without offset.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "71.source",
+          "requirement": "UTC/offset исходных данных сохранены, команды/пути не переписываются форматированием.",
+          "scenario": "VerifyAcceptance51; VerifyOutputMatrix51; VerifyRelease35/36; Display36/LogPresentation review",
+          "expected": "UTC/offset исходных данных сохранены, команды/пути не переписываются форматированием.",
+          "actual": "UTC data models unchanged; literal command output is excluded from formatting through both channels; PS script/path roundtrip preserved.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "71.boundaries",
+          "requirement": "Переход дня/года, часовые пояса и цвет давности проверены.",
+          "scenario": "VerifyAcceptance51; VerifyOutputMatrix51; VerifyRelease35/36; Display36/LogPresentation review",
+          "expected": "Переход дня/года, часовые пояса и цвет давности проверены.",
+          "actual": "Offsets -12,-5,0,+3,+14 and day/year boundaries exercised; report age tones use original timestamp rather than read time.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 73,
+      "current_requirement": "Все выводы приложения: главный результат и действия сверху, подробности и сведения задания снизу; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "73.primary",
+          "requirement": "Все виды вывода начинают с фактического результата текущего действия, краткой причины/кода и необходимого следующего действия.",
+          "scenario": "VerifyOutputMatrix51; VerifyRelease28/35/36/40/45/46; VerifyStatus50; WPF themes matrix",
+          "expected": "Все виды вывода начинают с фактического результата текущего действия, краткой причины/кода и необходимого следующего действия.",
+          "actual": "Seven operation kinds × four completion outcomes start with summary then details; primary hex retained and copy contains final output.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "73.proof",
+          "requirement": "Непроверенное не равно исправному, exit0 не доказывает состояние службы/загрузки; частичность и неизвестность явно указаны.",
+          "scenario": "VerifyOutputMatrix51; VerifyRelease28/35/36/40/45/46; VerifyStatus50; WPF themes matrix",
+          "expected": "Непроверенное не равно исправному, exit0 не доказывает состояние службы/загрузки; частичность и неизвестность явно указаны.",
+          "actual": "Service exit0 without observed service lines explicitly says unconfirmed; incomplete flags and missing report never imply readiness.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "73.reboot",
+          "requirement": "Подтверждённый reboot приоритет, прежний сбой остаётся, старая проверка с датой; полный текущий заголовок обновления сохранён по позднему #87.",
+          "scenario": "VerifyOutputMatrix51; VerifyRelease28/35/36/40/45/46; VerifyStatus50; WPF themes matrix",
+          "expected": "Подтверждённый reboot приоритет, прежний сбой остаётся, старая проверка с датой; полный текущий заголовок обновления сохранён по позднему #87.",
+          "actual": "Reboot evidence has priority while failed attempt stays below; full stage title remains in main card and stale evidence carries its timestamp.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "73.details",
+          "requirement": "Подробности дополняют итог, не повторяют его; полезный вывод выше служебных ID/PID/времён/нулевыхкодов.",
+          "scenario": "VerifyOutputMatrix51; VerifyRelease28/35/36/40/45/46; VerifyStatus50; WPF themes matrix",
+          "expected": "Подробности дополняют итог, не повторяют его; полезный вывод выше служебных ID/PID/времён/нулевыхкодов.",
+          "actual": "Output precedes technical job metadata; OmitMain46 removes duplicate summary and aggregates technical sections.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "73.old-plan",
+          "requirement": "Прежний остановленный план явно отделён от успешной новой команды, возобновление только после фактической проверки.",
+          "scenario": "VerifyOutputMatrix51; VerifyRelease28/35/36/40/45/46; VerifyStatus50; WPF themes matrix",
+          "expected": "Прежний остановленный план явно отделён от успешной новой команды, возобновление только после фактической проверки.",
+          "actual": "Earlier maintenance plan has separate heading; RecoveryPipeline47 checks release/WUA/new search before continuing.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "73.old-data",
+          "requirement": "Старые результаты переформатируются без изменения исходников и выдуманной причины.",
+          "scenario": "VerifyOutputMatrix51; VerifyRelease28/35/36/40/45/46; VerifyStatus50; WPF themes matrix",
+          "expected": "Старые результаты переформатируются без изменения исходников и выдуманной причины.",
+          "actual": "ResultPresentation36 formats saved results at display time; history data is not overwritten with new assumptions.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "73.matrix",
+          "requirement": "Команды/службы/кэш/диагностика/связь/reboot/WSUS проверены для успеха/partial/ошибки/unknown/reboot/старогоплана, три темы.",
+          "scenario": "VerifyOutputMatrix51; VerifyRelease28/35/36/40/45/46; VerifyStatus50; WPF themes matrix",
+          "expected": "Команды/службы/кэш/диагностика/связь/reboot/WSUS проверены для успеха/partial/ошибки/unknown/reboot/старогоплана, три темы.",
+          "actual": "Command/service/cache/diagnostic/search/install outcomes combined with connection, reboot, partial/unknown and old-plan fixtures; actual WPF render in three themes.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 106,
+      "current_requirement": "0.39: убрать дубли диагностических разделов и служебные блоки без результата; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "106.dedupe",
+          "requirement": "Один смысловой раздел на снимок или задание; маркеры, повторные подписи и одинаковые данные объединены.",
+          "scenario": "VerifyRelease40; VerifyStatus50; VerifyOutputMatrix51; CompactJournal31/LogViewer review",
+          "expected": "Один смысловой раздел на снимок или задание; маркеры, повторные подписи и одинаковые данные объединены.",
+          "actual": "Exact duplicate sections collapse; marker-only diagnosis removed; repeated ordinary output is preserved.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "106.context",
+          "requirement": "Разные интервалы, снимки и задания не теряют контекст; полные файлы доступны.",
+          "scenario": "VerifyRelease40; VerifyStatus50; VerifyOutputMatrix51; CompactJournal31/LogViewer review",
+          "expected": "Разные интервалы, снимки и задания не теряют контекст; полные файлы доступны.",
+          "actual": "Same diagnostic text in different attempt headings remains; source/job context retained and full raw files exported separately.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "106.noise",
+          "requirement": "Пустое и только служебные сообщения убраны; ошибки доступа, таймаут, неполнота и следующее действие сохранены.",
+          "scenario": "VerifyRelease40; VerifyStatus50; VerifyOutputMatrix51; CompactJournal31/LogViewer review",
+          "expected": "Пустое и только служебные сообщения убраны; ошибки доступа, таймаут, неполнота и следующее действие сохранены.",
+          "actual": "Access denial survives empty-section cleanup; unknown/partial and next-action information remain visible.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "106.scope",
+          "requirement": "Все выводы, сохранённые результаты и копирование единообразны; полезное наверху, перерисовка не тормозит.",
+          "scenario": "VerifyRelease40; VerifyStatus50; VerifyOutputMatrix51; CompactJournal31/LogViewer review",
+          "expected": "Все выводы, сохранённые результаты и копирование единообразны; полезное наверху, перерисовка не тормозит.",
+          "actual": "Saved and live results use same formatter/VisibleText; performance fixture checks cached rendering and no repeated disk IO.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 107,
+      "current_requirement": "0.39: для событий WinRM показывать только заголовок; полный текст ошибки хранить в журналах; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "107.visible",
+          "requirement": "Видимое событие только Ошибка WinRM/аутентификации, время, значок и повторы; исключение не возвращается в подсказку или раскрытие.",
+          "scenario": "VerifyRelease40; VerifyOutputMatrix51; Workspace31 ShortTransport40/EventSignature review",
+          "expected": "Видимое событие только Ошибка WinRM/аутентификации, время, значок и повторы; исключение не возвращается в подсказку или раскрытие.",
+          "actual": "Transport event shows only short Russian label, time/icon and repetition count; raw cause not reintroduced by Body38.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "107.logs",
+          "requirement": "Исходное исключение, код, адрес и контекст сохранены в полных журналах; время и клиент позволяют сопоставить запись.",
+          "scenario": "VerifyRelease40; VerifyOutputMatrix51; Workspace31 ShortTransport40/EventSignature review",
+          "expected": "Исходное исключение, код, адрес и контекст сохранены в полных журналах; время и клиент позволяют сопоставить запись.",
+          "actual": "Serialized original Details retained with timestamp/host in per-client event log; UI abbreviation does not rewrite stored exception.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "107.copy",
+          "requirement": "Копирование видимой истории краткое, сигнатура группы учитывает настоящую причину; выбор и три копирования сохранены.",
+          "scenario": "VerifyRelease40; VerifyOutputMatrix51; Workspace31 ShortTransport40/EventSignature review",
+          "expected": "Копирование видимой истории краткое, сигнатура группы учитывает настоящую причину; выбор и три копирования сохранены.",
+          "actual": "Visible copy excludes raw transport cause; grouping signature still uses original reason and job scope; three copy modes preserved.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "107.scope",
+          "requirement": "Обычные WinRM-сводки едины, диагностика WU не обрезана; русские и английские DNS, таймаут, доступ и CLIXML проверены.",
+          "scenario": "VerifyRelease40; VerifyOutputMatrix51; Workspace31 ShortTransport40/EventSignature review",
+          "expected": "Обычные WinRM-сводки едины, диагностика WU не обрезана; русские и английские DNS, таймаут, доступ и CLIXML проверены.",
+          "actual": "Russian DNS/access and English timeout/access plus CLIXML fixtures share short link summary; WU results are outside transport-only abbreviation.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 112,
+      "current_requirement": "Единая система статусов, готовности и актуальности данных во всех представлениях приложения; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "112.facts",
+          "requirement": "Факты содержат источник, идентичность, контекст, время измерения и получения, полноту и ошибку; значения unknown/partial не превращаются в false.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Факты содержат источник, идентичность, контекст, время измерения и получения, полноту и ошибку; значения unknown/partial не превращаются в false.",
+          "actual": "Модели раздельно хранят client/WSUS/boot/endpoint/полноту/ошибки; partial не превращается в false.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.updates",
+          "requirement": "Готовность требует актуального успешного поиска и отсутствия необходимых обновлений по текущим политикам; старый/неполный серверный ноль недостаточен.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Готовность требует актуального успешного поиска и отсутствия необходимых обновлений по текущим политикам; старый/неполный серверный ноль недостаточен.",
+          "actual": "Нулевой полный серверный набор требует успешного клиентского поиска в текущем boot и источнике; remaining>0 блокирует Success.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.report",
+          "requirement": "Использовать реальное LastReportedUtc сервера; административное чтение не освежает отчёт. Свежий отчёт не обязан быть позже Ended последних служебных действий.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Использовать реальное LastReportedUtc сервера; административное чтение не освежает отчёт. Свежий отчёт не обязан быть позже Ended последних служебных действий.",
+          "actual": "LastReported — реальная серверная отметка; свежий отчёт до окончания служебных действий не ложная неисправность.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.reboot",
+          "requirement": "Полная отрицательная проверка подтверждает отсутствие флагов; partial, отказ доступа и новая загрузка сами по себе не подтверждают отрицание.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Полная отрицательная проверка подтверждает отсутствие флагов; partial, отказ доступа и новая загрузка сами по себе не подтверждают отрицание.",
+          "actual": "DescribeReboot40 отвергает partial negative, неполный ответ не Fresh; invalid/future time не подтверждает флаги.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.positive-reboot",
+          "requirement": "Положительное свидетельство сохраняется в той же загрузке до подтверждённой новой проверки; возраст сам по себе не снимает требование. После нового boot нужны новые флаги.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Положительное свидетельство сохраняется в той же загрузке до подтверждённой новой проверки; возраст сам по себе не снимает требование. После нового boot нужны новые флаги.",
+          "actual": "Merge сохраняет same-boot positive при неизвестности; новое boot удаляет прежнее свидетельство до новой проверки.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.priorities",
+          "requirement": "Текущая операция остаётся видимой; подтверждённая перезагрузка имеет приоритет над старой ошибкой отчёта, ошибки сохраняются в истории.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Текущая операция остаётся видимой; подтверждённая перезагрузка имеет приоритет над старой ошибкой отчёта, ошибки сохраняются в истории.",
+          "actual": "60 сочетаний флагов/серверных сведений/active проверяют приоритеты без изменения исходного отчёта.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.ready-retention",
+          "requirement": "Последняя полная готовность сохраняется до следующей запланированной/ручной проверки или новых противоречащих фактов; время само по себе не создаёт новую неисправность.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Последняя полная готовность сохраняется до следующей запланированной/ручной проверки или новых противоречащих фактов; время само по себе не создаёт новую неисправность.",
+          "actual": "ReadyProof43 сохраняется; одно старение не создаёт внимание, новые Needed/Error/boot/identity его отменяют.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.identity-order",
+          "requirement": "Запоздалый ответ старого запроса/endpoint не заменяет новые факты; значимые изменения инвалидируют только затронутые доказательства.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Запоздалый ответ старого запроса/endpoint не заменяет новые факты; значимые изменения инвалидируют только затронутые доказательства.",
+          "actual": "Поздние ответы client/status/job/report/connection отвергаются после смены endpoint/поколения; старый Collected не перетирает новый.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.consumers",
+          "requirement": "Шапка, дерево, последние, главная карточка, журнал, внимание, фильтры и копирование используют один смысл статуса, источников и времени.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Шапка, дерево, последние, главная карточка, журнал, внимание, фильтры и копирование используют один смысл статуса, источников и времени.",
+          "actual": "ExplainAssessment45 теперь общий для выбранных и фоновых клиентов; дерево/главная плашка/внимание/фильтры используют AssessClient41.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.age",
+          "requirement": "Возраст одного источника считается согласованно от исходной отметки, без новой сети на каждую перерисовку; UTC хранится, местное время отображается.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Возраст одного источника считается согласованно от исходной отметки, без новой сети на каждую перерисовку; UTC хранится, местное время отображается.",
+          "actual": "Общий ReportPresentation35 считает возраст исходного UTC; форматирование местное без смещения, будущее время отдельно.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.history",
+          "requirement": "Текущие новые сведения не переписывают прошлые результаты; старый Failed не становится ошибкой новой успешной попытки.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Текущие новые сведения не переписывают прошлые результаты; старый Failed не становится ошибкой новой успешной попытки.",
+          "actual": "История событий хранит первичные эпизоды; Failed не стирается новой успешной попыткой, разные jobID не склеиваются.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.criteria-ui",
+          "requirement": "Три основных критерия без нумерации и рамок; подусловия раскрываются стрелкой, проблемный критерий раскрыт, действия возле соответствующей причины.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Три основных критерия без нумерации и рамок; подусловия раскрываются стрелкой, проблемный критерий раскрыт, действия возле соответствующей причины.",
+          "actual": "Три Expander с ReadinessDisclosure46 без внутренних рамок; локальное раскрытие/адресные действия; старый RebootCard скрыт.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.reboot-action",
+          "requirement": "Проверка перезагрузки предлагается при неполных/устаревших данных, не вместо подтверждённого актуального отрицательного результата и не как отвлекающее действие во время установки.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Проверка перезагрузки предлагается при неполных/устаревших данных, не вместо подтверждённого актуального отрицательного результата и не как отвлекающее действие во время установки.",
+          "actual": "Матрица проверяет наличие кнопки для partial/unknown/old при разных общих проблемах и отсутствие во время active/fresh.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.operation-ui",
+          "requirement": "Крупный смысловой значок и полный заголовок рабочей операции; служебные чтения показываются текстом без анимации установки.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Крупный смысловой значок и полный заголовок рабочей операции; служебные чтения показываются текстом без анимации установки.",
+          "actual": "Крупный OperationGlyph38, единая ForOperation50 для Search/Download/Install/Repair/Wait и треугольник запуска для общего процесса; служебная активность SetService43 текстовая.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.journals",
+          "requirement": "Поиск, фильтр и копирование находятся в заголовках; панели имеют различные согласованные поверхности/границы; подробности дополняют, а не дублируют карточку.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Поиск, фильтр и копирование находятся в заголовках; панели имеют различные согласованные поверхности/границы; подробности дополняют, а не дублируют карточку.",
+          "actual": "Общие заголовки содержат поиск/фильтр/copy; разные поверхности и внешний контур; LogViewer.DisplaySections46 убирает дубль «Главное» и объединяет техданные.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.toasts",
+          "requirement": "Уведомления располагаются в верхней зоне без смещения раскладки и перекрытия действий; исчезают после потери актуальности.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Уведомления располагаются в верхней зоне без смещения раскладки и перекрытия действий; исчезают после потери актуальности.",
+          "actual": "Overlay в верхней зоне, VerifyToastPlacement47 проверяет границы и отсутствие изменения высоты; HideToast закрывает уведомление.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.performance",
+          "requirement": "Проверить 400+ клиентов и большую историю, четыре режима/три темы/два размера; сохранять ввод, выделение, прокрутку и раскрытие.",
+          "scenario": "VerifyStatus50; VerifyRelease41; VerifyRelease43; VerifyRelease45; VerifyRelease46; VerifyRelease39; VerifyObsoleteRead47; VerifyObsoleteReportDetails47",
+          "expected": "Проверить 400+ клиентов и большую историю, четыре режима/три темы/два размера; сохранять ввод, выделение, прокрутку и раскрытие.",
+          "actual": "Сценарий 450 строк/1006 jobs/10000 events, кэш группировки и отсутствие повторного дискового чтения; четыре режима×три темы×два размера, сохранение выбора/копирования.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.offline-color51",
+          "requirement": "При подтверждённой потере связи дерево и последние показывают серый компьютер, без активной анимации; сохранённый результат и дата доступны отдельно. Выделение строки независимо.",
+          "scenario": "VerifyStatus50 (collector header assertions); VerifyScale51; WPF mode/theme/size matrix",
+          "expected": "При подтверждённой потере связи дерево и последние показывают серый компьютер, без активной анимации; сохранённый результат и дата доступны отдельно. Выделение строки независимо.",
+          "actual": "Offline ComputerRow suppresses active progress and displays Unknown gray while original result remains stored; selection highlight is independent.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.operation-icons51",
+          "requirement": "Шестерёнка только настройки. Все представления используют значок известного этапа; общий процесс — запуск, ожидание — часы.",
+          "scenario": "VerifyStatus50 (collector header assertions); VerifyScale51; WPF mode/theme/size matrix",
+          "expected": "Шестерёнка только настройки. Все представления используют значок известного этапа; общий процесс — запуск, ожидание — часы.",
+          "actual": "Working uses play triangle; known stages map to Search/Download/Install/Repair; waiting uses clock, settings alone use gear.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.collector-header51",
+          "requirement": "Состояние опроса, причина, повтор и управление сборщиком находятся в общей шапке у связи, вне главной плашки.",
+          "scenario": "VerifyStatus50 (collector header assertions); VerifyScale51; WPF mode/theme/size matrix",
+          "expected": "Состояние опроса, причина, повтор и управление сборщиком находятся в общей шапке у связи, вне главной плашки.",
+          "actual": "Collector disclosure is in common identity header outside operation card, borderless; 24 actual WPF variants plus 125/150% layout scaling checked.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "112.install-success51",
+          "requirement": "Успешная установка зелёная; прежние счётчики отчёта и необходимость перезагрузки не окрашивают успешный этап предупреждением.",
+          "scenario": "VerifyStatus50 (collector header assertions); VerifyScale51; WPF mode/theme/size matrix; VerifyRelease45 rendered headline and partial-install guard",
+          "expected": "Успешная установка зелёная; прежние счётчики отчёта и необходимость перезагрузки не окрашивают успешный этап предупреждением.",
+          "actual": "Successful installation headline and update criterion are green; reboot glyph/criterion remain warning. Partial installation never gets a successful headline. Old report remains separate.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 119,
+      "current_requirement": "Команды: сохранять последовательный полный вывод всех команд и шагов задания; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "119.order",
+          "requirement": "Файлы stdout/stderr отображаются последовательно по номеру шага, без скрытого ограничения последними 80 строками.",
+          "scenario": "VerifyRelease46; VerifyOutputMatrix51; SYSTEM LocalSmoke; bounded polling workflow",
+          "expected": "Файлы stdout/stderr отображаются последовательно по номеру шага, без скрытого ограничения последними 80 строками.",
+          "actual": "Forty numbered step files including stderr preserve numeric order; no 32-file or 80-line silent tail cap.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "119.no-overwrite",
+          "requirement": "Новые данные не стирают предыдущие шаги и повторяющиеся обычные строки.",
+          "scenario": "VerifyRelease46; VerifyOutputMatrix51; SYSTEM LocalSmoke; bounded polling workflow",
+          "expected": "Новые данные не стирают предыдущие шаги и повторяющиеся обычные строки.",
+          "actual": "Initial/final markers and four repeated ordinary lines survive both channels; incoming snapshots include earlier steps.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "119.limits",
+          "requirement": "Ограничение чтения 1 МиБ обозначено; полные исходные файлы доступны в журнале/архиве.",
+          "scenario": "VerifyRelease46; VerifyOutputMatrix51; SYSTEM LocalSmoke; bounded polling workflow",
+          "expected": "Ограничение чтения 1 МиБ обозначено; полные исходные файлы доступны в журнале/архиве.",
+          "actual": "1 MiB truncation notice visible; raw logs exported independently with manifest/checksums.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "119.native-output",
+          "requirement": "DISM-подобные блоки и префиксы CIM/VersionInfo сохраняются; stdout и stderr различаются.",
+          "scenario": "VerifyRelease46; VerifyOutputMatrix51; SYSTEM LocalSmoke; bounded polling workflow",
+          "expected": "DISM-подобные блоки и префиксы CIM/VersionInfo сохраняются; stdout и stderr различаются.",
+          "actual": "CIM/VersionInfo and DISM-like output remain ordinary text; filename/step/stdout-stderr headings distinguish streams.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "119.user-code",
+          "requirement": "Пользовательский PowerShell не переписывается автоматически ради форматирования.",
+          "scenario": "VerifyRelease46; VerifyOutputMatrix51; SYSTEM LocalSmoke; bounded polling workflow",
+          "expected": "Пользовательский PowerShell не переписывается автоматически ради форматирования.",
+          "actual": "Script text preserved through PS alias normalization, serialization and execution; formatting applies only to presentation metadata.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "119.history-copy",
+          "requirement": "Повторное открытие результата и копирование сохраняют порядок, ошибки промежуточных шагов и пустые результаты.",
+          "scenario": "VerifyRelease46; VerifyOutputMatrix51; SYSTEM LocalSmoke; bounded polling workflow",
+          "expected": "Повторное открытие результата и копирование сохраняют порядок, ошибки промежуточных шагов и пустые результаты.",
+          "actual": "Reopened formatted result and VisibleText retain final marker/intermediate errors; empty stderr does not erase output.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 121,
+      "current_requirement": "Справочник: 0x80071160 — повреждение таблицы ресурсов WOF-файла; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "121.definition",
+          "requirement": "0x80071160 / -2147020448 / Win32 4448 соответствует ERROR_WOF_FILE_RESOURCE_TABLE_CORRUPT из Microsoft SDK.",
+          "scenario": "VerifyRelease45; test_reference.py; generated catalog/source hashes",
+          "expected": "0x80071160 / -2147020448 / Win32 4448 соответствует ERROR_WOF_FILE_RESOURCE_TABLE_CORRUPT из Microsoft SDK.",
+          "actual": "Signed -2147020448 and HRESULT 0x80071160 resolve to Win32 4448 ERROR_WOF_FILE_RESOURCE_TABLE_CORRUPT.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "121.context",
+          "requirement": "Не выдумывать повреждённый файл и не разрешать сброс кэша/WinSxS по одному коду; предложить поиск исходной ошибки и пути.",
+          "scenario": "VerifyRelease45; test_reference.py; generated catalog/source hashes",
+          "expected": "Не выдумывать повреждённый файл и не разрешать сброс кэша/WinSxS по одному коду; предложить поиск исходной ошибки и пути.",
+          "actual": "Card requests actual file path/original error; does not infer cache corruption or authorize WinSxS removal.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "121.data",
+          "requirement": "Карточка, индексы, справочник и контрольные суммы согласованы; детерминированная пересборка и namespace/signed lookup проверены.",
+          "scenario": "VerifyRelease45; test_reference.py; generated catalog/source hashes",
+          "expected": "Карточка, индексы, справочник и контрольные суммы согласованы; детерминированная пересборка и namespace/signed lookup проверены.",
+          "actual": "Card/index/catalog checksums and deterministic rebuild agree; namespace and signed lookup tests pass.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 129,
+      "current_requirement": "История: результаты действий и служебные события; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "129.results",
+          "requirement": "Результаты основных шагов сохраняются отдельно от последнего служебного этапа; поздний сбой не скрывает ранний успех.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Результаты основных шагов сохраняются отдельно от последнего служебного этапа; поздний сбой не скрывает ранний успех.",
+          "actual": "Результат CacheCleanup и последующий поиск имеют отдельные события, поздний failure не скрывает ранний успех.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "129.cache",
+          "requirement": "Структурированная сводка различает изоляцию, отсутствие каталога, резервную копию, отложенное удаление и неподтверждённый запуск удаления; нет ложного успеха.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Структурированная сводка различает изоляцию, отсутствие каталога, резервную копию, отложенное удаление и неподтверждённый запуск удаления; нет ложного успеха.",
+          "actual": "Cache50 хранит Isolated/Backups/PendingDelete/CleanupStarted; отсутствие, резервная копия и неподтверждённая очистка различаются.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "129.filter",
+          "requirement": "Основные события по умолчанию; ошибки/предупреждения, служебные и все записи доступны в заголовке, выбор сохранён и копирование учитывает фильтр.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Основные события по умолчанию; ошибки/предупреждения, служебные и все записи доступны в заголовке, выбор сохранён и копирование учитывает фильтр.",
+          "actual": "Четыре режима в заголовке, default основные; Store сохраняет выбор, copy применяет EventMatches47.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "129.noise",
+          "requirement": "Рутинные чтения/подключения не вытесняют результаты; подтверждённая потеря/восстановление связи и существенные проблемы видны.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Рутинные чтения/подключения не вытесняют результаты; подтверждённая потеря/восстановление связи и существенные проблемы видны.",
+          "actual": "Рутинные link/read/плановые проверки скрыты из основных; подтверждённые потеря/возврат и серия ошибок чтения остаются.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "129.scope",
+          "requirement": "Разные задания/планы/эпизоды не склеиваются; неизменный повторный опрос не добавляет запись.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Разные задания/планы/эпизоды не склеиваются; неизменный повторный опрос не добавляет запись.",
+          "actual": "Operation36 содержит job/step/plan; эпизоды разделены временем/сменой состояния, повторный Poll дедуплицирован.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "129.wait",
+          "requirement": "Занятость WUA, признаки установки и неполная проверка названы отдельно; служебные подробности сохраняются.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Занятость WUA, признаки установки и неполная проверка названы отдельно; служебные подробности сохраняются.",
+          "actual": "В фазе ожидания отдельно названы WUA busy, признаки установки и неполная проверка.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "129.tests",
+          "requirement": "Проверены повторный опрос, сохранение, разные задания, поздняя ошибка поиска, пустой кеш/копия/отложенное удаление/ошибка служб и старые данные.",
+          "scenario": "VerifyEventHistory50; test_cache47.ps1; VerifyRelease36; Windows UI screenshots",
+          "expected": "Проверены повторный опрос, сохранение, разные задания, поздняя ошибка поиска, пустой кеш/копия/отложенное удаление/ошибка служб и старые данные.",
+          "actual": "Новые проверки истории и Windows PowerShell сценарии Missing/Success/PendingSuccess/MaintenanceMissing/PrimaryAndRestore/PartialIsolation; совместимость старого StepResult.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "129.phase-transition51",
+          "requirement": "Одна запись ожидания на переход фазы/цикла/загрузки; смена причины повторного опроса не создаёт основные события. Новый цикл не объединяется с прежним.",
+          "scenario": "VerifyStatus50; EventHistory50Checks; MaintenanceEventSignature51 review",
+          "expected": "Одна запись ожидания на переход фазы/цикла/загрузки; смена причины повторного опроса не создаёт основные события. Новый цикл не объединяется с прежним.",
+          "actual": "Ten alternating poll explanations keep same phase signature; next cycle changes signature, preserving separate episode without poll spam.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 131,
+      "current_requirement": "Контроль перезагрузки и последующий поиск; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "131.receipt",
+          "requirement": "Подтверждённое назначение и отсчёт основаны на квитанции клиента; достижение срока не означает успешную перезагрузку.",
+          "scenario": "VerifyRebootFlow51; VerifyStatus50; VerifyMaintenance49; VerifyObservation51; reboot receipt workflow",
+          "expected": "Подтверждённое назначение и отсчёт основаны на квитанции клиента; достижение срока не означает успешную перезагрузку.",
+          "actual": "Dispatch receipt confirms scheduling and controlled clock gives 01:05 countdown; due time changes to waiting, never reboot-success.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "131.boot",
+          "requirement": "Новый BootUtc подтверждает возврат; свежие флаги читаются отдельно, неполные данные не трактуются как отрицательные.",
+          "scenario": "VerifyRebootFlow51; VerifyStatus50; VerifyMaintenance49; VerifyObservation51; reboot receipt workflow",
+          "expected": "Новый BootUtc подтверждает возврат; свежие флаги читаются отдельно, неполные данные не трактуются как отрицательные.",
+          "actual": "Old boot rejected; fresh new boot with partial CBS remains unknown, then complete fresh negative flags accepted.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "131.checkpoint",
+          "requirement": "Новая загрузка из обычного опроса или восстановления сборщика продвигает сохранённую контрольную точку и все представления; старое ожидание не возвращается.",
+          "scenario": "VerifyRebootFlow51; VerifyStatus50; VerifyMaintenance49; VerifyObservation51; reboot receipt workflow",
+          "expected": "Новая загрузка из обычного опроса или восстановления сборщика продвигает сохранённую контрольную точку и все представления; старое ожидание не возвращается.",
+          "actual": "Collector callback applies new boot and advances persisted watch/maintenance; same snapshot does not extend settling deadline.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "131.search",
+          "requirement": "После возврата и готовности один поиск обновлений; согласовать с существующим планом, без второго задания/установщика и без повторов после перезапуска.",
+          "scenario": "VerifyRebootFlow51; VerifyStatus50; VerifyMaintenance49; VerifyObservation51; reboot receipt workflow",
+          "expected": "После возврата и готовности один поиск обновлений; согласовать с существующим планом, без второго задания/установщика и без повторов после перезапуска.",
+          "actual": "Busy WUA prevents search; idle queues exactly one UpdateScan; two restores retain one job ID; existing maintenance has precedence.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "131.controls",
+          "requirement": "Master OFF, отмена, смена идентичности и поздний ответ не запускают новые действия. Явно назначенная новая перезагрузка включает контрольный поиск, установка зависит от Авто.",
+          "scenario": "VerifyRebootFlow51; VerifyStatus50; VerifyMaintenance49; VerifyObservation51; reboot receipt workflow",
+          "expected": "Master OFF, отмена, смена идентичности и поздний ответ не запускают новые действия. Явно назначенная новая перезагрузка включает контрольный поиск, установка зависит от Авто.",
+          "actual": "Master-OFF prevents reset/new reads; cancelled generation/identity invalidates response; explicit reboot search persists with Auto OFF without installing.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "131.end-to-end",
+          "requirement": "Изолированный сценарий установка→назначение→перезагрузка→ошибка сборщика→восстановление→свежие флаги→один поиск→отчёт; проверки времени, истории и всех адаптеров.",
+          "scenario": "VerifyRebootFlow51; VerifyStatus50; VerifyMaintenance49; VerifyObservation51; reboot receipt workflow",
+          "expected": "Изолированный сценарий установка→назначение→перезагрузка→ошибка сборщика→восстановление→свежие флаги→один поиск→отчёт; проверки времени, истории и всех адаптеров.",
+          "actual": "Isolated flow uses real application state machine with injected boot/transport/WSUS facts: receipt→old boot→collector repair→new boot partial→fresh flags→busy/idle→one scan→fresh report→Success. Own-process abrupt termination tested separately; no physical OS power cut claimed.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 132,
+      "current_requirement": "Ограниченное ожидание связи и неизвестный результат; действующие условия реестра, включая поздние решения 29.10.2026.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "132.bounded",
+          "requirement": "Отдельный абсолютный срок наблюдения результата, сохраняемый через перезапуск; повторные ошибки не продлевают срок. По истечении результат неизвестен, не ошибка установки.",
+          "scenario": "VerifyObservation51; VerifyStatus50; VerifyRecoveryPipeline47; VerifyMaintenance49; abrupt agent recovery workflow",
+          "expected": "Отдельный абсолютный срок наблюдения результата, сохраняемый через перезапуск; повторные ошибки не продлевают срок. По истечении результат неизвестен, не ошибка установки.",
+          "actual": "47-hour vs 48/72-hour boundaries and invalid start tested; fixed persisted job creation timestamp prevents retry extension; original remote status retained.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "132.backoff",
+          "requirement": "Частые запросы результата прекращаются при длительной потере связи; редкая проверка доступности отделена. Все каналы и повторные клики ограничены; master OFF соблюдается.",
+          "scenario": "VerifyObservation51; VerifyStatus50; VerifyRecoveryPipeline47; VerifyMaintenance49; abrupt agent recovery workflow",
+          "expected": "Частые запросы результата прекращаются при длительной потере связи; редкая проверка доступности отделена. Все каналы и повторные клики ограничены; master OFF соблюдается.",
+          "actual": "Ten offline attempts and ten manually stopped attempts make zero result reads; explicit check makes one; master OFF zero; single-flight/worker limits verified in real WinRM fixtures.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "132.reconcile",
+          "requirement": "После возврата сверить прежнее задание, boot, исполнитель/PID+start и результат; истечение ожидания не снимает защиту от второго установщика.",
+          "scenario": "VerifyObservation51; VerifyStatus50; VerifyRecoveryPipeline47; VerifyMaintenance49; abrupt agent recovery workflow",
+          "expected": "После возврата сверить прежнее задание, boot, исполнитель/PID+start и результат; истечение ожидания не снимает защиту от второго установщика.",
+          "actual": "Forced read addresses existing job only; actual killed-agent states and absent executor enter fresh-search recovery; busy WUA/unconfirmed ownership release block dispatch.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "132.manual",
+          "requirement": "Ручное завершение ожидания и проверка результата доступны с объяснением: удалённая операция этим не остановлена.",
+          "scenario": "VerifyObservation51; VerifyStatus50; VerifyRecoveryPipeline47; VerifyMaintenance49; abrupt agent recovery workflow",
+          "expected": "Ручное завершение ожидания и проверка результата доступны с объяснением: удалённая операция этим не остановлена.",
+          "actual": "Stop action persists endpoint/job observation key without changing remote job; explicit check never queues installer or clears remote ownership.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "132.presentation",
+          "requirement": "Все представления показывают неизвестный результат при потере связи; прежняя активность, скорость и ответ агента имеют исходное время.",
+          "scenario": "VerifyObservation51; VerifyStatus50; VerifyRecoveryPipeline47; VerifyMaintenance49; abrupt agent recovery workflow",
+          "expected": "Все представления показывают неизвестный результат при потере связи; прежняя активность, скорость и ответ агента имеют исходное время.",
+          "actual": "Offline current status is unknown/gray; retained speed/activity is labeled saved observation with original time, not a live agent response.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        },
+        {
+          "condition_id": "132.matrix",
+          "requirement": "Управляемое время до/после срока и перезапуск; возврат с живым/отсутствующим исполнителем, готовым результатом, занятым WUA; измерить отсутствие дублей и защищённость системных служб.",
+          "scenario": "VerifyObservation51; VerifyStatus50; VerifyRecoveryPipeline47; VerifyMaintenance49; abrupt agent recovery workflow",
+          "expected": "Управляемое время до/после срока и перезапуск; возврат с живым/отсутствующим исполнителем, готовым результатом, занятым WUA; измерить отсутствие дублей и защищённость системных служб.",
+          "actual": "Controlled deadline + persisted state, completed result vs live/missing executor, WUA busy/idle, own worker termination and real ownership tests cover return paths; system installers/services are not forcibly terminated.",
+          "result": "passed",
+          "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+        }
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "single-instance",
+      "result": "passed",
+      "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+      "expected": "Единственный собственный исполнитель/сборщик; повторные запросы не дублируют работу.",
+      "actual": "SYSTEM LocalSmoke, Probe42 single-flight и Collector43 проверяют реальное развёртывание, запросы, собственные задачи/процессы и защиту чужих.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+    },
+    {
+      "id": "two-consoles",
+      "result": "passed",
+      "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+      "expected": "Конкурирующие владельцы не создают второго исполнителя.",
+      "actual": "Cross-console ownership workflow и admission fixtures проверяют отказ чужому владельцу и сохранение активной работы; endpoint identity tests не смешивают IP/учётные данные.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+    },
+    {
+      "id": "reboot-mid-operation",
+      "result": "passed",
+      "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+      "expected": "После резкого прерывания восстановление через фактическую проверку, без продолжения по проценту.",
+      "actual": "Собственный агент резко завершён на четырёх этапах; сохранённые recovered states поступают в ReconcilePlan44 и создают UpdateScan. Новый boot и неполные флаги проверены управляемыми фактами; физическое питание не отключалось.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+    },
+    {
+      "id": "collector-remove-enable-recover",
+      "result": "passed",
+      "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+      "expected": "Удаление/запрет/явное включение/восстановление без дублей; успех требует свежего снимка.",
+      "actual": "Реальное SYSTEM удаление/включение, Collector43 foreign ownership/disabled gate, Probe42 kill/deadline и CompleteCollectorRepair47: пустой callback не публикует Success.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+    },
+    {
+      "id": "offline-and-reconnect",
+      "result": "passed",
+      "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+      "expected": "Потеря связи сохраняет неизвестный исход, возврат сверяет старое задание и состояние ОС.",
+      "actual": "VerifyObservation51: 10 offline чтений = 0; явное = 1. RecoveryPipeline47: release отказ/занятый WUA = 0 новых поисков, готовность = 1. Поздние ответы не меняют новые факты.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+    },
+    {
+      "id": "polling-master-off",
+      "result": "passed",
+      "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+      "expected": "Общий Опрос OFF запрещает новую сеть и отменённое поколение не возрождается.",
+      "actual": "Persisted OFF проверен отдельным запуском процесса; VerifyPause43/ObsoleteRead47/Observation51/Receipt and maintenance fixtures подтверждают отсутствие новых действий.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+    },
+    {
+      "id": "status-evidence-consistency",
+      "result": "passed",
+      "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+      "expected": "Одинаковые факты дают согласованные статусы; partial не false и старый Failed не новая ошибка.",
+      "actual": "VerifyStatus50, Readiness43, Release41/45, новая связанная reboot flow: свежий boot + partial отдельно, полный negative, один поиск и свежий отчёт завершаются Success; исходные исторические данные сохранены.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+    },
+    {
+      "id": "ui-all-modes-themes-sizes",
+      "result": "passed",
+      "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+      "expected": "Четыре режима × три темы × два размера, масштабирование; сборщик в шапке, действия доступны.",
+      "actual": "24 фактических WPF-снимка collector header и 24 масштабированных viewport снимка осмотрены; геометрия общей шапки и правой панели проверена. 125/150% растеризация WPF, не физическая смена monitor DPI.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+    },
+    {
+      "id": "selection-scroll-preservation",
+      "result": "passed",
+      "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+      "expected": "Фоновые события не меняют выбранного клиента/вкладку/выделение/прокрутку.",
+      "actual": "VerifySubmission47/RecoveryPipeline47 сохраняют навигацию; Release35/39 сохраняют viewport; native mouse/Shift/Ctrl/Ctrl+A/Ctrl+C проверяют историю и буфер обмена.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+    },
+    {
+      "id": "full-command-output",
+      "result": "passed",
+      "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+      "expected": "Файлы/шаги/stdout/stderr сохраняются с явными ограничениями и полным экспортом.",
+      "actual": "40 файлов с промежуточным stderr, no-newline/кириллица/CLIXML, реальный reg.exe и PowerShell; семь видов × четыре исхода сохраняют повторные строки/даты в обоих каналах и копировании.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+    },
+    {
+      "id": "cache-reset-failure-and-restoration",
+      "result": "passed",
+      "commit": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+      "expected": "Первичная ошибка и частичность сохраняются, восстановление служб проверяется, ложного успеха нет.",
+      "actual": "test_cache47 Windows PowerShell fault injection и hard process timeout restoration; backup/absent/delayed cleanup/access/service failure branches проверены без остановки системных служб production.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/40946218625 ; source 34a873154b20d420a2084a9f7089845c9d8aaa00 ; exact ZIP SHA256 792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898 ; UI artifact 12930566054 ; service artifact 12929353563 ; methods docs/acceptance/0.51-review.md"
+    }
+  ],
+  "close_issues": [
+    7,
+    8,
+    17,
+    40,
+    41,
+    48,
+    49,
+    62,
+    64,
+    70,
+    71,
+    73,
+    106,
+    107,
+    112,
+    119,
+    121,
+    129,
+    131,
+    132
+  ],
+  "registry_sha256": "ed0098083e0bc545e2da6cfc5da28071bbe12a561af7d95dc2d0bc61a0bf9809",
+  "batch_plan_sha256": "0eace505ec730ace416258981023b7702ae8e2d9cd967772384847cd2571c434"
+}

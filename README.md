@@ -1,3 +1,11 @@
+# DomainConsole 0.51
+
+[Скачать DomainConsole 0.51](https://github.com/Amenemhat/DomainConsole/releases/tag/v0.51)
+
+Контроль перезагрузки и один последующий поиск, ограниченное ожидание связи, восстановление сборщика, согласованные значки и сохранность вывода команд.
+
+[Изменения и границы проверок](docs/releases/0.51.md). При обновлении замените программу вместе с каталогом Agent, сохранив папку Data.
+
 # DomainConsole 0.46
 
 [Скачать DomainConsole 0.46](https://github.com/Amenemhat/DomainConsole/releases/tag/v0.46)

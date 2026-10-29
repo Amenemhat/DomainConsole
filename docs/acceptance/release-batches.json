@@ -373,7 +373,7 @@
       "version": "0.51",
       "priority": "P0/P1",
       "title": "Восстановление статусов после перезагрузки, ограниченное ожидание, команды и журналы",
-      "status": "in-progress",
+      "status": "accepted",
       "issues": [
         7,
         8,
@@ -511,7 +511,10 @@
         "132.manual",
         "132.presentation",
         "132.matrix"
-      ]
+      ],
+      "source": "34a873154b20d420a2084a9f7089845c9d8aaa00",
+      "run": 40946218625,
+      "artifact_sha256": "792969831934557e99ae9e265b41fc26c787d9802c1e779cbe795d266a594898"
     },
     {
       "version": "0.52",
