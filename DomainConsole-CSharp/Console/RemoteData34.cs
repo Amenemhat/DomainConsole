@@ -10,11 +10,11 @@ public sealed partial class RemoteService {
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';$warnings=@()
 function Read-DcJson34([string]$file){
  if(!(Test-Path -LiteralPath $file)){return $null}
- for($attempt=0;$attempt -lt 3;$attempt++){$reader=$null;try{
+ for($attempt=0;$attempt -lt 3;$attempt++){$reader=$null;$body='';try{
  $stream=New-Object IO.FileStream($file,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete));$reader=New-Object IO.StreamReader($stream)
  if($stream.Length -gt 8388608){throw 'Снимок превышает лимит 8 МБ'};$body=$reader.ReadToEnd();if([string]::IsNullOrWhiteSpace($body)){throw 'Пустой снимок'}
  return ($body|ConvertFrom-Json -ErrorAction Stop)
- }catch{if($attempt -eq 2){throw ('DC_DATA_ERROR|'+(Split-Path $file -Leaf)+'|'+$_.Exception.Message)};Start-Sleep -Milliseconds 150}finally{if($reader){$reader.Dispose()}}}
+ }catch{if($attempt -eq 2){$originalError=$_.Exception.Message;try{$meta=Get-Item -LiteralPath $file -ErrorAction Stop;$fragment=if($body.Length -gt 1024){$body.Substring(0,512)+"`n…`n"+$body.Substring($body.Length-512)}else{$body};@{Source=$meta.Name;Length=$meta.Length;ModifiedUtc=$meta.LastWriteTimeUtc.ToString('o');ReadUtc=[DateTime]::UtcNow.ToString('o');Error=$originalError;Fragment=$fragment}|ConvertTo-Json -Depth 4|Set-Content -LiteralPath (Join-Path $p 'snapshot-read-error.json') -Encoding UTF8 -ErrorAction Stop}catch{};throw ('DC_DATA_ERROR|'+(Split-Path $file -Leaf)+'|'+$originalError)};Start-Sleep -Milliseconds 150}finally{if($reader){$reader.Dispose()}}}
 }
 $state=Read-DcJson34 (Join-Path $p 'status.json');if($state -and [string]$state.Id -ne $dcJobId34){throw 'DC_DATA_ERROR|status.json|Идентификатор снимка не совпадает с заданием'}
 function Read-DcTail34([string]$file,[int]$limit){

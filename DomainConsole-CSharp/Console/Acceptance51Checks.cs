@@ -27,10 +27,38 @@ public partial class MainWindow {
   string script="Write-Output '2026-01-01T23:59:00+03:00'; # C:\\2026-01-01T23:59:00";
   var step=Store.Clone(new CommandStep{Kind="PS",Code=script});NormalizeCommandKinds34(new[]{step});
   Assert51(step.Kind=="PowerShell"&&step.Code==script,"import/roundtrip PS normalization preserves script timestamps and paths");
+  string raw="## Вывод команды\n"+script+"\n2026-01-01T23:59:00+03:00\n";
+  Assert51(Display36.Text(raw)==raw,"raw command output timestamps are not rewritten");
+  VerifyOutputMatrix51();
+  await VerifyLogDownload51();
   await VerifyRebootFlow51();
   await VerifyHistoryInput51();
   VerifyScale51();
   File.WriteAllLines(Path.Combine(Path.GetTempPath(),"ui-acceptance51.txt"),acceptanceEvidence51);
+ }
+ void VerifyOutputMatrix51(){
+  foreach(var operation in new[]{("CMD","Команда CMD"),("PowerShell","Команда PowerShell"),("PowerShell","Перезапуск служб"),("CacheCleanup","Очистка кэша"),("Diagnostics","Диагностика"),("UpdateScan","Поиск обновлений"),("Updates","Установка обновлений")})foreach(string status in new[]{"Completed","Failed","CompletedWithErrors","InterventionRequired"}){
+   bool failed=status!="Completed";
+   var state=new RemoteState{Status=status,Started=DateTimeOffset.UtcNow.AddMinutes(-1).ToString("o"),Ended=DateTimeOffset.UtcNow.ToString("o"),Error=failed?"fixture primary cause 0x80070020":"",Results=new(){new(){Kind=operation.Item1,Name=operation.Item2,ExitCode=failed?1:0}},RebootEvidence=new(){Required=false,CollectedUtc=DateTimeOffset.UtcNow.ToString("o")}};
+   var result=PresentResult("matrix51.fixture.invalid",new(){State=state,Files=new(){new(){Name="step-1.out",Body="FIRST51\nrepeat\nrepeat\nLAST51"}}});
+   Assert51(result.Contains("FIRST51")&&result.Contains("LAST51")&&result.Contains("repeat\nrepeat"),"output preserved "+operation.Item2+"/"+status);
+   Assert51(!failed||result.Contains("0x80070020"),"primary code retained "+operation.Item2+"/"+status);
+   var formatted=ResultPresentation36.Format(result);var parts=LogViewer.Sections(formatted);
+   Assert51(parts.Count>0&&parts[0].Title=="Главное"&&parts[^1].Title=="Сведения о задании","summary/details order "+operation.Item2+"/"+status);
+   var viewer=new LogViewer{Text=formatted};viewer.SetExpanded("Вывод команды",true);viewer.SetExpanded("Технические подробности · вывод операции",true);
+   Assert51(viewer.VisibleText().Contains("LAST51"),"copy includes output "+operation.Item2+"/"+status);
+  }
+  var sourceCases=new[]{"WinRM timeout","Не удалось разрешить имя сервера","Access is denied","Отказано в доступе","#< CLIXML <Objs/>"};
+  foreach(string cause in sourceCases){var e=new ClientEvent31{Operation36="link",Kind="Error",Text=cause,Details=cause};Assert51(e.Body38=="Ошибка WinRM/аутентификации"&&!EventCopyText36(new[]{e}).Contains(cause)&&Store.Clone(e).Details==cause,"transport visible/raw separation "+cause);}
+ }
+ async Task VerifyLogDownload51(){
+  var target=new TargetRecord{Host="logs51.fixture.invalid",ConnectionSnapshot=true,ConnectionAddress="192.0.2.51"};var row=new ComputerRow(target,"job51");
+  var gate=new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);TargetRecord? received=null;string id="",opened="";int opens=0;
+  var pending=DownloadJobLogs51(row,(t,j)=>{received=t;id=j;return gate.Task;},folder=>{opens++;opened=folder;});
+  target.ConnectionAddress="192.0.2.52";gate.SetResult(Path.GetTempPath());await pending;
+  Assert51(received!=target&&received?.ConnectionAddress=="192.0.2.51"&&id=="job51"&&opens==1&&opened==Path.GetTempPath(),"log download pins endpoint/job and opens saved folder once");
+  bool failed=false;try{await DownloadJobLogs51(row,(_,_)=>Task.FromException<string>(new IOException("fixture download failure")),_=>opens++);}catch(IOException){failed=true;}
+  Assert51(failed&&opens==1,"failed download never opens folder or reports success");
  }
  async Task VerifyRebootFlow51(){
   const string host="reboot-flow51.fixture.invalid";
