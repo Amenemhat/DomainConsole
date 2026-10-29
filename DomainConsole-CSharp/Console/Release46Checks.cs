@@ -7,6 +7,7 @@ public partial class MainWindow {
   VerifyEventHistory50();
   VerifyStatus50();
   AwaitUi39(VerifyObservation51());
+  AwaitUi39(VerifyAcceptance51());
   System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(),"maintenance47.ps1"),MaintenanceRegistration47.Script,new System.Text.UTF8Encoding(true));
   var stopJob47=new RemoteJob{OutputChannel="WSUS",Steps=new(){new(){Kind="CacheCleanup"},new(){Kind="PowerShell"},new(){Kind="Updates"}}};
   var stopState47=new RemoteState{Step=1,SupportsImmediateStop=true,SupportsWuaCancel=true,StopStatus="ForceRequired",Stage="Preparation KB890830"};
