@@ -6,7 +6,10 @@ public partial class MainWindow {
   bool auto=AutoServiceEnabled,tick=timer.IsEnabled,paused=TransportBudget41.Paused;timer.Stop();
   var row=new ComputerRow(new(){Host="maintenance49.fixture.invalid",Name="Maintenance fixture"});Computers.Add(row);
   try{
-   await VerifyEndpointDiagnostics49();
+   PollingControl43.Pause();bool endpointBlocked49=false,endpointProgress49=false;
+   try{await remote.ProbeEndpoint(new(){Host="paused49.invalid"},_=>endpointProgress49=true);}catch(OperationCanceledException){endpointBlocked49=true;}
+   if(!endpointBlocked49||endpointProgress49)throw new Exception("Endpoint setup probe bypassed master OFF");
+   PollingControl43.Resume();await VerifyEndpointDiagnostics49();
    PollingControl43.Resume();AutoServiceEnabled=true;
    if(!ForcedServiceActivity49(new(){InstallerBusy=true,CollectedUtc=DateTimeOffset.UtcNow.ToString("o")}).Contains("есть признаки установки")||!ForcedServiceActivity49(null).Contains("не подтверждена"))throw new Exception("Forced-service confirmation hid known/unknown installation activity");
    var candidate=new ServiceProcessCandidate{Pid=99999,CreatedUtc=DateTimeOffset.UtcNow.ToString("o"),Path="fixture",Services=new(){"bits"}};

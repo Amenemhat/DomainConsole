@@ -27,7 +27,7 @@ public partial class MainWindow {
   address.TextChanged+=(s,a)=>{if(address.Text.Trim().Length>0)mode.IsChecked=true;Changed();};ssl.Checked+=(s,a)=>Changed();ssl.Unchecked+=(s,a)=>Changed();account.SelectionChanged+=(s,a)=>Changed();user.TextChanged+=(s,a)=>Changed();password.PasswordChanged+=(s,a)=>Changed();
   common.Click+=(s,a)=>{if(EditSharedCredentials(window)){account.SelectedIndex=0;Changed();}};forgetSpecific.Click+=(s,a)=>{try{ConnectionStore.ForgetSpecific(ConnectionStore.Normalize(address.Text),ssl.IsChecked==true);Changed();}catch(Exception ex){status.Text=ex.Message;}};
   bool verifying=false;
-  async Task<bool> VerifyConnection(){if(verifying)return false;verifying=true;var inputs=new UIElement[]{mode,address,ssl,account,common,specific};foreach(var input in inputs)input.IsEnabled=false;try{
+  async Task<bool> VerifyConnection(){if(TransportBudget41.Paused){status.Text="Опрос выключен. Включите его перед проверкой и сохранением подключения.";return false;}if(verifying)return false;verifying=true;var inputs=new UIElement[]{mode,address,ssl,account,common,specific};foreach(var input in inputs)input.IsEnabled=false;try{
    var ip=ConnectionStore.Normalize(address.Text);var target=Candidate(ip);
    if(account.SelectedIndex==3&&password.SecurePassword.Length>0){ConnectionStore.SetSpecific(ip,ssl.IsChecked==true,user.Text.Trim(),password.SecurePassword,remember.IsChecked==true);password.Clear();}
    if(!ConnectionStore.CanConnect(target))throw new Exception("Учётная запись не задана. Нажмите «Общая учётная запись…» и введите её один раз для разных клиентов.");
