@@ -37,6 +37,15 @@ public partial class MainWindow {
  }
  static List<ClientEvent31> CompactEvents34(IEnumerable<ClientEvent31> source){
   var raw=source.SelectMany(e=>e.Occurrences36.Count>0?e.Occurrences36:new List<ClientEvent31>{e}).DistinctBy(e=>e.At+"|"+e.Kind+"|"+e.Text+"|"+e.Details+"|"+e.Operation36);
-  return raw.GroupBy(e=>e.Kind+"|"+e.Operation36+"|"+e.Text+"|"+e.Details).Select(g=>{var events=g.OrderByDescending(e=>e.At).ToList();var last=events[0];return new ClientEvent31{At=last.At,FirstAt=events.Select(e=>e.FirstAt.Length>0?e.FirstAt:e.At).Min()??last.At,Kind=last.Kind,Operation36=last.Operation36,Text=last.Text,Details=last.Details,Repeats=events.Sum(e=>e.Repeats),Occurrences36=events};}).OrderByDescending(e=>e.At).ToList();
+  var groups=new List<List<ClientEvent31>>();
+  foreach(var stream in raw.GroupBy(e=>e.Operation36)){
+   List<ClientEvent31>? group=null;ClientEvent31? previous=null;
+   foreach(var e in stream.OrderBy(e=>e.At)){
+    bool gap=previous!=null&&DateTimeOffset.TryParse(previous.At,out var before)&&DateTimeOffset.TryParse(e.At,out var after)&&after-before>TimeSpan.FromMinutes(30);
+    if(previous==null||gap||previous.Kind!=e.Kind||previous.Text!=e.Text||previous.Details!=e.Details){group=new();groups.Add(group);}
+    group!.Add(e);previous=e;
+   }
+  }
+  return groups.Select(events=>{events=events.OrderByDescending(e=>e.At).ToList();var last=events[0];return new ClientEvent31{At=last.At,FirstAt=events.Select(e=>e.FirstAt.Length>0?e.FirstAt:e.At).Min()??last.At,Kind=last.Kind,Operation36=last.Operation36,Text=last.Text,Details=last.Details,Repeats=events.Sum(e=>e.Repeats),Occurrences36=events};}).OrderByDescending(e=>e.At).ToList();
  }
 }

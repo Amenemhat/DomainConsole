@@ -74,11 +74,19 @@ try {
 
 if($primary){if($restoreErrors.Count){'Дополнительный сбой восстановления служб: '+($restoreErrors -join '; ')};throw $primary}
 if($restoreErrors.Count){throw ('Не восстановлены службы: '+($restoreErrors -join '; '))}
+$cleanupStarted50=$false
 if(@($detached|Where-Object {!$_.Backup}).Count){
- try{Start-ScheduledTask -TaskName 'DomainConsoleCSharp-Maintenance' -ErrorAction Stop;'Фоновая очистка изолированных кэшей запущена.'}catch{'WARNING: Изоляция кэша выполнена, но запуск фоновой очистки не подтверждён: '+$_.Exception.Message+'; используйте «Удалить старые кэши».'}
+ try{Start-ScheduledTask -TaskName 'DomainConsoleCSharp-Maintenance' -ErrorAction Stop;$cleanupStarted50=$true;'Фоновая очистка изолированных кэшей запущена.'}catch{'WARNING: Изоляция кэша выполнена, но запуск фоновой очистки не подтверждён: '+$_.Exception.Message+'; используйте «Удалить старые кэши».'}
 }
 # Logical reset is complete. Removing detached files is a separate, bounded cleanup task.
-if($detached.Count){'Кэш сброшен; службы запущены. Резервные копии сохранены; физическое удаление остальных старых файлов выполняется отдельно.'}else{'Каталоги для изоляции отсутствуют; службы запущены. Данные кэша не переносились.'}
+if($detached.Count){
+ if($backup){'Кэш сброшен; службы запущены. Резервная копия сохранена.'}
+ else{'Кэш сброшен; службы запущены. Старый кэш передан на отдельное удаление; резервная копия не создавалась.'}
+}else{'Каталоги для изоляции отсутствуют; службы запущены. Данные кэша не переносились.'}
+if($dcCacheResult50){
+ $result50=@{Isolated=$detached.Count;Backups=@($detached|Where-Object {$_.Backup}).Count;PendingDelete=@($detached|Where-Object {!$_.Backup}).Count;CleanupStarted=$cleanupStarted50}
+ [IO.File]::WriteAllText($dcCacheResult50,($result50|ConvertTo-Json -Compress),[Text.UTF8Encoding]::new($false))
+}
 
 """;
 }
