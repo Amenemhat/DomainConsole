@@ -111,6 +111,18 @@ public partial class MainWindow {
   var criteria51=Criteria45.Build(new("Reboot","",""),old51,clean with{Required=true},installed51,false,scan,1,false,"",boot);
   Check(criteria51[0].Tone=="Success"&&criteria51[0].Glyph=="Success","51 installation success stays green independently of old report");
   Check(CollectorNotice43.Parent==IdentityHeader34,"51 collector details belong to header");
+  var oldTheme51=Theme.Current;var oldTab51=MainTabs.SelectedItem;var oldVisibility51=CollectorNotice43.Visibility;var oldText51=CollectorNoticeText43.Text;
+  var disclosure51=(System.Windows.Controls.Expander)CollectorNotice43.Child;bool oldExpanded51=disclosure51.IsExpanded;double oldWidth51=Width,oldHeight51=Height;
+  try{
+   foreach(int theme51 in new[]{0,1,2}){Theme.Apply(theme51,false);foreach(var size51 in new[]{(1480d,940d),(1000d,640d)})foreach(var mode51 in new[]{WsusTab,CommandsTab,HistoryTab,SettingsTab}){
+    Width=size51.Item1;Height=size51.Item2;MainTabs.SelectedItem=mode51;ShowCurrent();
+    CollectorNotice43.Visibility=System.Windows.Visibility.Visible;disclosure51.IsExpanded=true;
+    CollectorNoticeText43.Text="Опрос не завершён: ошибка WinRM. Повторная проверка доступности запланирована. Клиентское задание не остановлено.";
+    UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);UpdateLayout();
+    Check(CollectorNotice43.TranslatePoint(new System.Windows.Point(0,CollectorNotice43.ActualHeight),CompactHeader32).Y<=CompactHeader32.ActualHeight+1,"51 collector contained in header "+theme51+"/"+mode51.Name+"/"+size51.Item1);
+    CaptureContent38("release51-collector-"+theme51+"-"+mode51.Name+"-"+(size51.Item1>1000?"wide":"compact"),size51.Item1,size51.Item2);
+   }}
+  }finally{Theme.Apply(oldTheme51,false);Width=oldWidth51;Height=oldHeight51;MainTabs.SelectedItem=oldTab51;CollectorNotice43.Visibility=oldVisibility51;CollectorNoticeText43.Text=oldText51;disclosure51.IsExpanded=oldExpanded51;ShowCurrent();}
   File.WriteAllLines(Path.Combine(Path.GetTempPath(),"ui-status50-matrix.txt"),observations);
  }
 }

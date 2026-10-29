@@ -1,6 +1,32 @@
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
+ async Task VerifyObservation51(){
+  const string host="observation51.fixture.invalid";
+  bool paused=TransportBudget41.Paused;var target=ConnectionStore.Capture(new TargetRecord{Host=host});target.Status="Running";
+  var job=new RemoteJob{Created=DateTimeOffset.UtcNow.AddDays(-3).ToString("o"),Targets=new(){target}};var row=new ComputerRow(target,job.Id);History.Insert(0,job);
+  int calls=0;Task<PollResult> Read(TargetRecord _,string id,bool selected){calls++;throw new RemoteDataException("fixture: outcome is unknown");}
+  try{
+   PollingControl43.Resume();clientConnections[host]=new(){Lost38=true,Error="WinRM fixture timeout",LastAttempt=DateTimeOffset.UtcNow,LastSuccess=DateTimeOffset.UtcNow.AddDays(-3)};
+   for(int i=0;i<10;i++)await Poll(row,false,Read);
+   if(calls!=0||!ObservationExpired51(row)||target.Status!="Running")throw new Exception("51 lost job generated polling calls or fabricated completion");
+   clientConnections[host]=new(){LastSuccess=DateTimeOffset.UtcNow};stoppedObservations51.Add(ObservationKey51(row));
+   for(int i=0;i<10;i++)await Poll(row,false,Read);
+   if(calls!=0)throw new Exception("51 manually stopped observation was automatically resumed");
+   PollingControl43.Pause();await Poll(row,false,Read);if(calls!=0)throw new Exception("51 master OFF allowed a network read");PollingControl43.Resume();
+   await Poll(row,true,Read);if(calls!=1||target.Status!="Running"||History.Count(j=>j.Id==job.Id)!=1||queue.Any(q=>q.Job.Id==job.Id))throw new Exception("51 explicit result check duplicated/replayed the operation");
+   var watch51=new RebootWatch{JobId=job.Id,Confirmed=true,ExpectedUtc=DateTimeOffset.UtcNow.AddMinutes(-1)};rebootWatches[host]=watch51;int resets51=0;
+   Task<string> Reset51(TargetRecord _){resets51++;return Task.FromResult("cooldown");}
+   PollingControl43.Pause();await TryResetRebootPoll51(host,watch51,target,Reset51);if(resets51!=0||watch51.PollResetAttempted51)throw new Exception("51 reset bypassed master OFF");PollingControl43.Resume();
+   await TryResetRebootPoll51(host,watch51,target,Reset51);watch51=Store.Clone(watch51);rebootWatches[host]=watch51;await TryResetRebootPoll51(host,watch51,target,Reset51);
+   if(resets51!=1||watch51.Done||!watch51.LastError.Contains("пока не получен")||watch51.Next<=DateTimeOffset.UtcNow)throw new Exception("51 reset repeated after restart or claimed a fresh result");
+
+  }finally{
+   rebootWatches.Remove(host);Store.Write("reboot-watches.json",rebootWatches);stoppedObservations51.Remove(ObservationKey51(row));History.Remove(job);clientConnections.Remove(host);liveConnections.Remove(host);polling.Remove(job.Id+host);readFailures34.Remove(host+"|результат задания");
+   if(eventWrites39.TryGetValue(host,out var writes))await writes;
+   if(paused)PollingControl43.Pause();else PollingControl43.Resume();
+  }
+ }
  async Task VerifyObsoleteJobObservation47(){
   const string host="job-observation47.fixture.invalid";
   ConnectionStore.Profiles.TryGetValue(host,out var saved);bool paused=TransportBudget41.Paused;
