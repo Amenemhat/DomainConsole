@@ -13,8 +13,9 @@ public partial class MainWindow {
   return blocks.Count>0?"## Причина сбоя и следующее действие\n"+string.Join("\n\n",blocks):"";
  }
  public static string CompactJournal31(string text){
-  if(!text.Contains("## "))return text;var sections=LogViewer.Sections(text);var output=new List<string>();var signatures=new HashSet<string>(StringComparer.Ordinal);var explained=new HashSet<string>();
-  foreach(var section in sections){var title=section.Title;var body=section.Body;
+  if(!text.Contains("## "))return text;var sections=LogViewer.Sections(text);var output=new List<string>();var signatures=new HashSet<string>(StringComparer.Ordinal);var explained=new HashSet<string>();var sectionsSeen51=new HashSet<string>(StringComparer.Ordinal);
+  foreach(var section in sections){var title=section.Title;var body=section.Body;signatures.Clear();
+   if(title!="Вывод команды"&&!sectionsSeen51.Add(title+"\n"+body))continue;
    if(title.StartsWith("Расшифровка кодов"))continue;
    if(title.StartsWith("Контроль выполнения")&&sections.Any(s=>s.Title.StartsWith("Причина сбоя")))continue;
    if(title.StartsWith("Диагностика статуса")&&body.Contains("прежнее ограничение снято"))continue;

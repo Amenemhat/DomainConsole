@@ -71,7 +71,7 @@ public partial class MainWindow {
  async Task CheckRebootNow40(ComputerRow row){if(TransportBudget41.Paused){Notify("Опрос выключен. Включите его рядом с настройками.");return;}
   if(!rebootChecks40.Add(row.Host))return;
   try{RefreshRebootCard40(row);var result=await ReadClientStatus(row,force:true);if(result==null)rebootProbeFailures40.Add(row.Host);RefreshOutcomes();if(IsCurrent(row))ShowCurrent();}
-  finally{rebootChecks40.Remove(row.Host);if(IsCurrent(row))RefreshRebootCard40(row);}
+  finally{rebootChecks40.Remove(row.Host);if(IsCurrent(row)){rendered45="";RefreshRebootCard40(row);ShowCurrent();}}
  }
  async void RebootCheck40_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{if(ComputerGrid.SelectedItem is ComputerRow row)await CheckRebootNow40(row);});
  FrameworkElement RebootDialogEvidence40(ComputerRow row){
@@ -89,7 +89,7 @@ public partial class MainWindow {
   RefreshRebootCard40(row);RebootVerify44.Visibility=Visibility.Collapsed;ReadinessTree45.Visibility=Visibility.Collapsed;if(MainTabs.SelectedItem!=WsusTab)return;
   var status=AssessClient41(row);
   RenderCriteria45(row,status,active);
-  if(active)return;
+  if(active&&!LostObservation51(row.Host)&&(stoppedObservations51.Count==0||!ObservationStopped51(OperationRow38(row))))return;
   CurrentStage.Text=status.Title;CurrentStage.Foreground=Theme.Tone(status.Tone);OperationGlyph38.Kind=status.Glyph;OperationGlyph38.Tint=Theme.Tone(status.Tone);OperationDetail38.Text=status.Details;OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=Visibility.Collapsed;
 
  }

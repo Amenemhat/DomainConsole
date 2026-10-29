@@ -1,6 +1,36 @@
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
+ async Task VerifyObservation51(){
+  const string host="observation51.fixture.invalid";
+  bool paused=TransportBudget41.Paused;var target=ConnectionStore.Capture(new TargetRecord{Host=host});target.Status="Running";
+  var job=new RemoteJob{Created=DateTimeOffset.UtcNow.AddDays(-3).ToString("o"),Targets=new(){target}};var row=new ComputerRow(target,job.Id);History.Insert(0,job);
+  int calls=0;Task<PollResult> Read(TargetRecord _,string id,bool selected){calls++;throw new RemoteDataException("fixture: outcome is unknown");}
+  try{
+   PollingControl43.Resume();clientConnections[host]=new(){Lost38=true,Error="WinRM fixture timeout",LastAttempt=DateTimeOffset.UtcNow,LastSuccess=DateTimeOffset.UtcNow.AddDays(-3)};
+   for(int i=0;i<10;i++)await Poll(row,false,Read);
+   if(calls!=0||!ObservationExpired51(row)||target.Status!="Running")throw new Exception("51 lost job generated polling calls or fabricated completion");
+   clientConnections[host]=new(){LastSuccess=DateTimeOffset.UtcNow};stoppedObservations51.Add(ObservationKey51(row));
+   for(int i=0;i<10;i++)await Poll(row,false,Read);
+   if(calls!=0)throw new Exception("51 manually stopped observation was automatically resumed");
+   PollingControl43.Pause();await Poll(row,false,Read);if(calls!=0)throw new Exception("51 master OFF allowed a network read");PollingControl43.Resume();
+   await Poll(row,true,Read);if(calls!=1||target.Status!="Running"||History.Count(j=>j.Id==job.Id)!=1||queue.Any(q=>q.Job.Id==job.Id))throw new Exception("51 explicit result check duplicated/replayed the operation");
+   var watch51=new RebootWatch{JobId=job.Id,Confirmed=true,ExpectedUtc=DateTimeOffset.UtcNow.AddMinutes(-1)};rebootWatches[host]=watch51;int resets51=0;
+   Task<string> Reset51(TargetRecord _){resets51++;return Task.FromResult("cooldown");}
+   PollingControl43.Pause();await TryResetRebootPoll51(host,watch51,target,Reset51);if(resets51!=0||watch51.PollResetAttempted51)throw new Exception("51 reset bypassed master OFF");PollingControl43.Resume();
+   await TryResetRebootPoll51(host,watch51,target,Reset51);watch51=Store.Clone(watch51);rebootWatches[host]=watch51;await TryResetRebootPoll51(host,watch51,target,Reset51);
+   if(resets51!=1||watch51.Done||!watch51.LastError.Contains("пока не получен")||watch51.Next<=DateTimeOffset.UtcNow)throw new Exception("51 reset repeated after restart or claimed a fresh result");
+   bool published51=false,rejected51=false;
+   try{await CompleteCollectorRepair47(target,PollingControl43.Token,Task.FromResult("remote repaired"),()=>throw new System.IO.IOException("fresh result not applied"),_=>published51=true);}catch(System.IO.IOException){rejected51=true;}
+   if(published51||!rejected51)throw new Exception("51 collector success published without applied snapshot");
+
+
+  }finally{
+   rebootWatches.Remove(host);Store.Write("reboot-watches.json",rebootWatches);stoppedObservations51.Remove(ObservationKey51(row));History.Remove(job);clientConnections.Remove(host);liveConnections.Remove(host);polling.Remove(job.Id+host);readFailures34.Remove(host+"|результат задания");
+   if(eventWrites39.TryGetValue(host,out var writes))await writes;
+   if(paused)PollingControl43.Pause();else PollingControl43.Resume();
+  }
+ }
  async Task VerifyObsoleteJobObservation47(){
   const string host="job-observation47.fixture.invalid";
   ConnectionStore.Profiles.TryGetValue(host,out var saved);bool paused=TransportBudget41.Paused;
@@ -54,7 +84,7 @@ public partial class MainWindow {
   bool enabled=AutomaticReportRecoveryEnabled;var savedRecoveries=reportRecoveries.ToList();reportRecoveries.Clear();
   try{
    WsusHost.Text="report-source47.fixture.invalid";WsusPort.Text="8530";Store.Write("automatic-report-recovery-enabled.json",true);
-   foreach(string phase in new[]{"queue","events","history","recovery"})foreach(bool fail in new[]{false,true})foreach(string change in new[]{"client","ssl","generation","report"}){
+   foreach(string phase in new[]{"queue","events","history","recovery"})foreach(bool fail in new[]{false,true})foreach(string change in new[]{"client","ssl","generation","report","offline"}){
     PollingControl43.Resume();WsusSsl.IsChecked=false;ConnectionStore.Profiles[host]=new(){AuthMode="Current",Address="192.0.2.71",Identity="fixture"};
     var target=ConnectionStore.Capture(new(){Host=host});var row=new ComputerRow(target);Computers.Add(row);
     var report=new WsusReport{LastReportedUtc=DateTimeOffset.UtcNow.AddDays(-3).ToString("o"),FailedCount=1,FailedUpdates=new(){new(){Id="fixture-update",Title="Fixture update"}}};
@@ -74,17 +104,18 @@ public partial class MainWindow {
      if(change=="client")ConnectionStore.Profiles[host].Address="192.0.2.72";
      else if(change=="ssl")WsusSsl.IsChecked=true;
      else if(change=="generation"){PollingControl43.Pause();PollingControl43.Resume();}
+     else if(change=="offline")clientConnections[host]=new(){Lost38=true,Error="fixture lost connection"};
      else {reportCache[host]=new(){Report=new(),Server=OverviewServer};if(phase=="recovery")reportRecoveries[host].Done=true;}
      gate.SetResult(true);await pending;
      if(nextCalls!=0||History.Count!=beforeJobs||queue.Count!=beforeQueue||serverReports[host]!="retained report"||report.FailureContext.Length>0||report.FailedUpdates[0].Detail.Length>0||wsusFailureDetails.ContainsKey(host)||deliveryReports.ContainsKey(trigger.Id+host)||deliveryReports.ContainsKey(host))throw new Exception("Obsolete report details changed state or launched another action: "+phase+"/"+change);
      if(phase=="queue"&&(reportRecoveries.ContainsKey(host)||automaticReportChecks.ContainsKey(host)))throw new Exception("Obsolete queue probe scheduled recovery or delayed fresh retry");
      // A fresh request under the new generation must still work (positive control).
      if(phase=="queue"){
-      PollingControl43.Resume();WsusSsl.IsChecked=false;ConnectionStore.Profiles[host].Address="192.0.2.71";reportCache[host]=new(){Report=report,Server=OverviewServer};
+      clientConnections.Remove(host);PollingControl43.Resume();WsusSsl.IsChecked=false;ConnectionStore.Profiles[host].Address="192.0.2.71";reportCache[host]=new(){Report=report,Server=OverviewServer};
       await CheckOldReport(row,report,_=>Task.FromResult(client));
       if(!reportRecoveries.ContainsKey(host)||!deliveryReports.ContainsKey(trigger.Id+host))throw new Exception("Fresh queue diagnosis discarded after obsolete response");
      }
-    }finally{History.Remove(trigger);Computers.Remove(row);reportRecoveries.Remove(host);reportCache.Remove(host);serverReports.Remove(host);automaticReportChecks.Remove(host);failureReading.Remove(host);deliveryReports.Remove(trigger.Id+host);deliveryReports.Remove(host);}
+    }finally{clientConnections.Remove(host);History.Remove(trigger);Computers.Remove(row);reportRecoveries.Remove(host);reportCache.Remove(host);serverReports.Remove(host);automaticReportChecks.Remove(host);failureReading.Remove(host);deliveryReports.Remove(trigger.Id+host);deliveryReports.Remove(host);}
    }
   }finally{WsusHost.Text=originalHost;WsusPort.Text=originalPort;WsusSsl.IsChecked=originalSsl;Store.Write("automatic-report-recovery-enabled.json",enabled);reportRecoveries.Clear();foreach(var item in savedRecoveries)reportRecoveries[item.Key]=item.Value;SaveReportRecoveries();if(saved==null)ConnectionStore.Profiles.Remove(host);else ConnectionStore.Profiles[host]=saved;if(paused)PollingControl43.Pause();else PollingControl43.Resume();}
  }

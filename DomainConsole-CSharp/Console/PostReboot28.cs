@@ -12,10 +12,47 @@ public partial class MainWindow {
   if(plan.Cancelled){watch.Done=true;watch.Phase="Перезагрузка отменена до отправки команды";watch.LastError="";Store.Write("reboot-watches.json",rebootWatches);return;}
   if(plan.DispatchExitCode is not null and not 0||plan.DispatchError.Length>0){watch.Done=true;watch.Phase="Команда перезагрузки не принята";watch.LastError=plan.DispatchError.Length>0?plan.DispatchError:"shutdown: код "+plan.DispatchExitCode;Store.Write("reboot-watches.json",rebootWatches);return;}
   if(watch.Confirmed){Store.Write("reboot-watches.json",rebootWatches);return;}if(!DateTimeOffset.TryParse(plan.RequestedUtc,out _)||!DateTimeOffset.TryParse(plan.DueUtc,out var due)||!DateTimeOffset.TryParse(data.ClientUtc,out var now))return;
-  watch.RequestedUtc=plan.RequestedUtc;watch.BeforeBootUtc=plan.BeforeBootUtc;watch.ExpectedUtc=DateTimeOffset.UtcNow.AddSeconds((due-now).TotalSeconds);watch.Confirmed=true;watch.Scan=job.ScanAfterReboot;watch.Phase="Ожидается назначенная перезагрузка";watch.Next=watch.ExpectedUtc.AddSeconds(Math.Max(15,postReboot.ProbeSeconds));watch.Until=watch.ExpectedUtc.AddDays(2);Store.Write("reboot-watches.json",rebootWatches);
+  watch.RequestedUtc=plan.RequestedUtc;watch.BeforeBootUtc=plan.BeforeBootUtc;watch.ExpectedUtc=DateTimeOffset.UtcNow.AddSeconds((due-now).TotalSeconds);watch.Confirmed=true;watch.Scan=job.ScanAfterReboot;watch.ExplicitScan51=job.ExplicitRebootScan51;watch.Phase="Ожидается назначенная перезагрузка";watch.Next=watch.ExpectedUtc.AddSeconds(Math.Max(15,postReboot.ProbeSeconds));watch.Until=watch.ExpectedUtc.AddDays(2);Store.Write("reboot-watches.json",rebootWatches);
+ }
+ async Task TryResetRebootPoll51(string host,RebootWatch watch,TargetRecord target,Func<TargetRecord,Task<string>>? reset=null){
+  if(TransportBudget41.Paused||watch.Done||!watch.Confirmed||watch.PollResetAttempted51||watch.ExpectedUtc>DateTimeOffset.UtcNow||!repairingCollectors47.Add(host))return;
+  var generation=PollingControl43.Token;
+  bool Current51()=>!closing&&!TransportBudget41.Paused&&!generation.IsCancellationRequested&&!watch.Done&&CurrentEndpoint(target)&&rebootWatches.TryGetValue(host,out var current)&&ReferenceEquals(current,watch);
+  try{
+   if(!Current51())return;
+   watch.PollResetAttempted51=true;Store.Write("reboot-watches.json",rebootWatches);
+   Event31(host,"reboot-poll51","reset","Восстановление опроса после перезагрузки","Info","Одна попытка штатного сброса собственного сборщика; установки не останавливаются.",scope:watch.JobId);
+   await (reset??remote.ResetPolling44)(target);
+   if(!Current51())return;
+   watch.Phase="Сборщик сброшен · ожидается свежая проверка";watch.LastError="Свежий результат пока не получен";watch.Next=DateTimeOffset.UtcNow.AddMinutes(2);
+  }catch(Exception ex){if(Current51()){watch.LastError="Автоматический сброс опроса не подтверждён: "+ShortConnectionError(ex.Message);watch.Phase="Требуется восстановление опроса";Event31(host,"reboot-poll51","failed",watch.Phase,"Warning",watch.LastError,scope:watch.JobId);}}
+  finally{repairingCollectors47.Remove(host);Store.Write("reboot-watches.json",rebootWatches);}
+ }
+ static string RebootHeadline51(RebootWatch w,DateTimeOffset now){
+  if(!w.Confirmed)return "Назначение перезагрузки ещё не подтверждено клиентом";
+  if(w.ExpectedUtc>now){var left=w.ExpectedUtc-now;return "Перезагрузка назначена · через "+(left.TotalHours>=1?((int)left.TotalHours).ToString("00")+":":"")+left.Minutes.ToString("00")+":"+left.Seconds.ToString("00");}
+  if(w.ReadyAfter!=default)return "Новая загрузка подтверждена · проверка состояния";
+  return w.Overdue?w.Phase:"Ожидается ответ после перезагрузки";
+ }
+ // Fresh snapshots from either manual recovery or the normal poll advance the
+ // same checkpoint. No new remote work is launched from snapshot presentation.
+ void ObserveRebootCheckpoint51(string host,RebootSnapshot snapshot){
+  var now=DateTimeOffset.UtcNow;
+  if(!DateTimeOffset.TryParse(snapshot.BootUtc,out var boot)||!DateTimeOffset.TryParse(snapshot.CollectedUtc,out var at)||at<boot||at>now.AddMinutes(1)||now-at>TimeSpan.FromMinutes(5))return;
+  bool returned=false;
+  if(rebootWatches.TryGetValue(host,out var watch)&&!watch.Done&&watch.Confirmed&&RebootReturned(watch,snapshot)){
+   returned=true;ObserveWatchBoot(watch,snapshot,now);
+   if(watch.ReadyAfter==default)watch.ReadyAfter=now.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));
+   watch.Phase="Новая загрузка подтверждена · проверка состояния";watch.Next=watch.ReadyAfter>now?watch.ReadyAfter:now;
+   Store.Write("reboot-watches.json",rebootWatches);
+  }
+  if(maintenancePlans.TryGetValue(host,out var p)&&!p.Done&&p.Phase=="Ожидается перезагрузка"&&(RebootSnapshotPolicy.NewBoot(new(){BootUtc=p.BootUtc},snapshot)||returned)){
+   p.BootUtc=snapshot.BootUtc;p.SearchAfterBoot49=true;p.Phase="После перезагрузки: ожидание готовности";p.Detail="";
+   p.ReadyAfter=now.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));p.Next=p.ReadyAfter;SaveMaintenance();
+  }
  }
  string PostRebootText(string host){if(!rebootWatches.TryGetValue(host,out var w))return "";if(w.Done)return "";if(!w.Confirmed)return "Назначение перезагрузки ещё не подтверждено клиентом";
-  var text=w.ExpectedUtc>DateTimeOffset.UtcNow?"Перезагрузка назначена на "+w.ExpectedUtc.ToLocalTime().ToString("HH:mm:ss")+" · через "+Age(w.ExpectedUtc-DateTimeOffset.UtcNow):w.Phase;
+  var text=RebootHeadline51(w,DateTimeOffset.UtcNow);
   text+="\nКоманда shutdown: "+(w.DispatchExitCode==0?"принята (код 0); завершение перезагрузки проверяется отдельно":w.DispatchUtc.Length>0?"вызвана; результат отправки не получен":"результат отправки ещё не получен");
   if(w.LastResponseUtc.Length>0)text+="\nПоследний ответ клиента: "+LocalDateConverter.Format(w.LastResponseUtc)+"; загрузка Windows: "+LocalDateConverter.Format(w.LastBootUtc);
   if(DateTimeOffset.TryParse(w.LastProbeUtc,out var attempted)&&(!DateTimeOffset.TryParse(w.LastResponseUtc,out var responded)||attempted>responded))text+="\nПоследняя попытка опроса: "+LocalDateConverter.Format(w.LastProbeUtc);
@@ -29,7 +66,7 @@ public partial class MainWindow {
   var live=await (activityProbe49??remote.LiveUpdates)(target);if(!watch.Scan||!rebootWatches.TryGetValue(host,out var currentWatch49)||!ReferenceEquals(watch,currentWatch49)||closing||TransportBudget41.Paused||generation49.IsCancellationRequested||watch.Done||!CurrentEndpoint(target)||!CurrentIdentity(target)||auto49!=AutoServiceEnabled)return;if(live.InstallerBusy||live.InstallationEvidence.Length>0||live.Limitation.Length>0){watch.LastError="Клиент ещё занят либо его готовность не подтверждена; поиск отложен";return;}
   EnsureFollowupJob(host,watch,target);
  }
- void EnsureFollowupJob(string host,RebootWatch watch,TargetRecord target){if(maintenancePlans.TryGetValue(host,out var maintenance)&&!maintenance.Done){watch.Done=true;watch.Phase="Перезагрузка подтверждена; продолжает сценарий обслуживания";watch.LastError="";return;}if(watch.FollowupId.Length==0){watch.FollowupId=Guid.NewGuid().ToString();Store.Write("reboot-watches.json",rebootWatches);}var job=History.FirstOrDefault(j=>j.Id==watch.FollowupId);if(job==null){var t=Store.Clone(target);t.Status="Queued";t.State=null;t.Output="";job=new(){SearchTimeoutMinutes37=Store.Read("search-minutes37.json",20),AutomaticChild31=true,Id=watch.FollowupId,Name="После перезагрузки: проверка обновлений",OutputChannel="WSUS",Targets=new(){t},Steps=new(){new(){Kind="UpdateScan",Name="WSUS · поиск после перезагрузки"}}};History.Insert(0,job);if(AutoServiceEnabled)BeginMaintenance(job);Save();}foreach(var t in job.Targets.Where(t=>t.Status=="Queued"&&t.State==null))if(!queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host==t.Host))queue.Enqueue((job,t));watch.Done=true;watch.Phase="После перезагрузки создано задание поиска";watch.LastError="";}
+ void EnsureFollowupJob(string host,RebootWatch watch,TargetRecord target){if(maintenancePlans.TryGetValue(host,out var maintenance)&&!maintenance.Done){watch.Done=true;watch.Phase="Перезагрузка подтверждена; продолжает сценарий обслуживания";watch.LastError="";return;}if(watch.FollowupId.Length==0){watch.FollowupId=Guid.NewGuid().ToString();Store.Write("reboot-watches.json",rebootWatches);}var job=History.FirstOrDefault(j=>j.Id==watch.FollowupId);if(job==null){var t=Store.Clone(target);t.Status="Queued";t.State=null;t.Output="";job=new(){SearchTimeoutMinutes37=Store.Read("search-minutes37.json",20),AutomaticChild31=!watch.ExplicitScan51,Id=watch.FollowupId,Name="После перезагрузки: проверка обновлений",OutputChannel="WSUS",Targets=new(){t},Steps=new(){new(){Kind="UpdateScan",Name="WSUS · поиск после перезагрузки"}}};History.Insert(0,job);if(AutoServiceEnabled)BeginMaintenance(job);Save();}foreach(var t in job.Targets.Where(t=>t.Status=="Queued"&&t.State==null))if(!queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host==t.Host))queue.Enqueue((job,t));watch.Done=true;watch.Phase="После перезагрузки создано задание поиска";watch.LastError="";}
  void RestoreFollowupQueues(){foreach(var entry in rebootWatches.Where(x=>x.Value.FollowupId.Length>0)){var job=History.FirstOrDefault(j=>j.Id==entry.Value.FollowupId);if(job!=null)foreach(var t in job.Targets.Where(t=>t.Status=="Queued"&&t.State==null))if(!queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host==t.Host))queue.Enqueue((job,t));}}
 
  async Task MonitorReboots(){if(TransportBudget41.Paused||checkingReboots||closing)return;checkingReboots=true;var generation49=PollingControl43.Token;try{foreach(var entry in rebootWatches.Where(x=>!x.Value.Done&&x.Value.Next<=DateTimeOffset.UtcNow).Take(2).ToList()){
@@ -39,7 +76,7 @@ public partial class MainWindow {
   if(!watch.Confirmed&&target.State!=null&&target.State.SchemaVersion<28&&DateTimeOffset.TryParse(target.State.Started,out var legacyStart)){watch.Confirmed=true;watch.RequestedUtc=legacyStart.ToString("o");watch.Scan=false;watch.Phase="Прежнее наблюдение: только проверка возврата";}
   if(!watch.Confirmed&&target.Status=="Failed"){watch.Done=true;watch.Phase="Назначение перезагрузки не подтверждено";watch.LastError=target.State?.Error??target.Status;continue;}
   try{if(!CurrentIdentity(target)){watch.Done=true;watch.Phase="Наблюдение остановлено: идентичность клиента изменена";continue;}
-   if(!RemoteService.SnapshotDue42(ConnectionStore.Capture(target)))continue;
+   if(LostObservation51(host)||!RemoteService.SnapshotDue42(ConnectionStore.Capture(target)))continue;
    var started38=DateTimeOffset.UtcNow;watch.LastProbeUtc=DateTimeOffset.UtcNow.ToString("o");var snapshot=await remote.ReadRebootState(captured49!,rebootJobId:job!.Id);if(!Current49())continue;ConnectionSucceeded(host,DateTimeOffset.TryParse(watch.LastProbeUtc,out var probe38)?probe38:default);
    if(snapshot.RebootPlan!=null)RegisterRebootPlan(job,new ComputerRow(target,job.Id),new(){RebootPlan=snapshot.RebootPlan,ClientUtc=snapshot.ClientUtc,State=target.State});
    if(watch.Done)continue;ApplyClientSnapshot(host,snapshot);if(!watch.Confirmed){watch.Phase="Клиент отвечает; план перезагрузки ещё не получен";watch.LastResponseUtc=DateTimeOffset.UtcNow.ToString("o");watch.LastBootUtc=snapshot.BootUtc;continue;}ObserveWatchBoot(watch,snapshot,DateTimeOffset.UtcNow);
@@ -48,7 +85,7 @@ public partial class MainWindow {
    if(DateTimeOffset.UtcNow<watch.ReadyAfter)continue;
    try{var settings=ReadWsus();var reply=(await remote.WsusOverview(settings,new(){host},CancellationToken.None)).SingleOrDefault();if(!Current49())continue;if(reply?.Found==true&&reply.Report!=null&&reply.Error.Length==0){var started=reportCache.GetValueOrDefault(host)?.Started??"";SaveReportCache(host,reply.Report,settings.Host+":"+settings.Port,started,false);serverReports[host]=reply.Report.Format(settings.Host+":"+settings.Port,started);}}catch(Exception ex){if(!Current49())continue;overviewErrors[host]=ex.Message;}
    watch.Phase="Возврат подтверждён; проверка готовности";if(Current49())await ContinueAfterReboot(host,watch,captured49!);
-  }catch(PollWait42 wait42){if(!Current49())continue;RecordPollWait42(host,"флаги и аптайм",wait42);watch.Phase="Ожидается восстановление опроса";watch.LastError=wait42.Message;}catch(Exception ex) when(ex is RebootProbeException || ex is RemoteDataException){if(!Current49())continue;ConnectionSucceeded(host,DateTimeOffset.TryParse(watch.LastProbeUtc,out var probe38)?probe38:default);RecordStatusDiagnostic(host,new(){CollectedUtc=DateTime.UtcNow.ToString("o"),Error=ex.Message});watch.Phase="Клиент отвечает; диагностический снимок не получен";watch.LastError="Повторный опрос запланирован; подробности в журнале";}catch(Exception ex){if(!Current49())continue;ConnectionFailed(host,ex.Message,DateTimeOffset.TryParse(watch.LastProbeUtc,out var probe38)?probe38:default);watch.Phase=watch.DispatchExitCode==0?"Команда перезагрузки принята; ожидается восстановление связи":"Связь пока недоступна; отправка команды перезагрузки не подтверждена";watch.LastError="При подключении через VPN может потребоваться подключить его на клиенте.";}
+  }catch(PollWait42 wait42){if(!Current49())continue;RecordPollWait42(host,"флаги и аптайм",wait42);watch.Phase="Ожидается восстановление опроса";watch.LastError=wait42.Message;if(wait42.Kind=="Blocked")await TryResetRebootPoll51(host,watch,captured49!);}catch(Exception ex) when(ex is RebootProbeException || ex is RemoteDataException){if(!Current49())continue;ConnectionSucceeded(host,DateTimeOffset.TryParse(watch.LastProbeUtc,out var probe38)?probe38:default);RecordStatusDiagnostic(host,new(){CollectedUtc=DateTime.UtcNow.ToString("o"),Error=ex.Message});watch.Phase="Клиент отвечает; диагностический снимок не получен";watch.LastError="Повторный опрос запланирован; подробности в журнале";}catch(Exception ex){if(!Current49())continue;ConnectionFailed(host,ex.Message,DateTimeOffset.TryParse(watch.LastProbeUtc,out var probe38)?probe38:default);watch.Phase=watch.DispatchExitCode==0?"Команда перезагрузки принята; ожидается восстановление связи":"Связь пока недоступна; отправка команды перезагрузки не подтверждена";watch.LastError="При подключении через VPN может потребоваться подключить его на клиенте.";}
   finally{Store.Write("reboot-watches.json",rebootWatches);RefreshOutcomes();if(CurrentHost(host))ShowCurrent();}
  }}finally{Store.Write("reboot-watches.json",rebootWatches);checkingReboots=false;await SendQueue();}}
  void SavePostReboot_Click(object sender,RoutedEventArgs e)=>Guard(()=>{if(!int.TryParse(RebootProbeSeconds.Text,out var probe)||probe<30||probe>600||!int.TryParse(RebootSettleSeconds.Text,out var settle)||settle<0||settle>1800)throw new Exception("Период: 30–600 секунд; готовность: 0–1800 секунд.");postReboot=new(){ProbeSeconds=probe,SettleSeconds=settle,Scan=PostRebootScan.IsChecked==true};Store.Write("post-reboot-settings.json",postReboot);Notify("Параметры наблюдения сохранены. Уже назначенные действия поиска не меняются.");});

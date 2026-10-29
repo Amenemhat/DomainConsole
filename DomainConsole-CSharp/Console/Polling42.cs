@@ -61,11 +61,12 @@ public partial class MainWindow {
   string details="Служебный снимок не получен; сохранённые данные оставлены. "+wait.Message+(wait.Next==DateTimeOffset.MaxValue?" · автоматический повтор остановлен":" · следующая проверка: "+Display36.Date(wait.Next.ToString("o")));
   statusLimitations[host]=details;string signature=wait.Kind+"|"+wait.Message;
   string eventKey43=host+"|collector";if(pollEventKeys42.GetValueOrDefault(eventKey43)!=signature){pollEventKeys42[eventKey43]=signature;Event31(host,"poll42",signature,title,"Warning",details);}
+  if(wait.Kind=="Blocked")Event31(host,"poll-state51","blocked","Опрос клиента приостановлен после повторных сбоев","Warning","Предыдущие данные сохранены. Состояние опроса и восстановление доступны в шапке.");
   var folder=Path.Combine(Store.Root,"Diagnostics");Directory.CreateDirectory(folder);string name=TransportBudget41.Key(new(){Host=host});Store.Write("Diagnostics/poll42-"+name+".json",new{Operation=operation,Kind=wait.Kind,Error=wait.Message,Next=wait.Next});
  }
 }
 public partial class MainWindow {
  readonly Dictionary<string,(DateTimeOffset Next,string Signature)> jobPoll42=new();
- bool JobPollDue42(ComputerRow row)=>!jobPoll42.TryGetValue(row.JobId+row.Host,out var value)||DateTimeOffset.UtcNow>=value.Next;
+ bool JobPollDue42(ComputerRow row)=>!ObservationStopped51(row)&&!LostObservation51(row.Host)&&(!jobPoll42.TryGetValue(row.JobId+row.Host,out var value)||DateTimeOffset.UtcNow>=value.Next);
  void JobPollObserved42(ComputerRow row,PollResult data,TimeSpan elapsed){string key=row.JobId+row.Host;string signature=data.State==null?"":data.State.Status+"|"+data.State.Stage+"|"+data.State.Progress;int seconds=row.Target.Status is "AwaitingReboot" or "RebootScheduled"?120:row.Target.State?.Ended.Length>0?120:elapsed.TotalSeconds>5?30:jobPoll42.TryGetValue(key,out var old)&&old.Signature==signature?20:10;jobPoll42[key]=(DateTimeOffset.UtcNow.AddSeconds(seconds),signature);}
 }

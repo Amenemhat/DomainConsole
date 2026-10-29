@@ -824,6 +824,8 @@ jobs:
            $status=Join-Path $p 'status.json';[IO.File]::WriteAllText($status,'.');$rejected=$false
            try{& ([ScriptBlock]::Create($body))}catch{$rejected=$_.Exception.Message.Contains('DC_DATA_ERROR|status.json|')}
            if(!$rejected){throw 'Malformed status not classified as data failure'}
+           $evidence=Get-Content (Join-Path $p 'snapshot-read-error.json') -Raw|ConvertFrom-Json
+           if($evidence.Source -ne 'status.json' -or $evidence.Fragment -ne '.' -or $evidence.Length -ne 1 -or !$evidence.ReadUtc -or !$evidence.ModifiedUtc){throw 'Malformed snapshot lost local source evidence'}
            [IO.File]::WriteAllText($status,(@{Id=$dcJobId34;Status='Running';Ended=''}|ConvertTo-Json))
            [IO.File]::WriteAllText((Join-Path $p 'step-1.out'),('X'*200000))
            $result=& ([ScriptBlock]::Create($body))|ConvertFrom-Json
