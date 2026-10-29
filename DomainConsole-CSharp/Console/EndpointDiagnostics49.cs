@@ -1,3 +1,4 @@
+using DomainConsole.Shared;
 using System.IO;
 using System.Net;
 using System.Net.Security;
@@ -37,9 +38,8 @@ public partial class MainWindow {
   foreach(var host in new[]{"127.0.0.1","localhost"}){
    var listener=new TcpListener(IPAddress.Loopback,0);listener.Start();
    try{var accept=listener.AcceptTcpClientAsync(deadline.Token);string result=await RemoteService.ProbeNetwork49(host,false,deadline.Token,port:((IPEndPoint)listener.LocalEndpoint).Port);using var peer=await accept;
-    if(!result.Contains("Маршрут/TCP: соединение")||!result.Contains("HTTPS/TLS: не используется")||!result.Contains(host=="localhost"?"DNS:":"DNS: не требуется")){
-     if(host!="localhost"||!result.Contains("DNS:")||result.Contains("DNS: не требуется"))throw new Exception("Endpoint network stages missing: "+result);
-    }
+    if(!result.Contains("Маршрут/TCP: соединение")||!result.Contains("HTTPS/TLS: не используется")||!result.Contains("DNS:"))throw new Exception("Endpoint network stages missing: "+result);
+    if((host=="localhost")==result.Contains("DNS: не требуется"))throw new Exception("DNS stage did not distinguish hostname from literal IP");
    }finally{listener.Stop();}
   }
   var tlsListener=new TcpListener(IPAddress.Loopback,0);tlsListener.Start();
