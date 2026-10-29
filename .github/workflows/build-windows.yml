@@ -138,6 +138,7 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           if($PSVersionTable.PSVersion.Major -ne 5){throw 'Expected Windows PowerShell 5.1'}
+          $expectedOwner=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('0KDQsNCx0L7Rh9Cw0Y8g0LrQvtC90YHQvtC70Yw='))
           $oldCulture=[Threading.Thread]::CurrentThread.CurrentCulture;$oldUi=[Threading.Thread]::CurrentThread.CurrentUICulture
           try {
             foreach($culture in @('ru-RU','en-US')){
@@ -146,7 +147,7 @@ jobs:
               $root=Join-Path $env:RUNNER_TEMP ('DomainConsole-coordination37/admission38-'+$culture)
               $records=@(Get-ChildItem $root -Recurse -Filter admission38.json|ForEach-Object {Get-Content $_.FullName -Raw -Encoding UTF8|ConvertFrom-Json})
               $foreign=@($records|Where-Object {$_.ReasonCode -eq 'other_console'})
-              if($foreign.Count -ne 1 -or !$foreign[0].Message.Contains('Рабочая консоль') -or $foreign[0].Message.Contains([char]0xFFFD)){throw 'UTF8 admission message lost in PS5.1'}
+              if($foreign.Count -ne 1 -or !$foreign[0].Message.Contains($expectedOwner) -or $foreign[0].Message.Contains([char]0xFFFD)){throw ('UTF8 admission message lost in PS5.1; matches='+$foreign.Count+'; reason codes='+($records.ReasonCode -join ','))}
               if(!($records|Where-Object {$_.Allowed -eq $true})){throw 'Accepted admission missing'}
               Write-Output ('Verified PS5.1 UTF8 structured admission under '+$culture)
             }
