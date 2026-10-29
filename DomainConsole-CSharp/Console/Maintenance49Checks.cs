@@ -21,7 +21,7 @@ public partial class MainWindow {
     maintenancePlans.Clear();History.Clear();queue.Clear();
     var target=ConnectionStore.Capture(row.Target);target.Status="Completed";target.State=new(){Status="Completed",Ended=DateTimeOffset.UtcNow.AddHours(-1).ToString("o"),UpdatesRemaining=1};
     var job=new RemoteJob{OutputChannel="WSUS",Targets=new(){target},Steps=new(){new(){Kind="Updates"}}};History.Add(job);BeginMaintenance(job);
-    var plan=maintenancePlans[row.Host];plan.Phase="Ожидается перезагрузка";plan.BootUtc=DateTimeOffset.UtcNow.AddDays(-1).ToString("o");
+    var plan=maintenancePlans[row.Host];plan.Cycles=required==false?3:1;plan.Phase="Ожидается перезагрузка";plan.BootUtc=DateTimeOffset.UtcNow.AddDays(-1).ToString("o");
     var boot=DateTimeOffset.UtcNow.AddMinutes(-10).ToString("o");
     Task<RebootSnapshot?> Snapshot(ComputerRow _)=>Task.FromResult<RebootSnapshot?>(new(){Required=required,BootUtc=boot,CollectedUtc=DateTimeOffset.UtcNow.ToString("o")});
     await AdvanceMaintenance(Snapshot,_=>Task.FromResult(new LiveUpdateActivity()),false);
@@ -31,9 +31,18 @@ public partial class MainWindow {
     await AdvanceMaintenance(Snapshot,_=>Task.FromResult(new LiveUpdateActivity{InstallerBusy=true}),false);
     if(queue.Count!=0||!plan.SearchAfterBoot49||plan.Done)throw new Exception("Busy WUA consumed post-boot checkpoint");
     plan.Next=default;await AdvanceMaintenance(Snapshot,_=>Task.FromResult(new LiveUpdateActivity()),false);
-    if(queue.Count!=1||queue.Peek().Job.Steps.Single().Kind!="UpdateScan"||plan.SearchAfterBoot49)throw new Exception("Post-boot recovery did not perform one diagnostic search for true/false/unknown flags");
+    if(queue.Count!=1||queue.Peek().Job.Steps.Single().Kind!="UpdateScan"||plan.SearchAfterBoot49||plan.Cycles!=(required==false?3:1))throw new Exception("Post-boot recovery did not perform one diagnostic search for true/false/unknown flags");
     plan.Next=default;await AdvanceMaintenance(Snapshot,_=>throw new Exception("Duplicate readiness call"),false);
     if(queue.Count!=1)throw new Exception("Post-boot search duplicated");
+    if(required==false){
+     var checkpoint=Store.Clone(plan);var scan=History.Single(j=>j.Id==plan.JobId);queue.Clear();
+     foreach(int remaining in new[]{0,1}){
+      plan=Store.Clone(checkpoint);maintenancePlans[row.Host]=plan;plan.Next=default;
+      scan.Targets[0].Status="Completed";scan.Targets[0].State=new(){Status="Completed",Ended=DateTimeOffset.UtcNow.ToString("o"),UpdatesRemaining=remaining};
+      await AdvanceMaintenance(Snapshot,_=>throw new Exception("Fourth installation readiness should not run"),false);
+      if(!plan.Done||queue.Count!=0||(remaining==0?plan.Phase!="Обслуживание завершено":!plan.Detail.Contains("3 цикла")))throw new Exception("Final verification after third installation lost its result or started a fourth attempt");
+     }
+    }
    }
    maintenancePlans.Clear();History.Clear();queue.Clear();
    var incompatible49=new RemoteJob{Steps=new(){new(){Kind="Updates"}},Targets=new(){new(){Host=row.Host,Status="Queued"}}};History.Add(incompatible49);
