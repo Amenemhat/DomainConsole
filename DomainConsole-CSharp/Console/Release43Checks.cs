@@ -7,12 +7,22 @@ public partial class MainWindow {
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-remove.ps1"),RemoteService.RemoveCollectorScript43(),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-enable.ps1"),RemoteService.RemoveCollectorScript43("Enable"),new UTF8Encoding(true));
   AwaitUi39(VerifyCollectorBatch48());
+  AwaitUi39(VerifyPausedCollector48());
   AwaitUi39(VerifyPause43());
   AwaitUi39(VerifyOverviewCancellation47());
   var current43=Current();current43.SetService43("Чтение состояния задания");CaptureContent38("release43-service",1000,640);current43.SetService43("");
   var row=Current();var old=readyProofs43.GetValueOrDefault(row.Host);CachedWsusReport? cache=null;var now=DateTimeOffset.UtcNow;var reboot=new RebootView40(false,true,now.ToString("o"),Array.Empty<string>(),"");
   try{readyProofs43.Remove(row.Host);var warning=new ClientAssessment41("Warning","Проверка неполная","");if(PreserveReady43(row,warning,false,null,cache,reboot,"").Kind=="Success")throw new Exception("Unknown result became success");PreserveReady43(row,new("Success","Проверено", ""),false,null,cache,reboot,"scan");var held=PreserveReady43(row,new("Stale","Снимок устарел", ""),false,null,cache,reboot with{Fresh=false},"scan");if(held.Kind!="Success")throw new Exception("Clock aging erased successful proof");if(PreserveReady43(row,new("Needed","К установке: 1", ""),false,null,cache,reboot,"scan").Kind!="Needed")throw new Exception("New update hidden by saved green");}
   finally{if(old==null)readyProofs43.Remove(row.Host);else readyProofs43[row.Host]=old;Store.Write("ready-proofs43.json",readyProofs43);}
+ }
+ async Task VerifyPausedCollector48(){
+  bool paused=TransportBudget41.Paused;PollingControl43.Pause();
+  try{
+   foreach(Func<Task<string>> action in new Func<Task<string>>[]{()=>remote.InspectSnapshot42(new(){Host="paused.fixture.invalid"}),()=>remote.ProbeInventory41(new(){Host="paused.fixture.invalid"})}){
+    bool denied=false;try{await action();}catch(OperationCanceledException){denied=true;}
+    if(!denied)throw new Exception("Collector inspection bypassed master OFF");
+   }
+  }finally{if(!paused)PollingControl43.Resume();}
  }
  static async Task VerifyCollectorBatch48(){
   var batch=new CollectorBatch48();var entered=new TaskCompletionSource();var finish=new TaskCompletionSource();var visited=new List<int>();

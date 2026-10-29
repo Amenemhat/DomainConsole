@@ -46,7 +46,7 @@ try{
  $result.@@KIND@@|ConvertTo-Json -Depth 12 -Compress
 }finally{if($lock){$lock.Dispose()}}
 """;
- public async Task<string> ProbeInventory41(TargetRecord target,bool clean=false){using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(60));return await PowerShellBridge.Execute("# DC-MANUAL41\n"+Invoke(target,LegacyProbeInventory41.Replace("@@CLEAN@@",clean?"$true":"$false")),timeout.Token);}
+ public async Task<string> ProbeInventory41(TargetRecord target,bool clean=false){using var read48=clean?null:PollingControl43.Read();using var timeout=CancellationTokenSource.CreateLinkedTokenSource(clean?CancellationToken.None:PollingControl43.Token);timeout.CancelAfter(TimeSpan.FromSeconds(60));return await PowerShellBridge.Execute("# DC-MANUAL41\n"+Invoke(target,LegacyProbeInventory41.Replace("@@CLEAN@@",clean?"$true":"$false")),timeout.Token);}
  public const string LegacyProbeInventory41="""
 $clean=@@CLEAN@@
 $root=Join-Path $env:ProgramData 'DomainConsoleCSharp';$base=Join-Path $root 'Probes'
