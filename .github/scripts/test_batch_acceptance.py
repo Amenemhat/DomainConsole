@@ -1,11 +1,11 @@
 import copy
 import unittest
 from acceptance_gate import batch_scope, validate_acceptance
-from test_acceptance_gate import AcceptanceTests
+import test_acceptance_gate
 
 class BatchTests(unittest.TestCase):
     def setUp(self):
-        base=AcceptanceTests();base.setUp()
+        base=test_acceptance_gate.AcceptanceTests();base.setUp()
         self.report,self.registry,self.request=base.report,base.registry,base.request
         self.registry['issues'].append(dict(issue=2,conditions=[dict(id='2.other',requirement='Later feature')]))
         self.plan=dict(schema=1,batches=[dict(version='0.47',issues=[1],condition_ids=['1.single']),dict(version='0.48',issues=[2],condition_ids=['2.other'])],mandatory_scenarios_each_release=['single-instance'])
@@ -38,8 +38,8 @@ class BatchTests(unittest.TestCase):
         import json
         from pathlib import Path
         root=Path(__file__).resolve().parents[2]
-        registry=json.loads((root/'docs/acceptance/requirements.json').read_text())
-        plan=json.loads((root/'docs/acceptance/release-batches.json').read_text())
+        registry=json.loads((root/'docs/acceptance/requirements.json').read_text(encoding="utf-8"))
+        plan=json.loads((root/'docs/acceptance/release-batches.json').read_text(encoding="utf-8"))
         self.assertEqual(batch_scope(registry,plan,'0.48'),set(range(113,119)))
 
 if __name__=='__main__':unittest.main()
