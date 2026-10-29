@@ -14,22 +14,28 @@ public sealed partial class RemoteService {
   _=flight.Value.ContinueWith(_=>collectorRepairs47.TryRemove(new KeyValuePair<string,Lazy<Task<string>>>(key,flight)),TaskScheduler.Default);
   return flight.Value;
  }
+ public static string RepairScript48()=>Resource42("repair48.ps1").Replace("@@REMOVE@@",RemoveCollectorScript43("Remove",true)).Replace("@@ENABLE@@",RemoveCollectorScript43("Enable",true)).Replace("@@GET@@",SnapshotScript42()).Replace("@@READ@@",SnapshotScript42("Read"));
  async Task<string> RepairCore47(TargetRecord target,string key){
   using var read=PollingControl43.Read();
   using var deadline=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);deadline.CancelAfter(TimeSpan.FromSeconds(150));
   try{
   if(snapshotCancellation47.TryGetValue(key,out var oldCancel)){try{oldCancel.Cancel();}catch(ObjectDisposedException){}}
   if(snapshotFlights42.TryGetValue(key,out var old)&&old.IsValueCreated){try{await old.Value.WaitAsync(TimeSpan.FromSeconds(15),deadline.Token);}catch(TimeoutException){throw new IOException("Прежнее подключение ещё не завершено. Второй сборщик не запущен; повторите после освобождения подключения.");}catch(OperationCanceledException) when(!deadline.IsCancellationRequested){}catch(PollWait42){}catch(Exception) when(old.Value.IsCompleted&&!deadline.IsCancellationRequested){} }
-  async Task Execute(bool enable){
-   while(true){deadline.Token.ThrowIfCancellationRequested();try{await RemoveCollector43(target,enable,deadline.Token);return;}
-    catch(PollWait42 busy) when(busy.Kind=="Busy"){await Task.Delay(2000,deadline.Token);}
-   }
+  string bundle;
+  while(true){
+   deadline.Token.ThrowIfCancellationRequested();
+   try{
+    var raw=await PowerShellBridge.Execute("# DC-MANUAL41\n"+Invoke(target,RepairScript48()),deadline.Token);
+    using var reply=JsonDocument.Parse(raw);var status=reply.RootElement.GetProperty("Status").GetString();
+    if(status=="Busy"){await Task.Delay(2000,deadline.Token);continue;}
+    if(status!="Recovered")throw new IOException("Восстановление сборщика не подтверждено");
+    bundle=reply.RootElement.GetProperty("Snapshot").GetRawText();break;
+   }catch(PollWait42 busy) when(busy.Kind=="Busy"){await Task.Delay(2000,deadline.Token);}
   }
-  await Execute(false);await Execute(true);
-  snapshotWait42.TryRemove(key,out _);snapshotCache42.TryRemove(key,out _);networkFailures42.TryRemove(key,out _);
-  string bundle=await Collect42(target,key,deadline.Token);
   using var parsed=JsonDocument.Parse(bundle);
   if(!parsed.RootElement.GetProperty("Healthy").GetBoolean()||!parsed.RootElement.GetProperty("Complete").GetBoolean())throw new IOException("Сборщик установлен, но полный свежий результат не получен.");
+  var stamp=parsed.RootElement.GetProperty("CollectedUtc").GetDateTimeOffset();
+  snapshotWait42.TryRemove(key,out _);snapshotCache42[key]=(bundle,stamp.AddSeconds(45));networkFailures42.TryRemove(key,out _);
   return "Сборщик восстановлен · свежий снимок получен: "+Display36.Date(parsed.RootElement.GetProperty("CollectedUtc").GetString()??"");
   }catch(Exception ex){snapshotCache42.TryRemove(key,out _);snapshotWait42[key]=new PollWait42("RepairFailed","Восстановление не подтверждено: "+MainWindow.ShortConnectionError(ex.Message),0);throw;}
  }

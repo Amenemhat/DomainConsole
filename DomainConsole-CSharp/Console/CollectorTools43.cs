@@ -6,7 +6,7 @@ using System.Windows.Controls;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed partial class RemoteService {
- public static string RemoveCollectorScript43(string mode="Remove")=>Resource42("remove43.ps1").Replace("@@MODE@@",mode);
+ public static string RemoveCollectorScript43(string mode="Remove",bool internalRepair=false)=>Resource42("remove43.ps1").Replace("@@MODE@@",mode).Replace("@@INTERNAL_REPAIR@@",internalRepair?"$true":"$false");
  public async Task<string> RemoveCollector43(TargetRecord target,bool enable=false,CancellationToken token=default){using var deadline=CancellationTokenSource.CreateLinkedTokenSource(token);deadline.CancelAfter(TimeSpan.FromSeconds(45));string result=await PowerShellBridge.Execute("# DC-MANUAL41\n"+Invoke(target,RemoveCollectorScript43(enable?"Enable":"Remove")),deadline.Token);using(var parsed=JsonDocument.Parse(result)){var status=parsed.RootElement.GetProperty("Status").GetString();if(status!=(enable?"Enabled":"Removed"))throw new IOException("Операция сборщика не завершена: "+parsed.RootElement.GetProperty("Reason").GetString()+"\n"+result);}
 snapshotCache42.TryRemove(TransportBudget41.Key(target),out _);if(enable)snapshotWait42.TryRemove(TransportBudget41.Key(target),out _);else snapshotWait42[TransportBudget41.Key(target)]=new PollWait42("Disabled","Сборщик удалён. Для установки нажмите «Включить опрос» рядом со связью.",0);return result;}
 }

@@ -10,9 +10,11 @@ foreach($id in @('S-1-5-18','S-1-5-32-544')){$acl.AddAccessRule((New-Object Secu
 Set-Acl -LiteralPath $root -AclObject $acl
 
 PlainPath $disabled
-if($mode -ne 'Enable'){[IO.File]::WriteAllText($disabled,'{"Disabled":true,"Protocol":1}',(New-Object Text.UTF8Encoding($false)))}
-$lock=$null;$gate=$null;$removed=@();$skipped=@()
+
+$repairGate=$null;$lock=$null;$gate=$null;$removed=@();$skipped=@()
 try{
+ if(!@@INTERNAL_REPAIR@@){PlainPath (Join-Path $root 'repair48.lock');try{$repairGate=[IO.File]::Open((Join-Path $root 'repair48.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}catch{throw 'Восстановление сборщика выполняется другой консолью; повторите после получения результата'}}
+ if($mode -ne 'Enable'){[IO.File]::WriteAllText($disabled,'{"Disabled":true,"Protocol":1}',(New-Object Text.UTF8Encoding($false)))}
  if(!(Test-Path -LiteralPath $path)){New-Item -ItemType Directory -Path $path -Force|Out-Null}
  PlainPath (Join-Path $path 'admission.lock')
  try{$lock=[IO.File]::Open((Join-Path $path 'admission.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}catch{throw 'Допуск сборщика занят; повторите очистку после завершения текущего подключения. Запрет новых запусков сохранён'}
@@ -53,4 +55,4 @@ try{
  foreach($f in @(Get-ChildItem -LiteralPath $path -Force|Where-Object {$_.Name -notin @('admission.lock','execution.lock')})){$skipped+=$f.Name}
  @{Status=$(if($skipped.Count){'Partial'}else{'Removed'});Reason='Сборщик удалён и повторный запуск запрещён. Задания обновлений и системные службы сохранены. Сохранены минимальный запрет установки и файлы блокировки.';Removed=@($removed);Unknown=@($skipped)}|ConvertTo-Json -Depth 6 -Compress
 }catch{@{Status='Partial';Reason=$_.Exception.Message;Removed=@($removed);Disabled=(Test-Path -LiteralPath $disabled)}|ConvertTo-Json -Depth 6 -Compress}
-finally{if($gate){$gate.Dispose()};if($lock){$lock.Dispose()}}
+finally{if($gate){$gate.Dispose()};if($lock){$lock.Dispose()};if($repairGate){$repairGate.Dispose()}}

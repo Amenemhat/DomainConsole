@@ -51,3 +51,22 @@ if((Run 'probe42-Get.ps1').Status -ne 'Cooldown'){throw 'Reset immediately resta
 $null=Run 'probe42-Recover.ps1'
 Write-Output 'Collector43: real WinRM inspection with mismatched task, SYSTEM identity, no downgrade, owned hung supervisor cleanup, foreign task protection, unrelated maintenance/data preservation, disabled reinstall gate, idempotency and re-enable passed.'
 
+
+# Two independent remote shells must share one recovery, not reinstall twice.
+$repairCode=[IO.File]::ReadAllText((Join-Path $Fixture 'collector48-repair.ps1'))
+$tokens=$null;$errors=$null;$null=[Management.Automation.Language.Parser]::ParseInput($repairCode,[ref]$tokens,[ref]$errors);if($errors){throw ($errors|Out-String)}
+$second=New-PSSession -Session $Session
+$repairJobs=@()
+try{
+ foreach($connection in @($Session,$second)){$repairJobs+=Invoke-Command -Session $connection -AsJob -ScriptBlock {param($code);& ([ScriptBlock]::Create($code))} -ArgumentList $repairCode}
+ $repairJobs|Wait-Job -Timeout 110|Out-Null
+ $replies=@(foreach($job in $repairJobs){if($job.State -ne 'Completed'){throw 'Concurrent recovery did not finish'};Receive-Job $job -ErrorAction Stop|ConvertFrom-Json})
+ if(!($replies|Where-Object {$_.Status -eq 'Recovered'})){throw 'No recovery confirmed'}
+ if($replies|Where-Object {$_.Status -notin @('Recovered','Busy')}){throw 'Unexpected competing recovery result'}
+ $registered=(Get-ScheduledTaskInfo $task).LastRunTime
+ $record=Get-Content (Join-Path (Split-Path $path) 'repair48.json') -Raw|ConvertFrom-Json
+ $joined=Invoke-Command -Session $second -ScriptBlock {param($code);& ([ScriptBlock]::Create($code))} -ArgumentList $repairCode|ConvertFrom-Json
+ if($joined.Status -ne 'Recovered' -or !$joined.Joined -or !$joined.Snapshot.Complete -or $joined.Snapshot.Id -ne $record.SnapshotId){throw 'Second console did not join fresh recovery result'}
+ if((Get-ScheduledTaskInfo $task).LastRunTime -ne $registered){throw 'Second recovery restarted the collector'}
+ Write-Output 'Collector48: two independent WinRM shells share one recovery and one fresh snapshot; repeated recovery does not reinstall.'
+}finally{$repairJobs|Remove-Job -Force -ErrorAction SilentlyContinue;Remove-PSSession $second}
