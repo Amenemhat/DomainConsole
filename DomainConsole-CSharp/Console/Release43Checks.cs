@@ -6,12 +6,23 @@ public partial class MainWindow {
  void VerifyRelease43(){VerifyRelease44();VerifyRelease45();VerifyRelease46();
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-remove.ps1"),RemoteService.RemoveCollectorScript43(),new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"collector43-enable.ps1"),RemoteService.RemoveCollectorScript43("Enable"),new UTF8Encoding(true));
+  AwaitUi39(VerifyCollectorBatch48());
   AwaitUi39(VerifyPause43());
   AwaitUi39(VerifyOverviewCancellation47());
   var current43=Current();current43.SetService43("Чтение состояния задания");CaptureContent38("release43-service",1000,640);current43.SetService43("");
   var row=Current();var old=readyProofs43.GetValueOrDefault(row.Host);CachedWsusReport? cache=null;var now=DateTimeOffset.UtcNow;var reboot=new RebootView40(false,true,now.ToString("o"),Array.Empty<string>(),"");
   try{readyProofs43.Remove(row.Host);var warning=new ClientAssessment41("Warning","Проверка неполная","");if(PreserveReady43(row,warning,false,null,cache,reboot,"").Kind=="Success")throw new Exception("Unknown result became success");PreserveReady43(row,new("Success","Проверено", ""),false,null,cache,reboot,"scan");var held=PreserveReady43(row,new("Stale","Снимок устарел", ""),false,null,cache,reboot with{Fresh=false},"scan");if(held.Kind!="Success")throw new Exception("Clock aging erased successful proof");if(PreserveReady43(row,new("Needed","К установке: 1", ""),false,null,cache,reboot,"scan").Kind!="Needed")throw new Exception("New update hidden by saved green");}
   finally{if(old==null)readyProofs43.Remove(row.Host);else readyProofs43[row.Host]=old;Store.Write("ready-proofs43.json",readyProofs43);}
+ }
+ static async Task VerifyCollectorBatch48(){
+  var batch=new CollectorBatch48();var entered=new TaskCompletionSource();var finish=new TaskCompletionSource();var visited=new List<int>();
+  var pending=batch.Run(new[]{1,2,3},()=>true,async n=>{visited.Add(n);entered.SetResult();await finish.Task;});
+  await entered.Task;batch.Stop();if(pending.IsCompleted)throw new Exception("Cancellation abandoned admitted cleanup");finish.SetResult();await pending;
+  if(!visited.SequenceEqual(new[]{1})||batch.Started!=1||batch.Finished!=1)throw new Exception("Cancelled cleanup admitted another endpoint");
+  var normal=new CollectorBatch48();visited.Clear();await normal.Run(new[]{1,2,3},()=>true,n=>{visited.Add(n);return Task.CompletedTask;});
+  if(!visited.SequenceEqual(new[]{1,2,3})||normal.Finished!=3)throw new Exception("Cleanup order changed");
+  var closed=new CollectorBatch48();await closed.Run(new[]{1,2},()=>false,n=>throw new Exception("Closed queue dispatched"));
+  if(closed.Started!=0)throw new Exception("Closed queue created work");
  }
  static async Task VerifyOverviewCancellation47(){
   bool paused=TransportBudget41.Paused;
