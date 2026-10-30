@@ -34,8 +34,9 @@ public partial class MainWindow {
  bool ReportRepairBusy52(ComputerRow row)=>pendingReportRepairs52.Contains(Identity40.EndpointKey(ConnectionStore.Capture(row.Target)))||History.Any(j=>j.Steps.Any(s=>s.Kind is "ReportRecovery" or "ReportQueueVerify")&&j.Targets.Any(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)));
  async Task RecoverReport52(bool focusOnly){
   var targets=focusOnly?new List<ComputerRow>{Current()}:Selected();if(targets.Count==0)targets.Add(Current());
-  if(targets.Any(ReportRepairBusy52)){Notify("Восстановление отчётности уже подготавливается или выполняется. Повтор не создан.");return;}
-  var keys=targets.Select(r=>Identity40.EndpointKey(ConnectionStore.Capture(r.Target))).Distinct(StringComparer.OrdinalIgnoreCase).ToList();foreach(var key in keys)pendingReportRepairs52.Add(key);
+  var possible=targets.ToList();if(ComputerGrid.SelectedItem is ComputerRow focused&&!possible.Contains(focused))possible.Add(focused);
+  if(possible.Any(ReportRepairBusy52)){Notify("Восстановление отчётности уже подготавливается или выполняется. Повтор не создан.");return;}
+  var keys=possible.Select(r=>Identity40.EndpointKey(ConnectionStore.Capture(r.Target))).Distinct(StringComparer.OrdinalIgnoreCase).ToList();foreach(var key in keys)pendingReportRepairs52.Add(key);
   try{ReadWsus();MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Name="Восстановление очереди отчётности",Kind="ReportRecovery",Code=DeliveryScripts.Recovery},QueueVerifyStep52(),new(){Name="WSUS · проверка и запрос свежего отчёта",Kind="UpdateScan"}},"WSUS",focusOnly:focusOnly);}finally{foreach(var key in keys)pendingReportRepairs52.Remove(key);}
  }
 }
