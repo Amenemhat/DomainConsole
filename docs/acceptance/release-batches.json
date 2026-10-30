@@ -518,9 +518,9 @@
     },
     {
       "version": "0.52",
-      "priority": "P2",
-      "title": "Интерфейс, навигация и производительность",
-      "status": "planned",
+      "priority": "P0/P1/P2",
+      "title": "Автоматическое продолжение, ограниченный агент, интерфейс и оставшаяся приёмка",
+      "status": "in-progress",
       "issues": [
         3,
         5,
@@ -557,7 +557,8 @@
         105,
         108,
         111,
-        122
+        122,
+        134
       ],
       "condition_ids": [
         "3.counts",
@@ -696,7 +697,20 @@
         "122.context",
         "122.visible",
         "122.no-new-work",
-        "122.matrix"
+        "122.matrix",
+        "134.queue-visible",
+        "134.queue-action",
+        "134.queue-verify",
+        "134.auto-install",
+        "134.recovery-postconditions",
+        "134.reconnect-short",
+        "134.reconnect-long",
+        "134.reconnect-boot",
+        "134.controls",
+        "134.agent-bounds",
+        "134.agent-install",
+        "134.durable",
+        "134.matrix"
       ]
     },
     {
