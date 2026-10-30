@@ -35,6 +35,7 @@ public partial class MainWindow {
    maintenancePlans.Clear();AutoServiceEnabled=false;PrepareReportContinuation52(repair,row.Host);if(repair.BeginPlan38)throw new Exception("Repair enables installation with Auto OFF");
    AutoServiceEnabled=true;PrepareReportContinuation52(repair,row.Host);if(!repair.BeginPlan38)throw new Exception("Recovery search lost automatic continuation");
    NormalizeCommandKinds34(new[]{QueueVerifyStep52()});
+   System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(),"report-queue-verify52.ps1"),QueueVerifyStep52().Code,new System.Text.UTF8Encoding(true));
    System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(),"ui-release52.txt"),"PASS: queue evidence/action/fresh-report; short/long reconnect; search then one install; cycles; stopped/Auto OFF; bounded queue verification step");
   }finally{
    Computers.Remove(row);maintenancePlans.Clear();foreach(var p in plans)maintenancePlans[p.Key]=p.Value;History.Clear();foreach(var j in jobs)History.Add(j);queue.Clear();foreach(var q in pending)queue.Enqueue(q);queueEvidence52.Clear();foreach(var e in evidence)queueEvidence52[e.Key]=e.Value;reportRecoveries.Clear();foreach(var r in recoveries)reportRecoveries[r.Key]=r.Value;
