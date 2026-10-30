@@ -39,6 +39,11 @@ jobs:
           New-Item Publish/Agent -ItemType Directory -Force | Out-Null
           Copy-Item DomainConsole-CSharp/Agent/bin/Release/net462/DomainConsole.Agent.exe Publish/Agent/
           Copy-Item DomainConsole-CSharp/README.txt Publish/README-source.txt
+      - name: Verify bounded agent waiting and persisted non-replay checkpoint
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe waiting-smoke52 (Join-Path $env:RUNNER_TEMP 'DomainConsole-waiting52')
+          if ($LASTEXITCODE -ne 0) { throw 'Bounded agent waiting failed' }
       - name: Verify recovery after killing the agent process
         shell: pwsh
         run: |

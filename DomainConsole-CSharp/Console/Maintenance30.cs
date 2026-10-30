@@ -4,7 +4,7 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed class AttentionRow30 {public string Host {get;set;}="";public string Text {get;set;}="";public Action Stop {get;set;}=()=>{};}
 public sealed class ReportWait30 {public int Attempts42 {get;set;}public string Id {get;set;}="";public DateTimeOffset Until {get;set;}public DateTimeOffset Next {get;set;}}
-public sealed class MaintenancePlan {public bool SearchAfterBoot49 {get;set;}public bool RecoveryCheck47 {get;set;}public string DeadlineUtc44 {get;set;}="";public bool Released37 {get;set;}public string PlanId37 {get;set;}="";
+public sealed class MaintenancePlan {public bool RecheckAfterConnection52 {get;set;}public bool SearchAfterBoot49 {get;set;}public bool RecoveryCheck47 {get;set;}public string DeadlineUtc44 {get;set;}="";public bool Released37 {get;set;}public string PlanId37 {get;set;}="";
  public string Host {get;set;}="";public string Identity {get;set;}="";public string JobId {get;set;}="";public string Phase {get;set;}="";public string BootUtc {get;set;}="";public string StartedUtc {get;set;}=DateTime.UtcNow.ToString("o");public string NextJobId {get;set;}="";public bool Install {get;set;}public bool Done {get;set;}public int Cycles {get;set;}public DateTimeOffset Next {get;set;}public DateTimeOffset ReadyAfter {get;set;}public string Detail {get;set;}="";
 }
 public partial class MainWindow {
@@ -34,6 +34,7 @@ public partial class MainWindow {
    if(PlanExpired44(p,DateTimeOffset.UtcNow)){p.Done=true;p.Phase="Требуется действие";p.Detail="Срок автоматического продолжения истёк (2 суток)";continue;}
    if(LostObservation51(p.Host)){p.Detail="Связь потеряна; ожидается отдельная проверка доступности. Клиентское задание не остановлено.";continue;}
    var job=History.FirstOrDefault(j=>j.Id==p.JobId);var target=job?.Targets.FirstOrDefault(t=>t.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase));
+   if(reportRecoveries.TryGetValue(p.Host,out var report52)&&!report52.Done&&report52.JobId!=p.JobId){p.Detail="Ожидается восстановление и проверка отчётности";continue;}
    if(target!=null&&ActiveTarget(target)){p.Phase="Выполняется обслуживание";continue;}
    if(target!=null&&!TerminalSuccess(target)&&!p.RecoveryCheck47){if(target.Status is "ConnectionFailed" or "Unavailable" or "AccessDenied" or "SubmissionUnknown"){p.Detail="Связь/передача не подтверждена; требуется проверка результата, повторный запуск не выполняется";continue;}p.Done=true;p.Phase=target.Status=="Cancelled"?"Обслуживание остановлено":"Требуется действие";p.Detail="Автоматическое продолжение прекращено: "+ComputerRow.StatusText(target.Status)+". См. результат задания.";continue;}
    if(p.Phase=="Ожидается перезагрузка"){
@@ -57,8 +58,9 @@ public partial class MainWindow {
     if(snapshot.Required==true){
      p.Phase="Ожидается перезагрузка";p.BootUtc=snapshot.BootUtc;p.Detail="Перезагрузите в согласованное время. После возврата обслуживание продолжится автоматически.";continue;
     }
-    if(snapshot.Required==null){p.Done=true;p.Phase="Требуется действие";p.Detail="Установка завершена; проверка флагов неполная. Уточните статус клиента перед новым циклом.";continue;}
-    if(!p.Install||target.State?.UpdatesRemaining==0){p.Done=true;p.Phase="Обслуживание завершено";p.Detail="Результат сохранён; получение отчёта WSUS отслеживается отдельно.";continue;}
+    if(snapshot.Required==null){p.Phase="Ожидается проверка готовности";p.Detail="Флаги пока не уточнены; повторная проверка запланирована. Новая установка не запускается.";continue;}
+    if(p.RecheckAfterConnection52){p.SearchAfterBoot49=true;p.Phase="После восстановления связи: контрольный поиск";}
+    else if(!p.Install||target.State?.UpdatesRemaining==0){p.Done=true;p.Phase="Обслуживание завершено";p.Detail="Результат сохранён; получение отчёта WSUS отслеживается отдельно.";continue;}
    }
    if(History.Any(j=>IsWsusJob(j)&&j.Targets.Any(t=>t.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)))){p.Detail="Ожидается завершение другого задания WSUS";continue;}
    if(p.Install&&(p.Phase=="После перезагрузки: ожидание готовности"||p.RecoveryCheck47)){
@@ -80,7 +82,7 @@ public partial class MainWindow {
   bool install47=p.Install&&!p.RecoveryCheck47&&!p.SearchAfterBoot49;
   if(job!=null&&(job.Steps.Count!=1||job.Steps[0].Kind!=(install47?"Updates":"UpdateScan"))){p.Done=true;p.Phase="Требуется действие";p.Detail="Сохранённый следующий шаг не соответствует текущей контрольной точке. Он не перезапущен; проверьте результат прежнего задания перед новым обслуживанием.";SaveMaintenance();return;}
   if(job==null){var t=Store.Clone(captured);t.Status="Queued";t.State=null;t.Output="";job=new(){PlanId37=p.PlanId37,SearchTimeoutMinutes37=Store.Read("search-minutes37.json",20),AutomaticChild31=true,Id=p.NextJobId,Name=install47?"Полное обслуживание · продолжение":"Проверка результата · поиск и отчёт",OutputChannel="WSUS",Steps=new(){new(){Kind=install47?"Updates":"UpdateScan",Name=install47?"WSUS · установка и запрос отчёта":"WSUS · проверка и запрос отчёта"}},Targets=new(){t}};History.Insert(0,job);Save();}
-  if(p.JobId!=job.Id&&install47)p.Cycles++;p.JobId=job.Id;p.RecoveryCheck47=false;p.SearchAfterBoot49=false;p.NextJobId="";p.ReadyAfter=default;p.Phase="Выполняется обслуживание";p.Detail="";SaveMaintenance();
+  if(p.JobId!=job.Id&&install47)p.Cycles++;p.JobId=job.Id;p.RecoveryCheck47=false;p.SearchAfterBoot49=false;p.RecheckAfterConnection52=false;p.NextJobId="";p.ReadyAfter=default;p.Phase="Выполняется обслуживание";p.Detail="";SaveMaintenance();
   foreach(var t in job.Targets.Where(t=>t.Status=="Queued"&&t.State==null))if(!queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host==t.Host))queue.Enqueue((job,t));
  }
  void RestoreMaintenanceQueues(){foreach(var p in maintenancePlans.Values.Where(p=>!p.Done)){
