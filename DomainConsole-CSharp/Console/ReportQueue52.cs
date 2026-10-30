@@ -13,7 +13,7 @@ public partial class MainWindow {
  void RememberQueue52(TargetRecord target,WsusReport report,ClientReportProbe probe){queueEvidence52[target.Host]=new(){Endpoint=Identity40.EndpointKey(target),Server=OverviewServer,ReportUtc=report.LastReportedUtc,Snapshot=probe};Store.Write("report-queue52.json",queueEvidence52);}
  QueueEvidence52? CurrentQueue52(ComputerRow row)=>queueEvidence52.TryGetValue(row.Host,out var q)&&q.Endpoint==Identity40.EndpointKey(ConnectionStore.Capture(row.Target))&&q.Server==OverviewServer?q:null;
  Criterion45 QueueCriterion52(ComputerRow row,Criterion45 criterion,WsusReport? report){
-  var evidence=CurrentQueue52(row);var recovery=reportRecoveries.GetValueOrDefault(row.Host);
+  var evidence=CurrentQueue52(row);var recovery=reportRecoveries.GetValueOrDefault(row.Host);if(recovery!=null&&(recovery.Server!=OverviewServer||!CurrentEndpoint(recovery.Target)||!CurrentIdentity(recovery.Target)))recovery=null;
   string expectedAfter=recovery!=null&&recovery.JobId.Length>0?History.FirstOrDefault(j=>j.Id==recovery.JobId)?.Targets.FirstOrDefault(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase))?.State?.Started??recovery.CreatedUtc:evidence?.ReportUtc??"";
   bool fresh=report!=null&&expectedAfter.Length>0&&Criteria45.Newer(report.LastReportedUtc,expectedAfter);
   string hint=evidence==null?"Размер очереди не определён · диагностика не получена":QueueHint52(evidence.Snapshot);

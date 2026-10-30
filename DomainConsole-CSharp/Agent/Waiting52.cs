@@ -28,7 +28,17 @@ namespace DomainConsole.Agent {
    // A repeated scheduler invocation reads the terminal checkpoint and cannot replay it.
    using(var p=Process.Start(new ProcessStartInfo(typeof(Program).Assembly.Location,"run "+Quote(Folder)){UseShellExecute=false,CreateNoWindow=true})){if(!p.WaitForExit(10000)){p.Kill();throw new Exception("Deferred agent restarted work");}}
    if(File.Exists(FilePath("step-1.out")))throw new Exception("Deferred job replayed after lane freed");
-   Console.WriteLine("Waiting52: owned agent exited at admission deadline; no command/installer started; persisted checkpoint prevents scheduler replay.");return 0;
+   // Explicit cancellation wins over automatic deferral and cannot become a resumable checkpoint.
+   Folder=Path.Combine(root,Guid.NewGuid().ToString());Directory.CreateDirectory(Folder);Job.Id=Path.GetFileName(Folder);
+   File.WriteAllText(FilePath("job.json"),Json.Serialize(Job));File.WriteAllText(FilePath("cancel.flag"),"cancel");
+   using(var lane=new Mutex(false,ExecutionLane())){if(!lane.WaitOne(0))throw new Exception("Cancellation fixture lane occupied");
+    try{using(var p=Process.Start(new ProcessStartInfo(typeof(Program).Assembly.Location,"run "+Quote(Folder)){UseShellExecute=false,CreateNoWindow=true})){
+     if(!p.WaitForExit(15000)){p.Kill();throw new Exception("Cancelled waiting agent did not exit");}
+    }}finally{lane.ReleaseMutex();}
+   }
+   result=Json.Deserialize<RemoteState>(File.ReadAllText(FilePath("status.json")));
+   if(result.Status!="Cancelled"||result.Deferred52||result.Results.Count!=0)throw new Exception("Explicit cancel was converted into deferred work");
+   Console.WriteLine("Waiting52: explicit cancellation retained; owned agent exited at admission deadline; no command/installer started; persisted checkpoint prevents scheduler replay.");return 0;
   }
  }
 }
