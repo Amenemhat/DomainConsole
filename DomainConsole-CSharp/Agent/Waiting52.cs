@@ -10,7 +10,7 @@ namespace DomainConsole.Agent {
    if(elapsed.TotalSeconds<Math.Max(1,Math.Min(300,Job.WaitBudgetSeconds52)))return false;
    State.Deferred52=true;State.Status="InterventionRequired";State.Stage="Ожидание отложено; исполнитель завершён";
    State.ActivityMessage=reason+" превысило предел. Контрольная точка сохранена; действующая установка не остановлена.";
-   State.Error=State.ActivityMessage;State.Ended=DateTime.UtcNow.ToString("o");Save();Log(State.ActivityMessage);return true;
+   State.Error=State.ActivityMessage;State.Ended=DateTime.UtcNow.ToString("o");Save();WriteJson("status.json",State);Log(State.ActivityMessage);return true;
   }
   static int WaitingSmoke52(string root){
    Directory.CreateDirectory(root);var id=Guid.NewGuid().ToString();Folder=Path.Combine(root,id);Directory.CreateDirectory(Folder);

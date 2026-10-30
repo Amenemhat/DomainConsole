@@ -4,7 +4,7 @@ public partial class MainWindow {
  void PrepareReportContinuation52(RemoteJob job,string host){
   job.AutomaticChild31=true;
   var previous=maintenancePlans.GetValueOrDefault(host);
-  job.BeginPlan38=AutoServiceEnabled&&!(previous?.Done==true&&previous.Phase.Contains("остановлено"));
+  job.BeginPlan38=AutoServiceEnabled&&(previous==null||!previous.Done);
   if(job.BeginPlan38)job.PlanId37=previous is {Done:false}?previous.PlanId37:job.Id;
  }
  bool AttachReportContinuation52(RemoteJob job,string host){

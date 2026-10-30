@@ -11,7 +11,7 @@ public partial class MainWindow {
    p.RecoveryCheck47=true;p.Phase="После прерывания: проверка готовности";p.Detail="Исполнитель прерван. После проверки готовности будет выполнен новый поиск; прежняя установка не повторяется вслепую.";p.BootUtc=data.BootUtc;p.ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));p.Next=p.ReadyAfter;SaveMaintenance();return;
   }
   if(state.Status is "Failed" or "CompletedWithErrors" or "Cancelled" or "InterventionRequired"){p.Done=true;p.Phase=state.Status=="Cancelled"?"Обслуживание остановлено":"Требуется действие";p.Detail=state.Error.Length>0?ConnectionBrief31(state.Error):ComputerRow.StatusText(state.Status);}
-  else if(!p.RecheckAfterConnection52&&state.Status is "Completed" or "VerifiedAfterReboot"&&state.HasUpdateSteps&&state.UpdateOperationStarted&&state.UpdatesRemaining==0&&state.RebootEvidence?.Required==false){p.Done=true;p.Phase="Обслуживание завершено";p.Detail="Необходимых обновлений по результату клиента нет; флаги перезагрузки отсутствуют. Отчёт WSUS проверяется отдельно.";}
+  else if(!p.RecheckAfterConnection52&&(state.Status is "Completed" or "VerifiedAfterReboot")&&state.HasUpdateSteps&&state.UpdateOperationStarted&&state.UpdatesRemaining==0&&state.RebootEvidence?.Required==false){p.Done=true;p.Phase="Обслуживание завершено";p.Detail="Необходимых обновлений по результату клиента нет; флаги перезагрузки отсутствуют. Отчёт WSUS проверяется отдельно.";}
   else {p.Next=DateTimeOffset.UtcNow;p.Phase=state.RebootEvidence?.Required==true?"Ожидается перезагрузка":"Проверка результата обслуживания";}
   SaveMaintenance();
  }

@@ -1,4 +1,6 @@
 using DomainConsole.Shared;
+using System.Windows;
+using System.Windows.Controls;
 namespace DomainConsole;
 public partial class MainWindow {
  async Task VerifyRelease52(){
@@ -12,6 +14,7 @@ public partial class MainWindow {
    RememberQueue52(ConnectionStore.Capture(row.Target),old,probe);
    var original=new Criterion45("report","Отчёт WSUS","Warning","Warning",new());
    var view=QueueCriterion52(row,original,old);if(!view.Repair52||!view.Hint52.Contains("5 файлов · 30 байт"))throw new Exception("Report queue is not actionable/visible");
+   VerifyQueueLayout52(row,view);
    probe.QueueError="Access denied";if(!QueueHint52(probe).Contains("не определён")||QueueCriterion52(row,original,old).Repair52)throw new Exception("Incomplete queue is treated as empty/actionable");probe.QueueError="";
    if(QueueCriterion52(row,original,new(){LastReportedUtc=now.ToString("o")}).Repair52)throw new Exception("Fresh report retained obsolete repair");
    var target=ConnectionStore.Capture(row.Target);target.Status="Completed";target.State=new(){Status="Completed",Started=now.AddMinutes(-30).ToString("o"),Ended=now.AddMinutes(-20).ToString("o"),UpdatesRemaining=1};
@@ -28,6 +31,7 @@ public partial class MainWindow {
    plan.Next=default;await AdvanceMaintenance(Snapshot,_=>throw new Exception("Duplicate installation probe"),false);if(queue.Count!=1)throw new Exception("Repeated poll duplicated installation");
    queue.Clear();plan.Done=true;plan.Phase="Обслуживание остановлено пользователем";ResumeConnection52(row.Host,now.AddHours(-1),now);if(!plan.Done)throw new Exception("Connection revived a stopped plan");
    var repair=new RemoteJob{Steps=new(){QueueVerifyStep52()}};PrepareReportContinuation52(repair,row.Host);if(repair.BeginPlan38)throw new Exception("Repair revived stopped installation consent");
+   plan.Phase="Автоматическое продолжение выключено";PrepareReportContinuation52(repair,row.Host);if(repair.BeginPlan38)throw new Exception("Repair revived a completed/disabled plan");
    maintenancePlans.Clear();AutoServiceEnabled=false;PrepareReportContinuation52(repair,row.Host);if(repair.BeginPlan38)throw new Exception("Repair enables installation with Auto OFF");
    AutoServiceEnabled=true;PrepareReportContinuation52(repair,row.Host);if(!repair.BeginPlan38)throw new Exception("Recovery search lost automatic continuation");
    NormalizeCommandKinds34(new[]{QueueVerifyStep52()});
@@ -37,4 +41,18 @@ public partial class MainWindow {
    AutoServiceEnabled=auto;if(paused)PollingControl43.Pause();else PollingControl43.Resume();SaveMaintenance();Save();Store.Write("report-queue52.json",queueEvidence52);if(tick)timer.Start();
   }
  }
+ void VerifyQueueLayout52(ComputerRow row,Criterion45 report){
+  var selected=ComputerGrid.SelectedItem;var tab=MainTabs.SelectedItem;int theme=Theme.Current;
+  try{
+   ComputerGrid.SelectedItem=row;MainTabs.SelectedItem=WsusTab;ShowCurrent();
+   foreach(int palette in new[]{0,1,2})foreach(var size in new[]{(1480d,940d),(1000d,640d)}){
+    Theme.Apply(palette,false);criteria45[row.Host]=new(){new("updates","Обновления · поиск завершён","Success","Success",new()),report,new("reboot","Перезагрузка · не требуется","Success","Success",new())};
+    rendered45="";RenderCriteria45(row,new("Warning","Ожидается отчёт",""),false);
+    CaptureContent38("queue52-"+palette+"-"+(size.Item1>1000?"wide":"compact"),size.Item1,size.Item2);
+    var button=Visual33<Button>(ReadinessTree45).Single(b=>b.Content?.ToString()=="Восстановить отчётность");
+    if(!button.IsEnabled||button.ToolTip?.ToString()?.Contains("5 файлов · 30 байт")!=true)throw new Exception("Queue action/hint missing in rendered criteria");
+   }
+  }finally{criteria45.Remove(row.Host);Theme.Apply(theme,false);ComputerGrid.SelectedItem=selected;MainTabs.SelectedItem=tab;rendered45="";ShowCurrent();}
+ }
+
 }
