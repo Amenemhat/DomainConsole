@@ -7,6 +7,7 @@ public sealed class QueueEvidence52 {
  public ClientReportProbe Snapshot {get;set;}=new();
 }
 public partial class MainWindow {
+ readonly HashSet<string> pendingReportRepairs52=new(StringComparer.OrdinalIgnoreCase);
  readonly Dictionary<string,QueueEvidence52> queueEvidence52=new(Store.Read("report-queue52.json",new Dictionary<string,QueueEvidence52>()),StringComparer.OrdinalIgnoreCase);
  static bool CompleteQueue52(ClientReportProbe p)=>p.QueueError.Length==0&&p.Queues.Count==2&&p.Queues.All(q=>q.Files>=0&&q.Bytes>=0)&&p.Queues.Select(q=>q.Name).ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(new[]{"EventCache","EventCache.v2"});
  static string QueueHint52(ClientReportProbe p)=>"Очередь отчётности · "+(CompleteQueue52(p)?p.Queues.Sum(q=>(long)q.Files)+" файлов · "+p.Queues.Sum(q=>q.Bytes)+" байт":"размер не определён: проверка неполная")+"\nПроверено: "+Display36.Date(p.CollectedUtc)+(p.QueueError.Length>0?"\n"+p.QueueError:"");
@@ -26,9 +27,15 @@ public partial class MainWindow {
   var checks=criterion.Checks.ToList();checks.Add(new(hint,"Info","Info"));
   if(recovering&&recovery!.Detail.Length>0)checks.Add(new(recovery.Detail,"Info","Info"));
   bool busy=History.Any(j=>IsWsusJob(j)&&j.Targets.Any(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)));
-  return criterion with{Text="Отчёт WSUS · "+phase,Tone=recommended?"Warning":criterion.Tone,Checks=checks,Hint52=hint,Repair52=recommended&&!recovering&&!busy&&!LostObservation51(row.Host)&&RebootReason(row).Length==0};
+  return criterion with{Text="Отчёт WSUS · "+phase,Tone=recommended?"Warning":criterion.Tone,Checks=checks,Hint52=hint,Repair52=recommended&&!recovering&&!busy&&!ReportRepairBusy52(row)&&!LostObservation51(row.Host)&&RebootReason(row).Length==0};
  }
  static CommandStep QueueVerifyStep52()=>new(){Kind="ReportQueueVerify",Name="Проверка очереди после восстановления",Code="$ErrorActionPreference='Stop';$raw=& {\n"+RemoteService.ReportQueueScript+"\n};$q=$raw|ConvertFrom-Json -ErrorAction Stop;if($q.QueueError -or @($q.Queues).Count -ne 2 -or @($q.Queues|Where-Object {$_.Name -eq 'EventCache'}).Count -ne 1 -or @($q.Queues|Where-Object {$_.Name -eq 'EventCache.v2'}).Count -ne 1){throw 'Очередь после восстановления прочитана не полностью.'};$q.Queues|ForEach-Object {if($_.Files -lt 0 -or $_.Bytes -lt 0){throw 'Размер очереди не подтверждён.'};$_.Name+': '+$_.Files+' файлов, '+$_.Bytes+' байт'};'Очередь проверена; получение отчёта подтверждается отдельно сервером.'"};
  async void RecoverReport52_Click(object sender,RoutedEventArgs e)=>await Guard(()=>RecoverReport52(true));
- async Task RecoverReport52(bool focusOnly){ReadWsus();MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Name="Восстановление очереди отчётности",Kind="ReportRecovery",Code=DeliveryScripts.Recovery},QueueVerifyStep52(),new(){Name="WSUS · проверка и запрос свежего отчёта",Kind="UpdateScan"}},"WSUS",focusOnly:focusOnly);}
+ bool ReportRepairBusy52(ComputerRow row)=>pendingReportRepairs52.Contains(Identity40.EndpointKey(ConnectionStore.Capture(row.Target)))||History.Any(j=>j.Steps.Any(s=>s.Kind is "ReportRecovery" or "ReportQueueVerify")&&j.Targets.Any(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)));
+ async Task RecoverReport52(bool focusOnly){
+  var targets=focusOnly?new List<ComputerRow>{Current()}:Selected();if(targets.Count==0)targets.Add(Current());
+  if(targets.Any(ReportRepairBusy52)){Notify("Восстановление отчётности уже подготавливается или выполняется. Повтор не создан.");return;}
+  var keys=targets.Select(r=>Identity40.EndpointKey(ConnectionStore.Capture(r.Target))).Distinct(StringComparer.OrdinalIgnoreCase).ToList();foreach(var key in keys)pendingReportRepairs52.Add(key);
+  try{ReadWsus();MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Name="Восстановление очереди отчётности",Kind="ReportRecovery",Code=DeliveryScripts.Recovery},QueueVerifyStep52(),new(){Name="WSUS · проверка и запрос свежего отчёта",Kind="UpdateScan"}},"WSUS",focusOnly:focusOnly);}finally{foreach(var key in keys)pendingReportRepairs52.Remove(key);}
+ }
 }

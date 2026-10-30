@@ -15,6 +15,10 @@ public partial class MainWindow {
    var original=new Criterion45("report","Отчёт WSUS","Warning","Warning",new());
    var view=QueueCriterion52(row,original,old);if(!view.Repair52||!view.Hint52.Contains("5 файлов · 30 байт"))throw new Exception("Report queue is not actionable/visible");
    VerifyQueueLayout52(row,view);
+   var endpoint=Identity40.EndpointKey(ConnectionStore.Capture(row.Target));pendingReportRepairs52.Add(endpoint);
+   if(!ReportRepairBusy52(row)||QueueCriterion52(row,original,old).Repair52)throw new Exception("Repeated preparation exposes another report repair");pendingReportRepairs52.Remove(endpoint);
+   var queuedRepair=new RemoteJob{OutputChannel="WSUS",Steps=new(){QueueVerifyStep52()},Targets=new(){new(){Host=row.Host,Status="Queued"}}};History.Add(queuedRepair);
+   if(!ReportRepairBusy52(row))throw new Exception("Queued repair permits another job");queuedRepair.Targets[0].Status="Completed";if(ReportRepairBusy52(row))throw new Exception("Completed repair retains submission lock");History.Remove(queuedRepair);
    probe.QueueError="Access denied";if(!QueueHint52(probe).Contains("не определён")||QueueCriterion52(row,original,old).Repair52)throw new Exception("Incomplete queue is treated as empty/actionable");probe.QueueError="";
    if(QueueCriterion52(row,original,new(){LastReportedUtc=now.ToString("o")}).Repair52)throw new Exception("Fresh report retained obsolete repair");
    var target=ConnectionStore.Capture(row.Target);target.Status="Completed";target.State=new(){Status="Completed",Started=now.AddMinutes(-30).ToString("o"),Ended=now.AddMinutes(-20).ToString("o"),UpdatesRemaining=1};
@@ -49,6 +53,7 @@ public partial class MainWindow {
    foreach(int palette in new[]{0,1,2})foreach(var size in new[]{(1480d,940d),(1000d,640d)}){
     Theme.Apply(palette,false);criteria45[row.Host]=new(){new("updates","Обновления · поиск завершён","Success","Success",new()),report,new("reboot","Перезагрузка · не требуется","Success","Success",new())};
     rendered45="";RenderCriteria45(row,new("Warning","Ожидается отчёт",""),false);
+    Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);UpdateLayout();
     CaptureContent38("queue52-"+palette+"-"+(size.Item1>1000?"wide":"compact"),size.Item1,size.Item2);
     var button=Visual33<Button>(ReadinessTree45).Single(b=>b.Content?.ToString()=="Восстановить отчётность");
     if(!button.IsEnabled||button.ToolTip?.ToString()?.Contains("5 файлов · 30 байт")!=true)throw new Exception("Queue action/hint missing in rendered criteria");
