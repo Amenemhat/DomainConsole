@@ -9,7 +9,7 @@ public partial class MainWindow {
   var generation=PollingControl43.Token;
   bool Current52()=>!closing&&!TransportBudget41.Paused&&!generation.IsCancellationRequested&&CurrentEndpoint(target)&&CurrentIdentity(target);
   if(!Current52())return false;
-  if(ConnectionFresh(row.Host))return true;
+  if(ConnectionFresh(row.Host)&&clientConnections[row.Host].Error.Length==0)return true;
   string key=TransportBudget41.Key(target);
   if(ipConnectionFlights52.TryGetValue(key,out var flight))return await flight&&Current52();
   if(ipConnectionRetry52.TryGetValue(key,out var next)&&DateTimeOffset.UtcNow<next)return false;
@@ -19,7 +19,7 @@ public partial class MainWindow {
   try{
    await (check??remote.CheckConnection)(target);
    if(!Current52())return false;
-   ConnectionSucceeded(row.Host,started,verifiedEndpoint52:true);ipConnectionRetry52.Remove(key);success=true;return true;
+   ConnectionSucceeded(row.Host,started,verifiedEndpoint52:true);success=clientConnections.TryGetValue(row.Host,out var observed)&&observed.EvidenceStarted38==started&&observed.Error.Length==0;if(success)ipConnectionRetry52.Remove(key);return success;
   }catch(Exception ex){
    if(Current52()){ConnectionFailed(row.Host,ex.Message,started);ipConnectionRetry52[key]=DateTimeOffset.UtcNow.AddMinutes(1);}
    return false;
@@ -45,12 +45,13 @@ public partial class MainWindow {
    if(calls!=failedCalls)throw new Exception("Disconnected VPN generated repeated checks");
    string key=TransportBudget41.Key(ConnectionStore.Capture(row.Target));ipConnectionRetry52[key]=DateTimeOffset.UtcNow.AddSeconds(-1);
    if(!await EnsureIpConnection52(row,_=>{calls++;return Task.FromResult("returned");})||calls!=failedCalls+1)throw new Exception("VPN return did not permit one retry");
-   foreach(string change in new[]{"address","identity","master"}){
+   foreach(string change in new[]{"address","identity","master","newer-failure"}){
     Offline();var delayed=new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
     var pending=EnsureIpConnection52(row,_=>delayed.Task);
     if(change=="address")ConnectionStore.Profiles[host].Address="192.0.2.153";
     else if(change=="identity")ConnectionStore.Profiles[host].Identity="replacement52";
-    else PollingControl43.Pause();
+    else if(change=="master")PollingControl43.Pause();
+    else ConnectionFailed(host,"WinRM newer failure",DateTimeOffset.UtcNow.AddSeconds(1));
     delayed.SetResult("obsolete");if(await pending||ConnectionFresh(host))throw new Exception("Obsolete IP response restored connection: "+change);
     PollingControl43.Resume();ConnectionStore.Profiles[host].Address="192.0.2.152";ConnectionStore.Profiles[host].Identity="vpn-fixture52";
    }
