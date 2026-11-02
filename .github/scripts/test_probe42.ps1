@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)]$Session,[Parameter(Mandatory)][pscredential]$Credential,[Parameter(Mandatory)][string]$Fixture)
+﻿param([Parameter(Mandatory)]$Session,[Parameter(Mandatory)][pscredential]$Credential,[Parameter(Mandatory)][string]$Fixture)
 $ErrorActionPreference='Stop'
 $baseline42=@(Get-Process wsmprovhost -ErrorAction SilentlyContinue).Count
 $task='DomainConsoleCSharp-Snapshot41';$path=Join-Path $env:ProgramData 'DomainConsoleCSharp\Snapshot41'
@@ -17,7 +17,7 @@ $result=Await-Result;if($result.Status -ne 'Ready' -or !$result.Snapshot.Reboot.
 if([System.Xml.XmlConvert]::ToTimeSpan((Get-ScheduledTask $task).Settings.ExecutionTimeLimit).TotalSeconds -ne 60){throw 'Legacy task was not safely migrated'}
 $registered=(Get-ScheduledTaskInfo $task).LastRunTime
 foreach($n in 1..12){if((Query 'Get').Status -ne 'Ready'){throw 'Cache lost'}}
-$jobs=@();try{foreach($n in 1..6){$jobs+=Invoke-Command -ComputerName localhost -Credential $Credential -Authentication Negotiate -AsJob -ScriptBlock {param($text);& ([ScriptBlock]::Create($text))} -ArgumentList (Code 'Get')};$jobs|Wait-Job -Timeout 40|Out-Null;foreach($j in $jobs){if($j.State -ne 'Completed'){throw 'Concurrent request failed'};$r=Receive-Job $j -ErrorAction Stop|ConvertFrom-Json;if($r.Status -notin @('Ready','Busy')){throw 'Busy became persistent block'}}}finally{$jobs|Remove-Job -Force -ErrorAction SilentlyContinue}
+$jobs=@();try{foreach($n in 1..6){$jobs+=Invoke-Command -ComputerName localhost -Credential $Credential -Authentication Negotiate -AsJob -ScriptBlock {param($text);& ([ScriptBlock]::Create($text))} -ArgumentList (Code 'Get')};$jobs|Wait-Job -Timeout 40|Out-Null;foreach($j in $jobs){if($j.State -ne 'Completed'){$detail=@($jobs|ForEach-Object {@{Id=$_.Id;State=[string]$_.State;Reason=[string]$_.JobStateInfo.Reason;Children=@($_.ChildJobs|ForEach-Object {@{State=[string]$_.State;Reason=[string]$_.JobStateInfo.Reason;Errors=@($_.Error|ForEach-Object {$_.ToString()})}})}});throw ('Concurrent request failed after 40 seconds: '+($detail|ConvertTo-Json -Depth 6 -Compress))};$r=Receive-Job $j -ErrorAction Stop|ConvertFrom-Json;if($r.Status -notin @('Ready','Busy')){throw 'Busy became persistent block'}}}finally{$jobs|Remove-Job -Force -ErrorAction SilentlyContinue}
 if((Get-ScheduledTaskInfo $task).LastRunTime -ne $registered){throw 'Cache/concurrency restarted collector'}
 # Failure reason, bounded cooldown, three errors then explicit recovery.
 $null=Query 'Recover'
