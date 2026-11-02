@@ -9,6 +9,7 @@ public partial class MainWindow {
    if(formatted.Contains("возобновилась ли загрузка")||formatted.Contains("Работа служб после команды")||!formatted.Contains("## Вывод команды\nWinDefend: Stopped\nИсходный вывод"))throw new Exception("Read-only service output classified as recovery");
   }
   await VerifyTreeKeyboard52();
+  await VerifySearchInput52();
   await VerifyIpReconnect52();
   var plans=maintenancePlans.ToList();var jobs=History.ToList();var pending=queue.ToList();var evidence=queueEvidence52.ToList();var recoveries=reportRecoveries.ToList();
   bool auto=AutoServiceEnabled,paused=TransportBudget41.Paused,tick=timer.IsEnabled;timer.Stop();
