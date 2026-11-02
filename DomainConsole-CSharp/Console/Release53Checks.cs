@@ -26,7 +26,7 @@ public partial class MainWindow {
    try{ComputerGrid.SelectedItem=row;MainTabs.SelectedItem=WsusTab;
     RemoteService.WithCollectorActivity53(ConnectionStore.Capture(row.Target),signal,()=>{
      foreach(int theme in new[]{0,1,2})foreach(var size in new[]{(1480d,940d),(1000d,640d)}){
-      Theme.Apply(theme,false);Width=size.Item1;Height=size.Item2;RefreshCollector44(row.Host);UpdateLayout();
+      Theme.Apply(theme,false);Width=size.Item1;Height=size.Item2;RefreshCollector44(row.Host);UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);UpdateLayout();
       if(CollectorStage53.Visibility!=System.Windows.Visibility.Visible||!CollectorBusy53.IsIndeterminate||!CollectorNoticeText43.Text.Contains("Последний сигнал"))throw new Exception("Collector stage/liveness missing from header");
       CaptureContent38("collector53-"+theme+"-"+(size.Item1>1000?"wide":"compact"),size.Item1,size.Item2,true);
      }
