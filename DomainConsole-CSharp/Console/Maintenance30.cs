@@ -37,9 +37,11 @@ public partial class MainWindow {
    if(reportRecoveries.TryGetValue(p.Host,out var report52)&&!report52.Done&&report52.JobId!=p.JobId){p.Detail="Ожидается восстановление и проверка отчётности";continue;}
    if((p.SearchAfterBoot49||p.Phase=="Ожидается перезагрузка")&&RecoverableCollector53(RemoteService.SnapshotWait42(captured))){
     if(p.PollRecoveryAttempted53){p.Detail="Автоматическое восстановление сборщика уже выполнено; новый снимок не получен. Доступна диагностика и восстановление в шапке.";continue;}
+    if(!repairingCollectors47.Add(p.Host)){p.Detail="Восстановление сборщика уже выполняется; повтор не создан";continue;}
     p.PollRecoveryAttempted53=true;SaveMaintenance();
     try{var recovered53=await RecoverCollectorStatus53(captured,resetProbe53);if(!Current49())continue;AllowStatusRetry53(p.Host);if(recovered53!=null){ReadSucceeded34(p.Host,"флаги и аптайм");ApplyClientSnapshot(p.Host,recovered53);p.Detail="Сборщик восстановлен; свежий статус получен";p.Next=DateTimeOffset.UtcNow;}else{p.Detail="Остановка сборщика подтверждена; ожидается свежая проверка после паузы";p.Next=DateTimeOffset.UtcNow.AddMinutes(2);}}
     catch(Exception ex){if(!Current49())continue;p.Detail="Автоматическое восстановление опроса не подтверждено: "+ShortConnectionError(ex.Message);}
+    finally{repairingCollectors47.Remove(p.Host);}
     continue;
    }
    if(target!=null&&ActiveTarget(target)){p.Phase="Выполняется обслуживание";continue;}

@@ -61,6 +61,10 @@ public partial class MainWindow {
    var plan=new MaintenancePlan{Host=row.Host,Identity=target.ConnectionIdentity,Phase="Ожидается перезагрузка",BootUtc=boot,Install=true};maintenancePlans[row.Host]=plan;
    await RemoteService.WithCollectorWait53(target,new("Blocked","Три сбоя сборщика подряд: fixture",0),async()=>{
     int planResets=0;Task<string> ResetPlan(TargetRecord _){planResets++;return Task.FromResult("Stopped");}
+    repairingCollectors47.Add(row.Host);
+    await AdvanceMaintenance(_=>throw new Exception("Concurrent recovery should not read"),_=>throw new Exception("Concurrent recovery should not inspect installation"),false,resetProbe53:ResetPlan);
+    if(planResets!=0||plan.PollRecoveryAttempted53)throw new Exception("Parallel collector recovery was not joined");
+    repairingCollectors47.Remove(row.Host);plan.Next=default;
     await AdvanceMaintenance(_=>throw new Exception("Blocked snapshot should not run"),_=>throw new Exception("Blocked installer check should not run"),false,resetProbe53:ResetPlan);
     plan=Store.Clone(plan);maintenancePlans[row.Host]=plan;plan.Next=default;
     await AdvanceMaintenance(_=>throw new Exception("Exhausted recovery should not run"),_=>throw new Exception("Unexpected installer check"),false,resetProbe53:ResetPlan);
