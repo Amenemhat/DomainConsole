@@ -17,9 +17,20 @@ public partial class MainWindow {
   var signal=new CollectorActivity53("Reboot","Чтение",now.AddSeconds(-10).ToString("o"),now.ToString("o"),now);
   if(!signal.Animate(now)||signal.Animate(now.AddMinutes(1))||(signal with{Stage="Stopping"}).Animate(now))throw new Exception("Collector animation misrepresents liveness");
   var row=new ComputerRow(new(){Host="status53.fixture.invalid",Name="Status fixture"});Computers.Add(row);
-  var pending=queue.ToList();var paused=TransportBudget41.Paused;
+  var pending=queue.ToList();var savedPlans=maintenancePlans.ToList();bool savedAuto=AutoServiceEnabled;var paused=TransportBudget41.Paused;
   try{
-   PollingControl43.Resume();var server=OverviewServer;
+   PollingControl43.Resume();
+   var selected53=ComputerGrid.SelectedItem;var tab53=MainTabs.SelectedItem;int theme53=Theme.Current;double width53=Width,height53=Height;
+   try{ComputerGrid.SelectedItem=row;MainTabs.SelectedItem=WsusTab;
+    RemoteService.WithCollectorActivity53(ConnectionStore.Capture(row.Target),signal,()=>{
+     foreach(int theme in new[]{0,1,2})foreach(var size in new[]{(1480d,940d),(1000d,640d)}){
+      Theme.Apply(theme,false);Width=size.Item1;Height=size.Item2;RefreshCollector44(row.Host);UpdateLayout();
+      if(CollectorStage53.Visibility!=System.Windows.Visibility.Visible||!CollectorBusy53.IsIndeterminate||!CollectorNoticeText43.Text.Contains("Последний сигнал"))throw new Exception("Collector stage/liveness missing from header");
+      CaptureContent38("collector53-"+theme+"-"+(size.Item1>1000?"wide":"compact"),size.Item1,size.Item2,true);
+     }
+    });
+   }finally{Theme.Apply(theme53,false);Width=width53;Height=height53;ComputerGrid.SelectedItem=selected53;MainTabs.SelectedItem=tab53;ShowCurrent();}
+   var server=OverviewServer;
    var report=new WsusReport{LastReportedUtc=now.ToString("o"),LastSyncResult="Succeeded",NeededCount=0,RequiredComplete=true};
    if(!ApplyOverviewReply53(row,new(){Host=row.Host,Found=true,Report=report},server))throw new Exception("Successful report rejected");
    var saved=reportCache[row.Host];
@@ -37,12 +48,30 @@ public partial class MainWindow {
    await TryResetRebootPoll51(row.Host,watch,target,Reset);await TryResetRebootPoll51(row.Host,watch,target,Reset);
    if(resets!=1||!watch.PollResetAttempted51||watch.Next<=now)throw new Exception("Post-boot collector recovery is not bounded/durable");
    watch.PollResetAttempted51=false;PollingControl43.Pause();await TryResetRebootPoll51(row.Host,watch,target,Reset);if(resets!=1)throw new Exception("Master OFF launched recovery");
+   PollingControl43.Resume();AutoServiceEnabled=true;maintenancePlans.Clear();
+   var plan=new MaintenancePlan{Host=row.Host,Identity=target.ConnectionIdentity,Phase="Ожидается перезагрузка",BootUtc=boot,Install=true};maintenancePlans[row.Host]=plan;
+   await RemoteService.WithCollectorWait53(target,new("Blocked","Три сбоя сборщика подряд: fixture",0),async()=>{
+    int planResets=0;Task<string> ResetPlan(TargetRecord _){planResets++;return Task.FromResult("Stopped");}
+    await AdvanceMaintenance(_=>throw new Exception("Blocked snapshot should not run"),_=>throw new Exception("Blocked installer check should not run"),false,resetProbe53:ResetPlan);
+    plan=Store.Clone(plan);maintenancePlans[row.Host]=plan;plan.Next=default;
+    await AdvanceMaintenance(_=>throw new Exception("Exhausted recovery should not run"),_=>throw new Exception("Unexpected installer check"),false,resetProbe53:ResetPlan);
+    if(planResets!=1||!plan.PollRecoveryAttempted53)throw new Exception("Maintenance collector recovery repeated across restart");
+   });
    if(queue.Count!=pending.Count)throw new Exception("Status observation launched work");
    File.WriteAllText(Path.Combine(Path.GetTempPath(),"ui-release53.txt"),"PASS: same-boot flags at 6m/12h/1d and JSON restart; new boot/partial/positive; heartbeat animation; missing/partial/error WSUS preserves report; new success clears limitation; historical proof survives work but not current error; one durable recovery; OFF; no update submission");
   }finally{
+   maintenancePlans.Clear();foreach(var entry in savedPlans)maintenancePlans[entry.Key]=entry.Value;AutoServiceEnabled=savedAuto;SaveMaintenance();
    Computers.Remove(row);reportCache.Remove(row.Host);serverReports.Remove(row.Host);reportSeverity.Remove(row.Host);overviewErrors.Remove(row.Host);liveReports.Remove(row.Host);readyProofs43.Remove(row.Host);rebootWatches.Remove(row.Host);
    Store.Write("ready-proofs43.json",readyProofs43);Store.Write("wsus-report-cache.json",reportCache);Store.Write("reboot-watches.json",rebootWatches);
    if(paused)PollingControl43.Pause();else PollingControl43.Resume();
   }
+ }
+}
+
+public sealed partial class RemoteService {
+ internal static void WithCollectorActivity53(TargetRecord target,CollectorActivity53 activity,Action test){string key=TransportBudget41.Key(target);var old=collectorActivity53.GetValueOrDefault(key);collectorActivity53[key]=activity;try{test();}finally{if(old==null)collectorActivity53.TryRemove(key,out _);else collectorActivity53[key]=old;}}
+ internal static async Task WithCollectorWait53(TargetRecord target,PollWait42 wait,Func<Task> test){
+  string key=TransportBudget41.Key(target);var old=snapshotWait42.GetValueOrDefault(key);snapshotWait42[key]=wait;
+  try{await test();}finally{if(old==null)snapshotWait42.TryRemove(key,out _);else snapshotWait42[key]=old;}
  }
 }

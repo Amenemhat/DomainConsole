@@ -4,7 +4,7 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed class AttentionRow30 {public string Host {get;set;}="";public string Text {get;set;}="";public Action Stop {get;set;}=()=>{};}
 public sealed class ReportWait30 {public int Attempts42 {get;set;}public string Id {get;set;}="";public DateTimeOffset Until {get;set;}public DateTimeOffset Next {get;set;}}
-public sealed class MaintenancePlan {public bool RecheckAfterConnection52 {get;set;}public bool SearchAfterBoot49 {get;set;}public bool RecoveryCheck47 {get;set;}public string DeadlineUtc44 {get;set;}="";public bool Released37 {get;set;}public string PlanId37 {get;set;}="";
+public sealed class MaintenancePlan {public bool PollRecoveryAttempted53 {get;set;}public bool RecheckAfterConnection52 {get;set;}public bool SearchAfterBoot49 {get;set;}public bool RecoveryCheck47 {get;set;}public string DeadlineUtc44 {get;set;}="";public bool Released37 {get;set;}public string PlanId37 {get;set;}="";
  public string Host {get;set;}="";public string Identity {get;set;}="";public string JobId {get;set;}="";public string Phase {get;set;}="";public string BootUtc {get;set;}="";public string StartedUtc {get;set;}=DateTime.UtcNow.ToString("o");public string NextJobId {get;set;}="";public bool Install {get;set;}public bool Done {get;set;}public int Cycles {get;set;}public DateTimeOffset Next {get;set;}public DateTimeOffset ReadyAfter {get;set;}public string Detail {get;set;}="";
 }
 public partial class MainWindow {
@@ -25,7 +25,7 @@ public partial class MainWindow {
   if(maintenancePlans.TryGetValue(host,out var active)&&!active.Done)return;
   maintenancePlans[host]=new(){Host=host,Identity=ConnectionStore.Capture(new TargetRecord{Host=host}).ConnectionIdentity,BootUtc=next.BootUtc,Install=AutoServiceEnabled,SearchAfterBoot49=true,Phase="После перезагрузки: ожидание готовности",ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800)),Next=DateTimeOffset.UtcNow};SaveMaintenance();observedReturns[host]=next.BootUtc;Store.Write("observed-return-scans.json",observedReturns);
  }
- async Task AdvanceMaintenance(Func<ComputerRow,Task<RebootSnapshot?>>? statusProbe=null,Func<TargetRecord,Task<LiveUpdateActivity>>? activityProbe=null,bool dispatch=true,Func<TargetRecord,string,Task<bool>>? releaseProbe47=null){if(TransportBudget41.Paused||advancingMaintenance||closing)return;releaseProbe47??=(t,p)=>remote.Control37(t,"release37",p);statusProbe??=r=>ReadClientStatus(r,force:true);activityProbe??=remote.LiveUpdates;advancingMaintenance=true;MaintenancePlan? probing51=null;var generation49=PollingControl43.Token;try{
+ async Task AdvanceMaintenance(Func<ComputerRow,Task<RebootSnapshot?>>? statusProbe=null,Func<TargetRecord,Task<LiveUpdateActivity>>? activityProbe=null,bool dispatch=true,Func<TargetRecord,string,Task<bool>>? releaseProbe47=null,Func<TargetRecord,Task<string>>? resetProbe53=null){if(TransportBudget41.Paused||advancingMaintenance||closing)return;releaseProbe47??=(t,p)=>remote.Control37(t,"release37",p);statusProbe??=r=>ReadClientStatus(r,force:true);activityProbe??=remote.LiveUpdates;advancingMaintenance=true;MaintenancePlan? probing51=null;var generation49=PollingControl43.Token;try{
   foreach(var p in maintenancePlans.Values.Where(p=>!p.Done&&p.Next<=DateTimeOffset.UtcNow).Take(3).ToList()){
    probing51=p;NormalizePlan44(p);p.Next=DateTimeOffset.UtcNow.AddMinutes(1);if(!AutoServiceEnabled&&p.Install){p.Done=true;p.Phase="Автоматическое продолжение выключено";continue;}var row=Computers.FirstOrDefault(r=>r.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase));
    if(row==null||row.Target.AdDisabled){p.Done=true;p.Phase="Требуется действие";p.Detail=row==null?"Компьютер отсутствует в рабочем списке":"Учётная запись отключена в AD";continue;}
@@ -35,6 +35,13 @@ public partial class MainWindow {
    if(LostObservation51(p.Host)){p.Detail="Связь потеряна; ожидается отдельная проверка доступности. Клиентское задание не остановлено.";continue;}
    var job=History.FirstOrDefault(j=>j.Id==p.JobId);var target=job?.Targets.FirstOrDefault(t=>t.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase));
    if(reportRecoveries.TryGetValue(p.Host,out var report52)&&!report52.Done&&report52.JobId!=p.JobId){p.Detail="Ожидается восстановление и проверка отчётности";continue;}
+   if((p.SearchAfterBoot49||p.Phase=="Ожидается перезагрузка")&&RemoteService.SnapshotWait42(captured) is {Kind:"Blocked"} exhausted53&&exhausted53.Message.StartsWith("Три сбоя сборщика подряд",StringComparison.Ordinal)){
+    if(p.PollRecoveryAttempted53){p.Detail="Автоматическое восстановление сборщика уже выполнено; новый снимок не получен. Доступна диагностика и восстановление в шапке.";continue;}
+    p.PollRecoveryAttempted53=true;SaveMaintenance();
+    try{await (resetProbe53??remote.ResetPolling44)(captured);if(!Current49())continue;ReadSucceeded34(p.Host,"флаги и аптайм");ReadSucceeded34(p.Host,"фоновая активность");p.Detail="Остановка сборщика подтверждена; ожидается свежая проверка после паузы";p.Next=DateTimeOffset.UtcNow.AddMinutes(2);}
+    catch(Exception ex){if(!Current49())continue;p.Detail="Автоматическое восстановление опроса не подтверждено: "+ShortConnectionError(ex.Message);}
+    continue;
+   }
    if(target!=null&&ActiveTarget(target)){p.Phase="Выполняется обслуживание";continue;}
    if(target!=null&&!TerminalSuccess(target)&&!p.RecoveryCheck47){if(target.Status is "ConnectionFailed" or "Unavailable" or "AccessDenied" or "SubmissionUnknown"){p.Detail="Связь/передача не подтверждена; требуется проверка результата, повторный запуск не выполняется";continue;}p.Done=true;p.Phase=target.Status=="Cancelled"?"Обслуживание остановлено":"Требуется действие";p.Detail="Автоматическое продолжение прекращено: "+ComputerRow.StatusText(target.Status)+". См. результат задания.";continue;}
    if(p.Phase=="Ожидается перезагрузка"){

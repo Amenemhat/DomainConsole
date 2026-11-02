@@ -41,7 +41,7 @@ public sealed partial class RemoteService {
     if(status=="Ready") {string bundle=root.GetProperty("Snapshot").GetRawText();using var parsed=JsonDocument.Parse(bundle);var stamp=parsed.RootElement.GetProperty("CollectedUtc").GetDateTimeOffset();snapshotCache42[key]=(bundle,stamp.AddSeconds(45));snapshotWait42.TryRemove(key,out _);networkFailures42.TryRemove(key,out _);return bundle;}
     if(status is "Busy" or "Stopping"){ObserveCollector53(key,root,status,reason);mode="Read";await Task.Delay(TimeSpan.FromSeconds(10),deadline.Token);continue;}
     var wait=new PollWait42(status,reason,status=="Idle"?120:root.GetProperty("RetrySeconds").GetInt32());snapshotWait42[key]=wait;throw wait;
-   }}catch(PollWait42){throw;}catch(OperationCanceledException) when(TransportBudget41.Paused||PollingControl43.Cancelled){throw;}catch(Exception ex){int failures=networkFailures42.AddOrUpdate(key,1,(_,n)=>Math.Min(3,n+1));var wait=CollectorFailure48(ex,failures);snapshotWait42[key]=wait;throw wait;}finally{collectorActivity53.TryRemove(key,out _);snapshotCancellation47.TryRemove(new KeyValuePair<string,CancellationTokenSource>(key,deadline));}
+   }}catch(PollWait42 wait53){snapshotWait42[key]=wait53;throw;}catch(OperationCanceledException) when(TransportBudget41.Paused||PollingControl43.Cancelled){throw;}catch(Exception ex){int failures=networkFailures42.AddOrUpdate(key,1,(_,n)=>Math.Min(3,n+1));var wait=CollectorFailure48(ex,failures);snapshotWait42[key]=wait;throw wait;}finally{collectorActivity53.TryRemove(key,out _);snapshotCancellation47.TryRemove(new KeyValuePair<string,CancellationTokenSource>(key,deadline));}
 
  }
  internal static PollWait42 CollectorFailure48(Exception ex,int failures){

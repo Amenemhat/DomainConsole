@@ -14,7 +14,8 @@ public sealed partial class RemoteService {
  static void ObserveCollector53(string key,JsonElement root,string status,string reason){
   string Field(JsonElement value,string name)=>value.ValueKind==JsonValueKind.Object&&value.TryGetProperty(name,out var field)&&field.ValueKind==JsonValueKind.String?field.GetString()??"":"";
   root.TryGetProperty("State",out var state);root.TryGetProperty("Run",out var run);
-  collectorActivity53[key]=new(status=="Stopping"?status:Field(state,"Phase"),reason,Field(run,"StartedUtc"),Field(state,"UpdatedUtc"),DateTimeOffset.UtcNow);
+  bool same=Field(run,"Id").Length>0&&Field(run,"Id")==Field(state,"Id");
+  collectorActivity53[key]=new(status=="Stopping"?status:same?Field(state,"Phase"):"",reason,Field(run,"StartedUtc"),same?Field(state,"UpdatedUtc"):"",DateTimeOffset.UtcNow);
  }
 }
 public partial class MainWindow {
