@@ -38,8 +38,10 @@ if($signature.Status -ne 'Valid' -or !$signature.SignerCertificate -or $signatur
 'Действие: '+$mode
 & $exe $mode
 $code=$LASTEXITCODE
-'Код MpCmdRun: '+$code
-if($code -ne 0){$log=Join-Path $env:TEMP 'MpCmdRun.log';if(Test-Path $log){Get-Content $log -Encoding Unicode -Tail 40};throw ('Восстановление не выполнено; код '+$code+'. Дальнейшие действия автоматически не запускаются.')}
+$hex='0x'+[BitConverter]::ToUInt32([BitConverter]::GetBytes([int]$code),0).ToString('X8')
+'Код MpCmdRun: '+$code+' ('+$hex+')'
+$reason=if($hex -eq '0x800106BA'){'Defender не смог воспользоваться своей службой. Проверьте WinDefend, режим защиты и сторонний антивирус; это не код ошибки RPC 0x800706BA.'}else{'Причина требует проверки журнала MpCmdRun.'}
+if($code -ne 0){$log=Join-Path $env:TEMP 'MpCmdRun.log';try{if(Test-Path $log){Get-Content $log -Encoding Unicode -Tail 40}}catch{'Журнал MpCmdRun недоступен: '+$_.Exception.Message};throw ('Восстановление не выполнено; код '+$code+' ('+$hex+'). '+$reason+' Дальнейшие действия автоматически не запускаются.')}
 Get-Service WinDefend|Select-Object Name,Status,StartType|Format-Table
 try{Get-MpComputerStatus -ErrorAction Stop|Select-Object AMProductVersion,AMEngineVersion,AntivirusSignatureVersion,AntivirusEnabled,RealTimeProtectionEnabled|Format-List}catch{'После восстановления статус пока недоступен: '+$_.Exception.Message}
 'Команда завершена. Проверьте устойчивость службы и повторите обновление через WSUS. Перезагрузка автоматически не выполняется.'
