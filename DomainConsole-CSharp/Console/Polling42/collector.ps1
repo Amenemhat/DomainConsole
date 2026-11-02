@@ -31,8 +31,9 @@ try{
   $start.UseShellExecute=$false;$start.CreateNoWindow=$true
   $worker=[Diagnostics.Process]::Start($start)
   try{[DcReadJob42]::Add($job,$worker.Handle)}catch{try{$worker.Kill();$null=$worker.WaitForExit(3000)}catch{};throw}
-  $partClock=[Diagnostics.Stopwatch]::StartNew();$budget=if($part -eq 'Reboot'){20}else{10}
+  $partClock=[Diagnostics.Stopwatch]::StartNew();$lastSignal=0;$budget=if($part -eq 'Reboot'){20}else{10}
   while(!$worker.WaitForExit(200)){
+   if($partClock.Elapsed.TotalSeconds -ge ($lastSignal+2)){Save-State @{Id=$run.Id;Phase=$part;StartedUtc=$run.StartedUtc;UpdatedUtc=[DateTime]::UtcNow.ToString('o');Supervisor=$PID};$lastSignal=$partClock.Elapsed.TotalSeconds}
    if($clock.Elapsed.TotalSeconds -ge 45 -or (Test-Path -LiteralPath (Join-Path $path 'cancel.flag'))){[IO.File]::WriteAllText((Join-Path $path 'cancel.flag'),'cancel')}
    if($partClock.Elapsed.TotalSeconds -ge $budget){[IO.File]::WriteAllText((Join-Path $path ($part+'.cancel')),'cancel')};if($partClock.Elapsed.TotalSeconds -ge ($budget+5) -or $clock.Elapsed.TotalSeconds -ge 50){break}
   }

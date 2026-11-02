@@ -5,7 +5,8 @@ $task='DomainConsoleCSharp-Snapshot41';$path=Join-Path $env:ProgramData 'DomainC
 function Code($mode){[IO.File]::ReadAllText((Join-Path $Fixture ('probe42-'+$mode+'.ps1')))}
 function Invoke-Probe([string]$body){Invoke-Command -Session $Session -ScriptBlock {param($text);& ([ScriptBlock]::Create($text))} -ArgumentList $body -ErrorAction Stop}
 function Query($mode){Invoke-Probe (Code $mode)|ConvertFrom-Json}
-function Await-Result { $until=[DateTime]::UtcNow.AddSeconds(100);do{$r=Query 'Read';if($r.Status -notin @('Busy','Stopping')){return $r};Start-Sleep -Seconds 2}while([DateTime]::UtcNow -lt $until);throw 'Collector did not settle' }
+$script:signals53=@{};$script:advances53=0
+function Await-Result { $until=[DateTime]::UtcNow.AddSeconds(100);do{$r=Query 'Read';if($r.Run.Id -and $r.State.Id -eq $r.Run.Id -and $r.State.Phase -in @('Reboot','Activity')){$key53=$r.State.Id+'|'+$r.State.Phase;$previous53=$script:signals53[$key53];if($previous53 -and [DateTime]::Parse($r.State.UpdatedUtc) -gt [DateTime]::Parse($previous53)){$script:advances53++};$script:signals53[$key53]=$r.State.UpdatedUtc};if($r.Status -notin @('Busy','Stopping')){return $r};Start-Sleep -Seconds 2}while([DateTime]::UtcNow -lt $until);throw 'Collector did not settle' }
 function Expire-Cache {$f=Join-Path $path 'result.json';if(Test-Path $f){$v=Get-Content $f -Raw|ConvertFrom-Json;$v.CollectedUtc=[DateTime]::UtcNow.AddMinutes(-2).ToString('o');$v|ConvertTo-Json -Depth 28|Set-Content $f -Encoding UTF8}}
 function Admit-Next {Expire-Cache;$f=Join-Path $path 'run.json';if(Test-Path $f){$v=Get-Content $f -Raw|ConvertFrom-Json;$v.NextUtc=[DateTime]::UtcNow.AddSeconds(-1).ToString('o');$v|ConvertTo-Json -Depth 8|Set-Content $f -Encoding UTF8}}
 # Parse every generated script before any execution.
@@ -27,13 +28,13 @@ if((Query 'Get').Status -ne 'Busy'){throw 'New collector package remained blocke
 if((Await-Result).Status -ne 'Ready'){throw 'Migrated collector failed to return a snapshot'}
 if((Query 'Recover').Status -ne 'Recovered'){throw 'Verified recovery failed'}
 # Non-cooperating read worker is bounded, its sibling result retained.
-Admit-Next;$null=Invoke-Probe (Code 'slow');$r=Await-Result;if($r.Status -ne 'Ready' -or $r.Snapshot.Complete -or !$r.Snapshot.Reboot.CollectedUtc){throw 'Hung optional source destroyed reboot result'}
+Admit-Next;$script:advances53=0;$script:signals53=@{};$null=Invoke-Probe (Code 'slow');$r=Await-Result;if($script:advances53 -lt 1){throw 'Collector heartbeat did not advance while waiting for an unresponsive worker'};if($r.Status -ne 'Ready' -or $r.Snapshot.Complete -or !$r.Snapshot.Reboot.CollectedUtc){throw 'Hung optional source destroyed reboot result'}
 $left=@(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'"|Where-Object {$_.CommandLine -like ('*'+$path+'\Activity.ps1*')});if($left.Count){throw 'Read worker survived supervision'}
 $null=Query 'Recover';Admit-Next
 # Start without any waiting console. Task Scheduler must stop the supervisor.
 $null=Invoke-Probe (Code 'autonomous');Start-Sleep -Seconds 64
 if((Get-ScheduledTask $task).State -in @('Running','Queued')){throw 'Autonomous timeout failed'}
-$r=Query 'Read';if($r.Status -ne 'Cooldown'){throw 'Unknown result blindly restarted'}
+$r=Query 'Read';if($r.Run.Id -and $r.State.Id -eq $r.Run.Id -and $r.State.Phase -in @('Reboot','Activity')){$key53=$r.State.Id+'|'+$r.State.Phase;$previous53=$script:signals53[$key53];if($previous53 -and [DateTime]::Parse($r.State.UpdatedUtc) -gt [DateTime]::Parse($previous53)){$script:advances53++};$script:signals53[$key53]=$r.State.UpdatedUtc};if($r.Status -ne 'Cooldown'){throw 'Unknown result blindly restarted'}
 $null=Query 'Recover';Admit-Next;$null=Query 'Get';if((Await-Result).Status -ne 'Ready'){throw 'Recovery did not collect'}
 # Existing legacy ownership/cleanup fixture remains exercised separately below.
 # Legacy cleanup: absent directory, foreign task, fresh task and running task.
@@ -69,5 +70,5 @@ $finalHosts42=@(Get-Process wsmprovhost -ErrorAction SilentlyContinue).Count
 if($finalHosts42 -gt $baseline42){throw 'WinRM processes did not return to baseline'}
 $collectorCount42=@(Get-ScheduledTask -TaskName $task -ErrorAction Stop).Count
 if($collectorCount42 -ne 1){throw 'Expected exactly one fixed collector task'}
-[pscustomobject]@{ConcurrentReaders=6;CachedSequentialReads=12;WinRMHostsBefore=$baseline42;WinRMHostsAfter=$finalHosts42;CollectorTasksAfter=$collectorCount42;HungActivityWorkersAfter=$left.Count;AutonomousDeadlineSeconds=60}|ConvertTo-Json -Compress|Write-Output
+[pscustomobject]@{ConcurrentReaders=6;CachedSequentialReads=12;WinRMHostsBefore=$baseline42;WinRMHostsAfter=$finalHosts42;CollectorTasksAfter=$collectorCount42;HungActivityWorkersAfter=$left.Count;AutonomousDeadlineSeconds=60;HeartbeatAdvances53=$script:advances53}|ConvertTo-Json -Compress|Write-Output
 Write-Output 'Probe42: real SYSTEM single-flight/cache, six WinRM readers, partial failures, cooldown/circuit breaker, non-cooperating worker termination, autonomous scheduler deadline, verified recovery and legacy cleanup passed.'

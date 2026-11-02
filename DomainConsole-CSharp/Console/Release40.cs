@@ -10,14 +10,14 @@ public static class Identity40 {
  public static string ConfiguredAddress(TargetRecord target){string value=ConnectionStore.Address(target);return ClientReadiness41.IPv4(value.Length>0?value:target.Host);}
 }
 public sealed record RebootView40(bool? Required,bool Fresh,string Stamp,string[] Sources,string Limitation){
- public string Title=>Required==true?(Fresh?"Требуется перезагрузка":"По последней проверке требовалась перезагрузка"):!Fresh?"Перезагрузка · данные устарели":Required==true?"Требуется перезагрузка":Required==false?"Перезагрузка не требуется":"Перезагрузка не уточнена";
+ public string Title=>Required==true?(Fresh?"Требуется перезагрузка":"По последней проверке требовалась перезагрузка"):!Fresh?"Перезагрузка · результат требует уточнения":Required==true?"Требуется перезагрузка":Required==false?"Перезагрузка не требуется":"Перезагрузка не уточнена";
  public string Details=>(Sources.Length>0?"Подтвердили источники: "+Sources.Length+"\n"+string.Join("; ",Sources)+"\n":"")+"Проверено: "+Display36.Date(Stamp)+(Limitation.Length>0?"\n"+Limitation:"");
  public string Tone=>Fresh&&Required==false?"Success":"Warning";
 }
 public partial class MainWindow {
  async void OpenRawEvents40()=>await Guard(async()=>{var row=Current();if(eventWrites39.TryGetValue(row.Host,out var pending))await pending;var folder=EventFolder31(row.Host);if(!System.IO.Directory.Exists(folder)){Notify("Сохранённых событий этого клиента пока нет");return;}System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(folder){UseShellExecute=true});});
- // One bounded freshness policy for the card, header, tree and read-only dialog.
- static readonly TimeSpan RebootFresh40=TimeSpan.FromMinutes(5);
+ // Evidence remains valid in its boot until a later observation contradicts it.
+ // Poll scheduling is independent from the validity of an already measured fact.
  readonly HashSet<string> rebootProbeFailures40=new(StringComparer.OrdinalIgnoreCase);
  readonly HashSet<string> rebootChecks40=new(StringComparer.OrdinalIgnoreCase);
  void RefreshAddress40(ComputerRow row){
@@ -36,7 +36,7 @@ public partial class MainWindow {
  static RebootView40 DescribeReboot40(RebootSnapshot? proof,string boot,DateTimeOffset now){
   if(proof==null)return new(null,false,"",Array.Empty<string>(),"Снимок клиента ещё не получен");
   bool afterBoot=!DateTimeOffset.TryParse(boot,out var b)||DateTimeOffset.TryParse(proof.CollectedUtc,out var c)&&c>=b;
-  bool fresh=DateTimeOffset.TryParse(proof.CollectedUtc,out var at)&&now>=at.AddMinutes(-1)&&now-at<=RebootFresh40&&afterBoot;
+  bool fresh=DateTimeOffset.TryParse(proof.CollectedUtc,out var at)&&now>=at.AddMinutes(-1)&&afterBoot;
   var sources=proof.Sources.Where(x=>!x.StartsWith("PendingFileRenameOperations",StringComparison.OrdinalIgnoreCase)).Select(ShortRebootSource).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
   bool preserved44=proof.Required==null&&proof.PreservedRequired==true&&DateTimeOffset.TryParse(proof.PreservedUtc,out var kept45)&&(!DateTimeOffset.TryParse(boot,out var boot45)||kept45>=boot45);bool? required=preserved44?true:QueueOnly32(proof.Sources)?null:proof.Required;if(preserved44){fresh=false;sources=proof.PreservedSources45.Select(ShortRebootSource).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();}
   // A false value with a failed source check is not a complete negative result.
@@ -61,6 +61,9 @@ public partial class MainWindow {
    if(prior45!=null&&DateTimeOffset.TryParse(prior45.CollectedUtc,out var positive45)&&(!DateTimeOffset.TryParse(current?.BootUtc,out var boot45)||boot45<=positive45)&&!(latest?.Required==false&&latest.Error.Length==0&&DateTimeOffset.TryParse(latest.CollectedUtc,out var negative45)&&negative45>positive45))view=new(true,false,prior45.CollectedUtc,prior45.Sources.Select(ShortRebootSource).ToArray(),"Последняя проверка неполная; прежнее требование сохраняется до уточнения");
   }
   if(view.Required!=true&&reportCache.TryGetValue(row.Host,out var cache)&&CacheMatches(cache)&&cache.Found&&cache.Report.InstalledPendingRebootCount>0&&DateTimeOffset.TryParse(cache.Report.LastReportedUtc,out var report)&&(!DateTimeOffset.TryParse(latest?.CollectedUtc,out var checkedAt)||report>checkedAt)&&(!DateTimeOffset.TryParse(current?.BootUtc,out var boot)||report>=boot))return new(null,false,cache.Report.LastReportedUtc,Array.Empty<string>(),"Требование сохранено в отчёте WSUS. Нужна проверка флагов на клиенте.");
+  var changed53=HostJobs39(row.Host).Where(x=>CurrentIdentity(x.Target)).SelectMany(x=>x.Target.State?.Results??new List<StepResult>()).Where(x=>x.Kind is "Updates" or "CacheCleanup" or "ReportRecovery").Any(x=>DateTimeOffset.TryParse(x.Ended,out var ended53)&&ended53<=DateTimeOffset.UtcNow.AddMinutes(1)&&(!DateTimeOffset.TryParse(view.Stamp,out var checked53)||ended53>checked53));
+  if(InstallerChanged53(row,view.Stamp))return view with {Fresh=false,Required=view.Required==true?true:null,Limitation="После проверки подтверждена работа установщика Windows Update; ожидается проверка флагов"};
+  if(changed53)return view with {Fresh=false,Required=view.Required==true?true:null,Limitation="После проверки выполнялась установка или восстановление; ожидается проверка флагов по результату операции"};
   if(rebootProbeFailures40.Contains(row.Host))return view with {Fresh=false,Limitation="Последняя проверка не удалась; сохранённый снимок не подтверждает текущее состояние. Повторите проверку; подробности в журнале."};
   return view;
  }

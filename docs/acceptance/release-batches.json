@@ -724,8 +724,38 @@
     },
     {
       "version": "0.53",
+      "priority": "P0",
+      "title": "Актуальные статусы, продолжение после перезагрузки и контроль сборщика",
+      "status": "in-progress",
+      "issues": [
+        136,
+        138,
+        139
+      ],
+      "condition_ids": [
+        "136.age",
+        "136.events",
+        "136.positive",
+        "136.persistence",
+        "136.bounds",
+        "136.matrix",
+        "138.reconcile",
+        "138.visible",
+        "138.singleflight",
+        "138.lifetime",
+        "138.recovery",
+        "138.matrix",
+        "139.lookup",
+        "139.preserve",
+        "139.proof",
+        "139.no-mutation",
+        "139.matrix"
+      ]
+    },
+    {
+      "version": "0.54",
       "priority": "P2",
-      "title": "Диагностика SusClientId и завершение оставшейся приёмки",
+      "title": "Диагностика и управляемая перерегистрация SusClientId",
       "status": "planned",
       "issues": [
         6
