@@ -34,7 +34,7 @@ public partial class MainWindow {
    return assessment;
   }
   if(!readyProofs43.TryGetValue(row.Host,out var saved))return assessment;
-  bool contradiction=active||row.Target.AdDisabled||saved.Key!=key||saved.Job!=job||(boot.Length>0&&saved.Boot!=boot)||assessment.Kind is "Error" or "SyncError" or "Reboot" or "Needed" or "NoWsus" or "Working"||reboot.Required==true||cache?.Found==false||cache?.Report.NeededCount>0||cache?.Report.FailedCount>0||cache?.Report.ApprovedUnknownCount>0||cache?.Report.LastSyncResult is "Failed" or "FailedWithErrors";
+  bool contradiction=(!reboot.Fresh&&reboot.Limitation.Length>0)||active||row.Target.AdDisabled||saved.Key!=key||saved.Job!=job||(boot.Length>0&&saved.Boot!=boot)||assessment.Kind is "Error" or "SyncError" or "Reboot" or "Needed" or "NoWsus" or "Working"||reboot.Required==true||cache?.Found==false||cache?.Report.NeededCount>0||cache?.Report.FailedCount>0||cache?.Report.ApprovedUnknownCount>0||cache?.Report.LastSyncResult is "Failed" or "FailedWithErrors";
   // Keep the historical proof through transient reads and active work.
   // The contradiction still takes precedence; it never paints a current failure green.
   if(contradiction)return assessment;

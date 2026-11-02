@@ -18,6 +18,14 @@ public sealed partial class RemoteService {
  }
 }
 public partial class MainWindow {
+bool NeedsRebootRead53(ComputerRow row){
+ if(rebootWatches.TryGetValue(row.Host,out var watch)&&!watch.Done)return true;
+ if(maintenancePlans.TryGetValue(row.Host,out var plan)&&!plan.Done)return true;
+ // Missing/invalidated evidence needs a retry. A healthy same-boot snapshot
+ // is not polled every five minutes merely because the WSUS card is not green.
+ return !RebootViewFor40(row).Fresh;
+}
+
  // A missing or incomplete lookup is not a replacement for a previously read report.
  // Keep its timestamp and identity; expose the failed lookup separately.
  bool ApplyOverviewReply53(ComputerRow row,OverviewReply? reply,string server){
@@ -31,7 +39,7 @@ public partial class MainWindow {
   if(error.Length==0)error="Клиент не найден при последнем чтении WSUS; прежние результаты сохранены";
   overviewErrors[row.Host]=error;
   if(reportCache.TryGetValue(row.Host,out var existing)&&CacheMatches(existing)&&existing.Found){
-   serverReports[row.Host]=CachedReportText(existing)+"\n\n## Последнее чтение WSUS\n"+error;return false;
+   existing.LookupError53=error;existing.LookupUtc53=DateTimeOffset.UtcNow.ToString("o");serverReports[row.Host]=CachedReportText(existing);return false;
   }
   if(reply is {Found:false,Error:""}){
    reportCache[row.Host]=new(){Found=false,Host41=row.Host,Endpoint41=Identity40.EndpointKey(new TargetRecord{Host=row.Host}),Server=server,ReceivedUtc=DateTimeOffset.UtcNow.ToString("o")};
