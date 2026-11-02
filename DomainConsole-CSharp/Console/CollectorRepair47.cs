@@ -55,12 +55,13 @@ public partial class MainWindow {
   if(!repairingCollectors47.Add(row.Host))return;
   try{RefreshCollector44(row.Host);Event31(row.Host,"collector-repair47",DateTimeOffset.UtcNow.ToString("o"),"Восстановление сборщика","Info","Останавливается только собственный сборщик. Установки обновлений продолжаются.");
    await CompleteCollectorRepair47(target,generation,remote.RepairCollector47(target),async()=>{
-    ReadSucceeded34(row.Host,"флаги и аптайм");ReadSucceeded34(row.Host,"фоновая активность");
     // The previous UI read may still be unwinding after the remote repair
     // cancelled its collector. Do not join that obsolete null result and publish success.
     if(statusReads.TryGetValue(row.Host,out var previous51))await previous51.WaitAsync(TimeSpan.FromSeconds(15),generation);
+    AllowStatusRetry53(row.Host);
     var snapshot51=await ReadClientStatus(row,force:true);
     if(snapshot51==null)throw new IOException("Сборщик восстановлен на клиенте, но свежий снимок не применён в консоли. Требуется повторная проверка состояния.");
+    ReadSucceeded34(row.Host,"фоновая активность");
    },result=>{Event31(row.Host,"collector-repair47",DateTimeOffset.UtcNow.ToString("o"),"Сборщик восстановлен","Success",result);if(CurrentHost(row.Host))Notify(result);});
   }catch(Exception ex){if(closing||generation.IsCancellationRequested||!CurrentEndpoint(target))return;Event31(row.Host,"collector-repair47",DateTimeOffset.UtcNow.ToString("o"),"Восстановление сборщика не подтверждено","Warning",ShortConnectionError(ex.Message));throw;}
   finally{repairingCollectors47.Remove(row.Host);if(CurrentHost(row.Host)){RefreshCollector44(row.Host);ShowCurrent();}}
