@@ -3469,7 +3469,7 @@
       "title": "Перезагрузка: событийная проверка флагов и сохранение результата",
       "url": "https://github.com/Amenemhat/DomainConsole/issues/136",
       "state_at_audit": "open",
-      "validation": "pending",
+      "validation": "accepted",
       "decision": "Согласованные исправления 0.53; архитектура #137 не внедряется.",
       "conditions": [
         {
@@ -3496,14 +3496,15 @@
           "id": "136.matrix",
           "requirement": "Проверить возраст, перезапуск, поздние ответы, новую загрузку, неполные источники и внешние установки."
         }
-      ]
+      ],
+      "acceptance": "docs/acceptance/0.53.json"
     },
     {
       "issue": 138,
       "title": "После перезагрузки: продолжение и жизнеспособность сборщика",
       "url": "https://github.com/Amenemhat/DomainConsole/issues/138",
       "state_at_audit": "open",
-      "validation": "pending",
+      "validation": "accepted",
       "decision": "Согласованные исправления 0.53; архитектура #137 не внедряется.",
       "conditions": [
         {
@@ -3530,14 +3531,15 @@
           "id": "138.matrix",
           "requirement": "Проверить прерывание, старые ответы, медленный/зависший сборщик, занятый транспорт, OFF и предел повторов."
         }
-      ]
+      ],
+      "acceptance": "docs/acceptance/0.53.json"
     },
     {
       "issue": 139,
       "title": "Сохранение результата при неудачном чтении WSUS",
       "url": "https://github.com/Amenemhat/DomainConsole/issues/139",
       "state_at_audit": "open",
-      "validation": "pending",
+      "validation": "accepted",
       "decision": "Согласованные исправления 0.53; архитектура #137 не внедряется.",
       "conditions": [
         {
@@ -3560,7 +3562,8 @@
           "id": "139.matrix",
           "requirement": "Проверить повторное чтение, перезапуск, неполный ответ, новую успешную проверку и смену endpoint."
         }
-      ]
+      ],
+      "acceptance": "docs/acceptance/0.53.json"
     }
   ],
   "mandatory_scenarios": [

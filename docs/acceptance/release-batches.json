@@ -726,7 +726,7 @@
       "version": "0.53",
       "priority": "P0",
       "title": "Актуальные статусы, продолжение после перезагрузки и контроль сборщика",
-      "status": "in-progress",
+      "status": "accepted",
       "issues": [
         136,
         138,
@@ -750,7 +750,11 @@
         "139.proof",
         "139.no-mutation",
         "139.matrix"
-      ]
+      ],
+      "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+      "run_id": 41461310993,
+      "sha256": "d2a411ae56a676046c96f5e86c5a561c6969b70f1d83c1a633a88689929ac08f",
+      "acceptance": "docs/acceptance/0.53.json"
     },
     {
       "version": "0.54",

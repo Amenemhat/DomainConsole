@@ -1,0 +1,299 @@
+{
+  "schema": 1,
+  "version": "0.53",
+  "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+  "run_id": 41461310993,
+  "sha256": "d2a411ae56a676046c96f5e86c5a561c6969b70f1d83c1a633a88689929ac08f",
+  "registry_sha256": "5fd386ccbfd20736945139630670c9df64a5df4679d32191d319da1b445f82c4",
+  "batch_plan_sha256": "df103e7e536335cfbd630b5d1c1f6b187e4868ffa9d3ab205b3d3600ea8429dc",
+  "reviewer": "Codex — сверка 17 условий с исходниками, Windows-сценариями, журналами и WPF-снимками",
+  "reviewed_at": "2026-11-02T14:38:48.494103+00:00",
+  "issues": [
+    {
+      "issue": 136,
+      "current_requirement": "Перезагрузка: событийная проверка флагов и сохранение результата; поздние уточнения и границы проверки описаны в 0.53-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "136.age",
+          "requirement": "Возраст сам по себе не отменяет подтверждённые флаги; сохраняются время, источники и загрузка.",
+          "scenario": "Release40.DescribeReboot40: нет пятиминутного истечения полного снимка в той же загрузке. Release53: 6 минут, 12 часов, сутки, сериализация/восстановление. Время и источники остаются исходными.",
+          "expected": "Возраст сам по себе не отменяет подтверждённые флаги; сохраняются время, источники и загрузка.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. Release40.DescribeReboot40: нет пятиминутного истечения полного снимка в той же загрузке. Release53: 6 минут, 12 часов, сутки, сериализация/восстановление. Время и источники остаются исходными.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "136.events",
+          "requirement": "Проверка при обслуживании, после установки/восстановления, новой загрузки и возврата незавершённого обслуживания; уменьшение аптайма сверяется с временем загрузки.",
+          "scenario": "RebootObservation.NeedsRebootRead53; план обслуживания и наблюдение reboot требуют чтения. Release40 учитывает завершённые изменяющие операции и более поздний WSUS PendingReboot. StatusRecovery53 сохраняет подтверждённое наблюдение InstallerBusy и требует флаги после него; BITS и TiWorker отдельно не считаются установкой.",
+          "expected": "Проверка при обслуживании, после установки/восстановления, новой загрузки и возврата незавершённого обслуживания; уменьшение аптайма сверяется с временем загрузки.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. RebootObservation.NeedsRebootRead53; план обслуживания и наблюдение reboot требуют чтения. Release40 учитывает завершённые изменяющие операции и более поздний WSUS PendingReboot. StatusRecovery53 сохраняет подтверждённое наблюдение InstallerBusy и требует флаги после него; BITS и TiWorker отдельно не считаются установкой.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "136.positive",
+          "requirement": "Положительное требование сохраняется до проверки; новая загрузка не доказывает отсутствие флагов.",
+          "scenario": "DescribeReboot40 сохраняет положительный факт в той же загрузке; частичный ответ не заменяет его отрицательным. После новой загрузки нужен новый результат, сама загрузка не доказывает отсутствия флагов. Release40/44/53 проверяют положительный, отрицательный, частичный и предшествующий boot снимки.",
+          "expected": "Положительное требование сохраняется до проверки; новая загрузка не доказывает отсутствие флагов.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. DescribeReboot40 сохраняет положительный факт в той же загрузке; частичный ответ не заменяет его отрицательным. После новой загрузки нужен новый результат, сама загрузка не доказывает отсутствия флагов. Release40/44/53 проверяют положительный, отрицательный, частичный и предшествующий boot снимки.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "136.persistence",
+          "requirement": "Результаты сохраняются после перезапуска/обновления; частичный ответ и ошибка отображаются явно.",
+          "scenario": "Navigation/Readiness43 сохраняют отчёт и историческое доказательство успешной проверки; новое противоречащее событие имеет приоритет, историческая запись не удаляется. Release53 проверяет JSON roundtrip и Working/Error/Stale; существующие проверки запуска приложения читают сохранённую историю.",
+          "expected": "Результаты сохраняются после перезапуска/обновления; частичный ответ и ошибка отображаются явно.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. Navigation/Readiness43 сохраняют отчёт и историческое доказательство успешной проверки; новое противоречащее событие имеет приоритет, историческая запись не удаляется. Release53 проверяет JSON roundtrip и Working/Error/Stale; существующие проверки запуска приложения читают сохранённую историю.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "136.bounds",
+          "requirement": "Один опрос, ограниченные повторы, Master OFF и отсутствие фонового спама.",
+          "scenario": "ReadClientStatus/statusReads, SnapshotPart42 и ReadDue34 сохраняют single-flight и защитную паузу. Master OFF и смена endpoint/поколения отбрасывают старый ответ. Release47/49/52/53 и Probe42 проверяют отмену, OFF и повторные запросы.",
+          "expected": "Один опрос, ограниченные повторы, Master OFF и отсутствие фонового спама.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. ReadClientStatus/statusReads, SnapshotPart42 и ReadDue34 сохраняют single-flight и защитную паузу. Master OFF и смена endpoint/поколения отбрасывают старый ответ. Release47/49/52/53 и Probe42 проверяют отмену, OFF и повторные запросы.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "136.matrix",
+          "requirement": "Проверить возраст, перезапуск, поздние ответы, новую загрузку, неполные источники и внешние установки.",
+          "scenario": "Release53 плюс Release40/44/49/51/52: возраст, сохранение, новая загрузка, неполные источники, поздний ответ, внешняя установка. Внешняя установка представлена данными WUA, реальные обновления на стенде не устанавливаются.",
+          "expected": "Проверить возраст, перезапуск, поздние ответы, новую загрузку, неполные источники и внешние установки.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. Release53 плюс Release40/44/49/51/52: возраст, сохранение, новая загрузка, неполные источники, поздний ответ, внешняя установка. Внешняя установка представлена данными WUA, реальные обновления на стенде не устанавливаются.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 138,
+      "current_requirement": "После перезагрузки: продолжение и жизнеспособность сборщика; поздние уточнения и границы проверки описаны в 0.53-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "138.reconcile",
+          "requirement": "После новой загрузки согласовать прежнее задание и получить актуальный снимок без повторной установки.",
+          "scenario": "MonitorReboots/AdvanceMaintenance восстанавливают доступ к сборщику после подтверждённого отказа и читают свежий снимок; ApplyClientSnapshot продвигает прежний checkpoint. Продолжение использует существующие проверки установщика и согласования прежнего задания; восстановление сборщика само не ставит обновления в очередь.",
+          "expected": "После новой загрузки согласовать прежнее задание и получить актуальный снимок без повторной установки.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. MonitorReboots/AdvanceMaintenance восстанавливают доступ к сборщику после подтверждённого отказа и читают свежий снимок; ApplyClientSnapshot продвигает прежний checkpoint. Продолжение использует существующие проверки установщика и согласования прежнего задания; восстановление сборщика само не ставит обновления в очередь.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "138.visible",
+          "requirement": "В шапке видны этап, время, последний сигнал и причина ожидания; анимация только подтверждённой работы.",
+          "scenario": "CollectorStage53 и CollectorBusy53 в шапке: фаза, длительность, последний heartbeat и причина в подробностях/подсказке. Анимация ограничена свежестью heartbeat и полученного состояния. Release53 делает шесть WPF-снимков в трёх темах и двух размерах.",
+          "expected": "В шапке видны этап, время, последний сигнал и причина ожидания; анимация только подтверждённой работы.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. CollectorStage53 и CollectorBusy53 в шапке: фаза, длительность, последний heartbeat и причина в подробностях/подсказке. Анимация ограничена свежестью heartbeat и полученного состояния. Release53 делает шесть WPF-снимков в трёх темах и двух размерах.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "138.singleflight",
+          "requirement": "Повторные запросы присоединяются к текущему; процессы и задания не размножаются.",
+          "scenario": "Polling42 сохраняет общий удалённый запуск и кэш. Watch, обслуживание и ручное восстановление используют repairingCollectors47. Release53 проверяет конкурентный ремонт; локальный SYSTEM и Probe42 — повторные читатели и отсутствие лишних процессов/задач.",
+          "expected": "Повторные запросы присоединяются к текущему; процессы и задания не размножаются.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. Polling42 сохраняет общий удалённый запуск и кэш. Watch, обслуживание и ручное восстановление используют repairingCollectors47. Release53 проверяет конкурентный ремонт; локальный SYSTEM и Probe42 — повторные читатели и отсутствие лишних процессов/задач.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "138.lifetime",
+          "requirement": "Различать отсутствие сигнала, результата и предел этапа; штатная отмена прежде завершения только принадлежащего процесса.",
+          "scenario": "collector.ps1 обновляет heartbeat, не продлевая бюджет этапа; существующие deadline, cancellation и проверка принадлежности процесса остаются. Probe42 проверяет неотвечающий worker, частичный результат, автономный deadline и очистку; тест дополнен проверкой продвижения heartbeat.",
+          "expected": "Различать отсутствие сигнала, результата и предел этапа; штатная отмена прежде завершения только принадлежащего процесса.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. collector.ps1 обновляет heartbeat, не продлевая бюджет этапа; существующие deadline, cancellation и проверка принадлежности процесса остаются. Probe42 проверяет неотвечающий worker, частичный результат, автономный deadline и очистку; тест дополнен проверкой продвижения heartbeat.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "138.recovery",
+          "requirement": "После подтверждения остановки один новый запуск и проверка свежего результата; повторы ограничены и переживают перезапуск.",
+          "scenario": "RecoverableCollector53 допускает только известный исчерпанный/осиротевший сборщик. RepairCollector47 подтверждает очистку и свежий bundle; затем читается reboot snapshot. AllowStatusRetry53 снимает старый локальный запрет чтения, не выдавая это за успешный ответ. Флаги однократной попытки сохраняются в watch/plan; Release53 проверяет повтор и восстановленный plan.",
+          "expected": "После подтверждения остановки один новый запуск и проверка свежего результата; повторы ограничены и переживают перезапуск.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. RecoverableCollector53 допускает только известный исчерпанный/осиротевший сборщик. RepairCollector47 подтверждает очистку и свежий bundle; затем читается reboot snapshot. AllowStatusRetry53 снимает старый локальный запрет чтения, не выдавая это за успешный ответ. Флаги однократной попытки сохраняются в watch/plan; Release53 проверяет повтор и восстановленный plan.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "138.matrix",
+          "requirement": "Проверить прерывание, старые ответы, медленный/зависший сборщик, занятый транспорт, OFF и предел повторов.",
+          "scenario": "Release53 проверяет классификацию отказов, OFF, конкурентный ремонт, одну попытку через restart и отсутствие новой установки. Probe42/Collector43/LocalSmoke47 — настоящие WinRM/SYSTEM, зависание, прерывание, старый результат, cooldown, выключение/включение, foreign process protection.",
+          "expected": "Проверить прерывание, старые ответы, медленный/зависший сборщик, занятый транспорт, OFF и предел повторов.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. Release53 проверяет классификацию отказов, OFF, конкурентный ремонт, одну попытку через restart и отсутствие новой установки. Probe42/Collector43/LocalSmoke47 — настоящие WinRM/SYSTEM, зависание, прерывание, старый результат, cooldown, выключение/включение, foreign process protection.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        }
+      ]
+    },
+    {
+      "issue": 139,
+      "current_requirement": "Сохранение результата при неудачном чтении WSUS; поздние уточнения и границы проверки описаны в 0.53-review.md.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "139.lookup",
+          "requirement": "Различать отсутствие записи, ошибку, неоднозначность и неполный ответ.",
+          "scenario": "WsusOverviewTransport различает отсутствие имени/ответа, неоднозначность и ошибку сервера. ApplyOverviewReply53 отдельно обрабатывает Found=true без Report. Неудача чтения не создаёт подтверждённое отрицательное состояние вместо прежнего отчёта.",
+          "expected": "Различать отсутствие записи, ошибку, неоднозначность и неполный ответ.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. WsusOverviewTransport различает отсутствие имени/ответа, неоднозначность и ошибку сервера. ApplyOverviewReply53 отдельно обрабатывает Found=true без Report. Неудача чтения не создаёт подтверждённое отрицательное состояние вместо прежнего отчёта.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "139.preserve",
+          "requirement": "Сохранять прежний отчёт, источник, идентичность и время; ограничение последнего чтения отдельно.",
+          "scenario": "CachedWsusReport хранит LookupError53/LookupUtc53 отдельно; сохранённые данные, источник, endpoint и время отчёта не заменяются. Navigation восстанавливает ограничение после запуска. Release53 проверяет null, NotFound, неполный и ошибочный ответы, затем новое успешное чтение.",
+          "expected": "Сохранять прежний отчёт, источник, идентичность и время; ограничение последнего чтения отдельно.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. CachedWsusReport хранит LookupError53/LookupUtc53 отдельно; сохранённые данные, источник, endpoint и время отчёта не заменяются. Navigation восстанавливает ограничение после запуска. Release53 проверяет null, NotFound, неполный и ошибочный ответы, затем новое успешное чтение.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "139.proof",
+          "requirement": "Историческая полная проверка сохраняется через временную занятость/перезапуск; текущие противоречащие факты имеют приоритет.",
+          "scenario": "PreserveReady43 не удаляет историю полной проверки из-за промежуточной занятости. Текущая ошибка, новая загрузка/идентичность и неполные/противоречащие флаги важнее прежнего успеха. Release53 проверяет Working, Error и последующее восстановление последнего результата.",
+          "expected": "Историческая полная проверка сохраняется через временную занятость/перезапуск; текущие противоречащие факты имеют приоритет.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. PreserveReady43 не удаляет историю полной проверки из-за промежуточной занятости. Текущая ошибка, новая загрузка/идентичность и неполные/противоречащие флаги важнее прежнего успеха. Release53 проверяет Working, Error и последующее восстановление последнего результата.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "139.no-mutation",
+          "requirement": "Отсутствие записи не запускает установку или перерегистрацию.",
+          "scenario": "Ветка чтения не запускает перерегистрацию, установку или восстановление. Release53 сверяет очередь до/после. Сброс SusClientId не добавлен в 0.53.",
+          "expected": "Отсутствие записи не запускает установку или перерегистрацию.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. Ветка чтения не запускает перерегистрацию, установку или восстановление. Release53 сверяет очередь до/после. Сброс SusClientId не добавлен в 0.53.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        },
+        {
+          "condition_id": "139.matrix",
+          "requirement": "Проверить повторное чтение, перезапуск, неполный ответ, новую успешную проверку и смену endpoint.",
+          "scenario": "Release53 и существующая матрица статусов проверяют сохранение отчёта и доказательств, рестарт, неудачу чтения, новый успех и приоритет актуальных противоречий. Это не воспроизведение конкретной базы WSUS производственного клиента.",
+          "expected": "Проверить повторное чтение, перезапуск, неполный ответ, новую успешную проверку и смену endpoint.",
+          "actual": "Сверено в исходниках; соответствующие Windows-сценарии завершились без нарушения проверяемых условий. Release53 и существующая матрица статусов проверяют сохранение отчёта и доказательств, рестарт, неудачу чтения, новый успех и приоритет актуальных противоречий. Это не воспроизведение конкретной базы WSUS производственного клиента.",
+          "result": "passed",
+          "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-UI-review: ui-release53.txt, ui-collector53-*.png, ui-status50-matrix.txt, ui-acceptance51.txt, ui-release52.txt; журналы Probe42/Collector43/local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+        }
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "single-instance",
+      "result": "passed",
+      "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+      "expected": "Повторный запуск не создаёт вторую управляющую консоль.",
+      "actual": "Windows single-instance smoke завершился успешно; версия и восстановление состояния проверены повторным запуском.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; Verify only one console instance; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+    },
+    {
+      "id": "two-consoles",
+      "result": "passed",
+      "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+      "expected": "Один endpoint не получает дублирующих сборщиков/исполнителей.",
+      "actual": "Coordination37 и Probe42 проверили общую блокировку, независимые WinRM-сеансы и single-flight. Число собственных процессов/задач контролируется в тестах.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; coordination37; test_probe42.ps1; Collector43; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+    },
+    {
+      "id": "reboot-mid-operation",
+      "result": "passed",
+      "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+      "expected": "Прерывание собственного агента сохраняет неизвестный исход; продолжение начинается с фактической проверки.",
+      "actual": "interruption-smoke47 завершился на изолированных процессах; Recovery47/49 и Release51/53 проверили checkpoint, новый boot, занятый установщик и однократный последующий поиск. Физического отключения питания не было.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; Verify recovery after killing the agent process; Recovery47Checks.cs; Maintenance49Checks.cs; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+    },
+    {
+      "id": "collector-remove-enable-recover",
+      "result": "passed",
+      "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+      "expected": "Удаление/запрет/включение и восстановление не размножают собственные процессы и требуют свежего результата.",
+      "actual": "local-smoke, Collector43 и Probe42 прошли удаление, запрет переустановки, включение, зависший worker, принадлежность процессов и свежий результат. Release53 проверил общий допуск ручного/автоматического ремонта и одну сохраняемую попытку.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; local-smoke; test_collector43.ps1; test_probe42.ps1; ui-release53.txt; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+    },
+    {
+      "id": "offline-and-reconnect",
+      "result": "passed",
+      "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+      "expected": "Возврат связи согласует старое задание; прежний адрес/снимок не становится состоянием новой цели.",
+      "actual": "Release49/51/52/53 проверили короткий/длинный разрыв, изменённый endpoint, новую загрузку и защиту от повторного задания. Подтверждённая внешняя установка учитывается отдельно от скачивания.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; ui-ip-reconnect52.txt; ui-release52.txt; ui-release53.txt; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+    },
+    {
+      "id": "polling-master-off",
+      "result": "passed",
+      "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+      "expected": "OFF отменяет поколение опроса и запрещает новые автоматические чтения/ремонт.",
+      "actual": "Release47/49/52/53 и local-smoke прошли отмену и OFF. Поздний ответ не применяется после смены поколения; собственная установка не завершается из-за выключения опроса.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; Observation47Checks.cs; Maintenance49Checks.cs; ui-release53.txt; local-smoke; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+    },
+    {
+      "id": "status-evidence-consistency",
+      "result": "passed",
+      "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+      "expected": "Возраст не отменяет полный факт; ошибки, boot и неполные данные явно различаются.",
+      "actual": "Матрицы Release40/44/50/51/53 прошли полный/частичный/предшествующий boot результат, старый Failed и новую установку, сохранение исторического успеха и отчёта при неудачном чтении. Общий assessment используется во всех представлениях.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; ui-status50-matrix.txt; ui-acceptance51.txt; ui-release53.txt; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+    },
+    {
+      "id": "ui-all-modes-themes-sizes",
+      "result": "passed",
+      "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+      "expected": "Четыре режима, три темы, два размера и масштабированная отрисовка сохраняют читаемость и действия.",
+      "actual": "Windows WPF-прогон и визуальный просмотр снимков выполнены. Новая строка сборщика в шапке проверена в шести сочетаниях темы/размера. Масштабирование проверено WPF-отрисовкой, без физической смены DPI монитора.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; ui-release39-*.png; ui-release40-*.png; ui-acceptance51-scale-*.png; ui-collector53-*.png; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+    },
+    {
+      "id": "selection-scroll-preservation",
+      "result": "passed",
+      "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+      "expected": "Фоновая работа не меняет выбранного клиента, вкладку, отметки и позицию чтения.",
+      "actual": "Submission47 и проверки history/search/keyboard/attention52 прошли обратный порядок завершения заданий и ввод во время обновления. Release39 проверил 450 строк, 1006 заданий и 10000 событий; refresh не читает диск и не выдаёт лишние уведомления неизменным строкам.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; ui-attention52.txt; ui-tree-keyboard52.txt; ui-search-input52.txt; ui-release39-performance.txt; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+    },
+    {
+      "id": "full-command-output",
+      "result": "passed",
+      "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+      "expected": "Исходный stdout/stderr и код команды сохраняются отдельно от сводки.",
+      "actual": "Release35/36/52 и проверки redirected/native exit/command failure прошли сохранение полного вывода, поиск и копирование.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; Verify redirected progress output; Verify native program exit capture in PowerShell; Verify command failure state; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+    },
+    {
+      "id": "cache-reset-failure-and-restoration",
+      "result": "passed",
+      "commit": "4754c9aefc1bed35bf2132036a54e62ae27dc8bf",
+      "expected": "Первичный сбой и неполное восстановление не становятся успехом; чужие процессы/каталоги защищены.",
+      "actual": "service-recovery-smoke47 и test_cache47 прошли timeout, принудительное завершение собственного процесса, восстановление, allowlist, junction/long-path и резервные копии. Системные службы представлены изолированными doubles.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41461310993; DomainConsole-service-recovery47; test_cache47.ps1; service-recovery-smoke47; https://github.com/Amenemhat/DomainConsole/blob/4754c9aefc1bed35bf2132036a54e62ae27dc8bf/docs/acceptance/0.53-review.md"
+    }
+  ],
+  "close_issues": [
+    136,
+    138,
+    139
+  ]
+}
