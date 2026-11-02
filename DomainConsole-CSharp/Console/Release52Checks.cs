@@ -11,6 +11,7 @@ public partial class MainWindow {
   await VerifyTreeKeyboard52();
   await VerifySearchInput52();
   await VerifyIpReconnect52();
+  VerifyProgress52();
   var plans=maintenancePlans.ToList();var jobs=History.ToList();var pending=queue.ToList();var evidence=queueEvidence52.ToList();var recoveries=reportRecoveries.ToList();
   bool auto=AutoServiceEnabled,paused=TransportBudget41.Paused,tick=timer.IsEnabled;timer.Stop();
   var row=new ComputerRow(new(){Host="continuation52.fixture.invalid",Name="Continuation fixture"});Computers.Add(row);
@@ -52,6 +53,23 @@ public partial class MainWindow {
    Computers.Remove(row);maintenancePlans.Clear();foreach(var p in plans)maintenancePlans[p.Key]=p.Value;History.Clear();foreach(var j in jobs)History.Add(j);queue.Clear();foreach(var q in pending)queue.Enqueue(q);queueEvidence52.Clear();foreach(var e in evidence)queueEvidence52[e.Key]=e.Value;reportRecoveries.Clear();foreach(var r in recoveries)reportRecoveries[r.Key]=r.Value;
    AutoServiceEnabled=auto;if(paused)PollingControl43.Pause();else PollingControl43.Resume();SaveMaintenance();Save();Store.Write("report-queue52.json",queueEvidence52);if(tick)timer.Start();
   }
+ }
+ void VerifyProgress52(){
+  var row=new ComputerRow(new(){Host="progress52.fixture.invalid"});Computers.Add(row);
+  var state=new RemoteState{Status="Running",Updated=DateTimeOffset.UtcNow.ToString("o")};
+  var job=new RemoteJob{Steps=new(){new(){Kind="CMD"}},Targets=new(){new(){Host=row.Host,Status="Running",State=state}}};
+  var oldIndex=refreshJobs39;refreshJobs39=null;
+  try{
+   History.Insert(0,job);confirmedJobs.Add(job.Id+row.Host);liveConnections.Add(row.Host);
+   clientConnections[row.Host]=new(){LastSuccess=DateTimeOffset.UtcNow};
+   RefreshActivity();if(!row.Working||!row.WorkBusy)throw new Exception("Live work without percent lost indeterminate progress");
+   state.Progress=42;RefreshActivity();if(!row.Working||row.WorkBusy||row.WorkProgress!=42)throw new Exception("Determinate progress lost");
+   clientConnections[row.Host].Lost38=true;RefreshActivity();if(row.Working||row.WorkBusy)throw new Exception("Offline job still animates");
+   clientConnections[row.Host].Lost38=false;job.Targets[0].Status="Completed";state.Status="Completed";
+   RefreshActivity();if(row.Working||row.WorkBusy)throw new Exception("Completed job still animates");
+   History.Remove(job);RefreshActivity();if(row.Working||row.WorkBusy)throw new Exception("Connection-only polling animates work");
+   System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(),"ui-progress52.txt"),"PASS: fresh acknowledged work without percent is indeterminate; 42 percent is determinate; offline/completed/background-only states do not animate");
+  }finally{History.Remove(job);Computers.Remove(row);confirmedJobs.Remove(job.Id+row.Host);liveConnections.Remove(row.Host);clientConnections.Remove(row.Host);refreshJobs39=oldIndex;RefreshActivity();}
  }
  void VerifyQueueLayout52(ComputerRow row,Criterion45 report){
   var selected=ComputerGrid.SelectedItem;var tab=MainTabs.SelectedItem;int theme=Theme.Current;
