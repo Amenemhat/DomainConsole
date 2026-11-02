@@ -8,6 +8,7 @@ public partial class MainWindow {
    var formatted=ResultPresentation36.Format("## Итог задания\nСостояние: Завершено\n## Результаты команд\n"+label+": успешно · 0\n## Вывод команды\nWinDefend: Stopped\nИсходный вывод");
    if(formatted.Contains("возобновилась ли загрузка")||formatted.Contains("Работа служб после команды")||!formatted.Contains("## Вывод команды\nWinDefend: Stopped\nИсходный вывод"))throw new Exception("Read-only service output classified as recovery");
   }
+  await VerifyTreeKeyboard52();
   var plans=maintenancePlans.ToList();var jobs=History.ToList();var pending=queue.ToList();var evidence=queueEvidence52.ToList();var recoveries=reportRecoveries.ToList();
   bool auto=AutoServiceEnabled,paused=TransportBudget41.Paused,tick=timer.IsEnabled;timer.Stop();
   var row=new ComputerRow(new(){Host="continuation52.fixture.invalid",Name="Continuation fixture"});Computers.Add(row);
@@ -63,6 +64,27 @@ public partial class MainWindow {
     if(!button.IsEnabled||button.ToolTip?.ToString()?.Contains("5 файлов · 30 байт")!=true)throw new Exception("Queue action/hint missing in rendered criteria");
    }
   }finally{criteria45.Remove(row.Host);Theme.Apply(theme,false);ComputerGrid.SelectedItem=selected;MainTabs.SelectedItem=tab;rendered45="";ShowCurrent();}
+ }
+
+ async Task VerifyTreeKeyboard52(){
+  var selected=ComputerGrid.SelectedItem;string savedOu=ou;bool open=TreeGroup.IsExpanded;
+  var root=(TreeViewItem)OuTree.Items[0];
+  var branch=root.Items.OfType<TreeViewItem>().LastOrDefault(x=>x.Tag is OuBranchState&&x.Items.Count>0)??root;
+  bool expanded=branch.IsExpanded;var marks=Computers.Select(x=>x.Selected).ToArray();
+  var scroll=FindTreeScroll(OuTree);double offset=scroll?.VerticalOffset??0;
+  try{
+   TreeGroup.IsExpanded=true;root.IsExpanded=true;branch.IsExpanded=false;UpdateLayout();
+   Activate();SetForegroundWindow(new System.Windows.Interop.WindowInteropHelper(this).Handle);
+   branch.Focus();branch.BringIntoView();await Task.Delay(100);
+   Key51(0x27);Key51(0x27,true);await Task.Delay(100);
+   if(!branch.IsExpanded)throw new Exception("Keyboard Right did not expand OU");
+   var focus=System.Windows.Input.Keyboard.FocusedElement;double at=scroll?.VerticalOffset??0;
+   RefreshOutcomes();RefreshBranches();UpdateLayout();await Task.Delay(100);
+   if(!ReferenceEquals(System.Windows.Input.Keyboard.FocusedElement,focus)||Math.Abs((scroll?.VerticalOffset??0)-at)>1||!ReferenceEquals(ComputerGrid.SelectedItem,selected))throw new Exception("Background refresh stole OU focus/scroll/client");
+   Key51(0x25);Key51(0x25,true);await Task.Delay(100);
+   if(branch.IsExpanded||!Computers.Select(x=>x.Selected).SequenceEqual(marks))throw new Exception("Keyboard OU collapse changed target marks");
+   System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(),"ui-tree-keyboard52.txt"),"PASS: real Right/Left keys expand/collapse OU; background outcome refresh retains focus, viewport, client and marks");
+  }finally{Key51(0x27,true);Key51(0x25,true);branch.IsExpanded=expanded;TreeGroup.IsExpanded=open;ComputerGrid.SelectedItem=selected;ou=savedOu;scroll?.ScrollToVerticalOffset(offset);}
  }
 
 }
