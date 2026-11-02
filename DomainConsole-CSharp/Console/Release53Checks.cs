@@ -32,6 +32,12 @@ public partial class MainWindow {
      }
     });
    }finally{Theme.Apply(theme53,false);Width=width53;Height=height53;ComputerGrid.SelectedItem=selected53;MainTabs.SelectedItem=tab53;ShowCurrent();}
+   var beforeInstall=now.AddMinutes(-1).ToString("o");
+   ObserveInstaller53(row,new(){CollectedUtc=now.ToString("o"),Busy=true,InstallationEvidence="TiWorker"});
+   if(InstallerChanged53(row,beforeInstall))throw new Exception("Download/process alone invalidated reboot flags");
+   ObserveInstaller53(row,new(){CollectedUtc=now.ToString("o"),InstallerBusy=true});
+   installerObservations53[row.Host]=Store.Clone(installerObservations53[row.Host]);
+   if(!InstallerChanged53(row,beforeInstall)||InstallerChanged53(row,now.AddSeconds(1).ToString("o")))throw new Exception("External installation/restart/fresh flag ordering failed");
    var server=OverviewServer;
    var report=new WsusReport{LastReportedUtc=now.ToString("o"),LastSyncResult="Succeeded",NeededCount=0,RequiredComplete=true};
    if(!ApplyOverviewReply53(row,new(){Host=row.Host,Found=true,Report=report},server))throw new Exception("Successful report rejected");
@@ -65,6 +71,7 @@ public partial class MainWindow {
   }finally{
    maintenancePlans.Clear();foreach(var entry in savedPlans)maintenancePlans[entry.Key]=entry.Value;AutoServiceEnabled=savedAuto;SaveMaintenance();
    readFailures34.Remove(row.Host+"|флаги и аптайм");readFailures34.Remove(row.Host+"|фоновая активность");
+   installerObservations53.Remove(row.Host);Store.Write("installer-observations53.json",installerObservations53);
    Computers.Remove(row);reportCache.Remove(row.Host);serverReports.Remove(row.Host);reportSeverity.Remove(row.Host);overviewErrors.Remove(row.Host);liveReports.Remove(row.Host);readyProofs43.Remove(row.Host);rebootWatches.Remove(row.Host);
    Store.Write("ready-proofs43.json",readyProofs43);Store.Write("wsus-report-cache.json",reportCache);Store.Write("reboot-watches.json",rebootWatches);
    if(paused)PollingControl43.Pause();else PollingControl43.Resume();

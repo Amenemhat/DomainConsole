@@ -724,26 +724,15 @@
     },
     {
       "version": "0.53",
-      "priority": "P0/P2",
-      "title": "Актуальные статусы, продолжение после перезагрузки, контроль сборщика и диагностика SusClientId",
+      "priority": "P0",
+      "title": "Актуальные статусы, продолжение после перезагрузки и контроль сборщика",
       "status": "in-progress",
       "issues": [
-        6,
         136,
         138,
         139
       ],
       "condition_ids": [
-        "6.read",
-        "6.collision",
-        "6.server",
-        "6.unique",
-        "6.consent",
-        "6.reset",
-        "6.preserve",
-        "6.verify",
-        "6.groups",
-        "6.matrix",
         "136.age",
         "136.events",
         "136.positive",
@@ -761,6 +750,27 @@
         "139.proof",
         "139.no-mutation",
         "139.matrix"
+      ]
+    },
+    {
+      "version": "0.54",
+      "priority": "P2",
+      "title": "Диагностика и управляемая перерегистрация SusClientId",
+      "status": "planned",
+      "issues": [
+        6
+      ],
+      "condition_ids": [
+        "6.read",
+        "6.collision",
+        "6.server",
+        "6.unique",
+        "6.consent",
+        "6.reset",
+        "6.preserve",
+        "6.verify",
+        "6.groups",
+        "6.matrix"
       ]
     }
   ],
