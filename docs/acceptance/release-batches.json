@@ -712,7 +712,10 @@
         "134.durable",
         "134.matrix",
         "134.defender-code",
-        "134.readonly-result"
+        "134.readonly-result",
+        "134.ip-connect",
+        "134.ip-bounds",
+        "134.ip-stale"
       ]
     },
     {
