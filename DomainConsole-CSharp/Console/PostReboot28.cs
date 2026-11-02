@@ -76,7 +76,12 @@ public partial class MainWindow {
   if(!watch.Confirmed&&target.State!=null&&target.State.SchemaVersion<28&&DateTimeOffset.TryParse(target.State.Started,out var legacyStart)){watch.Confirmed=true;watch.RequestedUtc=legacyStart.ToString("o");watch.Scan=false;watch.Phase="Прежнее наблюдение: только проверка возврата";}
   if(!watch.Confirmed&&target.Status=="Failed"){watch.Done=true;watch.Phase="Назначение перезагрузки не подтверждено";watch.LastError=target.State?.Error??target.Status;continue;}
   try{if(!CurrentIdentity(target)){watch.Done=true;watch.Phase="Наблюдение остановлено: идентичность клиента изменена";continue;}
-   if(LostObservation51(host)||!RemoteService.SnapshotDue42(ConnectionStore.Capture(target)))continue;
+   if(LostObservation51(host))continue;
+   // A terminal collector wait is not due, so the old early return made its
+   // recovery catch unreachable. Only retry the known exhausted collector,
+   // never disabled, incompatible or access-denied installations.
+   if(RemoteService.SnapshotWait42(captured49!) is {Kind:"Blocked"} blocked53 && blocked53.Message.StartsWith("Три сбоя сборщика подряд",StringComparison.Ordinal)){await TryResetRebootPoll51(host,watch,captured49!);continue;}
+   if(!RemoteService.SnapshotDue42(captured49!))continue;
    var started38=DateTimeOffset.UtcNow;watch.LastProbeUtc=DateTimeOffset.UtcNow.ToString("o");var snapshot=await remote.ReadRebootState(captured49!,rebootJobId:job!.Id);if(!Current49())continue;ConnectionSucceeded(host,DateTimeOffset.TryParse(watch.LastProbeUtc,out var probe38)?probe38:default);
    if(snapshot.RebootPlan!=null)RegisterRebootPlan(job,new ComputerRow(target,job.Id),new(){RebootPlan=snapshot.RebootPlan,ClientUtc=snapshot.ClientUtc,State=target.State});
    if(watch.Done)continue;ApplyClientSnapshot(host,snapshot);if(!watch.Confirmed){watch.Phase="Клиент отвечает; план перезагрузки ещё не получен";watch.LastResponseUtc=DateTimeOffset.UtcNow.ToString("o");watch.LastBootUtc=snapshot.BootUtc;continue;}ObserveWatchBoot(watch,snapshot,DateTimeOffset.UtcNow);

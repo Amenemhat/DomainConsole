@@ -3,7 +3,7 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed class ReadyProof43 {public string Key{get;set;}="";public string Job{get;set;}="";public string Boot{get;set;}="";public string At{get;set;}="";public string Report{get;set;}="";public string Scan{get;set;}="";public string Reboot{get;set;}="";}
 public partial class MainWindow {
- readonly Dictionary<string,ReadyProof43> readyProofs43=Store.Read("ready-proofs43.json",new Dictionary<string,ReadyProof43>());
+ readonly Dictionary<string,ReadyProof43> readyProofs43=new(Store.Read("ready-proofs43.json",new Dictionary<string,ReadyProof43>()),StringComparer.OrdinalIgnoreCase);
  readonly SemaphoreSlim pollQueue43=new(3);
  readonly HashSet<string> scheduledPoll46=new(StringComparer.OrdinalIgnoreCase);
  Task PollRows43(){
@@ -35,7 +35,9 @@ public partial class MainWindow {
   }
   if(!readyProofs43.TryGetValue(row.Host,out var saved))return assessment;
   bool contradiction=active||row.Target.AdDisabled||saved.Key!=key||saved.Job!=job||(boot.Length>0&&saved.Boot!=boot)||assessment.Kind is "Error" or "SyncError" or "Reboot" or "Needed" or "NoWsus" or "Working"||reboot.Required==true||cache?.Found==false||cache?.Report.NeededCount>0||cache?.Report.FailedCount>0||cache?.Report.ApprovedUnknownCount>0||cache?.Report.LastSyncResult is "Failed" or "FailedWithErrors";
-  if(contradiction){readyProofs43.Remove(row.Host);Store.Write("ready-proofs43.json",readyProofs43);return assessment;}
+  // Keep the historical proof through transient reads and active work.
+  // The contradiction still takes precedence; it never paints a current failure green.
+  if(contradiction)return assessment;
   return new("Success","Проверено · необходимых обновлений нет","Последняя полная проверка: "+Display36.Date(saved.At)+"\nПерезагрузка не требовалась · отчёт WSUS подтверждён: "+Display36.Date(saved.Report)+"\nСледующая проверка — по расписанию или вручную");
  }
 }

@@ -16,8 +16,8 @@ public sealed record RebootView40(bool? Required,bool Fresh,string Stamp,string[
 }
 public partial class MainWindow {
  async void OpenRawEvents40()=>await Guard(async()=>{var row=Current();if(eventWrites39.TryGetValue(row.Host,out var pending))await pending;var folder=EventFolder31(row.Host);if(!System.IO.Directory.Exists(folder)){Notify("Сохранённых событий этого клиента пока нет");return;}System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(folder){UseShellExecute=true});});
- // One bounded freshness policy for the card, header, tree and read-only dialog.
- static readonly TimeSpan RebootFresh40=TimeSpan.FromMinutes(5);
+ // Evidence remains valid in its boot until a later observation contradicts it.
+ // Poll scheduling is independent from the validity of an already measured fact.
  readonly HashSet<string> rebootProbeFailures40=new(StringComparer.OrdinalIgnoreCase);
  readonly HashSet<string> rebootChecks40=new(StringComparer.OrdinalIgnoreCase);
  void RefreshAddress40(ComputerRow row){
@@ -36,7 +36,7 @@ public partial class MainWindow {
  static RebootView40 DescribeReboot40(RebootSnapshot? proof,string boot,DateTimeOffset now){
   if(proof==null)return new(null,false,"",Array.Empty<string>(),"Снимок клиента ещё не получен");
   bool afterBoot=!DateTimeOffset.TryParse(boot,out var b)||DateTimeOffset.TryParse(proof.CollectedUtc,out var c)&&c>=b;
-  bool fresh=DateTimeOffset.TryParse(proof.CollectedUtc,out var at)&&now>=at.AddMinutes(-1)&&now-at<=RebootFresh40&&afterBoot;
+  bool fresh=DateTimeOffset.TryParse(proof.CollectedUtc,out var at)&&now>=at.AddMinutes(-1)&&afterBoot;
   var sources=proof.Sources.Where(x=>!x.StartsWith("PendingFileRenameOperations",StringComparison.OrdinalIgnoreCase)).Select(ShortRebootSource).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
   bool preserved44=proof.Required==null&&proof.PreservedRequired==true&&DateTimeOffset.TryParse(proof.PreservedUtc,out var kept45)&&(!DateTimeOffset.TryParse(boot,out var boot45)||kept45>=boot45);bool? required=preserved44?true:QueueOnly32(proof.Sources)?null:proof.Required;if(preserved44){fresh=false;sources=proof.PreservedSources45.Select(ShortRebootSource).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();}
   // A false value with a failed source check is not a complete negative result.

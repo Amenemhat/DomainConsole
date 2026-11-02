@@ -724,11 +724,14 @@
     },
     {
       "version": "0.53",
-      "priority": "P2",
-      "title": "Диагностика SusClientId и завершение оставшейся приёмки",
-      "status": "planned",
+      "priority": "P0/P2",
+      "title": "Актуальные статусы, продолжение после перезагрузки, контроль сборщика и диагностика SusClientId",
+      "status": "in-progress",
       "issues": [
-        6
+        6,
+        136,
+        138,
+        139
       ],
       "condition_ids": [
         "6.read",
@@ -740,7 +743,24 @@
         "6.preserve",
         "6.verify",
         "6.groups",
-        "6.matrix"
+        "6.matrix",
+        "136.age",
+        "136.events",
+        "136.positive",
+        "136.persistence",
+        "136.bounds",
+        "136.matrix",
+        "138.reconcile",
+        "138.visible",
+        "138.singleflight",
+        "138.lifetime",
+        "138.recovery",
+        "138.matrix",
+        "139.lookup",
+        "139.preserve",
+        "139.proof",
+        "139.no-mutation",
+        "139.matrix"
       ]
     }
   ],
