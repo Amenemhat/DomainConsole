@@ -19,6 +19,26 @@ public sealed partial class RemoteService {
  }
 }
 public partial class MainWindow {
+ static bool RecoverableCollector53(PollWait42? wait)=>
+  wait is {Kind:"Blocked"}&&wait.Message.StartsWith("Три сбоя сборщика подряд",StringComparison.Ordinal)||
+  wait is {Kind:"Unknown"}&&(wait.Message.StartsWith("Предыдущий исполнитель",StringComparison.Ordinal)||wait.Message.StartsWith("Процесс предыдущего сборщика",StringComparison.Ordinal));
+ async Task<RebootSnapshot?> RecoverCollectorStatus53(TargetRecord target,Func<TargetRecord,Task<string>>? substitute=null){
+  if(substitute!=null){await substitute(target);return null;}
+  var generation=PollingControl43.Token;
+  await remote.RepairCollector47(target);
+  generation.ThrowIfCancellationRequested();
+  if(closing||TransportBudget41.Paused||!CurrentEndpoint(target))throw new OperationCanceledException("Контекст восстановления изменён");
+  if(statusReads.TryGetValue(target.Host,out var previous))await previous.WaitAsync(TimeSpan.FromSeconds(15),generation);
+  generation.ThrowIfCancellationRequested();
+  if(!CurrentEndpoint(target))throw new OperationCanceledException("Адрес клиента изменён");
+  return await remote.ReadRebootState(target,generation);
+ }
+ void AllowStatusRetry53(string host){
+  // Reopening admission does not prove successful reading. Retain the reason
+  // until a fresh snapshot resolves it, but release the obsolete deadline.
+  foreach(var operation in new[]{"флаги и аптайм","фоновая активность"})
+   if(readFailures34.TryGetValue(host+"|"+operation,out var failure))failure.Next=DateTimeOffset.MinValue;
+ }
 bool NeedsRebootRead53(ComputerRow row){
  if(rebootWatches.TryGetValue(row.Host,out var watch)&&!watch.Done)return true;
  if(maintenancePlans.TryGetValue(row.Host,out var plan)&&!plan.Done)return true;
@@ -39,13 +59,14 @@ bool NeedsRebootRead53(ComputerRow row){
   }
   if(error.Length==0)error="Клиент не найден при последнем чтении WSUS; прежние результаты сохранены";
   overviewErrors[row.Host]=error;
-  if(reportCache.TryGetValue(row.Host,out var existing)&&CacheMatches(existing)&&existing.Found){
-   existing.LookupError53=error;existing.LookupUtc53=DateTimeOffset.UtcNow.ToString("o");serverReports[row.Host]=CachedReportText(existing);return false;
+  if(reportCache.TryGetValue(row.Host,out var existing)&&CacheMatches(existing)){
+   existing.LookupError53=error;existing.LookupUtc53=DateTimeOffset.UtcNow.ToString("o");serverReports[row.Host]=CachedReportText(existing)+(existing.Found?"":"\n\n## Последнее чтение WSUS\n"+Display36.Date(existing.LookupUtc53)+" · "+error);return false;
   }
   if(reply is {Found:false,Error:""}){
    reportCache[row.Host]=new(){Found=false,Host41=row.Host,Endpoint41=Identity40.EndpointKey(new TargetRecord{Host=row.Host}),Server=server,ReceivedUtc=DateTimeOffset.UtcNow.ToString("o")};
    liveReports.Add(row.Host);serverReports[row.Host]="Клиент не найден в WSUS. Доступность проверяется отдельно.";
   }
+  if(!serverReports.ContainsKey(row.Host))serverReports[row.Host]="Не удалось прочитать данные WSUS: "+error;
   return false;
  }
 }

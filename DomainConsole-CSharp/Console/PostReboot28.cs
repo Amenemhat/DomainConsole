@@ -22,10 +22,11 @@ public partial class MainWindow {
    if(!Current51())return;
    watch.PollResetAttempted51=true;Store.Write("reboot-watches.json",rebootWatches);
    Event31(host,"reboot-poll51","reset","Восстановление опроса после перезагрузки","Info","Одна попытка штатного сброса собственного сборщика; установки не останавливаются.",scope:watch.JobId);
-   await (reset??remote.ResetPolling44)(target);
+   var recovered53=await RecoverCollectorStatus53(target,reset);
    if(!Current51())return;
    AllowStatusRetry53(host);
-   watch.Phase="Сборщик сброшен · ожидается свежая проверка";watch.LastError="Свежий результат пока не получен";watch.Next=DateTimeOffset.UtcNow.AddMinutes(2);
+   if(recovered53!=null){ReadSucceeded34(host,"флаги и аптайм");ApplyClientSnapshot(host,recovered53);watch.Phase="Сборщик восстановлен · свежий статус получен";watch.LastError="";watch.Next=DateTimeOffset.UtcNow;}
+   else{watch.Phase="Сборщик сброшен · ожидается свежая проверка";watch.LastError="Свежий результат пока не получен";watch.Next=DateTimeOffset.UtcNow.AddMinutes(2);}
   }catch(Exception ex){if(Current51()){watch.LastError="Автоматический сброс опроса не подтверждён: "+ShortConnectionError(ex.Message);watch.Phase="Требуется восстановление опроса";Event31(host,"reboot-poll51","failed",watch.Phase,"Warning",watch.LastError,scope:watch.JobId);}}
   finally{repairingCollectors47.Remove(host);Store.Write("reboot-watches.json",rebootWatches);}
  }
@@ -81,7 +82,7 @@ public partial class MainWindow {
    // A terminal collector wait is not due, so the old early return made its
    // recovery catch unreachable. Only retry the known exhausted collector,
    // never disabled, incompatible or access-denied installations.
-   if(RemoteService.SnapshotWait42(captured49!) is {Kind:"Blocked"} blocked53 && blocked53.Message.StartsWith("Три сбоя сборщика подряд",StringComparison.Ordinal)){await TryResetRebootPoll51(host,watch,captured49!);continue;}
+   if(RecoverableCollector53(RemoteService.SnapshotWait42(captured49!))){await TryResetRebootPoll51(host,watch,captured49!);continue;}
    if(!RemoteService.SnapshotDue42(captured49!))continue;
    var started38=DateTimeOffset.UtcNow;watch.LastProbeUtc=DateTimeOffset.UtcNow.ToString("o");var snapshot=await remote.ReadRebootState(captured49!,rebootJobId:job!.Id);if(!Current49())continue;ConnectionSucceeded(host,DateTimeOffset.TryParse(watch.LastProbeUtc,out var probe38)?probe38:default);
    if(snapshot.RebootPlan!=null)RegisterRebootPlan(job,new ComputerRow(target,job.Id),new(){RebootPlan=snapshot.RebootPlan,ClientUtc=snapshot.ClientUtc,State=target.State});

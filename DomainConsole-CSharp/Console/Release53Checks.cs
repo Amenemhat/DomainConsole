@@ -16,6 +16,8 @@ public partial class MainWindow {
   proof.Error="";proof.Required=true;if(DescribeReboot40(proof,boot,now.AddDays(2)).Required!=true)throw new Exception("Positive requirement expired");
   var signal=new CollectorActivity53("Reboot","Чтение",now.AddSeconds(-10).ToString("o"),now.ToString("o"),now);
   if(!signal.Animate(now)||signal.Animate(now.AddMinutes(1))||(signal with{Stage="Stopping"}).Animate(now))throw new Exception("Collector animation misrepresents liveness");
+  foreach(var kind in new[]{"Disabled","AccessDenied","InvalidResult","RepairFailed","Cooldown","Busy"})if(RecoverableCollector53(new(kind,"fixture",0)))throw new Exception("Automatic recovery bypassed protected refusal: "+kind);
+  if(RecoverableCollector53(new("Blocked","На клиенте более новая версия",0))||!RecoverableCollector53(new("Blocked","Три сбоя сборщика подряд: fixture",0))||!RecoverableCollector53(new("Unknown","Предыдущий исполнитель удерживает блокировку",120)))throw new Exception("Automatic collector recovery classification incorrect");
   var row=new ComputerRow(new(){Host="status53.fixture.invalid",Name="Status fixture"});Computers.Add(row);
   var pending=queue.ToList();var savedPlans=maintenancePlans.ToList();bool savedAuto=AutoServiceEnabled;var paused=TransportBudget41.Paused;
   try{

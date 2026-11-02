@@ -35,10 +35,10 @@ public partial class MainWindow {
    if(LostObservation51(p.Host)){p.Detail="Связь потеряна; ожидается отдельная проверка доступности. Клиентское задание не остановлено.";continue;}
    var job=History.FirstOrDefault(j=>j.Id==p.JobId);var target=job?.Targets.FirstOrDefault(t=>t.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase));
    if(reportRecoveries.TryGetValue(p.Host,out var report52)&&!report52.Done&&report52.JobId!=p.JobId){p.Detail="Ожидается восстановление и проверка отчётности";continue;}
-   if((p.SearchAfterBoot49||p.Phase=="Ожидается перезагрузка")&&RemoteService.SnapshotWait42(captured) is {Kind:"Blocked"} exhausted53&&exhausted53.Message.StartsWith("Три сбоя сборщика подряд",StringComparison.Ordinal)){
+   if((p.SearchAfterBoot49||p.Phase=="Ожидается перезагрузка")&&RecoverableCollector53(RemoteService.SnapshotWait42(captured))){
     if(p.PollRecoveryAttempted53){p.Detail="Автоматическое восстановление сборщика уже выполнено; новый снимок не получен. Доступна диагностика и восстановление в шапке.";continue;}
     p.PollRecoveryAttempted53=true;SaveMaintenance();
-    try{await (resetProbe53??remote.ResetPolling44)(captured);if(!Current49())continue;AllowStatusRetry53(p.Host);p.Detail="Остановка сборщика подтверждена; ожидается свежая проверка после паузы";p.Next=DateTimeOffset.UtcNow.AddMinutes(2);}
+    try{var recovered53=await RecoverCollectorStatus53(captured,resetProbe53);if(!Current49())continue;AllowStatusRetry53(p.Host);if(recovered53!=null){ReadSucceeded34(p.Host,"флаги и аптайм");ApplyClientSnapshot(p.Host,recovered53);p.Detail="Сборщик восстановлен; свежий статус получен";p.Next=DateTimeOffset.UtcNow;}else{p.Detail="Остановка сборщика подтверждена; ожидается свежая проверка после паузы";p.Next=DateTimeOffset.UtcNow.AddMinutes(2);}}
     catch(Exception ex){if(!Current49())continue;p.Detail="Автоматическое восстановление опроса не подтверждено: "+ShortConnectionError(ex.Message);}
     continue;
    }
