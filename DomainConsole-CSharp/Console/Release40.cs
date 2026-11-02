@@ -10,7 +10,7 @@ public static class Identity40 {
  public static string ConfiguredAddress(TargetRecord target){string value=ConnectionStore.Address(target);return ClientReadiness41.IPv4(value.Length>0?value:target.Host);}
 }
 public sealed record RebootView40(bool? Required,bool Fresh,string Stamp,string[] Sources,string Limitation){
- public string Title=>Required==true?(Fresh?"Требуется перезагрузка":"По последней проверке требовалась перезагрузка"):!Fresh?"Перезагрузка · данные устарели":Required==true?"Требуется перезагрузка":Required==false?"Перезагрузка не требуется":"Перезагрузка не уточнена";
+ public string Title=>Required==true?(Fresh?"Требуется перезагрузка":"По последней проверке требовалась перезагрузка"):!Fresh?"Перезагрузка · результат требует уточнения":Required==true?"Требуется перезагрузка":Required==false?"Перезагрузка не требуется":"Перезагрузка не уточнена";
  public string Details=>(Sources.Length>0?"Подтвердили источники: "+Sources.Length+"\n"+string.Join("; ",Sources)+"\n":"")+"Проверено: "+Display36.Date(Stamp)+(Limitation.Length>0?"\n"+Limitation:"");
  public string Tone=>Fresh&&Required==false?"Success":"Warning";
 }

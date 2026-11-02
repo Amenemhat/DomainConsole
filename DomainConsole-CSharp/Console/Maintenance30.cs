@@ -38,7 +38,7 @@ public partial class MainWindow {
    if((p.SearchAfterBoot49||p.Phase=="Ожидается перезагрузка")&&RemoteService.SnapshotWait42(captured) is {Kind:"Blocked"} exhausted53&&exhausted53.Message.StartsWith("Три сбоя сборщика подряд",StringComparison.Ordinal)){
     if(p.PollRecoveryAttempted53){p.Detail="Автоматическое восстановление сборщика уже выполнено; новый снимок не получен. Доступна диагностика и восстановление в шапке.";continue;}
     p.PollRecoveryAttempted53=true;SaveMaintenance();
-    try{await (resetProbe53??remote.ResetPolling44)(captured);if(!Current49())continue;ReadSucceeded34(p.Host,"флаги и аптайм");ReadSucceeded34(p.Host,"фоновая активность");p.Detail="Остановка сборщика подтверждена; ожидается свежая проверка после паузы";p.Next=DateTimeOffset.UtcNow.AddMinutes(2);}
+    try{await (resetProbe53??remote.ResetPolling44)(captured);if(!Current49())continue;AllowStatusRetry53(p.Host);p.Detail="Остановка сборщика подтверждена; ожидается свежая проверка после паузы";p.Next=DateTimeOffset.UtcNow.AddMinutes(2);}
     catch(Exception ex){if(!Current49())continue;p.Detail="Автоматическое восстановление опроса не подтверждено: "+ShortConnectionError(ex.Message);}
     continue;
    }

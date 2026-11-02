@@ -12,17 +12,7 @@ public partial class MainWindow {
   CollectorBusy53.Visibility=activity53!=null?Visibility.Visible:Visibility.Collapsed;CollectorBusy53.IsIndeterminate=activity53?.Animate(DateTimeOffset.UtcNow)==true&&!TransportBudget41.Paused;
   if(activity53!=null){CollectorNotice43.Visibility=Visibility.Visible;CollectorNoticeText43.Text=activity53.Details(DateTimeOffset.UtcNow);CollectorBusy53.ToolTip=CollectorNoticeText43.Text;return;}
   if(wait==null)return;var seconds=(int)Math.Ceiling((wait.Next-DateTimeOffset.UtcNow).TotalSeconds);CollectorNoticeText43.Text=wait.Message+"\n"+(TransportBudget41.Paused?"Опрос выключен — автоматический повтор приостановлен":wait.Next==DateTimeOffset.MaxValue?"Автоматический повтор остановлен; доступна адресная диагностика":seconds>0?"Повторная проверка через "+seconds/60+" мин "+seconds%60+" с":"Повторная проверка разрешена по расписанию")+". Задания обновлений не останавливаются.";}
- async void PollReset44_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{
-  if(TransportBudget41.Paused){Notify("Для повторной проверки включите опрос.");return;}
-  var row=Current();var target=ConnectionStore.Capture(row.Target);var generation=PollingControl43.Token;
-  if(!repairingCollectors47.Add(row.Host))return;
-  try{
-   RefreshCollector44(row.Host);
-   await CompleteCollectorRepair47(target,generation,remote.ResetPolling44(target),()=>{
-    ReadSucceeded34(row.Host,"флаги и аптайм");ReadSucceeded34(row.Host,"фоновая активность");return Task.CompletedTask;
-   },message=>{Event31(row.Host,"poll-reset44",DateTimeOffset.UtcNow.ToString("o"),"Восстановление служебной проверки","Info",message);if(CurrentHost(row.Host))Notify(message);});
-  }catch(OperationCanceledException) when(generation.IsCancellationRequested||TransportBudget41.Paused){}
-  catch(Exception) when(closing||!CurrentEndpoint(target)){}
-  finally{repairingCollectors47.Remove(row.Host);if(CurrentHost(row.Host)){RefreshCollector44(row.Host);ShowCurrent();}}
- });
+ // The header's explicit restart follows the same verified recovery path:
+ // cancellation/owned cleanup, one new collector and application of fresh data.
+ void PollReset44_Click(object sender,RoutedEventArgs e)=>CollectorRepair47_Click(sender,e);
 }

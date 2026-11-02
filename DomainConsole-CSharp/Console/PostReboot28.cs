@@ -24,6 +24,7 @@ public partial class MainWindow {
    Event31(host,"reboot-poll51","reset","Восстановление опроса после перезагрузки","Info","Одна попытка штатного сброса собственного сборщика; установки не останавливаются.",scope:watch.JobId);
    await (reset??remote.ResetPolling44)(target);
    if(!Current51())return;
+   AllowStatusRetry53(host);
    watch.Phase="Сборщик сброшен · ожидается свежая проверка";watch.LastError="Свежий результат пока не получен";watch.Next=DateTimeOffset.UtcNow.AddMinutes(2);
   }catch(Exception ex){if(Current51()){watch.LastError="Автоматический сброс опроса не подтверждён: "+ShortConnectionError(ex.Message);watch.Phase="Требуется восстановление опроса";Event31(host,"reboot-poll51","failed",watch.Phase,"Warning",watch.LastError,scope:watch.JobId);}}
   finally{repairingCollectors47.Remove(host);Store.Write("reboot-watches.json",rebootWatches);}
@@ -84,7 +85,7 @@ public partial class MainWindow {
    if(!RemoteService.SnapshotDue42(captured49!))continue;
    var started38=DateTimeOffset.UtcNow;watch.LastProbeUtc=DateTimeOffset.UtcNow.ToString("o");var snapshot=await remote.ReadRebootState(captured49!,rebootJobId:job!.Id);if(!Current49())continue;ConnectionSucceeded(host,DateTimeOffset.TryParse(watch.LastProbeUtc,out var probe38)?probe38:default);
    if(snapshot.RebootPlan!=null)RegisterRebootPlan(job,new ComputerRow(target,job.Id),new(){RebootPlan=snapshot.RebootPlan,ClientUtc=snapshot.ClientUtc,State=target.State});
-   if(watch.Done)continue;ApplyClientSnapshot(host,snapshot);if(!watch.Confirmed){watch.Phase="Клиент отвечает; план перезагрузки ещё не получен";watch.LastResponseUtc=DateTimeOffset.UtcNow.ToString("o");watch.LastBootUtc=snapshot.BootUtc;continue;}ObserveWatchBoot(watch,snapshot,DateTimeOffset.UtcNow);
+   if(watch.Done)continue;ReadSucceeded34(host,"флаги и аптайм");ApplyClientSnapshot(host,snapshot);if(!watch.Confirmed){watch.Phase="Клиент отвечает; план перезагрузки ещё не получен";watch.LastResponseUtc=DateTimeOffset.UtcNow.ToString("o");watch.LastBootUtc=snapshot.BootUtc;continue;}ObserveWatchBoot(watch,snapshot,DateTimeOffset.UtcNow);
    if(!RebootReturned(watch,snapshot))continue;
    if(watch.ReadyAfter==default){watch.ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));watch.Phase="Перезагрузка подтверждена; ожидание готовности служб";watch.Next=watch.ReadyAfter;watch.LastError="";continue;}
    if(DateTimeOffset.UtcNow<watch.ReadyAfter)continue;

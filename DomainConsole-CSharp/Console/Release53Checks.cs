@@ -44,9 +44,10 @@ public partial class MainWindow {
    if(PreserveReady43(row,new("Error","Ошибка",""),false,null,saved,reboot,"scan").Kind!="Error")throw new Exception("Saved proof hides current error");
    if(PreserveReady43(row,new("Stale","Снимок",""),false,null,saved,reboot,"scan").Kind!="Success")throw new Exception("Historical success cannot be restored");
    var target=ConnectionStore.Capture(row.Target);var watch=new RebootWatch{JobId=Guid.NewGuid().ToString(),Confirmed=true,ExpectedUtc=now.AddMinutes(-5)};rebootWatches[row.Host]=watch;
+   readFailures34[row.Host+"|флаги и аптайм"]=new(){Next=DateTimeOffset.MaxValue,Error="blocked"};
    int resets=0;Task<string> Reset(TargetRecord _){resets++;return Task.FromResult("Stopped");}
    await TryResetRebootPoll51(row.Host,watch,target,Reset);await TryResetRebootPoll51(row.Host,watch,target,Reset);
-   if(resets!=1||!watch.PollResetAttempted51||watch.Next<=now)throw new Exception("Post-boot collector recovery is not bounded/durable");
+   if(resets!=1||!watch.PollResetAttempted51||watch.Next<=now||!ReadDue34(row.Host+"|флаги и аптайм"))throw new Exception("Post-boot collector recovery is not bounded/durable");
    watch.PollResetAttempted51=false;PollingControl43.Pause();await TryResetRebootPoll51(row.Host,watch,target,Reset);if(resets!=1)throw new Exception("Master OFF launched recovery");
    PollingControl43.Resume();AutoServiceEnabled=true;maintenancePlans.Clear();
    var plan=new MaintenancePlan{Host=row.Host,Identity=target.ConnectionIdentity,Phase="Ожидается перезагрузка",BootUtc=boot,Install=true};maintenancePlans[row.Host]=plan;
@@ -61,6 +62,7 @@ public partial class MainWindow {
    File.WriteAllText(Path.Combine(Path.GetTempPath(),"ui-release53.txt"),"PASS: same-boot flags at 6m/12h/1d and JSON restart; new boot/partial/positive; heartbeat animation; missing/partial/error WSUS preserves report; new success clears limitation; historical proof survives work but not current error; one durable recovery; OFF; no update submission");
   }finally{
    maintenancePlans.Clear();foreach(var entry in savedPlans)maintenancePlans[entry.Key]=entry.Value;AutoServiceEnabled=savedAuto;SaveMaintenance();
+   readFailures34.Remove(row.Host+"|флаги и аптайм");readFailures34.Remove(row.Host+"|фоновая активность");
    Computers.Remove(row);reportCache.Remove(row.Host);serverReports.Remove(row.Host);reportSeverity.Remove(row.Host);overviewErrors.Remove(row.Host);liveReports.Remove(row.Host);readyProofs43.Remove(row.Host);rebootWatches.Remove(row.Host);
    Store.Write("ready-proofs43.json",readyProofs43);Store.Write("wsus-report-cache.json",reportCache);Store.Write("reboot-watches.json",rebootWatches);
    if(paused)PollingControl43.Pause();else PollingControl43.Resume();
