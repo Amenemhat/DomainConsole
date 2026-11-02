@@ -9,6 +9,7 @@ public partial class MainWindow {
    if(formatted.Contains("возобновилась ли загрузка")||formatted.Contains("Работа служб после команды")||!formatted.Contains("## Вывод команды\nWinDefend: Stopped\nИсходный вывод"))throw new Exception("Read-only service output classified as recovery");
   }
   await VerifyTreeKeyboard52();
+  VerifyTreeCheckFocus52();
   await VerifySearchInput52();
   await VerifyIpReconnect52();
   VerifyProgress52();
@@ -53,6 +54,14 @@ public partial class MainWindow {
    Computers.Remove(row);maintenancePlans.Clear();foreach(var p in plans)maintenancePlans[p.Key]=p.Value;History.Clear();foreach(var j in jobs)History.Add(j);queue.Clear();foreach(var q in pending)queue.Enqueue(q);queueEvidence52.Clear();foreach(var e in evidence)queueEvidence52[e.Key]=e.Value;reportRecoveries.Clear();foreach(var r in recoveries)reportRecoveries[r.Key]=r.Value;
    AutoServiceEnabled=auto;if(paused)PollingControl43.Pause();else PollingControl43.Resume();SaveMaintenance();Save();Store.Write("report-queue52.json",queueEvidence52);if(tick)timer.Start();
   }
+ }
+ void VerifyTreeCheckFocus52(){
+  var selected=ComputerGrid.SelectedItem;
+  var row=Computers.First(r=>!ReferenceEquals(r,selected)&&computerNodes.ContainsKey(r.Host));
+  var leaf=computerNodes[row.Host];var check=Visual33<CheckBox>((System.Windows.DependencyObject)leaf.Header).First();
+  var args=new System.Windows.Input.MouseButtonEventArgs(System.Windows.Input.Mouse.PrimaryDevice,Environment.TickCount,System.Windows.Input.MouseButton.Left){RoutedEvent=UIElement.PreviewMouseLeftButtonDownEvent,Source=check};
+  leaf.RaiseEvent(args);
+  if(!ReferenceEquals(ComputerGrid.SelectedItem,selected))throw new Exception("Marking a different tree client steals current client");
  }
  void VerifyProgress52(){
   var row=new ComputerRow(new(){Host="progress52.fixture.invalid"});Computers.Add(row);
