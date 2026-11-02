@@ -4,6 +4,10 @@ using System.Windows.Controls;
 namespace DomainConsole;
 public partial class MainWindow {
  async Task VerifyRelease52(){
+  foreach(var label in new[]{"Службы антивируса и центра безопасности","Перезапуск служб (только название)","Службы: диагностика"}){
+   var formatted=ResultPresentation36.Format("## Итог задания\nСостояние: Завершено\n## Результаты команд\n"+label+": успешно · 0\n## Вывод команды\nWinDefend: Stopped\nИсходный вывод");
+   if(formatted.Contains("возобновилась ли загрузка")||formatted.Contains("Работа служб после команды")||!formatted.Contains("## Вывод команды\nWinDefend: Stopped\nИсходный вывод"))throw new Exception("Read-only service output classified as recovery");
+  }
   var plans=maintenancePlans.ToList();var jobs=History.ToList();var pending=queue.ToList();var evidence=queueEvidence52.ToList();var recoveries=reportRecoveries.ToList();
   bool auto=AutoServiceEnabled,paused=TransportBudget41.Paused,tick=timer.IsEnabled;timer.Stop();
   var row=new ComputerRow(new(){Host="continuation52.fixture.invalid",Name="Continuation fixture"});Computers.Add(row);

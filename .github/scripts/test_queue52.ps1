@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$Fixture)
+﻿param([Parameter(Mandatory=$true)][string]$Fixture)
 $ErrorActionPreference='Stop'
 $path=Join-Path $Fixture 'report-queue-verify52.ps1'
 $tokens=$null;$errors=$null
@@ -26,3 +26,22 @@ foreach($mode in @('complete','empty','partial','duplicate','negative','error'))
  if(!$failed -and ($output -join ' ') -notmatch 'EventCache.v2'){throw 'Queue measurements absent'}
  Write-Output "Queue52 $mode PASS"
 }
+
+# Validate the actual MpCmdRun result handler without invoking Defender or changing services.
+$defender=[IO.File]::ReadAllText((Join-Path $Fixture 'defender-recover.ps1'))
+$start=$defender.IndexOf("`$hex='0x'",[StringComparison]::Ordinal)
+$end=$defender.IndexOf('Get-Service WinDefend',[StringComparison]::Ordinal)
+if($start -lt 0 -or $end -le $start){throw 'Defender result handler missing'}
+$handler=[ScriptBlock]::Create($defender.Substring($start,$end-$start))
+function Test-Path {param($Path) return $false}
+try {
+ foreach($code in @(0,-2147416390,-2147023174)) {
+  $failure=$null
+  try {$lines=@(& $handler)} catch {$failure=$_.Exception.Message}
+  if($code -eq 0 -and $failure){throw 'Successful MpCmdRun classified as failure'}
+  if($code -ne 0 -and (!$failure -or !$failure.Contains([string]$code))){throw 'Original Defender error lost'}
+  if($code -eq -2147416390 -and (!$failure.Contains('0x800106BA') -or !$failure.Contains('WinDefend'))){throw 'Defender service error lost hex/context'}
+  if($code -eq -2147023174 -and (!$failure.Contains('0x800706BA') -or $failure.Contains('WinDefend'))){throw 'RPC error confused with Defender error'}
+  Write-Output "Defender52 $code PASS"
+ }
+} finally {Remove-Item Function:\Test-Path}

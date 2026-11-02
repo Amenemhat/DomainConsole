@@ -135,12 +135,12 @@ public partial class MainWindow {
  void VerifyScale51(){
   var root=(FrameworkElement)Content;int theme=Theme.Current;var tab=MainTabs.SelectedItem;var old=new Size(root.ActualWidth,root.ActualHeight);
   try{
-   foreach(double scale in new[]{1.25,1.5})foreach(int palette in new[]{0,1,2})foreach(var mode in new[]{WsusTab,CommandsTab,HistoryTab,SettingsTab}){
+   foreach(double scale in new[]{1.25,1.5,2.0})foreach(int palette in new[]{0,1,2})foreach(var mode in new[]{WsusTab,CommandsTab,HistoryTab,SettingsTab}){
     Theme.Apply(palette,false);MainTabs.SelectedItem=mode;ShowCurrent();UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);UpdateLayout();HideToast(null,EventArgs.Empty);
-    double width=1480/scale,height=940/scale;root.Measure(new Size(width,height));root.Arrange(new Rect(0,0,width,height));
+    double width=Math.Max(MinWidth,1480/scale),height=Math.Max(MinHeight,940/scale);root.Measure(new Size(width,height));root.Arrange(new Rect(0,0,width,height));
     Assert51(CompactHeader32.ActualWidth>0&&CompactHeader32.TranslatePoint(new Point(CompactHeader32.ActualWidth,CompactHeader32.ActualHeight),root).X<=width+2,"scaled header within viewport "+scale+"/"+palette+"/"+mode.Name);
     Assert51(HeaderActions34.TranslatePoint(new Point(HeaderActions34.ActualWidth,0),root).X<=width+2,"scaled actions within viewport "+scale+"/"+palette+"/"+mode.Name);
-    var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap(1480,940,96*scale,96*scale,PixelFormats.Pbgra32);var visual=new DrawingVisual();
+    var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(width*scale),(int)Math.Ceiling(height*scale),96*scale,96*scale,PixelFormats.Pbgra32);var visual=new DrawingVisual();
     using(var context=visual.RenderOpen()){context.DrawRectangle(Theme.Brush("AppSurface"),null,new Rect(0,0,width,height));context.DrawRectangle(new VisualBrush(root){Stretch=Stretch.None,AlignmentX=AlignmentX.Left,AlignmentY=AlignmentY.Top},null,new Rect(0,0,width,height));}
     bitmap.Render(visual);var encoder=new System.Windows.Media.Imaging.PngBitmapEncoder();encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
     using var file=File.Create(Path.Combine(Path.GetTempPath(),"ui-acceptance51-scale-"+scale.ToString(CultureInfo.InvariantCulture)+"-"+palette+"-"+mode.Name+".png"));encoder.Save(file);

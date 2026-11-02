@@ -710,7 +710,9 @@
         "134.agent-bounds",
         "134.agent-install",
         "134.durable",
-        "134.matrix"
+        "134.matrix",
+        "134.defender-code",
+        "134.readonly-result"
       ]
     },
     {
