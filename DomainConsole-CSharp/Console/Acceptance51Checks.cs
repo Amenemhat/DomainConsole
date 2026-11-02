@@ -140,6 +140,7 @@ public partial class MainWindow {
     double width=Math.Max(MinWidth,1480/scale),height=Math.Max(MinHeight,940/scale);root.Measure(new Size(width,height));root.Arrange(new Rect(0,0,width,height));
     Assert51(CompactHeader32.ActualWidth>0&&CompactHeader32.TranslatePoint(new Point(CompactHeader32.ActualWidth,CompactHeader32.ActualHeight),root).X<=width+2,"scaled header within viewport "+scale+"/"+palette+"/"+mode.Name);
     Assert51(HeaderActions34.TranslatePoint(new Point(HeaderActions34.ActualWidth,0),root).X<=width+2,"scaled actions within viewport "+scale+"/"+palette+"/"+mode.Name);
+    foreach(var viewer in Visual33<LogViewer>(root).Where(v=>v.IsVisible&&v.ShellMode!="Report"))foreach(var input in Visual33<TextBox>(viewer).Where(v=>v.IsVisible&&!v.IsReadOnly))Assert51(input.ActualWidth>=140,"usable log search width "+scale+"/"+palette+"/"+mode.Name);
     var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(width*scale),(int)Math.Ceiling(height*scale),96*scale,96*scale,PixelFormats.Pbgra32);var visual=new DrawingVisual();
     using(var context=visual.RenderOpen()){context.DrawRectangle(Theme.Brush("AppSurface"),null,new Rect(0,0,width,height));context.DrawRectangle(new VisualBrush(root){Stretch=Stretch.None,AlignmentX=AlignmentX.Left,AlignmentY=AlignmentY.Top},null,new Rect(0,0,width,height));}
     bitmap.Render(visual);var encoder=new System.Windows.Media.Imaging.PngBitmapEncoder();encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
