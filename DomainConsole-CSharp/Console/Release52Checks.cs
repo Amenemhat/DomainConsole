@@ -10,6 +10,7 @@ public partial class MainWindow {
   }
   await VerifyTreeKeyboard52();
   VerifyTreeCheckFocus52();
+  await VerifyAttentionReading52();
   await VerifySearchInput52();
   await VerifyIpReconnect52();
   VerifyProgress52();
