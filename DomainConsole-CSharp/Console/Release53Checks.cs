@@ -31,7 +31,11 @@ public partial class MainWindow {
       CaptureContent38("collector53-"+theme+"-"+(size.Item1>1000?"wide":"compact"),size.Item1,size.Item2,true);
       CollectorDetails54_Click(this,new());UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);
       if(!CollectorPopup54.IsOpen||CollectorNotice43.Visibility!=System.Windows.Visibility.Visible)throw new Exception("Collector details popup did not open beside connection");
-      CaptureContent38("collector54-popup-"+theme+"-"+(size.Item1>1000?"wide":"compact"),size.Item1,size.Item2,true);CollectorPopup54.IsOpen=false;
+      var popup54=(System.Windows.FrameworkElement)CollectorPopup54.Child;popup54.UpdateLayout();
+      if(popup54.ActualWidth<100||popup54.ActualHeight<50)throw new Exception("Collector popup has no rendered content");
+      var image54=new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(popup54.ActualWidth),(int)Math.Ceiling(popup54.ActualHeight),96,96,System.Windows.Media.PixelFormats.Pbgra32);image54.Render(popup54);
+      var encoder54=new System.Windows.Media.Imaging.PngBitmapEncoder();encoder54.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(image54));
+      using(var file54=File.Create(Path.Combine(Path.GetTempPath(),"ui-collector54-popup-"+theme+"-"+(size.Item1>1000?"wide":"compact")+".png")))encoder54.Save(file54);CollectorPopup54.IsOpen=false;
      }
     });
    }finally{Theme.Apply(theme53,false);Width=width53;Height=height53;ComputerGrid.SelectedItem=selected53;MainTabs.SelectedItem=tab53;ShowCurrent();}

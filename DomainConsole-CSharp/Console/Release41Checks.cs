@@ -24,7 +24,7 @@ public partial class MainWindow {
   if(Evaluate().Kind!="Success")throw new Exception("Fresh report predating job Ended falsely warns");
   if(Evaluate(searched:false).Kind=="Success"||Evaluate(saved:true).Kind=="Success"||Evaluate(p:proof with{Fresh=false}).Kind=="Success"||Evaluate(p:proof with{Required=null}).Kind=="Success")throw new Exception("Missing checks falsely prove readiness");
   report.FailedCount=1;if(Evaluate().Kind!="Error"||Evaluate(active:true).Kind!="Working")throw new Exception("Error/active operation priority failed");report.FailedCount=0;
-  report.NeededCount=2;if(Evaluate().Kind!="Needed")throw new Exception("Needed updates hidden");report.NeededCount=0;
+  report.NeededCount=2;if(Evaluate().Kind!="Discrepancy"||Evaluate(searched:false).Kind!="Needed")throw new Exception("Server/client discrepancy or server-only requirement hidden");report.NeededCount=0;
   if(Evaluate(p:proof with{Required=true,Sources=new[]{"RebootRequired"}}).Kind!="Reboot")throw new Exception("Fresh reboot proof missing");
   if(ReportPresentation35.AgeAt41(report.LastReportedUtc,now)==ReportPresentation35.AgeAt41(report.LastReportedUtc,now.AddMinutes(6)))throw new Exception("Relative report age froze");
   report.LastReportedUtc=now.AddMinutes(10).ToString("o");if(Evaluate().Kind=="Success")throw new Exception("Future report is fresh");report.LastReportedUtc=now.AddMinutes(-1).ToString("o");
