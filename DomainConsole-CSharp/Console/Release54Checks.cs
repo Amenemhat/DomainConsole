@@ -28,6 +28,7 @@ public partial class MainWindow {
   MergeUpdateHistory54(job,host,poll);MergeUpdateHistory54(job,host,poll);
   job=Store.Clone(job);var partial=new PollResult{State=new(){Status="Running"}};MergeUpdateHistory54(job,host,partial);
   if(job.Targets[0].UpdateHistory54.Count!=1||partial.Updates.Count!=1||partial.Updates[0].ResultCode!=2)throw new Exception("Per-package success lost or duplicated after restart/partial reply");
+  var older=Store.Clone(partial.Updates[0]);older.ResultCode=null;older.Download=2;partial.Updates=new(){older};MergeUpdateHistory54(job,host,partial);if(partial.Updates[0].ResultCode!=2)throw new Exception("Delayed download overwrote retained installation result");
   var intent54=new UpdateAttempt54{Id="update54",Revision=3,Started54=now.AddMinutes(-1).ToString("o")};string job54=Guid.NewGuid().ToString();
   var entry54=new ClientUpdateHistory{Id="UPDATE54",Revision=3,Date=now.ToString("o"),Initiator54="DomainConsole CSharp / "+job54,Operation=1,ResultCode=2};
   if(!MatchesInstallHistory54(entry54,intent54,job54,now))throw new Exception("Exact attributable WUA result rejected");
@@ -37,6 +38,14 @@ public partial class MainWindow {
   var reboot=DescribeReboot40(new(){Required=false,CollectedUtc=now.ToString("o"),BootUtc=now.AddDays(-1).ToString("o")},now.AddDays(-1).ToString("o"),now);
   var assessment=ClientReadiness41.Evaluate(report,false,true,reboot,new(){Status="Completed"},false,true,0,now.ToString("o"),"",now,24);
   if(assessment.Kind!="Discrepancy")throw new Exception("Server/client discrepancy hidden");
+  report.LastReportedUtc=now.AddMinutes(-5).ToString("o");
+  var waitingAssessment=ClientReadiness41.Evaluate(report,false,true,reboot,new(){Status="Completed"},false,true,0,now.ToString("o"),"",now,24);
+  if(waitingAssessment.Kind!="ReportPending"||waitingAssessment.Tone!="Info")throw new Exception("Older server count presented as current installation requirement");
+  report.LastReportedUtc=now.ToString("o");
+  var nonzero=ClientReadiness41.Evaluate(report,false,true,reboot,new(){Status="Completed"},false,true,2,now.ToString("o"),"",now,24);
+  if(nonzero.Kind!="Discrepancy")throw new Exception("Two nonzero disagreeing counts hidden");
+  var nonzeroCriteria=Criteria45.Build(nonzero,report,reboot,new(){Status="Completed"},false,now.ToString("o"),2,false,"","");
+  if(nonzeroCriteria[0].Checks[0].Tone!="Success")throw new Exception("Successful search with updates shown as failed search");
   var formatted=ResultPresentation36.Format("## Итог задания\nСостояние: Завершено\n## Результаты команд\nfixture: успешно · 0\n## Проверка перезагрузки клиента\nФлаги перезагрузки Windows Update / CBS отсутствуют.\n## Вывод команды\nTcpTestSucceeded : False");
   if(formatted.Contains("## Проверка перезагрузки")||formatted.Contains("## Технические подробности · результаты команд")||!formatted.Contains("TcpTestSucceeded : False")||!formatted.Contains("Результаты шагов"))throw new Exception("Duplicate sections or missing output/codes");
   var diagnostic=ResultPresentation36.Format(PresentResult(host,new(){State=new(){Status="Completed",Results=new(){new(){Kind="ClientDiagnostics",Name="diagnostic",ExitCode=0}}},Client=new(){TcpConnected54=false},Files=new(){new(){Name="step-1.out",Body="TcpTestSucceeded : False"}}}));
