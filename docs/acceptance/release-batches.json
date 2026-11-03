@@ -804,6 +804,21 @@
         "6.groups",
         "6.matrix"
       ]
+    },
+    {
+      "version": "0.54.1",
+      "priority": "P0",
+      "title": "Сохранённые статусы после перезапуска",
+      "status": "candidate",
+      "issues": [
+        142
+      ],
+      "condition_ids": [
+        "142.restore",
+        "142.connection",
+        "142.precedence",
+        "142.read-only"
+      ]
     }
   ],
   "mandatory_scenarios_each_release": [

@@ -31,6 +31,14 @@ public partial class MainWindow {
    rebootProbeFailures40.Remove(host);
    rebootSnapshots[host]=new(){Required=true,CollectedUtc=now.ToString("o"),Sources=new(){"CBS"}};
    if(AssessClientCore41(row).Kind!="Reboot")throw new Exception("Saved success hides newly confirmed reboot");
+   rebootSnapshots.Remove(host);
+   var view=new RebootView40(false,true,stamp,Array.Empty<string>(),"");
+   foreach(var kind in new[]{"Error","Needed","Discrepancy","Working"})if(PreserveReady43(row,new(kind,"new evidence",""),kind=="Working",null,null,view,stamp).Kind!=kind)throw new Exception("Historical success hides "+kind);
+   ConnectionStore.Profiles[host]=new(){Identity="different-computer"};
+   if(AssessClientCore41(row).Kind=="Success")throw new Exception("Proof reused for a different computer");
+   ConnectionStore.Profiles.Remove(host);
+   rebootSnapshots[host]=new(){BootUtc=now.ToString("o"),CollectedUtc=now.ToString("o")};
+   if(AssessClientCore41(row).Kind=="Success")throw new Exception("Previous boot claimed current full readiness");
    rebootSnapshots.Remove(host);readyProofs43.Remove(host);
    if(AssessClientCore41(row).Kind=="Success")throw new Exception("Unknown client falsely restored as successful");
    if(queue.Count!=queued)throw new Exception("Restoring status submitted client work");
