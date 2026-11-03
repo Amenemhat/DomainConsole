@@ -84,6 +84,8 @@ jobs:
           Remove-Item Publish/Data -Recurse -Force
           Write-Output "History persisted, opened without network, and survived AD list refresh."
       - name: Verify exact owned executor termination and stale PID rejection
+        id: executor54
+        continue-on-error: true
         shell: powershell
         run: ./.github/scripts/test-executor54.ps1
       - name: Parse generated collector scripts before execution
@@ -128,6 +130,8 @@ jobs:
           Remove-Item Publish/local-smoke-*.txt
           Remove-Item Publish/Data -Recurse -Force -ErrorAction SilentlyContinue
       - name: Verify update progress and cancellation
+        id: updates54
+        continue-on-error: true
         shell: pwsh
         run: |
           & ./Publish/Agent/DomainConsole.Agent.exe update-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-update-smoke")
@@ -863,6 +867,11 @@ jobs:
           '@
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
           if($LASTEXITCODE -ne 0){throw 'Polling snapshot fixture failed'}
+      - name: Require executor and update regression success before packaging
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          if ('${{ steps.executor54.outcome }}' -ne 'success' -or '${{ steps.updates54.outcome }}' -ne 'success') { throw 'Executor/update regression failed or was not executed; package is blocked' }
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:
