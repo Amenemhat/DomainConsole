@@ -48,7 +48,6 @@ public partial class MainWindow {
  Dictionary<string,ClientAssessment41>? refreshClientStatus41;
  ClientAssessment41 AssessClient41(ComputerRow row){if(refreshClientStatus41!=null&&refreshClientStatus41.TryGetValue(row.Host,out var cached))return cached;var result=AssessClientCore41(row);if(refreshClientStatus41!=null)refreshClientStatus41[row.Host]=result;return result;}
  ClientAssessment41 AssessClientCore41(ComputerRow row){
-  if(ConnectionStore.Disconnected54(row.Host))return new("Unknown","Подключение отключено вручную","Сохранённые данные; клиентские задания не остановлены. Переподключитесь по IP для проверки результата.");
   var jobs=HostJobs39(row.Host).Where(x=>CurrentIdentity(x.Target)).ToList();var operation=jobs.FirstOrDefault(x=>IsCurrentExecution(x.Target.Status)||x.Target.Status=="Queued");
   var wsus=jobs.FirstOrDefault(x=>IsWsusJob(x.Job));var target=operation.Target??wsus.Target;var state=target?.State;
   if(state!=null&&state.Status!=target!.Status){state=Store.Clone(state);state.Status=target.Status;}
@@ -70,7 +69,7 @@ public partial class MainWindow {
   assessment=ApplySourceResult54(row,assessment,active);
   if(!active&&rebootWatches.TryGetValue(row.Host,out var observing51)&&!observing51.Done)assessment=new(HeaderRebootJob(row)!=null||observing51.ReadyAfter==default?"Reboot":"Working",RebootHeadline51(observing51,DateTimeOffset.UtcNow),assessment.Title+"\n"+assessment.Details);
   var observed51=operation.Target!=null?new ComputerRow(operation.Target,operation.Job.Id):new ComputerRow(target??row.Target,wsus.Job?.Id??"");
-  if(LostObservation51(row.Host)||(stoppedObservations51.Count>0&&ObservationStopped51(observed51))){assessment=new("Unknown",IsCurrentExecution(observed51.Target.Status)?ObservationExpired51(observed51)||ObservationStopped51(observed51)?"Ожидание завершено · результат операции неизвестен":"Связь потеряна · результат операции неизвестен":"Связь потеряна · текущее состояние неизвестно",assessment.Title+"\nПоследнее состояние: "+Display36.Date(observed51.Target.State?.Updated??""));}
+  if(active&&(LostObservation51(row.Host)||(stoppedObservations51.Count>0&&ObservationStopped51(observed51)))){assessment=new("Unknown",IsCurrentExecution(observed51.Target.Status)?ObservationExpired51(observed51)||ObservationStopped51(observed51)?"Ожидание завершено · результат операции неизвестен":"Связь потеряна · результат операции неизвестен":"Связь потеряна · текущее состояние неизвестно",assessment.Title+"\nПоследнее состояние: "+Display36.Date(observed51.Target.State?.Updated??""));}
   return row.Target.AdDisabled?new("AdDisabled","Учётная запись компьютера отключена в AD",assessment.Title+"\n"+assessment.Details):assessment;
  }
  string CurrentReportText41(ComputerRow row){if(reportCache.TryGetValue(row.Host,out var c)&&CacheMatches(c)&&c.Found){c.Report.ReceivedUtc41=c.ReceivedUtc;return liveReports.Contains(row.Host)?c.Report.Format(c.Server,c.Started):CachedReportText(c);}return serverReports.GetValueOrDefault(row.Host,"Отчёт выбранного компьютера можно прочитать кнопкой «Отчёт WSUS».");}

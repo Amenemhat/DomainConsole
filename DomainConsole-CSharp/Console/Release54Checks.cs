@@ -9,6 +9,7 @@ public partial class MainWindow {
   try{await pending;throw new Exception("Disconnect did not cancel local transport wait");}catch(OperationCanceledException){}
  }
  void VerifyRelease54(){
+  VerifySavedStatus55();
   AwaitUi39(VerifyConnectionCancel54());
   var now=DateTimeOffset.UtcNow;var host="release54.fixture.invalid";var original=ConnectionStore.Profiles.GetValueOrDefault(host);
   try{
