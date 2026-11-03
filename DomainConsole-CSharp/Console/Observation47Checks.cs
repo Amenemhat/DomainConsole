@@ -53,6 +53,8 @@ public partial class MainWindow {
     PollingControl43.Resume();ConnectionStore.Profiles[host]=new(){AuthMode="Current",Address="192.0.2.61",Identity="fixture"};
     var target=ConnectionStore.Capture(new(){Host=host});var job=new RemoteJob{Targets=new(){target}};var row=new ComputerRow(target,job.Id);
     var state=new RemoteState{Id=job.Id,Status="Completed",Ended=DateTimeOffset.UtcNow.ToString("o")};var reply=new TaskCompletionSource<RebootSnapshot>(TaskCreationOptions.RunContinuationsAsynchronously);bool entered=false;
+    await ObserveRebootAfterJob(row,job,new(){State=state},_=>throw new Exception("Read-only command unexpectedly probes reboot"));
+    job.Steps.Add(new(){Kind="PowerShell",TouchesUpdates=true});
     var pending=ObserveRebootAfterJob(row,job,new(){State=state},_=>{entered=true;return reply.Task;});
     if(!entered)throw new Exception("Post-job reboot fixture never entered transport");
     if(cancel){PollingControl43.Pause();PollingControl43.Resume();}else ConnectionStore.Profiles[host].Address="192.0.2.62";

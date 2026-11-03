@@ -95,7 +95,7 @@ namespace DomainConsole.Agent {
    if(File.Exists(FilePath("service-original.json"))&&Json.Deserialize<string>(File.ReadAllText(FilePath("service-original.json")))=="Stopped"){if(Run("net.exe","stop wuauserv","services")!=0)throw new Exception("Cannot restore stopped service state.");}
    WriteJson("restored.json",new{RestoredAt=DateTime.UtcNow.ToString("o")});if(State!=null){State.RestoreStatus="Restored";Save();}DeleteTask("Restore");
   }
-  static dynamic Com(string name){var type=Type.GetTypeFromProgID(name);if(type==null)throw new Exception("COM component missing: "+name);return Activator.CreateInstance(type);}
+  static dynamic Com(string name){if(fixtureCom54!=null)return fixtureCom54(name);var type=Type.GetTypeFromProgID(name);if(type==null)throw new Exception("COM component missing: "+name);return Activator.CreateInstance(type);}
   static int Updates(string prefix,bool scanOnly=false){
    Stage("Проверка источника обновлений");string source="";int managed=0,blocked=0;
    using(var key=Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate")){if(key!=null){source=Convert.ToString(key.GetValue("WUServer",""));blocked=Convert.ToInt32(key.GetValue("DoNotConnectToWindowsUpdateInternetLocations",0));}}
