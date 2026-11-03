@@ -12,6 +12,7 @@ public static class ResultPresentation36 {
   string status=info.Body.Split('\n').FirstOrDefault(x=>x.StartsWith("Состояние:"))?.Replace("Состояние: ","")??"Результат не получен";
   string command=results.Body?.Split('\n')[0]??"";command=Regex.Replace(command,@": (успешно|ошибка|остановлено).*","");
   string summary=needs?"Нужна перезагрузка":failed?"Ошибка · "+BriefFailure(failure.Body??info.Body):status+(command.Length>0?" · "+Short(command,100):"");
+  var finding=info.Body.Split('\n').FirstOrDefault(x=>x.StartsWith("Диагностический итог: "));if(!failed&&finding!=null)summary=finding.Substring("Диагностический итог: ".Length);
   if(status.StartsWith("Перезагрузка подтверждена;"))summary="Перезагрузка Windows подтверждена";var main=new List<string>{summary};if(status.StartsWith("Перезагрузка подтверждена;"))main.Add("Флаги перезагрузки не проверены. Повторите проверку клиента; ограничение и время снимка — ниже.");if(needs&&failed)main.Add("Неудачная попытка сохранена в подробностях.");
 
   if(failed&&results.Body!=null){int successful=results.Body.Split('\n').Count(x=>x.Contains(": успешно"));int errors=results.Body.Split('\n').Count(x=>x.Contains(": ошибка"));if(successful>0)main.Add("Успешных действий: "+successful+"; с ошибкой: "+errors+". Выполнение частичное.");}

@@ -35,6 +35,7 @@ public partial class MainWindow {
    RecordReportReceipt54(host,new(){LastReportedUtc=now.ToString("o")},"fixture:8530");
    if(reportWaiting.ContainsKey(host))throw new Exception("New report did not release wait");
   }finally{if(oldCache==null)reportCache.Remove(host);else reportCache[host]=oldCache;if(oldWait==null)reportWaiting.Remove(host);else reportWaiting[host]=oldWait;Store.Write("report-waits.json",reportWaiting);}
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"cancel-executor54.ps1"),RemoteService.CancelScript,new System.Text.UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"ui-release54.txt"),"Endpoint generations/disconnect, persisted individual outcomes, discrepancy, compact output, unknown queue and report delivery boundary verified.");
  }
 }

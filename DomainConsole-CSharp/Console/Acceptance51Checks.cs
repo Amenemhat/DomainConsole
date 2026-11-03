@@ -125,7 +125,7 @@ public partial class MainWindow {
    Key51(0x11);await Click(1);Key51(0x11,true);await Task.Delay(100);
    Assert51(EventList32.SelectedItems.Count==2&&!EventList32.SelectedItems.Contains(EventList32.Items[1]),"real Ctrl click toggles one event");
    EventList32.Focus();Key51(0x11);Key51(0x43);Key51(0x43,true);Key51(0x11,true);await Task.Delay(100);
-   Assert51(Clipboard.GetText().Contains("Details 0")&&Clipboard.GetText().Contains("Details 2")&&!Clipboard.GetText().Contains("Details 1"),"real Ctrl C respects selected rows");
+   Assert51(Clipboard.GetText().Contains("Details 0")&&Clipboard.GetText().Contains("Details 2")&&!Clipboard.GetText().Contains("Details 1"),"real Ctrl C respects selected rows; selected="+EventList32.SelectedItems.Count+"; clipboard="+Clipboard.GetText());
    Key51(0x11);Key51(0x41);Key51(0x41,true);Key51(0x11,true);await Task.Delay(100);
    Assert51(EventList32.SelectedItems.Count==EventList32.Items.Count,"real Ctrl A selects visible history");
   }finally{

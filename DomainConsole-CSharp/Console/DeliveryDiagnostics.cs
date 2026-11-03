@@ -3,6 +3,7 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed class ReportQueueProbe {public string Name {get;set;}="";public int Files {get;set;}public long Bytes {get;set;}public string OldestUtc {get;set;}="";}
 public sealed class ClientReportProbe {
+ public bool? TcpConnected54 {get;set;}public string NetworkError54 {get;set;}="";public string Route54 {get;set;}="";
  public string Services {get;set;}="";public string EtlStatus {get;set;}="Не получен";public List<ReportQueueProbe> Queues {get;set;}=new();public string QueueError {get;set;}="";
  public string Computer {get;set;}="";public string Os {get;set;}="";public string Build {get;set;}="";public string WUServer {get;set;}="";public string WUStatusServer {get;set;}="";public int UseWUServer {get;set;}public string SusClientId {get;set;}="";public string[] IPs {get;set;}=Array.Empty<string>();public string CollectedUtc {get;set;}="";
 }
@@ -81,6 +82,21 @@ foreach($name in @('EventCache','EventCache.v2')){
  }catch{$probe.QueueError+=$name+': '+$_.Exception.Message+'; '}
 }
 $probe|ConvertTo-Json -Depth 5|Set-Content (Join-Path $dcFolder 'delivery-client.json') -Encoding UTF8
+$probe.TcpConnected54=$null;$probe.NetworkError54='';$probe.Route54=''
+if($probe.WUServer){
+ try{$uri=[uri]$probe.WUServer;$tcp=New-Object Net.Sockets.TcpClient
+ try{$connect=$tcp.ConnectAsync($uri.DnsSafeHost,$uri.Port);if(!$connect.Wait(5000)){throw 'Нет ответа TCP за 5 секунд'};$connect.GetAwaiter().GetResult();$probe.TcpConnected54=$tcp.Connected}
+ finally{$tcp.Dispose()}
+ }catch{$probe.TcpConnected54=$false;$probe.NetworkError54=$_.Exception.Message}
+ try{$address=[Net.Dns]::GetHostAddresses($uri.DnsSafeHost)|Where-Object AddressFamily -eq InterNetwork|Select-Object -First 1;if($address){$probe.Route54=Find-NetRoute -RemoteIPAddress $address.IPAddressToString -ErrorAction Stop|Select-Object InterfaceAlias,InterfaceIndex,IPAddress,DestinationPrefix,NextHop,RouteMetric|Format-List|Out-String}}catch{$probe.Route54='Маршрут не прочитан: '+$_.Exception.Message}
+}
+$probe|ConvertTo-Json -Depth 5|Set-Content (Join-Path $dcFolder 'delivery-client.json') -Encoding UTF8
+'## Сеть клиент → WSUS'
+'TCP: '+$(if($null -eq $probe.TcpConnected54){'Неизвестно'}elseif($probe.TcpConnected54){'Подключение установлено; HTTP отдельно'}else{'Подключение не установлено'})
+$probe.NetworkError54;$probe.Route54
+netsh winhttp show proxy
+'Если маршрут выбран через домашнюю сеть, проверьте пересечение подсетей VPN. Маршруты и политики не изменялись.'
+
 'Клиент: '+$probe.Computer+'; ОС: '+$probe.Os+'; сборка: '+$probe.Build
 'Источник: '+$probe.WUServer+'; адрес отчётности: '+$probe.WUStatusServer+'; UseWUServer: '+$probe.UseWUServer
 'IP: '+($ips -join ', ')+'; SusClientId: '+$probe.SusClientId

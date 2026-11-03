@@ -83,6 +83,9 @@ jobs:
           Remove-Item Publish/ui-smoke-ready.txt -Force
           Remove-Item Publish/Data -Recurse -Force
           Write-Output "History persisted, opened without network, and survived AD list refresh."
+      - name: Verify exact owned executor termination and stale PID rejection
+        shell: powershell
+        run: ./.github/scripts/test-executor54.ps1
       - name: Parse generated collector scripts before execution
         shell: pwsh
         run: |

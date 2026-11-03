@@ -19,6 +19,23 @@ public partial class MainWindow {
   }
   foreach(var update in target.UpdateHistory54){if(!data.Updates.Any(u=>u.Id==update.Id&&u.Revision==update.Revision&&u.Title==update.Title&&u.Started54==update.Started54))data.Updates.Add(System.Text.Json.JsonSerializer.Deserialize<UpdateOutcome>(System.Text.Json.JsonSerializer.Serialize(update,Store.Options),Store.Options)!);}
  }
+ ClientAssessment41 ApplySourceResult54(ComputerRow row,ClientAssessment41 current,bool active){
+  if(active)return current;
+  var latest=HostJobs39(row.Host).FirstOrDefault(x=>IsWsusJob(x.Job)&&CurrentIdentity(x.Target));var state=latest.Target?.State;
+  if(state==null||!(state.ManagedSource54==false||latest.Job.UpdateSource54=="WindowsUpdate")||state.Status is not ("Completed" or "VerifiedAfterReboot"))return current;
+  var step=state.Results.LastOrDefault(x=>x.Kind is "Updates" or "UpdateScan"&&x.ExitCode==0);
+  if(step==null)return current;
+  var reboot=RebootViewFor40(row);if(reboot.Required==true)return current;
+  var boot=rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"";
+  if(Criteria45.Newer(boot,step.Ended))return new("Unknown","Последний поиск выполнен до перезагрузки","Источник: Windows Update; результат "+Display36.Date(step.Ended)+" сохранён. Ожидается проверка после загрузки.");
+  int count=state.UpdatesRemaining;string source=latest.Job.UpdateSource54=="WindowsUpdate"?"Windows Update":"текущие политики клиента (без WSUS)";
+  var result=new ClientAssessment41(count==0?"Success":"Needed",count==0?"Проверено · необходимых обновлений нет":"К установке по поиску клиента: "+count,"Источник: "+source+" · "+Display36.Date(step.Ended)+". Данные WSUS относятся к отдельному источнику.");
+  if(criteria45.TryGetValue(row.Host,out var criteria)){
+   criteria[0]=new("updates","Обновления · "+source+" · осталось: "+count,count==0?"Success":"Info",count==0?"Success":"Info",new(){new("Успешный поиск клиента: "+Display36.Date(step.Ended),"Success","Success"),new("Установлено в этом запуске: "+state.InstalledCount38,"Info","Info")});
+   criteria[1]=criteria[1] with{Text="Отчёт WSUS · отдельный источник",Checks=new(criteria[1].Checks){new("Этот отчёт не подтверждает результат поиска Windows Update","Info","Info")}};
+  }
+  return result;
+ }
  string SelectedUpdateSource54()=>UpdateSource54.SelectedIndex switch{1=>"WSUS",2=>"WindowsUpdate",_=>"Policy"};
  void CollectorDetails54_Click(object sender,RoutedEventArgs e){CollectorNotice43.Visibility=Visibility.Visible;((System.Windows.Controls.Expander)CollectorNotice43.Child).IsExpanded=true;CollectorPopup54.IsOpen=!CollectorPopup54.IsOpen;}
  void RecordReportReceipt54(string host,WsusReport report,string server){
