@@ -45,6 +45,18 @@ public partial class MainWindow {
      if(t.Status!=(changed?"Running":"Completed"))throw new Exception("Manual result lifetime/endpoint guard failed");
     }finally{History.Remove(j);archivedJobs.Remove(j.Id+host);clientConnections.Remove(host);liveConnections.Remove(host);if(prior==null)ConnectionStore.Profiles.Remove(host);else ConnectionStore.Profiles[host]=prior;}
    }
+   // Explicit refresh replaces a stuck background observation, not the remote job.
+   PollingControl43.Resume();
+   var pendingTarget=new TargetRecord{Host="replace-observation56.fixture.invalid",Status="Running"};
+   var pendingJob=new RemoteJob{Targets=new(){pendingTarget}};var pendingRow=new ComputerRow(pendingTarget,pendingJob.Id);History.Insert(0,pendingJob);archivedJobs.Add(pendingJob.Id+pendingTarget.Host);
+   try{
+    var delayed=new TaskCompletionSource<PollResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var old=Poll(pendingRow,false,(_,_,_)=>delayed.Task);
+    await Poll(pendingRow,true,(_,_,_)=>Task.FromResult(new PollResult{State=new(){Id=pendingJob.Id,Status="Completed",Ended=DateTime.UtcNow.ToString("o")}}));
+    if(pendingTarget.Status!="Completed")throw new Exception("Manual refresh blocked by previous observation");
+    delayed.SetResult(new(){State=new(){Id=pendingJob.Id,Status="Running"}});await old;
+    if(pendingTarget.Status!="Completed")throw new Exception("Late replaced observation overwrote manual result");
+   }finally{History.Remove(pendingJob);archivedJobs.Remove(pendingJob.Id+pendingTarget.Host);clientConnections.Remove(pendingTarget.Host);liveConnections.Remove(pendingTarget.Host);}
    int theme56=Theme.Current;
    try{foreach(int theme in new[]{0,1,2}){
     Theme.Apply(theme,false);
