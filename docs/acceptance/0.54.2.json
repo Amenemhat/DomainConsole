@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "version": "0.54.2",
+  "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+  "run_id": 41678868083,
+  "sha256": "ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084",
+  "registry_sha256": "57aa37ae40608a398f39b0200961d35e6179ee29d25c960917b2b35f3cceaf2c",
+  "batch_plan_sha256": "2b63d016fa254235f5f7e77156e852085188eae20e68a21664552cc0f70debb4",
+  "reviewer": "Codex — локальная сверка предоставленных данных, обезличенный startup fixture, Windows regression, фактические WPF-снимки и проверенный ZIP; производственные клиенты не изменялись",
+  "reviewed_at": "2026-11-03T17:09:44.145806+00:00",
+  "issues": [
+    {
+      "issue": 143,
+      "current_requirement": "Устранить воспроизведённую регрессию формата EndpointKey; продолжение #142, без новой архитектуры.",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "143.keys",
+          "requirement": "Сохранённые ключи 0.53 и 0.54 читаются при настоящем запуске и повторном запуске; прежние даты и результаты сохраняются.",
+          "scenario": "VerifyRestoreStartup55: два настоящих запуска с JSON, содержащими буквальный трёхчастный ключ 0.53, историю завершённого поиска, WSUS и reboot snapshot. Success и CacheMatches=true. Проверяется также пятичастный ключ 0.54. Исходные даты остаются в снимке.",
+          "expected": "Сохранённые ключи 0.53 и 0.54 читаются при настоящем запуске и повторном запуске; прежние даты и результаты сохраняются.",
+          "actual": "VerifyRestoreStartup55: два настоящих запуска с JSON, содержащими буквальный трёхчастный ключ 0.53, историю завершённого поиска, WSUS и reboot snapshot. Success и CacheMatches=true. Проверяется также пятичастный ключ 0.54. Исходные даты остаются в снимке.",
+          "result": "passed",
+          "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+        },
+        {
+          "condition_id": "143.consistent",
+          "requirement": "Отчёт WSUS, главный статус, счётчик и сохранённый адрес согласованы; наблюдения установщика прежнего формата учитываются.",
+          "scenario": "Проверки Outcome=Success, HeaderReport35 без «нет данных», восстановленный адрес RFC 5737, legacy installer observation; фактический WPF-снимок ui-restore55-success.png. Визуально счётчик 0 и зелёный главный итог согласованы с отчётом.",
+          "expected": "Отчёт WSUS, главный статус, счётчик и сохранённый адрес согласованы; наблюдения установщика прежнего формата учитываются.",
+          "actual": "Проверки Outcome=Success, HeaderReport35 без «нет данных», восстановленный адрес RFC 5737, legacy installer observation; фактический WPF-снимок ui-restore55-success.png. Визуально счётчик 0 и зелёный главный итог согласованы с отчётом.",
+          "result": "passed",
+          "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+        },
+        {
+          "condition_id": "143.guards",
+          "requirement": "Совместимость применяется только к сохранённым данным неизменённого подключения. Смена поколения/адреса/идентичности и подтверждённые ошибки/перезагрузка не маскируются.",
+          "scenario": "VerifyRestoreStartup55: поколение 1 отвергает ключ 0.53; текущий ключ поколения 1 принимается, поколение 2 его отвергает; Failed и новые положительные флаги дают Error/Reboot. Полные Release54/SavedStatus55 дополнительно проверяют смену адреса, идентичности и запрет устаревшей отправки.",
+          "expected": "Совместимость применяется только к сохранённым данным неизменённого подключения. Смена поколения/адреса/идентичности и подтверждённые ошибки/перезагрузка не маскируются.",
+          "actual": "VerifyRestoreStartup55: поколение 1 отвергает ключ 0.53; текущий ключ поколения 1 принимается, поколение 2 его отвергает; Failed и новые положительные флаги дают Error/Reboot. Полные Release54/SavedStatus55 дополнительно проверяют смену адреса, идентичности и запрет устаревшей отправки.",
+          "result": "passed",
+          "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+        },
+        {
+          "condition_id": "143.readonly",
+          "requirement": "Восстановление не запускает поиск, установку или сетевые команды; обязательные регрессии пройдены на точном артефакте.",
+          "scenario": "Восстановление выполнено с PollingControl43.Pause и остановленными таймерами, без обращений к клиентам; очередь осталась пустой. Полный Windows regression на точном коммите завершён; восстановление использует только сохранённые факты.",
+          "expected": "Восстановление не запускает поиск, установку или сетевые команды; обязательные регрессии пройдены на точном артефакте.",
+          "actual": "Восстановление выполнено с PollingControl43.Pause и остановленными таймерами, без обращений к клиентам; очередь осталась пустой. Полный Windows regression на точном коммите завершён; восстановление использует только сохранённые факты.",
+          "result": "passed",
+          "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+        }
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "single-instance",
+      "result": "passed",
+      "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+      "expected": "Повторный запуск не создаёт вторую управляющую консоль.",
+      "actual": "Windows single-instance smoke завершился успешно; версия и восстановление состояния проверены повторным запуском.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+    },
+    {
+      "id": "two-consoles",
+      "result": "passed",
+      "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+      "expected": "Один endpoint не получает дублирующих сборщиков/исполнителей.",
+      "actual": "Coordination37 и Probe42 проверили общую блокировку, независимые WinRM-сеансы и single-flight. Число собственных процессов/задач контролируется в тестах.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+    },
+    {
+      "id": "reboot-mid-operation",
+      "result": "passed",
+      "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+      "expected": "Прерывание собственного агента сохраняет неизвестный исход; продолжение начинается с фактической проверки.",
+      "actual": "interruption-smoke47 завершился на изолированных процессах; Recovery47/49 и Release51/53 проверили checkpoint, новый boot, занятый установщик и однократный последующий поиск. Физического отключения питания не было.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+    },
+    {
+      "id": "collector-remove-enable-recover",
+      "result": "passed",
+      "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+      "expected": "Удаление/запрет/включение и восстановление не размножают собственные процессы и требуют свежего результата.",
+      "actual": "local-smoke, Collector43 и Probe42 прошли удаление, запрет переустановки, включение, зависший worker, принадлежность процессов и свежий результат. Release53 проверил общий допуск ручного/автоматического ремонта и одну сохраняемую попытку.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+    },
+    {
+      "id": "offline-and-reconnect",
+      "result": "passed",
+      "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+      "expected": "Возврат связи согласует старое задание; прежний адрес/снимок не становится состоянием новой цели.",
+      "actual": "Release49/51/52/53 проверили короткий/длинный разрыв, изменённый endpoint, новую загрузку и защиту от повторного задания. Подтверждённая внешняя установка учитывается отдельно от скачивания. Release54 дополнительно проверил смену поколения/адреса, запрет старой отправки и отмену местного ожидания. Hotfix: завершённые результаты сохраняются независимо от связи; неподтверждённая текущая работа не показывается как выполняющаяся.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+    },
+    {
+      "id": "polling-master-off",
+      "result": "passed",
+      "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+      "expected": "OFF отменяет поколение опроса и запрещает новые автоматические чтения/ремонт.",
+      "actual": "Release47/49/52/53 и local-smoke прошли отмену и OFF. Поздний ответ не применяется после смены поколения; собственная установка не завершается из-за выключения опроса.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+    },
+    {
+      "id": "status-evidence-consistency",
+      "result": "passed",
+      "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+      "expected": "Возраст не отменяет полный факт; ошибки, boot и неполные данные явно различаются.",
+      "actual": "Матрицы Release40/44/50/51/53 прошли полный/частичный/предшествующий boot результат, старый Failed и новую установку, сохранение исторического успеха и отчёта при неудачном чтении. Общий assessment используется во всех представлениях. Дополнительно настоящий запуск с буквальными ключами 0.53/0.54 и повторный запуск: ui-restore-status55.json; дефект до исправления воспроизведён run 41677038692.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+    },
+    {
+      "id": "ui-all-modes-themes-sizes",
+      "result": "passed",
+      "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+      "expected": "Четыре режима, три темы, два размера и масштабированная отрисовка сохраняют читаемость и действия.",
+      "actual": "Windows WPF-прогон и визуальный просмотр снимков всех режимов, трёх тем и двух размеров. Опрос расположен рядом со связью; popup и границы подписи проверены отдельно. Масштабирование проверено средствами WPF, без физической смены DPI. Просмотрен отдельный фактический снимок восстановленного сохранённого успеха.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+    },
+    {
+      "id": "selection-scroll-preservation",
+      "result": "passed",
+      "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+      "expected": "Фоновая работа не меняет выбранного клиента, вкладку, отметки и позицию чтения.",
+      "actual": "Submission47 и проверки history/search/keyboard/attention52 прошли обратный порядок завершения заданий и ввод во время обновления. Release39 проверил 450 строк, 1006 заданий и 10000 событий; refresh не читает диск и не выдаёт лишние уведомления неизменным строкам.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+    },
+    {
+      "id": "full-command-output",
+      "result": "passed",
+      "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+      "expected": "Исходный stdout/stderr и код команды сохраняются отдельно от сводки.",
+      "actual": "Release35/36/52 и проверки redirected/native exit/command failure прошли сохранение полного вывода, поиск и копирование. Release54: компактный вывод и сохранение кодов шагов, False в диагностике не маскируется.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+    },
+    {
+      "id": "cache-reset-failure-and-restoration",
+      "result": "passed",
+      "commit": "f4105165e7a694af679fb098ea514eb2c776d0fb",
+      "expected": "Первичный сбой и неполное восстановление не становятся успехом; чужие процессы/каталоги защищены.",
+      "actual": "service-recovery-smoke47 и test_cache47 прошли timeout, принудительное завершение собственного процесса, восстановление, allowlist, junction/long-path и резервные копии. Системные службы представлены изолированными doubles.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/41678868083; ui-restore-status55.json, ui-restore-ready55.txt, ui-restore55-success.png и полный Windows smoke; ZIP SHA-256 ae0555e01c2def6b30e02b11ffe565c4ffddb7a520a35d705c0750f69a385084"
+    }
+  ],
+  "close_issues": []
+}
