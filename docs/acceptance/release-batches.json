@@ -819,6 +819,21 @@
         "142.precedence",
         "142.read-only"
       ]
+    },
+    {
+      "version": "0.54.2",
+      "priority": "P0",
+      "title": "Совместимость сохранённых ключей 0.53",
+      "status": "candidate",
+      "issues": [
+        143
+      ],
+      "condition_ids": [
+        "143.keys",
+        "143.consistent",
+        "143.guards",
+        "143.readonly"
+      ]
     }
   ],
   "mandatory_scenarios_each_release": [

@@ -40,7 +40,7 @@ public partial class MainWindow:Window {
   if(Library.Count==0)Seed();KindBox.SelectedIndex=Math.Clamp(Store.Read("shell-mode.json",0),0,1);ApplyEditorMode();
 
   var retention=Store.Read("retention.json",new RetentionSettings());CopiedDays.Text=retention.CopiedDays.ToString();UncopiedDays.Text=retention.UncopiedDays.ToString();DiagnosticMinutes.Text=Store.Read("diagnostic-settings.json",15).ToString();RestoreCommandLayout();foreach(var job in History)RememberSuccessful(job);
-  Loaded+=(sender,args)=>{if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_LOCAL_SMOKE")=="1"){timer.Stop();rebootTimer.Stop();((App)Application.Current).LocalSmoke();return;}if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_UI_SMOKE")=="1"){
+  Loaded+=(sender,args)=>{if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_RESTORE_SMOKE")=="1"){VerifyRestoreStartup55();return;}if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_LOCAL_SMOKE")=="1"){timer.Stop();rebootTimer.Stop();((App)Application.Current).LocalSmoke();return;}if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_UI_SMOKE")=="1"){
    if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_EXPECT_HISTORY")=="1"&&WsusHost.Text!="wsus.invalid")throw new Exception("WSUS settings were not restored.");
    WsusHost.Text="wsus.invalid";WsusPort.Text="8530";WsusSsl.IsChecked=false;Store.Write("wsus-settings.json",ReadWsus());UpdateWsusHeader();
    if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_EXPECT_HISTORY")=="1"&&History.Count==0)throw new Exception("History was not restored after restart.");

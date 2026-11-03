@@ -22,7 +22,7 @@ public partial class MainWindow {
  readonly HashSet<string> rebootChecks40=new(StringComparer.OrdinalIgnoreCase);
  void RefreshAddress40(ComputerRow row){
   string address=Identity40.ConfiguredAddress(row.Target),hint=address.Length>0?"Заданный адрес подключения; доступность проверяется отдельно":"";
-  if(rebootSnapshots.TryGetValue(row.Host,out var snapshot)&&snapshot.Address40.Length>0&&snapshot.AddressKey40==Identity40.EndpointKey(row.Target)){
+  if(rebootSnapshots.TryGetValue(row.Host,out var snapshot)&&snapshot.Address40.Length>0&&SavedEvidence55.Matches(snapshot.AddressKey40,row.Target)){
    address=ClientReadiness41.IPv4(snapshot.Address40);hint="Адрес TCP-подключения WinRM\nПолучен: "+Display36.Date(snapshot.AddressReceived40,true)+"\nСохранённый результат проверки; при смене VPN-адреса обновится после следующего подключения.";
   }
   row.SetAddress40(address,hint);

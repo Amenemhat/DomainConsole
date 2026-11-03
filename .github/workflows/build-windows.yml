@@ -56,6 +56,30 @@ jobs:
         run: |
           & ./Publish/Agent/DomainConsole.Agent.exe service-recovery-smoke47 (Join-Path $env:RUNNER_TEMP 'service-recovery47')
           if ($LASTEXITCODE -ne 0) { throw 'Service recovery fault injection failed' }
+      - name: Reload persisted status through the actual window startup twice
+        shell: pwsh
+        run: |
+          New-Item Publish/Data -ItemType Directory -Force | Out-Null
+          Copy-Item .github/fixtures/restore55/*.json Publish/Data/
+          $env:DOMAINCONSOLE_UI_SMOKE='1'
+          $env:DOMAINCONSOLE_RESTORE_SMOKE='1'
+          $env:TEMP=Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
+          $env:TMP=$env:TEMP
+          New-Item $env:TEMP -ItemType Directory -Force | Out-Null
+          1..2 | ForEach-Object {
+            $p=Start-Process ./Publish/DomainConsole.exe -PassThru
+            if (!$p.WaitForExit(60000)) { Stop-Process -Id $p.Id; throw 'Startup restore timed out' }
+            if (Test-Path Publish/restore-status55.json) { Get-Content Publish/restore-status55.json }
+            if ($p.ExitCode -ne 0) { if(Test-Path Publish/smoke-error.txt){Get-Content Publish/smoke-error.txt}; throw 'Startup restore failed' }
+            if (!(Test-Path Publish/restore-ready55.txt)) { throw 'No restore assertions' }
+          }
+          Remove-Item Env:DOMAINCONSOLE_RESTORE_SMOKE
+          $evidence=Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
+          New-Item $evidence -ItemType Directory -Force | Out-Null
+          Copy-Item Publish/restore-status55.json (Join-Path $evidence 'ui-restore-status55.json')
+          Copy-Item Publish/restore-ready55.txt (Join-Path $evidence 'ui-restore-ready55.txt')
+          Remove-Item Publish/restore-status55.json,Publish/restore-ready55.txt -Force
+          Remove-Item Publish/Data -Recurse -Force
       - name: Verify window and history after restart
         shell: pwsh
         run: |

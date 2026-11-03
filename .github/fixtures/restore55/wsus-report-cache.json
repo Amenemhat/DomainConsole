@@ -1,0 +1,21 @@
+{
+  "RESTORE-PC.fixture.invalid": {
+    "Host41": "RESTORE-PC.fixture.invalid",
+    "Endpoint41": "RESTORE-PC.FIXTURE.INVALID||",
+    "Server": "wsus.fixture.invalid:8530",
+    "Found": true,
+    "Report": {
+      "NeededCount": 0,
+      "ApprovedUnknownCount": 0,
+      "RequiredComplete": true,
+      "LastReportedUtc": "2026-11-03T09:54:02.4770000Z",
+      "LastSyncUtc": "2026-11-03T09:53:39.5970000Z",
+      "LastSyncResult": "Succeeded",
+      "InstalledPendingRebootCount": 0,
+      "FailedCount": 0,
+      "FullDomainName": "restore-pc.fixture.invalid"
+    },
+    "Started": "2026-11-03T09:53:33.9028831Z",
+    "ReceivedUtc": "2026-11-03T09:55:38.8727495Z"
+  }
+}

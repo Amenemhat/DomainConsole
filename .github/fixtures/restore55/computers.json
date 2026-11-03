@@ -1,0 +1,9 @@
+[
+  {
+    "Host": "RESTORE-PC.fixture.invalid",
+    "Name": "RESTORE-PC",
+    "DirectoryId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "Status": "Не проверен",
+    "OS": "Windows test"
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "RESTORE-PC.fixture.invalid": {
+    "Required": false,
+    "BootUtc": "2026-11-02T09:59:15.5000000Z",
+    "CollectedUtc": "2026-11-03T09:54:46.1366493Z",
+    "ProbeVersion": 2,
+    "Sources": [],
+    "Error": "",
+    "Address40": "192.0.2.41",
+    "AddressKey40": "RESTORE-PC.FIXTURE.INVALID||",
+    "AddressReceived40": "2026-11-03T09:54:46.1366493Z"
+  }
+}
