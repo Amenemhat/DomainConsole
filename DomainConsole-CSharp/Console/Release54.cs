@@ -10,6 +10,7 @@ public partial class MainWindow {
   RefreshOutcomes();ShowCurrent();
  }
  async void DiagnoseReport54_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{var row=Current();await ReadDelayedQueue54(row.Host);await FetchWsusReport(row);Notify("Диагностика очереди и чтение WSUS завершены; результаты доступны в критерии отчёта. Очередь не очищалась.");});
+ static bool MatchesInstallHistory54(ClientUpdateHistory entry,UpdateAttempt54 intent,string jobId,DateTimeOffset now)=>Guid.TryParse(jobId,out _)&&entry.Id.Equals(intent.Id,StringComparison.OrdinalIgnoreCase)&&entry.Revision==intent.Revision&&entry.Operation==1&&entry.Initiator54.Contains(jobId,StringComparison.OrdinalIgnoreCase)&&DateTimeOffset.TryParse(entry.Date,out var at)&&DateTimeOffset.TryParse(intent.Started54,out var start)&&at>=start.AddSeconds(-1)&&at<=now.AddMinutes(1);
  readonly HashSet<string> recoveredHistory54=new();
  async Task RecoverInstallHistory54(TargetRecord endpoint,RemoteJob? job,PollResult data){
   if(job==null||data.State==null||!InactiveEvidence(data)||data.State.UpdateIntents54.Count==0)return;
@@ -20,7 +21,7 @@ public partial class MainWindow {
    if(!CurrentEndpoint(endpoint)||PollingControl43.Token.IsCancellationRequested)return;
    var history=System.Text.Json.JsonSerializer.Deserialize<FailureHistoryReply>(raw,Store.Options)??new();
    foreach(var intent in missing){
-    var matches=history.History.Where(h=>h.Id==intent.Id&&h.Revision==intent.Revision&&h.Operation==1&&h.Initiator54.Contains(job.Id,StringComparison.OrdinalIgnoreCase)&&DateTimeOffset.TryParse(h.Date,out var at)&&DateTimeOffset.TryParse(intent.Started54,out var start)&&at>=start.AddSeconds(-1)&&at<=DateTimeOffset.UtcNow.AddMinutes(1)).ToList();
+    var matches=history.History.Where(h=>MatchesInstallHistory54(h,intent,job.Id,DateTimeOffset.UtcNow)).ToList();
     if(matches.Count!=1)continue;var found=matches[0];
     data.Updates.Add(new(){Id=intent.Id,Revision=intent.Revision,Title=intent.Title,Started54=intent.Started54,Ended54=found.Date,ResultCode=found.ResultCode,HResult=found.HResult,Evidence54="Windows Update history / "+found.Initiator54});
     Event31(endpoint.Host,"install-history54",job.Id+"|"+intent.Id+"|"+intent.Revision+"|"+found.Date,"Восстановлен результат установки из истории Windows Update",found.ResultCode==2?"Success":"Warning",intent.Title+" · "+WsusFailurePresentation.HistoryText(found)+". Совпали UpdateID, ревизия, время и ID задания в инициаторе.",scope:job.Id);
@@ -58,10 +59,10 @@ public partial class MainWindow {
  void CollectorDetails54_Click(object sender,RoutedEventArgs e){CollectorNotice43.Visibility=Visibility.Visible;((System.Windows.Controls.Expander)CollectorNotice43.Child).IsExpanded=true;CollectorPopup54.IsOpen=!CollectorPopup54.IsOpen;}
  void RecordReportReceipt54(string host,WsusReport report,string server){
   var previous=reportCache.GetValueOrDefault(host);
-  bool newer=DateTimeOffset.TryParse(report.LastReportedUtc,out var incoming)&&incoming<=DateTimeOffset.UtcNow.AddMinutes(1)&&
-   (previous==null||previous.Server!=server||!DateTimeOffset.TryParse(previous.Report.LastReportedUtc,out var old)||incoming>old);
+  bool valid=DateTimeOffset.TryParse(report.LastReportedUtc,out var incoming)&&incoming<=DateTimeOffset.UtcNow.AddMinutes(1);
+  bool newer=valid&&(previous==null||previous.Server!=server||!DateTimeOffset.TryParse(previous.Report.LastReportedUtc,out var old)||incoming>old);
   if(newer)Event31(host,"report-received54",server+"|"+report.LastReportedUtc,"Получен новый отчёт WSUS","Info","Обнаружен консолью сейчас; время отчёта на сервере: "+Display36.Date(report.LastReportedUtc)+". К установке по отчёту: "+report.NeededCount+"; ошибок: "+report.FailedCount+". Сопоставление с результатом клиента — в текущем статусе.",scope:server);
-  if(reportWaiting.TryGetValue(host,out var pending)){
+  if(valid&&reportWaiting.TryGetValue(host,out var pending)){
    var requested=pending.Requested54==default?pending.Until.AddMinutes(-15):pending.Requested54;
    if(incoming>=requested){reportWaiting.Remove(host);Store.Write("report-waits.json",reportWaiting);}
   }

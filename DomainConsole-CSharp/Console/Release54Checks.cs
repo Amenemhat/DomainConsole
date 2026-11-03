@@ -28,6 +28,11 @@ public partial class MainWindow {
   MergeUpdateHistory54(job,host,poll);MergeUpdateHistory54(job,host,poll);
   job=Store.Clone(job);var partial=new PollResult{State=new(){Status="Running"}};MergeUpdateHistory54(job,host,partial);
   if(job.Targets[0].UpdateHistory54.Count!=1||partial.Updates.Count!=1||partial.Updates[0].ResultCode!=2)throw new Exception("Per-package success lost or duplicated after restart/partial reply");
+  var intent54=new UpdateAttempt54{Id="update54",Revision=3,Started54=now.AddMinutes(-1).ToString("o")};string job54=Guid.NewGuid().ToString();
+  var entry54=new ClientUpdateHistory{Id="UPDATE54",Revision=3,Date=now.ToString("o"),Initiator54="DomainConsole CSharp / "+job54,Operation=1,ResultCode=2};
+  if(!MatchesInstallHistory54(entry54,intent54,job54,now))throw new Exception("Exact attributable WUA result rejected");
+  entry54.Initiator54="Windows Update";if(MatchesInstallHistory54(entry54,intent54,job54,now))throw new Exception("External installation attributed to console");
+  entry54.Initiator54="DomainConsole CSharp / "+job54;entry54.Revision=4;if(MatchesInstallHistory54(entry54,intent54,job54,now))throw new Exception("Different revision attributed to job");
   var report=new WsusReport{NeededCount=1,RequiredComplete=true,LastReportedUtc=now.ToString("o"),LastSyncResult="Succeeded"};
   var reboot=DescribeReboot40(new(){Required=false,CollectedUtc=now.ToString("o"),BootUtc=now.AddDays(-1).ToString("o")},now.AddDays(-1).ToString("o"),now);
   var assessment=ClientReadiness41.Evaluate(report,false,true,reboot,new(){Status="Completed"},false,true,0,now.ToString("o"),"",now,24);
@@ -46,6 +51,7 @@ public partial class MainWindow {
    RecordReportReceipt54(host,new(){LastReportedUtc=now.ToString("o")},"fixture:8530");
    if(reportWaiting.ContainsKey(host))throw new Exception("New report did not release wait");
   }finally{if(oldCache==null)reportCache.Remove(host);else reportCache[host]=oldCache;if(oldWait==null)reportWaiting.Remove(host);else reportWaiting[host]=oldWait;Store.Write("report-waits.json",reportWaiting);}
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"applicability54.ps1"),RemoteService.ApplicabilityScript54,new System.Text.UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"cancel-executor54.ps1"),RemoteService.CancelScript,new System.Text.UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"ui-release54.txt"),"Endpoint generations/disconnect, persisted individual outcomes, discrepancy, compact output, unknown queue and report delivery boundary verified.");
  }

@@ -116,7 +116,8 @@ public partial class MainWindow {
   var row=Current();string host=row.Host;var mem=memoryEvents32.GetValueOrDefault(host);var recent=recentEvents31.GetValueOrDefault(host);var tab=MainTabs.SelectedItem;bool expanded=EventHistoryGroup32.IsExpanded;int filter=EventFilter47.SelectedIndex;double width=Width,height=Height;
   try{
    Width=1480;Height=940;MainTabs.SelectedItem=WsusTab;ShowCurrent();EventHistoryGroup32.IsExpanded=true;EventFilter47.SelectedIndex=3;
-   memoryEvents32[host]=Enumerable.Range(0,12).Select(i=>new ClientEvent31{At=DateTimeOffset.UtcNow.AddMinutes(-i).ToString("o"),Text="Input fixture "+i,Details="Details "+i,Kind="Info",Operation36="input51"}).ToList();recentEvents31[host]=memoryEvents32[host].ToList();historyReset35=true;historyEventsKey32="";RefreshEventHistory32(host);UpdateLayout();
+   memoryEvents32[host]=Enumerable.Range(0,12).Select(i=>new ClientEvent31{At=DateTimeOffset.UtcNow.AddMinutes(-i).ToString("o"),Text="Input fixture "+i,Details="Details "+i,Kind="Info",Operation36="input51"}).ToList();recentEvents31[host]=memoryEvents32[host].ToList();historyReset35=true;historyEventsKey32="";RefreshEventHistory32(host);EventList32.ItemsSource=memoryEvents32[host];UpdateLayout();
+   Assert51(EventList32.Items.Count==12,"isolated input fixture excludes prior diagnostic events");
    Activate();SetForegroundWindow(new WindowInteropHelper(this).Handle);await Task.Delay(100);
    async Task Click(int index){EventList32.ScrollIntoView(EventList32.Items[index]);UpdateLayout();var item=(ListBoxItem)EventList32.ItemContainerGenerator.ContainerFromIndex(index);var point=item.PointToScreen(new Point(8,item.ActualHeight/2));Assert51(SetCursorPos((int)point.X,(int)point.Y),"move mouse "+index);mouse_event(2,0,0,0,UIntPtr.Zero);mouse_event(4,0,0,0,UIntPtr.Zero);await Task.Delay(100);}
    await Click(0);Assert51(EventList32.SelectedIndex==0&&EventList32.SelectedItems.Count==1,"real mouse selects first event");
