@@ -124,7 +124,7 @@
                       <ContextMenu>
                         <MenuItem Header="Принять управление клиентом…" Click="ClaimControl37_Click"/>
                         <MenuItem Header="Адрес и учётная запись…" Click="HeaderAddress_Click"/>
-                        <MenuItem Header="Подробная проверка подключения…" Click="CheckConnection_Click"/>
+                        <MenuItem Header="Отключить подключение" Click="Disconnect54_Click"/><MenuItem Header="Переподключить по IP…" Click="HeaderAddress_Click"/><MenuItem Header="Подробная проверка подключения…" Click="CheckConnection_Click"/>
                       </ContextMenu>
                     </Button.ContextMenu>
                     <StackPanel Orientation="Horizontal">

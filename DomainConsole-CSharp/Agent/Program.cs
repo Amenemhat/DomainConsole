@@ -107,7 +107,7 @@ namespace DomainConsole.Agent {
    State.UpdateSource54=selected;Save();
    bool useWsus=selected=="WSUS"||(selected=="Policy"&&managed==1);
    if(useWsus){Uri address;if(!Uri.TryCreate(source,UriKind.Absolute,out address)||(address.Scheme!="http"&&address.Scheme!="https"))throw new InvalidOperationException("Некорректный адрес WSUS в политике клиента.");
-    Stage("WSUS · DNS и предварительная проверка TCP");try{using(var tcp=new System.Net.Sockets.TcpClient()){var connect=tcp.ConnectAsync(address.DnsSafeHost,address.Port);if(!connect.Wait(5000))throw new TimeoutException("Нет ответа TCP за 5 секунд");connect.GetAwaiter().GetResult();Log("TCP доступен: "+source+". HTTP и авторизация проверяются отдельно.");}}catch(Exception ex){Log("Предварительная проверка сети: "+ex.Message+". WUA проверит свой маршрут и прокси.");}}
+    Stage("WSUS · DNS и предварительная проверка TCP");try{using(var tcp=new System.Net.Sockets.TcpClient()){var connect=tcp.ConnectAsync(address.DnsSafeHost,address.Port);if(!connect.Wait(5000))throw new System.TimeoutException("Нет ответа TCP за 5 секунд");connect.GetAwaiter().GetResult();Log("TCP доступен: "+source+". HTTP и авторизация проверяются отдельно.");}}catch(Exception ex){Log("Предварительная проверка сети: "+ex.Message+". WUA проверит свой маршрут и прокси.");}}
    if(Cancelled())return 0;Stage("Создание сеанса Windows Update Agent");
    dynamic session=Com("Microsoft.Update.Session");session.ClientApplicationID="DomainConsole CSharp";
    dynamic search=session.CreateUpdateSearcher();search.ServerSelection=selected=="WSUS"?1:selected=="WindowsUpdate"?2:0;search.Online=true;

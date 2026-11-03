@@ -48,6 +48,7 @@ public partial class MainWindow {
  Dictionary<string,ClientAssessment41>? refreshClientStatus41;
  ClientAssessment41 AssessClient41(ComputerRow row){if(refreshClientStatus41!=null&&refreshClientStatus41.TryGetValue(row.Host,out var cached))return cached;var result=AssessClientCore41(row);if(refreshClientStatus41!=null)refreshClientStatus41[row.Host]=result;return result;}
  ClientAssessment41 AssessClientCore41(ComputerRow row){
+  if(ConnectionStore.Disconnected54(row.Host))return new("Unknown","Подключение отключено вручную","Сохранённые данные; клиентские задания не остановлены. Переподключитесь по IP для проверки результата.");
   var jobs=HostJobs39(row.Host).Where(x=>CurrentIdentity(x.Target)).ToList();var operation=jobs.FirstOrDefault(x=>IsCurrentExecution(x.Target.Status)||x.Target.Status=="Queued");
   var wsus=jobs.FirstOrDefault(x=>IsWsusJob(x.Job));var target=operation.Target??wsus.Target;var state=target?.State;
   if(state!=null&&state.Status!=target!.Status){state=Store.Clone(state);state.Status=target.Status;}
@@ -64,6 +65,7 @@ public partial class MainWindow {
   if(!active&&cache?.Found==false&&assessment.Kind is not ("Error" or "SyncError" or "Reboot"))assessment=new("NoWsus","Клиент не найден в WSUS","Проверьте регистрацию клиента");
   if(HeaderRebootJob(row)!=null&&assessment.Kind is not ("Error" or "SyncError"))assessment=new("Reboot","Перезагрузка назначена",assessment.Title+"\n"+assessment.Details);
   assessment=PreserveReady43(row,assessment,active,state,cache,proof,scan.Step?.Ended??"");if(assessment.Kind=="Success"&&rebootWatches.TryGetValue(row.Host,out var watch43)&&!watch43.Done&&rebootSnapshots.TryGetValue(row.Host,out var snap43)&&RebootReturned(watch43,snap43)&&ObservedAfter(snap43,watch43.RequestedUtc)&&snap43.Required==false){watch43.Done=true;watch43.Phase="Перезагрузка и готовность подтверждены";Store.Write("reboot-watches.json",rebootWatches);}
+  if(active&&!StateFresh(state))assessment=new("Unknown",ConnectionFresh(row.Host)?"Клиент доступен; состояние задания уточняется":"Нет свежего статуса задания","Последний известный этап: "+(state?.Stage??"не получен")+" · "+Display36.Date(state?.Updated??""));
   assessment=ExplainAssessment45(row,assessment,cache,proof,state,active,scan.Step?.Ended??"",scan.State?.UpdatesRemaining);
   if(!active&&rebootWatches.TryGetValue(row.Host,out var observing51)&&!observing51.Done)assessment=new("Working",RebootHeadline51(observing51,DateTimeOffset.UtcNow),assessment.Title+"\n"+assessment.Details);
   var observed51=operation.Target!=null?new ComputerRow(operation.Target,operation.Job.Id):new ComputerRow(target??row.Target,wsus.Job?.Id??"");

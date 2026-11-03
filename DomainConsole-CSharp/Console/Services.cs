@@ -68,8 +68,8 @@ public sealed partial class RemoteService {
  static readonly SemaphoreSlim pollSlots34=new(4);
  public async Task<PollResult> Poll(TargetRecord target,string id,bool includeOutput=true){using var read43=PollingControl43.Read();await pollSlots34.WaitAsync();try{using var pollTimeout=new CancellationTokenSource(TimeSpan.FromSeconds(20));if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректный ID задания.");string prefix="$dcJobId34="+PowerShellBridge.Literal(id)+";$includeOutput34="+(includeOutput?"$true":"$false")+";$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') $dcJobId34;";try{var json=await PowerShellBridge.Execute(Invoke(target,prefix+PollScript34),pollTimeout.Token);return ParseData34<PollResult>(json,"результат задания");}catch(Exception ex) when(ex.Message.Contains("DC_DATA_ERROR",StringComparison.OrdinalIgnoreCase)||ex.Message.Contains("недопустимый примитив",StringComparison.OrdinalIgnoreCase)){throw new RemoteDataException("Чтение результата: "+ex.Message,ex);}}finally{pollSlots34.Release();}}
  public async Task<CancellationReply> Cancel(TargetRecord target,string id,string mode="after"){using var stopTimeout=new CancellationTokenSource(TimeSpan.FromSeconds(30));
-  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(mode is not ("after" or "now" or "force"))throw new ArgumentException("Некорректный режим остановки.");
-  var json=await PowerShellBridge.Execute(Invoke(target,GuardControlScript37(CancellationScript(id,mode))),stopTimeout.Token);return JsonSerializer.Deserialize<CancellationReply>(json,Store.Options)??throw new Exception("Ответ отмены не получен");
+  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(mode is not ("after" or "now" or "force" or "executor"))throw new ArgumentException("Некорректный режим остановки.");
+  target=ConnectionStore.Capture(target);string json;try{json=await PowerShellBridge.Execute(Invoke(target,GuardControlScript37(CancellationScript(id,mode))),stopTimeout.Token);}catch(Exception ex){throw new InvalidOperationException("Остановка не подтверждена. Адрес управления: "+(ConnectionStore.Address(target).Length>0?ConnectionStore.Address(target):target.Host)+". "+ex.Message,ex);}return JsonSerializer.Deserialize<CancellationReply>(json,Store.Options)??throw new Exception("Ответ отмены не получен");
  }
  public static string CancellationScript(string id,string mode)=>"$id="+PowerShellBridge.Literal(id)+";$mode="+PowerShellBridge.Literal(mode)+";"+CancelScript;
  public const string CancelScript="""
@@ -99,6 +99,25 @@ if(!$state){
  New-Item (Join-Path $p 'cancel.flag') -ItemType File -Force|Out-Null
  New-Item (Join-Path $p 'stop-now.flag') -ItemType File -Force|Out-Null
  Dc-Reply 'Файл состояния отсутствует, но исполнитель или задача ещё работает. Запрос отмены записан; завершение пока не подтверждено.';return
+}
+if($mode -eq 'executor'){
+ $stopFile=Join-Path $p 'stop-now.flag'
+ if(!(Test-Path $stopFile)){$stopFile=Join-Path $p 'cancel.flag'}
+ if(!(Test-Path $stopFile) -or ([DateTime]::UtcNow-(Get-Item $stopFile).CreationTimeUtc).TotalSeconds -lt 120){throw 'Сначала запросите штатную отмену; принудительное завершение собственного агента доступно через 2 минуты без завершения.'}
+ if(!$task -or @($task.Actions).Count -ne 1 -or !$state.ExecutorPid37 -or !$state.ExecutorStarted37){throw 'Не получены точные сведения о задаче, PID и времени запуска; принудительное завершение запрещено.'}
+ if($task.Actions[0].Arguments -ne ('run "'+$p+'"')){throw 'Назначение задачи не совпало; завершение запрещено.'}
+ $candidate=@($owned|Where-Object {$_.ProcessId -eq $state.ExecutorPid37 -and $_.ExecutablePath -eq $task.Actions[0].Execute})
+ if($candidate.Count -ne 1){throw 'Принадлежность процесса заданию не подтверждена.'}
+ $process=Get-Process -Id $state.ExecutorPid37 -ErrorAction Stop
+ $null=$process.Handle
+ if([Math]::Abs(($process.StartTime.ToUniversalTime()-[DateTime]::Parse($state.ExecutorStarted37).ToUniversalTime()).TotalSeconds) -gt 1){throw 'PID уже принадлежит другому запуску; завершение запрещено.'}
+ Disable-ScheduledTask -InputObject $task -ErrorAction Stop|Out-Null
+ $process.Kill()
+ if(!$process.WaitForExit(5000)){throw 'Завершение агента не подтверждено.'}
+ $state.Status='InterventionRequired';$state.Ended=[DateTime]::UtcNow.ToString('o');$state.Updated=$state.Ended
+ $state.Error='Собственный агент завершён принудительно. Исход переданной Windows Update операции не подтверждён; проверьте установщик и результаты перед повтором.'
+ [IO.File]::WriteAllText($statePath,($state|ConvertTo-Json -Depth 25),(New-Object Text.UTF8Encoding($false)))
+ Dc-Reply $state.Error 'InterventionRequired';return
 }
 if($mode -ne 'after' -and !$state.SupportsImmediateStop){throw 'Исполнитель поддерживает только остановку после шага. Выберите этот режим.'}
 if($mode -eq 'force' -and $state.StopStatus -ne 'ForceRequired'){throw 'Принудительное завершение доступно после неуспешного запроса Ctrl+C'}

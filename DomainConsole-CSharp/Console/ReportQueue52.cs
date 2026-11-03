@@ -10,24 +10,25 @@ public partial class MainWindow {
  readonly HashSet<string> pendingReportRepairs52=new(StringComparer.OrdinalIgnoreCase);
  readonly Dictionary<string,QueueEvidence52> queueEvidence52=new(Store.Read("report-queue52.json",new Dictionary<string,QueueEvidence52>()),StringComparer.OrdinalIgnoreCase);
  static bool CompleteQueue52(ClientReportProbe p)=>p.QueueError.Length==0&&p.Queues.Count==2&&p.Queues.All(q=>q.Files>=0&&q.Bytes>=0)&&p.Queues.Select(q=>q.Name).ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(new[]{"EventCache","EventCache.v2"});
- static string QueueHint52(ClientReportProbe p)=>"Очередь отчётности · "+(CompleteQueue52(p)?p.Queues.Sum(q=>(long)q.Files)+" файлов · "+p.Queues.Sum(q=>q.Bytes)+" байт":"размер не определён: проверка неполная")+"\nПроверено: "+Display36.Date(p.CollectedUtc)+(p.QueueError.Length>0?"\n"+p.QueueError:"");
+ static string QueueHint52(ClientReportProbe p)=>"Очередь отчётности · "+(CompleteQueue52(p)?p.Queues.Sum(q=>(long)q.Files)+" файлов · "+p.Queues.Sum(q=>q.Bytes)+" байт":"Неизвестно: проверка неполная")+"\nПроверено: "+Display36.Date(p.CollectedUtc)+(p.QueueError.Length>0?"\n"+p.QueueError:"");
  void RememberQueue52(TargetRecord target,WsusReport report,ClientReportProbe probe){queueEvidence52[target.Host]=new(){Endpoint=Identity40.EndpointKey(target),Server=OverviewServer,ReportUtc=report.LastReportedUtc,Snapshot=probe};Store.Write("report-queue52.json",queueEvidence52);}
  QueueEvidence52? CurrentQueue52(ComputerRow row)=>queueEvidence52.TryGetValue(row.Host,out var q)&&q.Endpoint==Identity40.EndpointKey(ConnectionStore.Capture(row.Target))&&q.Server==OverviewServer?q:null;
  Criterion45 QueueCriterion52(ComputerRow row,Criterion45 criterion,WsusReport? report){
   var evidence=CurrentQueue52(row);var recovery=reportRecoveries.GetValueOrDefault(row.Host);if(recovery!=null&&(recovery.Server!=OverviewServer||!CurrentEndpoint(recovery.Target)||!CurrentIdentity(recovery.Target)))recovery=null;
   string expectedAfter=recovery!=null&&recovery.JobId.Length>0?History.FirstOrDefault(j=>j.Id==recovery.JobId)?.Targets.FirstOrDefault(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase))?.State?.Started??recovery.CreatedUtc:evidence?.ReportUtc??"";
   bool fresh=report!=null&&expectedAfter.Length>0&&Criteria45.Newer(report.LastReportedUtc,expectedAfter);
-  string hint=evidence==null?"Размер очереди не определён · диагностика не получена":QueueHint52(evidence.Snapshot);
+  string hint=evidence==null?"Очередь отчётности: Неизвестно · диагностика не получена":QueueHint52(evidence.Snapshot);
   if(reportWaiting.TryGetValue(row.Host,out var waiting))hint+="\n"+(waiting.Delayed54?"Отчёт задерживается":"Ожидаем отчёт в течение 10 минут · осталось "+Math.Max(0,(int)(waiting.Until-DateTimeOffset.UtcNow).TotalMinutes)+" мин")+" · срок: "+Display36.Date(waiting.Until.ToString("o"));
   if(fresh&&!reportWaiting.ContainsKey(row.Host))return criterion with{Hint52=hint};
-  bool recommended=report!=null&&evidence!=null&&ReportRecoveryPolicy30.Recommended(evidence.Snapshot,report,ReportAgeHours(),DateTimeOffset.UtcNow);
+  bool delayed54=reportWaiting.TryGetValue(row.Host,out var wait54)&&wait54.Delayed54;
+  bool recommended=report!=null&&evidence!=null&&(ReportRecoveryPolicy30.Recommended(evidence.Snapshot,report,ReportAgeHours(),DateTimeOffset.UtcNow)||delayed54&&CompleteQueue52(evidence.Snapshot)&&evidence.Snapshot.Queues.Sum(q=>(long)q.Files)>0);
   bool recovering=recovery!=null&&!recovery.Done;
   string phase=recovering?recovery!.Phase:recommended?"Очередь отчётности требует восстановления":reportWaiting.TryGetValue(row.Host,out var pending54)?pending54.Delayed54?"Отчёт задерживается":"Ожидается новый отчёт (до 10 минут)":recovery is {Done:true}&&recovery.Phase=="Очередь проверена; ожидается новый отчёт"?recovery.Phase:evidence!=null&&(!CompleteQueue52(evidence.Snapshot)||evidence.Snapshot.QueueError.Length>0)?"Причина задержки отчёта не установлена":"";
-  if(phase.Length==0)return criterion with{Hint52=hint};
+  if(phase.Length==0)return criterion with{Hint52=hint,Diagnose54=evidence!=null&&!CompleteQueue52(evidence.Snapshot)};
   var checks=criterion.Checks.ToList();checks.Add(new(hint,"Info","Info"));
   if(recovering&&recovery!.Detail.Length>0)checks.Add(new(recovery.Detail,"Info","Info"));
   bool busy=History.Any(j=>IsWsusJob(j)&&j.Targets.Any(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)));
-  return criterion with{Text="Отчёт WSUS · "+phase,Tone=recommended?"Warning":criterion.Tone,Checks=checks,Hint52=hint,Repair52=recommended&&!recovering&&!busy&&!ReportRepairBusy52(row)&&!LostObservation51(row.Host)&&RebootReason(row).Length==0};
+  return criterion with{Text="Отчёт WSUS · "+phase,Diagnose54=delayed54&&(evidence==null||!CompleteQueue52(evidence.Snapshot)),Glyph=delayed54?"Warning":criterion.Glyph,Tone=recommended||delayed54?"Warning":criterion.Tone,Checks=checks,Hint52=hint,Repair52=recommended&&!recovering&&!busy&&!ReportRepairBusy52(row)&&!LostObservation51(row.Host)&&RebootReason(row).Length==0};
  }
  static CommandStep QueueVerifyStep52()=>new(){Kind="ReportQueueVerify",Name="Проверка очереди после восстановления",Code="$ErrorActionPreference='Stop';$raw=& {\n"+RemoteService.ReportQueueScript+"\n};$q=$raw|ConvertFrom-Json -ErrorAction Stop;if($q.QueueError -or @($q.Queues).Count -ne 2 -or @($q.Queues|Where-Object {$_.Name -eq 'EventCache'}).Count -ne 1 -or @($q.Queues|Where-Object {$_.Name -eq 'EventCache.v2'}).Count -ne 1){throw 'Очередь после восстановления прочитана не полностью.'};$q.Queues|ForEach-Object {if($_.Files -lt 0 -or $_.Bytes -lt 0){throw 'Размер очереди не подтверждён.'};$_.Name+': '+$_.Files+' файлов, '+$_.Bytes+' байт'};'Очередь проверена; получение отчёта подтверждается отдельно сервером.'"};
  async void RecoverReport52_Click(object sender,RoutedEventArgs e)=>await Guard(()=>RecoverReport52(true));

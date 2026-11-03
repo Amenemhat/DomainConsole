@@ -2,6 +2,14 @@ using System.Windows;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
+ void Disconnect54_Click(object sender,RoutedEventArgs e){
+  var row=Current();var profile=ConnectionStore.Profiles.GetValueOrDefault(row.Host)??new();
+  profile.Disconnected54=true;profile.Generation54=DateTime.UtcNow.Ticks;profile.Address="";ConnectionStore.Profiles[row.Host]=profile;ConnectionStore.Save();
+  liveConnections.Remove(row.Host);liveReports.Remove(row.Host);clientConnections.Remove(row.Host);Store.Write("client-connections.json",clientConnections);
+  Event31(row.Host,"manual-disconnect54",profile.Generation54.ToString(),"Подключение отключено вручную","Info","Новые обращения остановлены; переданные клиенту задания продолжают работу. Для проверки результата переподключитесь по IP.");
+  RefreshOutcomes();ShowCurrent();
+ }
+ async void DiagnoseReport54_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{var row=Current();await ReadDelayedQueue54(row.Host);await FetchWsusReport(row);Notify("Диагностика очереди и чтение WSUS завершены; результаты доступны в критерии отчёта. Очередь не очищалась.");});
  string SelectedUpdateSource54()=>UpdateSource54.SelectedIndex switch{1=>"WSUS",2=>"WindowsUpdate",_=>"Policy"};
  void CollectorDetails54_Click(object sender,RoutedEventArgs e){CollectorNotice43.Visibility=Visibility.Visible;((System.Windows.Controls.Expander)CollectorNotice43.Child).IsExpanded=true;CollectorPopup54.IsOpen=!CollectorPopup54.IsOpen;}
  void RecordReportReceipt54(string host,WsusReport report,string server){

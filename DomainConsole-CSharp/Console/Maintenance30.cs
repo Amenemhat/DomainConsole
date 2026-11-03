@@ -103,7 +103,7 @@ public partial class MainWindow {
  string MaintenanceText(string host)=>maintenancePlans.TryGetValue(host,out var p)?"\n\n## Обслуживание клиента\n"+p.Phase+(p.Detail.Length>0?"\n"+p.Detail:"")+"\nПлан начат: "+Display36.Date(p.StartedUtc,true)+" · задание: "+p.JobId+"\nРежим: "+(p.Install?"полное обслуживание":"только поиск и отчёт")+"; циклов: "+p.Cycles+" / 3":"";
  void RefreshAttentionButton(){if(AttentionButton==null)return;var rows=AttentionEntries36().Where(x=>x.Required).ToList();AttentionButton.Content="Требуют внимания · "+rows.Count;AttentionButton.Foreground=rows.Any(x=>x.Tone=="Error")?Theme.Tone("Error"):rows.Count>0?Theme.Tone("Warning"):Theme.Brush("TextPrimary");}
  void Attention_Click(object sender,RoutedEventArgs e)=>AttentionWindow36().ShowDialog();
- async void FullMaintenance_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{ReadWsus();MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Kind="Updates",Name="Полное обслуживание · установка и запрос отчёта"}},"WSUS",fullMaintenance:true);});
+ async void FullMaintenance_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{if(SelectedUpdateSource54()=="WSUS")ReadWsus();MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Kind="Updates",Name="Полное обслуживание · установка и запрос отчёта"}},"WSUS",fullMaintenance:true);});
 }
 
 
