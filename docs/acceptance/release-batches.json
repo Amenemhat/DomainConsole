@@ -758,6 +758,34 @@
     },
     {
       "version": "0.54",
+      "priority": "P0",
+      "title": "Исправления накопленных регрессий 0.53",
+      "status": "candidate",
+      "issues": [
+        141
+      ],
+      "condition_ids": [
+        "141.source",
+        "141.continuation-source",
+        "141.current-status",
+        "141.collector-placement",
+        "141.diagnostic-result",
+        "141.connection-state",
+        "141.reconnect",
+        "141.stop",
+        "141.progress-history",
+        "141.report-lifecycle",
+        "141.report-queue",
+        "141.automatic-install",
+        "141.discrepancy",
+        "141.compact-output",
+        "141.defender",
+        "141.regression"
+      ],
+      "scope_note": "Текущий выпуск по последнему запросу владельца посвящён накопленным недочётам консоли. Отдельная ранее запланированная функция перерегистрации SusClientId (#6) остаётся не реализованной и открытой в следующей порции; архитектура #137 не внедряется."
+    },
+    {
+      "version": "0.55",
       "priority": "P2",
       "title": "Диагностика и управляемая перерегистрация SusClientId",
       "status": "planned",
