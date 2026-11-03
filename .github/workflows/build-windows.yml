@@ -115,11 +115,16 @@ jobs:
       - name: Parse generated collector scripts before execution
         shell: pwsh
         run: |
-          foreach($file in Get-ChildItem (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke') -Filter '*.ps1'|Where-Object {$_.Name -like 'probe42-*' -or $_.Name -like 'collector43-*'}){
+          foreach($file in Get-ChildItem (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke') -Filter '*.ps1'|Where-Object {$_.Name -like 'probe42-*' -or $_.Name -like 'collector43-*' -or $_.Name -like 'collector56-*'}){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile($file.FullName,[ref]$tokens,[ref]$errors)
             if($errors){throw ($file.Name+': '+($errors|Out-String))}
           }
+      - name: Verify targeted orphan reservation repair without touching client state
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File .github/scripts/test-control56.ps1 -Script (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/collector56-control.ps1')
+          if ($LASTEXITCODE -ne 0) { throw 'Targeted orphan reservation repair failed' }
       - name: Verify safe maintenance executor upgrades
         shell: powershell
         run: |

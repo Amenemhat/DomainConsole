@@ -78,7 +78,7 @@ foreach($t in @($tasks|Select-Object -First 500)){
 // prevent separate console processes on this workstation from overlapping.
 public static class TransportBudget41 {
  static readonly SemaphoreSlim slots=new(3);
- static readonly SemaphoreSlim manualSlots56=new(4);
+ static readonly SemaphoreSlim manualSlots56=new(4),controlSlots56=new(2);
  static readonly Dictionary<string,HashSet<CancellationTokenSource>> background56=new();
  static readonly object activeGate54=new();static readonly Dictionary<string,HashSet<CancellationTokenSource>> active54=new();
  public static void CancelEndpoint54(TargetRecord target){CancellationTokenSource[] reads;lock(activeGate54)reads=active54.TryGetValue(Key(target),out var found)?found.ToArray():Array.Empty<CancellationTokenSource>();foreach(var read in reads)try{read.Cancel();}catch(ObjectDisposedException){}}
@@ -104,8 +104,8 @@ public static class TransportBudget41 {
     PollingControl43.Show(endpoint54,"Ожидание ручного подключения · "+(int)wait56.Elapsed.TotalSeconds+" с");await Task.Delay(200,token);
    }
   }
-  var budget56=manual?manualSlots56:slots;
-  using(gate){await budget56.WaitAsync(token);try{token.ThrowIfCancellationRequested();if(Paused&&!manual&&PollingControl43.IsRead)throw new OperationCanceledException("Опрос выключен");string label=code.Contains("# DC-HISTORY48")?"Чтение истории Windows Update":code.Contains("$dcJobId34=")?"Чтение состояния задания":code.Contains("# DC-READ42")?"Чтение флагов и активности":code.Contains("whoami;hostname")?"Проверка связи":"Получение данных WSUS";if(PollingControl43.IsRead)PollingControl43.Show(match.Groups[1].Value,label);return await execute(token);}finally{if(PollingControl43.IsRead)PollingControl43.Show(match.Groups[1].Value,"");budget56.Release();}}
+  var budget56=manual?(PollingControl43.Lane56=="control"?controlSlots56:manualSlots56):slots;
+  using(gate){await budget56.WaitAsync(token);try{token.ThrowIfCancellationRequested();if(Paused&&!manual&&PollingControl43.IsRead)throw new OperationCanceledException("Опрос выключен");string label=manual&&!PollingControl43.IsRead?"Ручное действие: передача запроса":code.Contains("# DC-HISTORY48")?"Чтение истории Windows Update":code.Contains("$dcJobId34=")?"Чтение состояния задания":code.Contains("# DC-READ42")?"Чтение флагов и активности":code.Contains("whoami;hostname")?"Проверка связи":"Получение данных WSUS";if(PollingControl43.IsRead||manual)PollingControl43.Show(match.Groups[1].Value,label);return await execute(token);}finally{if(PollingControl43.IsRead||manual)PollingControl43.Show(match.Groups[1].Value,"");budget56.Release();}}
   }finally{lock(activeGate54){if(background56.TryGetValue(endpoint54,out var bg)){bg.Remove(linked54);if(bg.Count==0)background56.Remove(endpoint54);}if(active54.TryGetValue(endpoint54,out var runs)){runs.Remove(linked54);if(runs.Count==0)active54.Remove(endpoint54);}}}
  }
 }

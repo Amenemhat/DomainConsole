@@ -5,6 +5,7 @@ public sealed class ReadyProof43 {public string Key{get;set;}="";public string J
 public partial class MainWindow {
  readonly Dictionary<string,ReadyProof43> readyProofs43=new(Store.Read("ready-proofs43.json",new Dictionary<string,ReadyProof43>()),StringComparer.OrdinalIgnoreCase);
  readonly SemaphoreSlim pollQueue43=new(3);
+ readonly SemaphoreSlim manualPollQueue56=new(3);
  readonly HashSet<string> scheduledPoll46=new(StringComparer.OrdinalIgnoreCase);
  bool ManualJob56(string id)=>History.Any(j=>j.Id==id&&(j.Manual56||j.OutputChannel=="Commands"&&!j.AutomaticChild31));
  Task PollRows43(){
@@ -16,15 +17,15 @@ public partial class MainWindow {
   return Task.CompletedTask;
  }
  async Task PollOne46(ComputerRow row,string key,CancellationToken generation){
-  bool entered=false;try{await pollQueue43.WaitAsync(generation);entered=true;
+  var lane56=ManualJob56(row.JobId)?manualPollQueue56:pollQueue43;bool entered=false;try{await lane56.WaitAsync(generation);entered=true;
    if(TransportBudget41.Paused&&!ManualJob56(row.JobId))return;await Task.Delay(Random.Shared.Next(30,650),generation);
    if(!TransportBudget41.Paused||ManualJob56(row.JobId))await Poll(row);
   }catch(OperationCanceledException) when(generation.IsCancellationRequested){}
   catch(Exception ex){ReadFailed34(row.Host,"результат задания",ex,row.JobId);}
-  finally{if(entered)pollQueue43.Release();scheduledPoll46.Remove(key);}
+  finally{if(entered)lane56.Release();scheduledPoll46.Remove(key);}
  }
 
- void PollActivity43(string key,string label){if(closing)return;var generation48=PollingControl43.Token;Dispatcher.BeginInvoke(()=>{if(closing||generation48.IsCancellationRequested)return;foreach(var row in Computers)if(TransportBudget41.Key(ConnectionStore.Capture(row.Target))==key)row.SetService43(TransportBudget41.Paused?"":label);});}
+ void PollActivity43(string key,string label){if(closing)return;bool manual56=PollingControl43.IsManual56;var generation48=PollingControl43.Token;Dispatcher.BeginInvoke(()=>{if(closing||generation48.IsCancellationRequested)return;foreach(var row in Computers)if(TransportBudget41.Key(ConnectionStore.Capture(row.Target))==key)row.SetService43(TransportBudget41.Paused&&!manual56?"":label);});}
  ClientAssessment41 PreserveReady43(ComputerRow row,ClientAssessment41 assessment,bool active,RemoteState? state,CachedWsusReport? cache,RebootView40 reboot,string scan){
   string key=Identity40.EndpointKey(ConnectionStore.Capture(row.Target))+"|"+OverviewServer+"|ssl="+(WsusSsl.IsChecked==true)+"|"+row.Target.DirectoryId;
   string job=HostJobs39(row.Host).FirstOrDefault(x=>IsWsusJob(x.Job)&&CurrentIdentity(x.Target)).Job?.Id??"";
