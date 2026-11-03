@@ -29,7 +29,7 @@ public partial class MainWindow {
   installerObservations53[row.Host]=new(Identity40.EndpointKey(row.Target),live.CollectedUtc);
   Store.Write("installer-observations53.json",installerObservations53);
  }
- bool InstallerChanged53(ComputerRow row,string checkedAt)=>installerObservations53.TryGetValue(row.Host,out var observed)&&observed.Endpoint==Identity40.EndpointKey(row.Target)&&DateTimeOffset.TryParse(observed.Stamp,out var at)&&at<=DateTimeOffset.UtcNow.AddMinutes(1)&&(!DateTimeOffset.TryParse(checkedAt,out var read)||at>read);
+ bool InstallerChanged53(ComputerRow row,string checkedAt)=>installerObservations53.TryGetValue(row.Host,out var observed)&&SavedEvidence55.Matches(observed.Endpoint,row.Target)&&DateTimeOffset.TryParse(observed.Stamp,out var at)&&at<=DateTimeOffset.UtcNow.AddMinutes(1)&&(!DateTimeOffset.TryParse(checkedAt,out var read)||at>read);
  static bool RecoverableCollector53(PollWait42? wait)=>
   wait is {Kind:"Blocked"}&&wait.Message.StartsWith("Три сбоя сборщика подряд",StringComparison.Ordinal)||
   wait is {Kind:"Unknown"}&&(wait.Message.StartsWith("Предыдущий исполнитель",StringComparison.Ordinal)||wait.Message.StartsWith("Процесс предыдущего сборщика",StringComparison.Ordinal));

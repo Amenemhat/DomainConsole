@@ -15,13 +15,23 @@ public partial class MainWindow {
    Boot=rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc}).ToList();
   File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"restore-status55.json"),JsonSerializer.Serialize(facts,Store.Options));
   if(Computers.Count!=1||Computers[0].Outcome!="Success")throw new Exception("Saved startup status was not restored: "+JsonSerializer.Serialize(facts));
-  var row=Computers[0];var snapshot=rebootSnapshots[row.Host];var saved=readyProofs43[row.Host];
-  // A failed read after a completed post-boot check must not revive an older reboot watch.
-  var request=DateTimeOffset.Parse(snapshot.BootUtc).AddMinutes(-2).ToString("o");
-  rebootWatches[row.Host]=new(){RequestedUtc=request,BeforeBootUtc=DateTimeOffset.Parse(snapshot.BootUtc).AddDays(-1).ToString("o"),ReadyAfter=DateTimeOffset.Parse(snapshot.BootUtc).AddMinutes(1),Confirmed=true,Scan=true};
-  snapshot.Required=null;snapshot.Error="Fixture: transient read unavailable";
-  RefreshOutcomes();
-  if(row.Outcome!="Success"||!rebootWatches[row.Host].Done)throw new Exception("An obsolete reboot watch replaced a later durable successful result: "+row.Outcome+" / "+row.OutcomeHint);
+  var row=Computers[0];var snapshot=rebootSnapshots[row.Host];var saved=readyProofs43[row.Host];var report=reportCache[row.Host];
+  string oldKey=saved.Key,oldEndpoint=report.Endpoint41;
+  var target=History[0].Targets[0];var oldStatus=target.Status;
+  void Expect(string kind,string message){RefreshOutcomes();if(row.Outcome!=kind)throw new Exception(message+": "+row.Outcome+" / "+row.OutcomeHint);}
+  try{
+   ConnectionStore.Profiles[row.Host]=new(){Generation54=1};
+   Expect("Unknown","Legacy evidence crossed a reconnect generation");
+   report.Endpoint41=Identity40.EndpointKey(row.Target);
+   saved.Key=report.Endpoint41+"|"+OverviewServer+"|ssl=False|"+row.Target.DirectoryId;
+   Expect("Success","0.54 evidence was not restored");
+   ConnectionStore.Profiles[row.Host].Generation54=2;
+   Expect("Unknown","Current evidence crossed a reconnect generation");
+   ConnectionStore.Profiles.Remove(row.Host);report.Endpoint41=oldEndpoint;saved.Key=oldKey;
+   target.Status="Failed";Expect("Error","A real failure was hidden by saved success");target.Status=oldStatus;
+   snapshot.Required=true;snapshot.Sources=new(){"RebootRequired"};Expect("Reboot","A new reboot requirement was hidden");snapshot.Required=false;snapshot.Sources.Clear();
+   Expect("Success","Legacy proof did not survive the restart fixture");
+  }finally{ConnectionStore.Profiles.Remove(row.Host);report.Endpoint41=oldEndpoint;saved.Key=oldKey;target.Status=oldStatus;snapshot.Required=false;snapshot.Sources.Clear();}
   if(queue.Count!=0)throw new Exception("Restoration enqueued remote work");
   File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"restore-ready55.txt"),"PASS: actual startup, saved WSUS report, mixed-case host, completed job, persisted proof and reboot snapshot; no network or submitted work.");
   Application.Current.Shutdown(0);
