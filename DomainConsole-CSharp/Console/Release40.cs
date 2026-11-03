@@ -6,7 +6,7 @@ namespace DomainConsole;
 public sealed class HasText40:System.Windows.Data.IValueConverter {public object Convert(object value,Type type,object parameter,System.Globalization.CultureInfo culture)=>!string.IsNullOrWhiteSpace(value?.ToString());public object ConvertBack(object value,Type type,object parameter,System.Globalization.CultureInfo culture)=>throw new NotSupportedException();}
 public static class Identity40 {
  public static string ShortName(string host){host=host.Trim().TrimEnd('.');return IPAddress.TryParse(host,out _)?host:host.Split('.')[0];}
- public static string EndpointKey(TargetRecord target){return target.Host.ToUpperInvariant()+"|"+ConnectionStore.Address(target)+"|"+ConnectionStore.Identity(target);}
+ public static string EndpointKey(TargetRecord target){return target.Host.ToUpperInvariant()+"|"+ConnectionStore.Address(target)+"|"+ConnectionStore.Identity(target)+"|"+ConnectionStore.Ssl(target)+"|"+ConnectionStore.Generation54(target);}
  public static string ConfiguredAddress(TargetRecord target){string value=ConnectionStore.Address(target);return ClientReadiness41.IPv4(value.Length>0?value:target.Host);}
 }
 public sealed record RebootView40(bool? Required,bool Fresh,string Stamp,string[] Sources,string Limitation){

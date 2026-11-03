@@ -79,7 +79,7 @@ foreach($t in @($tasks|Select-Object -First 500)){
 public static class TransportBudget41 {
  static readonly SemaphoreSlim slots=new(3);
  public static bool Paused {get;set;}=Store.Read("poll-paused41.json",false);
- public static string Key(TargetRecord t)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(t.Host.ToUpperInvariant()+"|"+ConnectionStore.Address(t)+"|"+ConnectionStore.Identity(t))));
+ public static string Key(TargetRecord t)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Identity40.EndpointKey(t))));
  public static void Reset(TargetRecord t){string file=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"DomainConsole","Transport41",Key(t)+".blocked");if(File.Exists(file))File.Delete(file);}
  public static async Task<string> Run(string code,CancellationToken token,Func<CancellationToken,Task<string>> execute){
   var match=System.Text.RegularExpressions.Regex.Match(code,@"# DC-ENDPOINT41:([A-F0-9]{64})");

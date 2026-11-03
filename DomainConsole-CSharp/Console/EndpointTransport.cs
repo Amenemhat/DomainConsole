@@ -18,6 +18,7 @@ public static partial class ConnectionStore {
  public static void EnsureConnected54(string host){if(Disconnected54(host))throw new InvalidOperationException("Подключение отключено вручную. Используйте «Переподключить по IP…»; клиентские задания не остановлены.");}
  public static string Normalize(string input)=>IPAddress.TryParse(input.Trim(),out var ip)?ip.ToString():throw new ArgumentException("Укажите корректный IPv4 или IPv6 без порта.");
  public static string Address(TargetRecord t)=>t.ConnectionSnapshot?t.ConnectionAddress:Profiles.GetValueOrDefault(t.Host)?.Address??"";
+ public static long Generation54(TargetRecord t)=>t.ConnectionSnapshot?t.ConnectionGeneration54:Profiles.GetValueOrDefault(t.Host)?.Generation54??0;
  public static bool Ssl(TargetRecord t)=>t.ConnectionSnapshot?t.ConnectionSsl:Profiles.GetValueOrDefault(t.Host)?.Ssl??false;
  public static string Identity(TargetRecord t)=>t.ConnectionSnapshot?t.ConnectionIdentity:Profiles.GetValueOrDefault(t.Host)?.Identity??"";
  public static TargetRecord Capture(TargetRecord source){var t=Store.Clone(source);if(!t.ConnectionSnapshot){var p=Profiles.GetValueOrDefault(t.Host);t.ConnectionGeneration54=p?.Generation54??0;t.ConnectionAuth=p?.AuthMode??"";t.ConnectionAddress=p?.Address??"";t.ConnectionSsl=p?.Ssl??false;t.ConnectionIdentity=p?.Identity??"";t.ConnectionName=p?.ComputerName??"";t.ConnectionSnapshot=true;}return t;}

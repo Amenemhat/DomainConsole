@@ -9,6 +9,7 @@ public partial class MainWindow {
    var frozen=ConnectionStore.Capture(new(){Host=host});
    ConnectionStore.Profiles[host]=new(){Address="192.0.2.11",Identity="identity54",Generation54=2};
    if(CurrentEndpoint(frozen)||ConnectionStore.Address(frozen)!="192.0.2.10")throw new Exception("Late endpoint reply accepted or historical endpoint mutated");
+   if(TransportBudget41.Key(frozen)==TransportBudget41.Key(new(){Host=host}))throw new Exception("Reconnect reused prior transport lock");
    var current=ConnectionStore.Capture(new(){Host=host});if(!CurrentEndpoint(current))throw new Exception("Verified endpoint not accepted");
    ConnectionStore.Profiles[host].Disconnected54=true;
    if(CurrentEndpoint(current))throw new Exception("Disconnected endpoint remains active");

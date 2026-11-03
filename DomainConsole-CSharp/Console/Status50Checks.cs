@@ -13,7 +13,7 @@ public partial class MainWindow {
    var report=Report();if(server=="failed")report.FailedCount=1;if(server=="sync-failed")report.LastSyncResult="Failed";if(server=="old")report.LastReportedUtc=now.AddDays(-3).ToString("o");if(server=="partial")report.RequiredComplete=false;if(server=="needed")report.NeededCount=2;
    var reboot=flag switch{"required"=>clean with{Required=true,Sources=new[]{"Windows Update API","RebootRequired (Windows Update)"}},"unknown"=>clean with{Required=null,Fresh=false},"partial"=>clean with{Required=null,Fresh=false,Limitation="CBS не прочитан"},"old-clear"=>clean with{Fresh=false},_=>clean};
    var result=ClientReadiness41.Evaluate(report,false,true,reboot,done,active,true,0,scan,"",now,24,boot);
-   string expected=active?"Working":flag=="required"?"Reboot":server=="failed"?"Error":server=="sync-failed"?"SyncError":server=="old"?"Stale":server=="needed"?"Needed":server=="partial"||flag!="clear"?"Warning":"Success";
+   string expected=active?"Working":flag=="required"?"Reboot":server=="failed"?"Error":server=="sync-failed"?"SyncError":server=="old"?"Stale":server=="needed"?"Discrepancy":server=="partial"||flag!="clear"?"Warning":"Success";
    Check(result.Kind==expected,flag+"/"+server+"/active="+active);
    var criteria=Criteria45.Build(result,report,reboot,done,active,scan,0,false,"",boot);
    Check(criteria.Count==3&&criteria[2].Action==(!active&&!reboot.Fresh&&result.Kind!="Success"),"action "+flag+"/"+server+"/"+active);
