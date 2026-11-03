@@ -28,6 +28,7 @@ public partial class MainWindow {
      foreach(int theme in new[]{0,1,2})foreach(var size in new[]{(1480d,940d),(1000d,640d)}){
       Theme.Apply(theme,false);Width=size.Item1;Height=size.Item2;RefreshCollector44(row.Host);UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);UpdateLayout();
       if(CollectorStage53.Visibility!=System.Windows.Visibility.Visible||!CollectorBusy53.IsIndeterminate||!CollectorNoticeText43.Text.Contains("Последний сигнал"))throw new Exception("Collector stage/liveness missing from header");
+      if(HeaderLinkText.TranslatePoint(new System.Windows.Point(HeaderLinkText.ActualWidth,0),CompactHeader32).X>CollectorDetails54.TranslatePoint(new System.Windows.Point(0,0),CompactHeader32).X)throw new Exception("Connection label overlaps collector action");
       CaptureContent38("collector53-"+theme+"-"+(size.Item1>1000?"wide":"compact"),size.Item1,size.Item2,true);
       CollectorDetails54_Click(this,new());UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);
       if(!CollectorPopup54.IsOpen||CollectorNotice43.Visibility!=System.Windows.Visibility.Visible)throw new Exception("Collector details popup did not open beside connection");
