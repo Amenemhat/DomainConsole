@@ -30,6 +30,21 @@ public partial class MainWindow {
     if(job.Targets[0].Status!="Completed")throw new Exception("Manual result discarded while polling OFF");
    }finally{History.Remove(job);archivedJobs.Remove(key);}
 
+   // A manual request survives a background pause, but never a changed endpoint.
+   foreach(bool changed in new[]{false,true}){
+    var host="manual-endpoint56.fixture.invalid";ConnectionStore.Profiles.TryGetValue(host,out var prior);
+    ConnectionStore.Profiles[host]=new(){Address="192.0.2.81",AuthMode="Current",Identity="fixture"};
+    var t=ConnectionStore.Capture(new TargetRecord{Host=host});t.Status="Running";
+    var j=new RemoteJob{Manual56=true,OutputChannel="Commands",Targets=new(){t}};var r=new ComputerRow(t,j.Id);History.Insert(0,j);archivedJobs.Add(j.Id+host);
+    try{
+     var reply=new TaskCompletionSource<PollResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+     var pending=Poll(r,true,(_,_,_)=>reply.Task);
+     PollingControl43.Resume();PollingControl43.Pause();
+     if(changed)ConnectionStore.Profiles[host].Address="192.0.2.82";
+     reply.SetResult(new(){State=new(){Id=j.Id,Status="Completed",Ended=DateTime.UtcNow.ToString("o")}});await pending;
+     if(t.Status!=(changed?"Running":"Completed"))throw new Exception("Manual result lifetime/endpoint guard failed");
+    }finally{History.Remove(j);archivedJobs.Remove(j.Id+host);clientConnections.Remove(host);liveConnections.Remove(host);if(prior==null)ConnectionStore.Profiles.Remove(host);else ConnectionStore.Profiles[host]=prior;}
+   }
    int theme56=Theme.Current;
    try{foreach(int theme in new[]{0,1,2}){
     Theme.Apply(theme,false);
