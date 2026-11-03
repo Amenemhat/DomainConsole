@@ -45,9 +45,11 @@ public partial class MainWindow {
   var queue=new ClientReportProbe{QueueError="access denied",CollectedUtc=now.ToString("o")};if(!QueueHint52(queue).Contains("Неизвестно"))throw new Exception("Unread queue rendered as zero");
   var oldCache=reportCache.GetValueOrDefault(host);var oldWait=reportWaiting.GetValueOrDefault(host);
   try{
-   reportWaiting[host]=new(){Id="fixture54",Requested54=now,Until=now.AddMinutes(10)};
+   reportWaiting[host]=new(){Id="fixture54",Server54="fixture:8530",Requested54=now,Until=now.AddMinutes(10)};
    RecordReportReceipt54(host,new(){LastReportedUtc=now.AddMinutes(-1).ToString("o")},"fixture:8530");
    if(!reportWaiting.ContainsKey(host))throw new Exception("Report before request cleared wait");
+   RecordReportReceipt54(host,new(){LastReportedUtc=now.ToString("o")},"other:8530");
+   if(!reportWaiting.ContainsKey(host))throw new Exception("Other WSUS server cleared report wait");
    RecordReportReceipt54(host,new(){LastReportedUtc=now.ToString("o")},"fixture:8530");
    if(reportWaiting.ContainsKey(host))throw new Exception("New report did not release wait");
   }finally{if(oldCache==null)reportCache.Remove(host);else reportCache[host]=oldCache;if(oldWait==null)reportWaiting.Remove(host);else reportWaiting[host]=oldWait;Store.Write("report-waits.json",reportWaiting);}

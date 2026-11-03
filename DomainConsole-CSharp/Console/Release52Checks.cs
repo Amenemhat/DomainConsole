@@ -29,7 +29,7 @@ public partial class MainWindow {
    if(!ReportRepairBusy52(row)||QueueCriterion52(row,original,old).Repair52)throw new Exception("Repeated preparation exposes another report repair");pendingReportRepairs52.Remove(endpoint);
    var queuedRepair=new RemoteJob{OutputChannel="WSUS",Steps=new(){QueueVerifyStep52()},Targets=new(){new(){Host=row.Host,Status="Queued"}}};History.Add(queuedRepair);
    if(!ReportRepairBusy52(row))throw new Exception("Queued repair permits another job");queuedRepair.Targets[0].Status="Completed";if(ReportRepairBusy52(row))throw new Exception("Completed repair retains submission lock");History.Remove(queuedRepair);
-   probe.QueueError="Access denied";if(!QueueHint52(probe).Contains("не определён")||QueueCriterion52(row,original,old).Repair52)throw new Exception("Incomplete queue is treated as empty/actionable");probe.QueueError="";
+   probe.QueueError="Access denied";if(!QueueHint52(probe).Contains("Неизвестно")||QueueCriterion52(row,original,old).Repair52)throw new Exception("Incomplete queue is treated as empty/actionable");probe.QueueError="";
    if(QueueCriterion52(row,original,new(){LastReportedUtc=now.ToString("o")}).Repair52)throw new Exception("Fresh report retained obsolete repair");
    var target=ConnectionStore.Capture(row.Target);target.Status="Completed";target.State=new(){Status="Completed",Started=now.AddMinutes(-30).ToString("o"),Ended=now.AddMinutes(-20).ToString("o"),UpdatesRemaining=1};
    var scan=new RemoteJob{OutputChannel="WSUS",Steps=new(){new(){Kind="UpdateScan"}},Targets=new(){target}};History.Add(scan);BeginAcceptedPlan38(scan,target);

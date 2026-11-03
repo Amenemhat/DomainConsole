@@ -54,7 +54,7 @@ public partial class MainWindow {
   }
   return result;
  }
- static ReportWait30 NewReportWait54(string id,string stamp){var now=DateTimeOffset.UtcNow;var requested=DateTimeOffset.TryParse(stamp,out var at)&&at.Year>2000&&at<=now.AddMinutes(1)?at:now;return new(){Id=id,Requested54=requested,Until=requested.AddMinutes(10),Next=now.AddSeconds(30)};}
+ static ReportWait30 NewReportWait54(string id,string stamp,string server=""){var now=DateTimeOffset.UtcNow;var requested=DateTimeOffset.TryParse(stamp,out var at)&&at.Year>2000&&at<=now.AddMinutes(1)?at:now;return new(){Id=id,Server54=server,Requested54=requested,Until=requested.AddMinutes(10),Next=now.AddSeconds(30)};}
  string SelectedUpdateSource54()=>UpdateSource54.SelectedIndex switch{1=>"WSUS",2=>"WindowsUpdate",_=>"Policy"};
  void CollectorDetails54_Click(object sender,RoutedEventArgs e){CollectorNotice43.Visibility=Visibility.Visible;((System.Windows.Controls.Expander)CollectorNotice43.Child).IsExpanded=true;CollectorPopup54.IsOpen=!CollectorPopup54.IsOpen;}
  void RecordReportReceipt54(string host,WsusReport report,string server){
@@ -64,7 +64,7 @@ public partial class MainWindow {
   if(newer)Event31(host,"report-received54",server+"|"+report.LastReportedUtc,"Получен новый отчёт WSUS","Info","Обнаружен консолью сейчас; время отчёта на сервере: "+Display36.Date(report.LastReportedUtc)+". К установке по отчёту: "+report.NeededCount+"; ошибок: "+report.FailedCount+". Сопоставление с результатом клиента — в текущем статусе.",scope:server);
   if(valid&&reportWaiting.TryGetValue(host,out var pending)){
    var requested=pending.Requested54==default?pending.Until.AddMinutes(-15):pending.Requested54;
-   if(incoming>=requested){reportWaiting.Remove(host);Store.Write("report-waits.json",reportWaiting);}
+   if((pending.Server54.Length==0||pending.Server54==server)&&incoming>=requested){reportWaiting.Remove(host);Store.Write("report-waits.json",reportWaiting);}
   }
  }
  async Task ReadDelayedQueue54(string host){

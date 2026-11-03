@@ -29,6 +29,9 @@ public partial class MainWindow {
       Theme.Apply(theme,false);Width=size.Item1;Height=size.Item2;RefreshCollector44(row.Host);UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);UpdateLayout();
       if(CollectorStage53.Visibility!=System.Windows.Visibility.Visible||!CollectorBusy53.IsIndeterminate||!CollectorNoticeText43.Text.Contains("Последний сигнал"))throw new Exception("Collector stage/liveness missing from header");
       CaptureContent38("collector53-"+theme+"-"+(size.Item1>1000?"wide":"compact"),size.Item1,size.Item2,true);
+      CollectorDetails54_Click(this,new());UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);
+      if(!CollectorPopup54.IsOpen||CollectorNotice43.Visibility!=System.Windows.Visibility.Visible)throw new Exception("Collector details popup did not open beside connection");
+      CaptureContent38("collector54-popup-"+theme+"-"+(size.Item1>1000?"wide":"compact"),size.Item1,size.Item2,true);CollectorPopup54.IsOpen=false;
      }
     });
    }finally{Theme.Apply(theme53,false);Width=width53;Height=height53;ComputerGrid.SelectedItem=selected53;MainTabs.SelectedItem=tab53;ShowCurrent();}

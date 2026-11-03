@@ -7,8 +7,8 @@ namespace DomainConsole;
 public sealed record ClientAssessment41(string Kind,string Title,string Details){
  public bool InstallationSucceeded51 {get;init;}
  public string HeadlineTone51=>InstallationSucceeded51?"Success":Tone;
- public string Tone=>Kind switch{"Success"=>"Success","Error" or "SyncError"=>"Error","Needed" or "Working"=>"Info","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Warning"};
- public string Glyph=>Kind switch{"Success"=>"Success","Error" or "SyncError"=>"Error","Reboot"=>"Reboot","Working"=>"Working","Needed"=>"Info","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Warning"};
+ public string Tone=>Kind switch{"Success"=>"Success","Error" or "SyncError"=>"Error","Needed" or "Working" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Warning"};
+ public string Glyph=>Kind switch{"Success"=>"Success","Error" or "SyncError"=>"Error","Reboot"=>"Reboot","Working"=>"Working","Needed" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Warning"};
 }
 public static class ClientReadiness41 {
  public static string IPv4(string value){if(!IPAddress.TryParse(value,out var ip))return "";if(ip.IsIPv4MappedToIPv6)ip=ip.MapToIPv4();return ip.AddressFamily==AddressFamily.InterNetwork?ip.ToString():"";}
@@ -28,7 +28,7 @@ public static class ClientReadiness41 {
   if(report==null)return Result("Unknown","Отчёт WSUS не получен","Прочитайте данные сервера WSUS");
   if(!found)return Result("NoWsus","Клиент не найден в WSUS","Проверьте регистрацию клиента");
   if(ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success")return Result("Stale","Отчёт WSUS устарел или время некорректно","Проверьте дату отчёта и доставку отчётности");
-  if(searched&&remaining==0&&report.NeededCount>0)return Result("Discrepancy","Данные клиента и WSUS расходятся","Поиск клиента: 0 · "+Display36.Date(searchAt)+"; WSUS: "+report.NeededCount+". Требуется сверка применимости конкретных обновлений");
+  if(searched&&remaining.HasValue&&remaining!=report.NeededCount){if(Criteria45.Newer(searchAt,report.LastReportedUtc))return Result("ReportPending","Поиск клиента: "+remaining+" · ожидается подтверждение WSUS","Серверный счётчик "+report.NeededCount+" относится к более раннему отчёту; поиск клиента: "+Display36.Date(searchAt));return Result("Discrepancy","Данные клиента и WSUS расходятся","Поиск клиента: "+remaining+" · "+Display36.Date(searchAt)+"; WSUS: "+report.NeededCount+". Требуется сверка применимости конкретных обновлений");}
   if(report.NeededCount>0)return Result("Needed","К установке: "+(report.RequiredComplete?"":"≥ ")+report.NeededCount,"Одобрены и применимы · установите в согласованное время");
   if(report.LastSyncResult!="Succeeded")return Result("Warning","Проверка неполная · результат поиска WSUS неизвестен","Последнее соединение: "+Display36.Date(report.LastSyncUtc));
   if(error.Length>0)return Result("Warning","Проверка неполная · данные WSUS не обновлены","Показан сохранённый результат; повторите чтение отчёта");
