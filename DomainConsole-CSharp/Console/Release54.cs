@@ -10,6 +10,15 @@ public partial class MainWindow {
   RefreshOutcomes();ShowCurrent();
  }
  async void DiagnoseReport54_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{var row=Current();await ReadDelayedQueue54(row.Host);await FetchWsusReport(row);Notify("Диагностика очереди и чтение WSUS завершены; результаты доступны в критерии отчёта. Очередь не очищалась.");});
+ static void MergeUpdateHistory54(RemoteJob? job,string host,PollResult data){
+  var target=job?.Targets.FirstOrDefault(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase));if(target==null)return;
+  foreach(var update in data.Updates.Where(u=>u.ResultCode.HasValue||u.Download.HasValue)){
+   string key=update.Id+"|"+update.Revision+"|"+update.Title+"|"+update.Started54;
+   var previous=target.UpdateHistory54.FindIndex(u=>u.Id+"|"+u.Revision+"|"+u.Title+"|"+u.Started54==key);
+   if(previous<0)target.UpdateHistory54.Add(Store.Clone<UpdateAttempt54>(update));else if(!target.UpdateHistory54[previous].ResultCode.HasValue||update.ResultCode.HasValue)target.UpdateHistory54[previous]=Store.Clone<UpdateAttempt54>(update);
+  }
+  foreach(var update in target.UpdateHistory54){if(!data.Updates.Any(u=>u.Id==update.Id&&u.Revision==update.Revision&&u.Title==update.Title&&u.Started54==update.Started54))data.Updates.Add(System.Text.Json.JsonSerializer.Deserialize<UpdateOutcome>(System.Text.Json.JsonSerializer.Serialize(update,Store.Options),Store.Options)!);}
+ }
  string SelectedUpdateSource54()=>UpdateSource54.SelectedIndex switch{1=>"WSUS",2=>"WindowsUpdate",_=>"Policy"};
  void CollectorDetails54_Click(object sender,RoutedEventArgs e){CollectorNotice43.Visibility=Visibility.Visible;((System.Windows.Controls.Expander)CollectorNotice43.Child).IsExpanded=true;CollectorPopup54.IsOpen=!CollectorPopup54.IsOpen;}
  void RecordReportReceipt54(string host,WsusReport report,string server){

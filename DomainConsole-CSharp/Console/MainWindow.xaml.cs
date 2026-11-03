@@ -259,7 +259,7 @@ public partial class MainWindow:Window {
   bool CurrentPoll47()=>!closing&&!TransportBudget41.Paused&&!generation47.IsCancellationRequested&&CurrentEndpoint(pollTarget);
   RefreshActivity();UpdateWsusStage();var started38=DateTimeOffset.UtcNow;var readClock=System.Diagnostics.Stopwatch.StartNew();try{if(!CurrentPoll47())return;var data=await (pollOverride47!=null?pollOverride47(pollTarget,id,IsCurrent(row)):remote.Poll(pollTarget,id,IsCurrent(row)));if(!CurrentPoll47())return;JobPollObserved42(row,data,readClock.Elapsed);ReadSucceeded34(host,"результат задания");ConnectionSucceeded(host,started38);var sourceJob=History.FirstOrDefault(j=>j.Id==id);if(sourceJob!=null)ReconcileMissing(data,sourceJob,DateTimeOffset.UtcNow);if(data.State!=null){
    Reconcile(data);ReconcilePlan44(host,id,data);RegisterRebootPlan(sourceJob,row,data);await ObserveRebootAfterJob(row,sourceJob,data);if(!CurrentPoll47())return;ApplyPostBootResult(row,data);
-   confirmedJobs.Add(key);var output=await Task.Run(()=>PresentResult(host,data));if(!CurrentPoll47())return;RecordJobEvents50(host,id,data);
+   confirmedJobs.Add(key);MergeUpdateHistory54(sourceJob,host,data);var output=await Task.Run(()=>PresentResult(host,data));if(!CurrentPoll47())return;RecordJobEvents50(host,id,data);
 
    foreach(var job in History.Where(j=>j.Id==id)){var t=job.Targets.FirstOrDefault(t=>t.Host==host);if(t!=null){t.Status=data.State.Status;t.State=data.State;t.Output=output;}Sync(job);RememberSuccessful(job);}
    if(row.JobId==id){row.Target.State=data.State;row.Target.Status=data.State.Status;row.Target.Output=output;row.Refresh();if(IsCurrent(row)){ShowCurrent();}RefreshOutcomes();}Save();

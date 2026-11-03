@@ -35,7 +35,7 @@ public static partial class PowerShellBridge {
   if(p.ExitCode!=0){SaveTransportError34(error,output);var plain=PlainError(error);throw new Exception(string.IsNullOrWhiteSpace(plain)?"PowerShell завершился с кодом "+p.ExitCode+"; сообщение об ошибке не получено.":plain);}return output.Trim();
  }
 }
-public sealed class UpdateOutcome {public string Title {get;set;}="";public int? Download {get;set;}public int? ResultCode {get;set;}public int? HResult {get;set;}public bool RebootRequired {get;set;}}
+public sealed class UpdateOutcome : UpdateAttempt54 {}
 public sealed class RetentionSettings {public int CopiedDays {get;set;}=7;public int UncopiedDays {get;set;}=30;}
 public sealed class CancellationReply {public string Message {get;set;}="";public string Status {get;set;}="";}
 public sealed class RemoteOutputFile {public string Name {get;set;}="";public string Body {get;set;}="";}
@@ -101,6 +101,9 @@ if(!$state){
  Dc-Reply 'Файл состояния отсутствует, но исполнитель или задача ещё работает. Запрос отмены записан; завершение пока не подтверждено.';return
 }
 if($mode -eq 'executor'){
+ $job=Get-Content -LiteralPath (Join-Path $p 'job.json') -Raw -Encoding UTF8 -ErrorAction Stop|ConvertFrom-Json
+ if(!$state.HasUpdateSteps -or $state.Step -lt 1 -or $state.Step -gt @($job.Steps).Count -or $job.Steps[$state.Step-1].Kind -notin @('Updates','UpdateScan') -or $state.RestoreStatus -eq 'Pending'){throw 'Принудительное завершение здесь разрешено только собственному исполнителю поиска/обновлений вне восстановления политик. Для команды используйте её отдельную остановку.'}
+
  $stopFile=Join-Path $p 'stop-now.flag'
  if(!(Test-Path $stopFile)){$stopFile=Join-Path $p 'cancel.flag'}
  if(!(Test-Path $stopFile) -or ([DateTime]::UtcNow-(Get-Item $stopFile).CreationTimeUtc).TotalSeconds -lt 120){throw 'Сначала запросите штатную отмену; принудительное завершение собственного агента доступно через 2 минуты без завершения.'}

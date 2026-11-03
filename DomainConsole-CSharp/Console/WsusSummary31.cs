@@ -17,7 +17,7 @@ function Read-RequiredUpdates31($target){
   $result.RequiredComplete=$result.ApprovedUnknownCount -eq 0
   $names=@();$nameErrors=@()
   foreach($info in @($needed|Select-Object -First 200)){
-   try{$update=$info.GetUpdate();$names+=@{Id=[string]$info.UpdateId;Revision=[int]$update.Id.RevisionNumber;Title=[string]$update.Title;KB=($update.KnowledgebaseArticles -join ', ');State=[string]$info.UpdateInstallationState}}
+   try{$update=$info.GetUpdate();$names+=@{Id=[string]$info.UpdateId;Revision=[int]$update.Id.RevisionNumber;Title=[string]$update.Title;Superseded54=[bool]$update.IsSuperseded;Publication54=[string]$update.PublicationState;KB=($update.KnowledgebaseArticles -join ', ');State=[string]$info.UpdateInstallationState}}
    catch{$nameErrors+=$_.Exception.Message}
   }
   $result.RequiredUpdates=@($names);$result.RequiredListComplete=($names.Count -eq $needed.Count)

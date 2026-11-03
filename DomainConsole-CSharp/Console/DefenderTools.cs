@@ -8,7 +8,7 @@ $ProgressPreference='SilentlyContinue'
 '## Диагностика Defender'
 Get-CimInstance Win32_OperatingSystem|Select-Object Caption,Version,BuildNumber|Format-List
 Get-Service WinDefend,WdNisSvc -ErrorAction SilentlyContinue|Select-Object Name,Status,StartType|Format-Table
-try{Get-MpComputerStatus -ErrorAction Stop|Select-Object AMProductVersion,AMEngineVersion,AntivirusSignatureVersion,AntivirusEnabled,RealTimeProtectionEnabled,AntivirusSignatureLastUpdated|Format-List}catch{'Состояние Defender недоступно: '+$_.Exception.Message}
+try{Get-MpComputerStatus -ErrorAction Stop|Select-Object AMProductVersion,AMEngineVersion,AntivirusSignatureVersion,AntivirusEnabled,RealTimeProtectionEnabled,AntivirusSignatureLastUpdated|Format-List}catch{'Состояние Defender недоступно: '+$_.Exception.Message;'Зарегистрированные антивирусы (регистрация не подтверждает работоспособность):';Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct -ErrorAction SilentlyContinue|Select-Object displayName,pathToSignedProductExe|Format-List;'Сохранённые версии баз (не текущий статус защиты):';Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows Defender\Signature Updates' -ErrorAction SilentlyContinue|Select-Object AVSignatureVersion,ASSignatureVersion,EngineVersion|Format-List}
 $platform=Join-Path $env:ProgramData 'Microsoft\Windows Defender\Platform'
 Get-ChildItem $platform -Directory -ErrorAction SilentlyContinue|Select-Object Name,LastWriteTime|Format-Table
 $before=@(Get-Process MsMpEng,MRT -ErrorAction SilentlyContinue|Select-Object Name,Id,CPU,StartTime)

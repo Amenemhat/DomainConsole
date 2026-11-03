@@ -1,6 +1,6 @@
 using System.Text.Json;
 namespace DomainConsole;
-public sealed class WsusRequiredUpdate37 {public string Id {get;set;}="";public int Revision {get;set;}public string Title {get;set;}="";public string KB {get;set;}="";public string State {get;set;}="";}
+public sealed class WsusRequiredUpdate37 {public bool? Superseded54 {get;set;}public string Publication54 {get;set;}="";public string Id {get;set;}="";public int Revision {get;set;}public string Title {get;set;}="";public string KB {get;set;}="";public string State {get;set;}="";}
 public sealed class WsusReport {
  public List<WsusRequiredUpdate37> RequiredUpdates {get;set;}=new();public bool RequiredListComplete {get;set;}public string RequiredListError {get;set;}="";
  public int? ClientSearchCount31 {get;set;}public string ClientSearchUtc31 {get;set;}="";
@@ -34,7 +34,7 @@ public sealed class WsusReport {
   if(NeededCount>0){
    lines.Add("## Необходимые обновления · "+NeededCount);
    var updates=RequiredUpdates.GroupBy(u=>u.Id,StringComparer.OrdinalIgnoreCase).Select(g=>g.OrderByDescending(u=>u.Revision).First()).ToList();
-   int number=0;foreach(var update in updates){string title=update.Title.Length>0?update.Title:"Название не получено";string kb=update.KB.Length>0?"KB"+update.KB.Replace("KB", "",StringComparison.OrdinalIgnoreCase):"";if(kb.Length>0&&!title.Contains(kb,StringComparison.OrdinalIgnoreCase))title=kb+" — "+title;lines.Add((++number)+". "+title+" · "+(update.State=="Downloaded"?"скачано":update.State=="Failed"?"ошибка последней попытки":"не скачано"));}
+   int number=0;foreach(var update in updates){string title=update.Title.Length>0?update.Title:"Название не получено";string kb=update.KB.Length>0?"KB"+update.KB.Replace("KB", "",StringComparison.OrdinalIgnoreCase):"";if(kb.Length>0&&!title.Contains(kb,StringComparison.OrdinalIgnoreCase))title=kb+" — "+title;lines.Add((++number)+". "+title+" · "+(update.State=="Downloaded"?"скачано":update.State=="Failed"?"ошибка последней попытки":"не скачано")+(update.Superseded54==true?" · заменено более новым пакетом":""));lines.Add("   UpdateID: "+update.Id+" · ревизия: "+update.Revision+" · "+update.Publication54);}
    if(updates.Count==0)lines.Add("Список обновлений не получен");
    else if(!RequiredListComplete||updates.Count!=NeededCount)lines.Add("Получено названий: "+updates.Count+" из "+NeededCount+" · список неполный");
    if(!RequiredComplete)lines.Add("Применимость части одобренных обновлений пока не определена");

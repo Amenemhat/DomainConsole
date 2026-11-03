@@ -35,7 +35,7 @@ public partial class MainWindow {
   else if(p!=null&&!p.Done){details=p.Phase+(p.Detail.Length>0?" · "+p.Detail:"");text=MaintenanceBadge40(p.Phase,p.Detail);}
   else if(p!=null&&p.Phase=="Требуется действие"&&AssessClient41(row).Kind!="Success"){text="Требуется действие";details=p.Detail;}
   else {details=PostRebootText(row.Host).Split('\n')[0];if(details.Length>0)text="Ожидает возврата";}
-  HeaderNext31.Text=text;HeaderNext31.ToolTip=details;HeaderNext31.Visibility=text.Length>0?Visibility.Visible:Visibility.Collapsed;
+  if(ConnectionFresh(row.Host)&&text=="Ждёт связи"){text="Уточнение состояния задания";details="Клиент доступен; проверяется результат прежнего задания. "+details;}HeaderNext31.Text=text;HeaderNext31.ToolTip=details;HeaderNext31.Visibility=text.Length>0?Visibility.Visible:Visibility.Collapsed;
  }
  static List<ClientEvent31> CompactEvents34(IEnumerable<ClientEvent31> source){
   var raw=source.SelectMany(e=>e.Occurrences36.Count>0?e.Occurrences36:new List<ClientEvent31>{e}).DistinctBy(e=>e.At+"|"+e.Kind+"|"+e.Text+"|"+e.Details+"|"+e.Operation36);
