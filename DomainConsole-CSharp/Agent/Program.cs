@@ -28,7 +28,7 @@ namespace DomainConsole.Agent {
   static void Save(){lock(Gate){State.Updated=DateTime.UtcNow.ToString("o");if(statusWritePending&&DateTime.UtcNow<nextStatusWrite)return;try{WriteJson("status.json",State);if(statusWritePending)Log("Запись статуса восстановлена; операция продолжала контролироваться агентом.");statusWritePending=false;}catch(IOException ex){if(!statusWritePending)Log("WARNING: Временно не удалось сохранить статус; операция продолжает выполняться: "+ex.Message);statusWritePending=true;nextStatusWrite=DateTime.UtcNow.AddSeconds(3);}}}
   static void Log(string message){lock(Gate)File.AppendAllText(FilePath("runner.log"),DateTime.UtcNow.ToString("o")+" "+message+Environment.NewLine,Encoding.UTF8);}
   static void Stage(string value){lock(Gate){DateTimeOffset started;if(DateTimeOffset.TryParse(State.StageStarted,out started))Log("Этап завершён: "+State.Stage+"; секунд: "+(int)(DateTimeOffset.UtcNow-started).TotalSeconds);State.Stage=value;State.StageEnded="";State.StageStarted=DateTime.UtcNow.ToString("o");State.Progress=null;State.ProgressValue="";State.LastOutputUtc="";State.LastProgressUtc="";State.LastMovementUtc=DateTime.UtcNow.ToString("o");State.ActivityMessage="";State.TransferText="";State.ForceCandidatePid=0;Log("Начат этап: "+value);Save();}}
-  static int Report(){State.ReportRequested=true;Save();Stage("WSUS · запрос отправки отчёта");int a=Run("UsoClient.exe","Report","report-uso",30000),b=Run("wuauclt.exe","/reportnow","report-wuauclt",30000);State.ReportRequestStatus="Запросы завершены: UsoClient="+a+", wuauclt="+b+". Это результат команд клиента; получение отчёта проверяется отдельно на сервере.";Log(State.ReportRequestStatus);Save();return a==0||b==0?0:1;}
+  static int Report(){State.ReportRequested=true;State.ReportRequestedUtc54=DateTime.UtcNow.ToString("o");Save();Stage("WSUS · запрос отправки отчёта");int a=Run("UsoClient.exe","Report","report-uso",30000),b=Run("wuauclt.exe","/reportnow","report-wuauclt",30000);State.ReportRequestStatus="Запросы завершены: UsoClient="+a+", wuauclt="+b+". Это результат команд клиента; получение отчёта проверяется отдельно на сервере.";Log(State.ReportRequestStatus);Save();return a==0||b==0?0:1;}
   static bool Cancelled()=>File.Exists(FilePath("cancel.flag"))||File.Exists(FilePath("stop-now.flag"));
   static string CurrentKind="";
   static ServiceRecovery47 serviceRecovery47;
@@ -97,19 +97,25 @@ namespace DomainConsole.Agent {
   }
   static dynamic Com(string name){var type=Type.GetTypeFromProgID(name);if(type==null)throw new Exception("COM component missing: "+name);return Activator.CreateInstance(type);}
   static int Updates(string prefix,bool scanOnly=false){
-   Stage("WSUS · проверка политики клиента");string source;
-   using(var key=Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate")){source=key==null?"":key.GetValue("WUServer") as string;if(string.IsNullOrWhiteSpace(source))throw new Exception("Политика WUServer не задана.");Log("Источник клиента: "+source);}
-   using(var au=Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU")){if(au==null||Convert.ToInt32(au.GetValue("UseWUServer",0))!=1)throw new Exception("UseWUServer не равен 1. Проверка остановлена без изменения политики.");}
-   Uri address;if(!Uri.TryCreate(source,UriKind.Absolute,out address)||(address.Scheme!="http"&&address.Scheme!="https"))throw new Exception("Некорректный адрес WUServer.");
-   Stage("WSUS · DNS и предварительная проверка TCP");try{var addresses=System.Net.Dns.GetHostAddresses(address.DnsSafeHost);Log("DNS: "+string.Join(", ",addresses.Select(a=>a.ToString())));
-   using(var tcp=new System.Net.Sockets.TcpClient()){var connect=tcp.ConnectAsync(address.DnsSafeHost,address.Port);if(!connect.Wait(5000))throw new Exception("TCP-подключение к WSUS не завершилось за 5 секунд. Проверьте сеть, VPN и порт.");Log("TCP-порт WSUS доступен. Это не проверка HTTP, TLS или авторизации WUA.");}}catch(Exception ex){Log("Предварительная проверка сети: "+ex.Message+". Продолжается проверка через WUA: он может использовать собственный прокси-маршрут.");}
-   if(Cancelled())return 0;Stage("WSUS · создание сеанса Windows Update Agent");
+   Stage("Проверка источника обновлений");string source="";int managed=0,blocked=0;
+   using(var key=Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate")){if(key!=null){source=Convert.ToString(key.GetValue("WUServer",""));blocked=Convert.ToInt32(key.GetValue("DoNotConnectToWindowsUpdateInternetLocations",0));}}
+   using(var au=Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU")){if(au!=null)managed=Convert.ToInt32(au.GetValue("UseWUServer",0));}
+   string selected=Job.UpdateSource54??"Policy";
+   if(selected=="WSUS"&&(managed!=1||string.IsNullOrWhiteSpace(source)))throw new InvalidOperationException("Выбран WSUS, но политика клиента не задаёт этот источник. Выберите текущие политики или Windows Update; настройки клиента не изменены.");
+   if(selected=="WindowsUpdate"&&blocked==1)throw new InvalidOperationException("Обращение к Windows Update в Интернете запрещено политикой клиента. Политика не изменена.");
+   if(selected!="Policy"&&selected!="WSUS"&&selected!="WindowsUpdate")throw new InvalidOperationException("Неизвестный источник обновлений: "+selected);
+   State.UpdateSource54=selected;Save();
+   bool useWsus=selected=="WSUS"||(selected=="Policy"&&managed==1);
+   if(useWsus){Uri address;if(!Uri.TryCreate(source,UriKind.Absolute,out address)||(address.Scheme!="http"&&address.Scheme!="https"))throw new InvalidOperationException("Некорректный адрес WSUS в политике клиента.");
+    Stage("WSUS · DNS и предварительная проверка TCP");try{using(var tcp=new System.Net.Sockets.TcpClient()){var connect=tcp.ConnectAsync(address.DnsSafeHost,address.Port);if(!connect.Wait(5000))throw new TimeoutException("Нет ответа TCP за 5 секунд");connect.GetAwaiter().GetResult();Log("TCP доступен: "+source+". HTTP и авторизация проверяются отдельно.");}}catch(Exception ex){Log("Предварительная проверка сети: "+ex.Message+". WUA проверит свой маршрут и прокси.");}}
+   if(Cancelled())return 0;Stage("Создание сеанса Windows Update Agent");
    dynamic session=Com("Microsoft.Update.Session");session.ClientApplicationID="DomainConsole CSharp";
-   dynamic search=session.CreateUpdateSearcher();search.ServerSelection=1;search.Online=true;
+   dynamic search=session.CreateUpdateSearcher();search.ServerSelection=selected=="WSUS"?1:selected=="WindowsUpdate"?2:0;search.Online=true;
+   Log("Источник поиска: "+selected+"; политика WSUS: "+managed+"; "+source);
    dynamic result=SearchWithRetry(search);if((int)result.ResultCode!=2)throw new Exception("Search ResultCode: "+result.ResultCode);
    var details=new List<object>();int failures=0;int total=(int)result.Updates.Count;
    State.UpdateTotal38=total;State.InstalledCount38=0;State.UpdatesRemaining=total;Log("Поиск завершён. Применимых обновлений: "+total);Save();
-   if(Cancelled()){WriteJson(prefix+".updates.json",details);return 0;}if(scanOnly){for(int n=0;n<total;n++){dynamic u=result.Updates.Item(n);details.Add(new{Title=(string)u.Title,Downloaded=(bool)u.IsDownloaded});}WriteJson(prefix+".updates.json",details);return Report();}
+   if(Cancelled()){WriteJson(prefix+".updates.json",details);return 0;}if(scanOnly&&(!Job.AutoInstall54||total==0)){for(int n=0;n<total;n++){dynamic u=result.Updates.Item(n);details.Add(new{Title=(string)u.Title,Downloaded=(bool)u.IsDownloaded});}WriteJson(prefix+".updates.json",details);return useWsus?Report():0;}
    for(int i=0;i<total;i++){
     if(Cancelled())break;State.UpdateIndex38=i+1;dynamic update=result.Updates.Item(i);
     if((bool)update.InstallationBehavior.CanRequestUserInput){Log("Skipped interactive update: "+update.Title);continue;}
@@ -121,10 +127,10 @@ namespace DomainConsole.Agent {
     dynamic installed=AsyncInstall(installer);dynamic item=installed.GetUpdateResult(0);int code=(int)item.ResultCode;
     if(code==2){State.InstalledCount38++;State.InstalledUpdates45.Add(new InstalledUpdate45{Id=(string)update.Identity.UpdateID,Revision=(int)update.Identity.RevisionNumber,Title=(string)update.Title,At=DateTime.UtcNow.ToString("o")});}details.Add(new{Title=(string)update.Title,ResultCode=code,HResult=(int)item.HResult,RebootRequired=(bool)installed.RebootRequired});
     if(code!=2){failures++;int hr=(int)item.HResult;string installError="Не установлено: "+(string)update.Title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+". "+ExecutionDiagnosis.Explain(hr);Log(installError);if(string.IsNullOrEmpty(State.Error))State.Error=installError;ApplyRecommendation(installError);}State.RebootRequired=State.RebootRequired||(bool)installed.RebootRequired;
-    State.UpdatesRemaining=total-i-1;WriteJson(prefix+".updates.json",details);if(State.RebootRequired)break;
+    State.UpdatesRemaining=total-i-1;WriteJson(prefix+".updates.json",details);Save();if(State.RebootRequired)break;
    }
    dynamic info=Com("Microsoft.Update.SystemInfo");State.RebootRequired=State.RebootRequired||(bool)info.RebootRequired;WriteJson(prefix+".updates.json",details);
-   if(Cancelled())return failures>0?1:0;int report=Report();return failures>0?1:report;
+   if(Cancelled())return failures>0?1:0;int report=useWsus?Report():0;return failures>0?1:report;
   }
   static string UpdateLogCode(string prefix){DateTimeOffset start;if(!DateTimeOffset.TryParse(State.Started,out start))start=DateTimeOffset.UtcNow.AddHours(-1);
    string folder=FilePath("").Replace("'","''"),log=FilePath(prefix+".WindowsUpdate.log").Replace("'","''"),quality=FilePath(prefix+".quality.log").Replace("'","''");
@@ -191,7 +197,7 @@ namespace DomainConsole.Agent {
          if(Cancelled()){State.Status="Cancelled";break;}
          State.Step++;CurrentKind=step.Kind;Stage(step.Name);var prefix="step-"+State.Step;var stepResult=new StepResult{Kind=step.Kind,Name=step.Name,Started=DateTime.UtcNow.ToString("o")};
          try{
-          if(step.Kind=="Updates"){State.UpdateOperationStarted=true;Save();stepResult.ExitCode=Updates(prefix);}
+          if(step.Kind=="Updates"){State.UpdateOperationStarted=true;Save();stepResult.ExitCode=Updates(prefix);if(stepResult.ExitCode==0)stepResult.UpdatesFound50=State.UpdateTotal38;}
           else if(step.Kind=="UpdateScan"){State.UpdateOperationStarted=true;Save();stepResult.ExitCode=Updates(prefix,true);if(stepResult.ExitCode==0)stepResult.UpdatesFound50=State.UpdateTotal38;}
           else if(step.Kind=="Diagnostics")stepResult.ExitCode=PowerShell(UpdateLogCode(prefix),prefix,300000);
           else if(step.Kind=="CacheResidueCleanup")stepResult.ExitCode=Run(typeof(Program).Assembly.Location,"cache-cleanup \""+Path.GetDirectoryName(Folder)+"\"",prefix,300000);
@@ -224,7 +230,7 @@ namespace DomainConsole.Agent {
        finally{
         if(State.RestoreStatus=="Pending"){try{Restore();}catch(Exception ex){State.RestoreStatus="InterventionRequired";State.Status="InterventionRequired";State.Error=ex.Message;Log(ex.ToString());}}
         if(!string.IsNullOrEmpty(State.ServiceRecoveryError47)){State.Status="InterventionRequired";if(!State.Error.Contains(State.ServiceRecoveryError47))State.Error+="\n"+State.ServiceRecoveryError47;}
-        State.RebootEvidence=RebootEvidence.Collect();if(State.RebootEvidence.Required==true){State.RebootRequired=true;if(State.Status=="Completed")State.Status="AwaitingReboot";}
+        if(State.HasUpdateSteps||Job.AutoReboot||Job.Steps.Any(s=>s.TouchesUpdates)){State.RebootEvidence=RebootEvidence.Collect();}if(State.RebootEvidence!=null&&State.RebootEvidence.Required==true){State.RebootRequired=true;if(State.Status=="Completed")State.Status="AwaitingReboot";}
         State.Ended=DateTime.UtcNow.ToString("o");if(State.Status=="Cancelled"){State.StopStatus="Stopped";State.StopMessage="Задание остановлено администратором";}Save();
 
         if(Job.AutoReboot&&State.RebootRequired&&(State.Status=="Completed"||State.Status=="AwaitingReboot")&&State.RestoreStatus!="InterventionRequired"){

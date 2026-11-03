@@ -21,16 +21,20 @@ public partial class MainWindow {
    if(c.PendingDelete>0)detail+=c.CleanupStarted?" Старые файлы переданы на фоновое удаление.":" Старые файлы изолированы; запуск фонового удаления не подтверждён.";
    return (name,c.PendingDelete>0&&!c.CleanupStarted?"Warning":"Success",detail);
   }
+  if(step.Kind=="Updates"&&step.UpdatesFound50==0)return ("Поиск завершён · найдено обновлений: 0","Info","Установка не выполнялась. Результат WSUS сопоставляется отдельно.");
   if(step.Kind=="UpdateScan")return (step.UpdatesFound50.HasValue?"Поиск завершён · найдено обновлений: "+step.UpdatesFound50:"Поиск обновлений завершён","Success","Установка в этом шаге не выполнялась.");
   return ("Завершено · "+step.Name,"Success","");
  }
  void RecordJobEvents50(string host,string id,PollResult data){
-  var state=data.State!;bool cache=state.Results.Any(r=>r.Kind=="CacheCleanup");
+  var state=data.State!;
+  foreach(var update in state.InstalledUpdates45)Event31(host,"update-installed54",update.Id+"|"+update.Revision+"|"+update.At,"Установлено · "+update.Title,"Success","Результат установки подтверждён агентом; задание: "+id,update.At,scope:id+"|"+update.Id+"|"+update.Revision);
+  foreach(var update in data.Updates.Where(u=>u.ResultCode.HasValue&&u.ResultCode!=2))Event31(host,"update-result54",update.Title+"|"+update.ResultCode+"|"+update.HResult,"Установка не завершена · "+update.Title,"Warning","ResultCode: "+update.ResultCode+"; HRESULT: "+update.HResult, state.Updated,scope:id+"|"+update.Title);
+  bool cache=state.Results.Any(r=>r.Kind=="CacheCleanup");
   for(int i=0;i<state.Results.Count;i++){
    var step=state.Results[i];if(string.IsNullOrEmpty(step.Ended))continue;
    // WUA failure already has a precise per-update title (KB, download vs installation).
    if(step.ExitCode!=0&&step.Kind is "Updates" or "UpdateScan")continue;
-   var entry=StepEvent50(step);string title=entry.Title;
+   var entry=StepEvent50(step);if(step.Kind=="UpdateScan"&&state.InstalledCount38>0)entry=("Поиск и автоматическая установка завершены","Success","Найдено: "+step.UpdatesFound50+"; установлено: "+state.InstalledCount38+". Результаты каждого пакета сохранены отдельно.");string title=entry.Title;
    if(step.Name=="Перезагрузка текущего компьютера"&&step.ExitCode==0){
     var receipt=data.RebootPlan;
     entry=receipt?.Cancelled==true?("Перезагрузка отменена","Info","Команда отменена до перезапуска."):receipt?.DispatchExitCode==0?("Команда перезагрузки принята Windows","Info","Новая загрузка и флаги проверяются отдельно."):("Команда назначения перезагрузки завершена","Info","Отправка shutdown и новая загрузка ещё требуют подтверждения.");title=entry.Title;

@@ -113,7 +113,7 @@ public partial class MainWindow {
   var old51=Report();old51.NeededCount=1;old51.FailedCount=1;
   var criteria51=Criteria45.Build(new("Reboot","",""),old51,clean with{Required=true},installed51,false,scan,1,false,"",boot);
   Check(criteria51[0].Tone=="Success"&&criteria51[0].Glyph=="Success","51 installation success stays green independently of old report");
-  Check(CollectorNotice43.Parent==IdentityHeader34,"51 collector details belong to header");
+  Check(CollectorPopup54.PlacementTarget==CollectorDetails54,"54 collector details anchored beside connection");
   var oldTheme51=Theme.Current;var oldTab51=MainTabs.SelectedItem;var oldVisibility51=CollectorNotice43.Visibility;var oldText51=CollectorNoticeText43.Text;
   var disclosure51=(System.Windows.Controls.Expander)CollectorNotice43.Child;bool oldExpanded51=disclosure51.IsExpanded;double oldWidth51=Width,oldHeight51=Height;
   try{
@@ -122,7 +122,7 @@ public partial class MainWindow {
     CollectorNotice43.Visibility=System.Windows.Visibility.Visible;disclosure51.IsExpanded=true;
     CollectorNoticeText43.Text="Опрос не завершён: ошибка WinRM. Повторная проверка доступности запланирована. Клиентское задание не остановлено.";
     UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);UpdateLayout();
-    Check(CollectorNotice43.TranslatePoint(new System.Windows.Point(0,CollectorNotice43.ActualHeight),CompactHeader32).Y<=CompactHeader32.ActualHeight+1,"51 collector contained in header "+theme51+"/"+mode51.Name+"/"+size51.Item1);
+    Check(CollectorDetails54.IsVisible,"54 collector entry visible beside connection");
     CaptureContent38("release51-collector-"+theme51+"-"+mode51.Name+"-"+(size51.Item1>1000?"wide":"compact"),size51.Item1,size51.Item2);
    }}
   }finally{Theme.Apply(oldTheme51,false);Width=oldWidth51;Height=oldHeight51;MainTabs.SelectedItem=oldTab51;CollectorNotice43.Visibility=oldVisibility51;CollectorNoticeText43.Text=oldText51;disclosure51.IsExpanded=oldExpanded51;ShowCurrent();}

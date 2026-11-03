@@ -18,11 +18,11 @@ public partial class MainWindow {
   string expectedAfter=recovery!=null&&recovery.JobId.Length>0?History.FirstOrDefault(j=>j.Id==recovery.JobId)?.Targets.FirstOrDefault(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase))?.State?.Started??recovery.CreatedUtc:evidence?.ReportUtc??"";
   bool fresh=report!=null&&expectedAfter.Length>0&&Criteria45.Newer(report.LastReportedUtc,expectedAfter);
   string hint=evidence==null?"Размер очереди не определён · диагностика не получена":QueueHint52(evidence.Snapshot);
-  if(reportWaiting.TryGetValue(row.Host,out var waiting))hint+="\nОжидание нового отчёта: "+Math.Max(0,(int)(DateTimeOffset.UtcNow-(waiting.Until-TimeSpan.FromMinutes(15))).TotalMinutes)+" мин";
-  if(fresh)return criterion with{Hint52=hint};
+  if(reportWaiting.TryGetValue(row.Host,out var waiting))hint+="\n"+(waiting.Delayed54?"Отчёт задерживается":"Ожидаем отчёт в течение 10 минут · осталось "+Math.Max(0,(int)(waiting.Until-DateTimeOffset.UtcNow).TotalMinutes)+" мин")+" · срок: "+Display36.Date(waiting.Until.ToString("o"));
+  if(fresh&&!reportWaiting.ContainsKey(row.Host))return criterion with{Hint52=hint};
   bool recommended=report!=null&&evidence!=null&&ReportRecoveryPolicy30.Recommended(evidence.Snapshot,report,ReportAgeHours(),DateTimeOffset.UtcNow);
   bool recovering=recovery!=null&&!recovery.Done;
-  string phase=recovering?recovery!.Phase:recommended?"Очередь отчётности требует восстановления":reportWaiting.ContainsKey(row.Host)?"Ожидается новый отчёт":recovery is {Done:true}&&recovery.Phase=="Очередь проверена; ожидается новый отчёт"?recovery.Phase:evidence!=null&&(!CompleteQueue52(evidence.Snapshot)||evidence.Snapshot.QueueError.Length>0)?"Причина задержки отчёта не установлена":"";
+  string phase=recovering?recovery!.Phase:recommended?"Очередь отчётности требует восстановления":reportWaiting.TryGetValue(row.Host,out var pending54)?pending54.Delayed54?"Отчёт задерживается":"Ожидается новый отчёт (до 10 минут)":recovery is {Done:true}&&recovery.Phase=="Очередь проверена; ожидается новый отчёт"?recovery.Phase:evidence!=null&&(!CompleteQueue52(evidence.Snapshot)||evidence.Snapshot.QueueError.Length>0)?"Причина задержки отчёта не установлена":"";
   if(phase.Length==0)return criterion with{Hint52=hint};
   var checks=criterion.Checks.ToList();checks.Add(new(hint,"Info","Info"));
   if(recovering&&recovery!.Detail.Length>0)checks.Add(new(recovery.Detail,"Info","Info"));
