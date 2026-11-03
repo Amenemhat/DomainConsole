@@ -2,7 +2,14 @@ using System.IO;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
+ async Task VerifyConnectionCancel54(){
+  var target=ConnectionStore.Capture(new(){Host="cancel54.fixture.invalid"});var started=new TaskCompletionSource();using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(5));
+  var pending=TransportBudget41.Run("# DC-MANUAL41\n# DC-ENDPOINT41:"+TransportBudget41.Key(target),timeout.Token,async token=>{started.TrySetResult();await Task.Delay(Timeout.Infinite,token);return "unexpected";});
+  await started.Task.WaitAsync(timeout.Token);TransportBudget41.CancelEndpoint54(target);
+  try{await pending;throw new Exception("Disconnect did not cancel local transport wait");}catch(OperationCanceledException){}
+ }
  void VerifyRelease54(){
+  AwaitUi39(VerifyConnectionCancel54());
   var now=DateTimeOffset.UtcNow;var host="release54.fixture.invalid";var original=ConnectionStore.Profiles.GetValueOrDefault(host);
   try{
    ConnectionStore.Profiles[host]=new(){Address="192.0.2.10",Identity="identity54",Generation54=1};
@@ -10,6 +17,7 @@ public partial class MainWindow {
    ConnectionStore.Profiles[host]=new(){Address="192.0.2.11",Identity="identity54",Generation54=2};
    if(CurrentEndpoint(frozen)||ConnectionStore.Address(frozen)!="192.0.2.10")throw new Exception("Late endpoint reply accepted or historical endpoint mutated");
    if(TransportBudget41.Key(frozen)==TransportBudget41.Key(new(){Host=host}))throw new Exception("Reconnect reused prior transport lock");
+   try{ConnectionStore.EnsureCurrent54(frozen);throw new Exception("Old endpoint could dispatch after reconnect");}catch(InvalidOperationException){}
    var current=ConnectionStore.Capture(new(){Host=host});if(!CurrentEndpoint(current))throw new Exception("Verified endpoint not accepted");
    ConnectionStore.Profiles[host].Disconnected54=true;
    if(CurrentEndpoint(current))throw new Exception("Disconnected endpoint remains active");
@@ -26,6 +34,9 @@ public partial class MainWindow {
   if(assessment.Kind!="Discrepancy")throw new Exception("Server/client discrepancy hidden");
   var formatted=ResultPresentation36.Format("## Итог задания\nСостояние: Завершено\n## Результаты команд\nfixture: успешно · 0\n## Проверка перезагрузки клиента\nФлаги перезагрузки Windows Update / CBS отсутствуют.\n## Вывод команды\nTcpTestSucceeded : False");
   if(formatted.Contains("## Проверка перезагрузки")||formatted.Contains("## Технические подробности · результаты команд")||!formatted.Contains("TcpTestSucceeded : False")||!formatted.Contains("Результаты шагов"))throw new Exception("Duplicate sections or missing output/codes");
+  var diagnostic=ResultPresentation36.Format(PresentResult(host,new(){State=new(){Status="Completed",Results=new(){new(){Kind="ClientDiagnostics",Name="diagnostic",ExitCode=0}}},Client=new(){TcpConnected54=false},Files=new(){new(){Name="step-1.out",Body="TcpTestSucceeded : False"}}}));
+  if(!diagnostic.StartsWith("## Главное\nTCP-подключение")||!diagnostic.Contains("TcpTestSucceeded : False"))throw new Exception("Negative TCP result hidden behind successful command exit");
+  var delayed=NewReportWait54("fixture54",now.AddMinutes(-8).ToString("o"));if(delayed.Until!=now.AddMinutes(2))throw new Exception("Report deadline restarted on delayed polling");
   var queue=new ClientReportProbe{QueueError="access denied",CollectedUtc=now.ToString("o")};if(!QueueHint52(queue).Contains("Неизвестно"))throw new Exception("Unread queue rendered as zero");
   var oldCache=reportCache.GetValueOrDefault(host);var oldWait=reportWaiting.GetValueOrDefault(host);
   try{

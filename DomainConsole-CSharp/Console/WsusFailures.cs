@@ -10,6 +10,7 @@ public sealed class WsusUpdateEvent {
  public string Type {get;set;}="";public string Message {get;set;}="";public string Status {get;set;}="";public bool IsError {get;set;}public long? ErrorCode {get;set;}
 }
 public sealed class ClientUpdateHistory {
+ public string Initiator54 {get;set;}="";public string Title54 {get;set;}="";
  public string Id {get;set;}="";public string Date {get;set;}="";public int Revision {get;set;}public int HResult {get;set;}public int UnmappedResult {get;set;}public int ResultCode {get;set;}public int Operation {get;set;}
 }
 public sealed class FailureHistoryReply {public List<ClientUpdateHistory> History {get;set;}=new();public int Limit {get;set;}public int Total {get;set;}}
@@ -17,7 +18,7 @@ public sealed class WsusEventReply {public List<WsusUpdateEvent> Events {get;set
 public sealed partial class RemoteService {
  public static string FailureHistoryScript48(List<WsusFailedUpdate> failures){
   var ids=string.Join(",",failures.Select(f=>PowerShellBridge.Literal(f.Id)));
-  var script="$ids=@("+ids+");$search=New-Object -ComObject Microsoft.Update.Searcher;$total=$search.GetTotalHistoryCount();$count=[Math]::Min(500,$total);$items=@();if($count -gt 0){$items=@($search.QueryHistory(0,$count)|Where-Object {$ids -contains [string]$_.UpdateIdentity.UpdateID}|ForEach-Object {@{Id=[string]$_.UpdateIdentity.UpdateID;Revision=[int]$_.UpdateIdentity.RevisionNumber;Date=[DateTime]::SpecifyKind($_.Date,[DateTimeKind]::Utc).ToString('o');HResult=[int]$_.HResult;UnmappedResult=[int]$_.UnmappedResultCode;ResultCode=[int]$_.ResultCode;Operation=[int]$_.Operation}})};@{History=@($items);Limit=$count;Total=$total}|ConvertTo-Json -Depth 5 -Compress";
+  var script="$ids=@("+ids+");$search=New-Object -ComObject Microsoft.Update.Searcher;$total=$search.GetTotalHistoryCount();$count=[Math]::Min(500,$total);$items=@();if($count -gt 0){$items=@($search.QueryHistory(0,$count)|Where-Object {$ids -contains [string]$_.UpdateIdentity.UpdateID}|ForEach-Object {@{Id=[string]$_.UpdateIdentity.UpdateID;Revision=[int]$_.UpdateIdentity.RevisionNumber;Date=[DateTime]::SpecifyKind($_.Date,[DateTimeKind]::Utc).ToString('o');HResult=[int]$_.HResult;UnmappedResult=[int]$_.UnmappedResultCode;ResultCode=[int]$_.ResultCode;Operation=[int]$_.Operation;Initiator54=[string]$_.ClientApplicationID;Title54=[string]$_.Title}})};@{History=@($items);Limit=$count;Total=$total}|ConvertTo-Json -Depth 5 -Compress";
   return script;
  }
  public async Task<string> FailureHistory(TargetRecord target,List<WsusFailedUpdate> failures){

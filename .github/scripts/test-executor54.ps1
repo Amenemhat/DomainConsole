@@ -14,7 +14,7 @@ function Get-ScheduledTask {param($TaskName) $script:task54}
 function Disable-ScheduledTask {param($InputObject) $script:disabled54=$true}
 try {
  @{Steps=@(@{Kind='UpdateScan'})}|ConvertTo-Json -Depth 6|Set-Content (Join-Path $p 'job.json') -Encoding UTF8
- $state=@{Status='Running';Ended='';HasUpdateSteps=$true;Step=1;RestoreStatus='NotRequested';ExecutorPid37=$process.Id;ExecutorStarted37=$process.StartTime.ToUniversalTime().AddMinutes(-1).ToString('o');Error='';Results=@(@{Name='preserve';ExitCode=0})}
+ $state=@{Status='Running';Ended='';Updated='';HasUpdateSteps=$true;Step=1;RestoreStatus='NotRequested';ExecutorPid37=$process.Id;ExecutorStarted37=$process.StartTime.ToUniversalTime().AddMinutes(-1).ToString('o');Error='';Results=@(@{Name='preserve';ExitCode=0})}
  $status=Join-Path $p 'status.json';$flag=Join-Path $p 'stop-now.flag';New-Item $flag -ItemType File|Out-Null
  $state|ConvertTo-Json -Depth 10|Set-Content $status -Encoding UTF8
  $rejected=$false;try{& ([scriptblock]::Create($script))}catch{$rejected=$_.Exception.Message -match '2 минуты'}

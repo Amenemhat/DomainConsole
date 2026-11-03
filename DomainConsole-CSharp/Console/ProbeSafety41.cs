@@ -78,16 +78,22 @@ foreach($t in @($tasks|Select-Object -First 500)){
 // prevent separate console processes on this workstation from overlapping.
 public static class TransportBudget41 {
  static readonly SemaphoreSlim slots=new(3);
+ static readonly object activeGate54=new();static readonly Dictionary<string,HashSet<CancellationTokenSource>> active54=new();
+ public static void CancelEndpoint54(TargetRecord target){CancellationTokenSource[] reads;lock(activeGate54)reads=active54.TryGetValue(Key(target),out var found)?found.ToArray():Array.Empty<CancellationTokenSource>();foreach(var read in reads)try{read.Cancel();}catch(ObjectDisposedException){}}
+
  public static bool Paused {get;set;}=Store.Read("poll-paused41.json",false);
  public static string Key(TargetRecord t)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Identity40.EndpointKey(t)+"|"+ConnectionStore.Ssl(t)+"|"+ConnectionStore.Generation54(t))));
  public static void Reset(TargetRecord t){string file=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"DomainConsole","Transport41",Key(t)+".blocked");if(File.Exists(file))File.Delete(file);}
  public static async Task<string> Run(string code,CancellationToken token,Func<CancellationToken,Task<string>> execute){
   var match=System.Text.RegularExpressions.Regex.Match(code,@"# DC-ENDPOINT41:([A-F0-9]{64})");
   if(!match.Success)return await execute(token);
+  string endpoint54=match.Groups[1].Value;using var linked54=CancellationTokenSource.CreateLinkedTokenSource(token);lock(activeGate54){if(!active54.TryGetValue(endpoint54,out var runs)){runs=new();active54[endpoint54]=runs;}runs.Add(linked54);}token=linked54.Token;
+  try{
   bool manual=code.Contains("# DC-MANUAL41\n",StringComparison.Ordinal);
   if(Paused&&!manual&&(PollingControl43.IsRead||code.Contains("# DC-READ42",StringComparison.Ordinal)))throw new IOException("DC_PROBE_PAUSED: служебные подключения приостановлены в этой консоли");
   string dir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"DomainConsole","Transport41");Directory.CreateDirectory(dir);string path=Path.Combine(dir,match.Groups[1].Value);FileStream gate;
   try{gate=new FileStream(path+".lock",FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);}catch(IOException){throw new PollWait42("Busy","Подключение к клиенту уже выполняется; повтор не создан",10);}
   using(gate){await slots.WaitAsync(token);try{token.ThrowIfCancellationRequested();if(Paused&&!manual&&PollingControl43.IsRead)throw new OperationCanceledException("Опрос выключен");string label=code.Contains("# DC-HISTORY48")?"Чтение истории Windows Update":code.Contains("$dcJobId34=")?"Чтение состояния задания":code.Contains("# DC-READ42")?"Чтение флагов и активности":code.Contains("whoami;hostname")?"Проверка связи":"Получение данных WSUS";if(PollingControl43.IsRead)PollingControl43.Show(match.Groups[1].Value,label);return await execute(token);}finally{if(PollingControl43.IsRead)PollingControl43.Show(match.Groups[1].Value,"");slots.Release();}}
+  }finally{lock(activeGate54){if(active54.TryGetValue(endpoint54,out var runs)){runs.Remove(linked54);if(runs.Count==0)active54.Remove(endpoint54);}}}
  }
 }

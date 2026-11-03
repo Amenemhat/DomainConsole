@@ -3,13 +3,30 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  void Disconnect54_Click(object sender,RoutedEventArgs e){
-  var row=Current();var profile=ConnectionStore.Profiles.GetValueOrDefault(row.Host)??new();
+  var row=Current();TransportBudget41.CancelEndpoint54(ConnectionStore.Capture(new TargetRecord{Host=row.Host}));var profile=ConnectionStore.Profiles.GetValueOrDefault(row.Host)??new();
   profile.Disconnected54=true;profile.Generation54=DateTime.UtcNow.Ticks;profile.Address="";ConnectionStore.Profiles[row.Host]=profile;ConnectionStore.Save();
   liveConnections.Remove(row.Host);liveReports.Remove(row.Host);clientConnections.Remove(row.Host);Store.Write("client-connections.json",clientConnections);
   Event31(row.Host,"manual-disconnect54",profile.Generation54.ToString(),"Подключение отключено вручную","Info","Новые обращения остановлены; переданные клиенту задания продолжают работу. Для проверки результата переподключитесь по IP.");
   RefreshOutcomes();ShowCurrent();
  }
  async void DiagnoseReport54_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{var row=Current();await ReadDelayedQueue54(row.Host);await FetchWsusReport(row);Notify("Диагностика очереди и чтение WSUS завершены; результаты доступны в критерии отчёта. Очередь не очищалась.");});
+ readonly HashSet<string> recoveredHistory54=new();
+ async Task RecoverInstallHistory54(TargetRecord endpoint,RemoteJob? job,PollResult data){
+  if(job==null||data.State==null||!InactiveEvidence(data)||data.State.UpdateIntents54.Count==0)return;
+  var missing=data.State.UpdateIntents54.Where(i=>i.Phase54=="Install"&&!data.Updates.Any(u=>u.Id==i.Id&&u.Revision==i.Revision&&u.ResultCode.HasValue)).ToList();
+  if(missing.Count==0||!recoveredHistory54.Add(job.Id+"|"+endpoint.Host))return;
+  try{
+   var raw=await remote.FailureHistory(endpoint,missing.Select(i=>new WsusFailedUpdate{Id=i.Id,Revision=i.Revision}).ToList());
+   if(!CurrentEndpoint(endpoint)||PollingControl43.Token.IsCancellationRequested)return;
+   var history=System.Text.Json.JsonSerializer.Deserialize<FailureHistoryReply>(raw,Store.Options)??new();
+   foreach(var intent in missing){
+    var matches=history.History.Where(h=>h.Id==intent.Id&&h.Revision==intent.Revision&&h.Operation==1&&h.Initiator54.Contains(job.Id,StringComparison.OrdinalIgnoreCase)&&DateTimeOffset.TryParse(h.Date,out var at)&&DateTimeOffset.TryParse(intent.Started54,out var start)&&at>=start.AddSeconds(-1)&&at<=DateTimeOffset.UtcNow.AddMinutes(1)).ToList();
+    if(matches.Count!=1)continue;var found=matches[0];
+    data.Updates.Add(new(){Id=intent.Id,Revision=intent.Revision,Title=intent.Title,Started54=intent.Started54,Ended54=found.Date,ResultCode=found.ResultCode,HResult=found.HResult,Evidence54="Windows Update history / "+found.Initiator54});
+    Event31(endpoint.Host,"install-history54",job.Id+"|"+intent.Id+"|"+intent.Revision+"|"+found.Date,"Восстановлен результат установки из истории Windows Update",found.ResultCode==2?"Success":"Warning",intent.Title+" · "+WsusFailurePresentation.HistoryText(found)+". Совпали UpdateID, ревизия, время и ID задания в инициаторе.",scope:job.Id);
+   }
+  }catch(Exception ex){Event31(endpoint.Host,"install-history-unavailable54",job.Id,"История установки не прочитана","Warning",ex.Message+". Результат не подменён; повторная установка не запускалась.",scope:job.Id);}
+ }
  static void MergeUpdateHistory54(RemoteJob? job,string host,PollResult data){
   var target=job?.Targets.FirstOrDefault(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase));if(target==null)return;
   foreach(var update in data.Updates.Where(u=>u.ResultCode.HasValue||u.Download.HasValue)){
@@ -36,14 +53,14 @@ public partial class MainWindow {
   }
   return result;
  }
+ static ReportWait30 NewReportWait54(string id,string stamp){var now=DateTimeOffset.UtcNow;var requested=DateTimeOffset.TryParse(stamp,out var at)&&at<=now.AddMinutes(1)?at:now;return new(){Id=id,Requested54=requested,Until=requested.AddMinutes(10),Next=now.AddSeconds(30)};}
  string SelectedUpdateSource54()=>UpdateSource54.SelectedIndex switch{1=>"WSUS",2=>"WindowsUpdate",_=>"Policy"};
  void CollectorDetails54_Click(object sender,RoutedEventArgs e){CollectorNotice43.Visibility=Visibility.Visible;((System.Windows.Controls.Expander)CollectorNotice43.Child).IsExpanded=true;CollectorPopup54.IsOpen=!CollectorPopup54.IsOpen;}
  void RecordReportReceipt54(string host,WsusReport report,string server){
   var previous=reportCache.GetValueOrDefault(host);
   bool newer=DateTimeOffset.TryParse(report.LastReportedUtc,out var incoming)&&incoming<=DateTimeOffset.UtcNow.AddMinutes(1)&&
    (previous==null||previous.Server!=server||!DateTimeOffset.TryParse(previous.Report.LastReportedUtc,out var old)||incoming>old);
-  if(!newer)return;
-  Event31(host,"report-received54",server+"|"+report.LastReportedUtc,"Получен новый отчёт WSUS","Info","Обнаружен консолью сейчас; время отчёта на сервере: "+Display36.Date(report.LastReportedUtc)+". К установке по отчёту: "+report.NeededCount+"; ошибок: "+report.FailedCount+". Сопоставление с результатом клиента — в текущем статусе.",scope:server);
+  if(newer)Event31(host,"report-received54",server+"|"+report.LastReportedUtc,"Получен новый отчёт WSUS","Info","Обнаружен консолью сейчас; время отчёта на сервере: "+Display36.Date(report.LastReportedUtc)+". К установке по отчёту: "+report.NeededCount+"; ошибок: "+report.FailedCount+". Сопоставление с результатом клиента — в текущем статусе.",scope:server);
   if(reportWaiting.TryGetValue(host,out var pending)){
    var requested=pending.Requested54==default?pending.Until.AddMinutes(-15):pending.Requested54;
    if(incoming>=requested){reportWaiting.Remove(host);Store.Write("report-waits.json",reportWaiting);}
