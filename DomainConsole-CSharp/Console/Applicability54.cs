@@ -2,14 +2,17 @@ using System.Windows;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed partial class RemoteService {
- public async Task<string> Applicability54(WsusSettings settings,IEnumerable<WsusRequiredUpdate37> updates){
+ public async Task<string> Applicability54(WsusSettings settings,string computer,IEnumerable<WsusRequiredUpdate37> updates){
   var selected=updates.Where(x=>Guid.TryParse(x.Id,out _)&&x.Revision>0).GroupBy(x=>x.Id+"|"+x.Revision).Select(g=>g.First()).Take(10).ToList();if(selected.Count==0)throw new InvalidOperationException("В отчёте нет идентификаторов обновлений для сверки.");
-  var code="[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');$s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($env:COMPUTERNAME,"+(settings.Ssl?"$true":"$false")+","+settings.Port+");$ids=@("+string.Join(",",selected.Select(x=>"@{Id="+PowerShellBridge.Literal(x.Id)+";Revision="+x.Revision+"}"))+");"+ApplicabilityScript54;
+  var code="[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');$s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($env:COMPUTERNAME,"+(settings.Ssl?"$true":"$false")+","+settings.Port+");$ids=@("+string.Join(",",selected.Select(x=>"@{Id="+PowerShellBridge.Literal(x.Id)+";Revision="+x.Revision+"}"))+");"+"$computer="+PowerShellBridge.Literal(computer)+";"+ApplicabilityScript54;
   using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(45));return await PowerShellBridge.Execute(Invoke(settings.Host,code),timeout.Token);
  }
  public const string ApplicabilityScript54="""
+$scope=New-Object Microsoft.UpdateServices.Administration.ComputerTargetScope;$scope.NameIncludes=$computer.Split('.')[0]
+$targets=@($s.GetComputerTargets($scope)|Where-Object {$_.FullDomainName -eq $computer});$clientGroups=@()
+if($targets.Count -eq 1){$clientGroups=@($targets[0].GetComputerTargetGroups()|ForEach-Object {[string]$_.Id});'Группы выбранного клиента:';$targets[0].GetComputerTargetGroups()|Select-Object Name,Id|Format-Table|Out-String}else{'Клиент не найден однозначно; соответствие одобрений группам неизвестно.'}
 $groups=@{};foreach($g in $s.GetComputerTargetGroups()){$groups[[string]$g.Id]=$g.Name}
-function Show-Approval54($u){$a=@($u.GetUpdateApprovals());if(!$a.Count){'Одобрений нет'};foreach($approval in $a){'Группа: '+$groups[[string]$approval.ComputerTargetGroupId]+'; действие: '+$approval.Action+'; дата: '+$approval.CreationDate+'; срок: '+$approval.Deadline}}
+function Show-Approval54($u){$a=@($u.GetUpdateApprovals());if(!$a.Count){'Одобрений нет'};foreach($approval in $a){'Группа: '+$groups[[string]$approval.ComputerTargetGroupId]+'; клиент состоит непосредственно: '+($clientGroups -contains [string]$approval.ComputerTargetGroupId)+'; действие: '+$approval.Action+'; дата: '+$approval.CreationDate+'; срок: '+$approval.Deadline}}
 foreach($item in $ids){$id=$item.Id
  try{
   $revision=New-Object Microsoft.UpdateServices.Administration.UpdateRevisionId ([guid]$id),([int]$item.Revision)
@@ -21,7 +24,7 @@ foreach($item in $ids){$id=$item.Id
   foreach($replacement in @($replacements|Select-Object -First 10)){$replacement|Select-Object Title,@{n='UpdateID';e={$_.Id.UpdateId}},@{n='Revision';e={$_.Id.RevisionNumber}},IsApproved,IsDeclined,IsSuperseded|Format-List|Out-String;Show-Approval54 $replacement}
  }catch{'Не удалось прочитать '+$id+': '+$_.Exception.Message}
 }
-'Одобрение и замена не доказывают применимость на конкретном клиенте. Политики, одобрения и состояние обновлений не менялись.'
+'Одобрения родительских групп могут наследоваться; показанное прямое членство не заменяет эффективное одобрение. Одобрение и замена не доказывают применимость на конкретном клиенте. Политики, одобрения и состояние обновлений не менялись.'
 """;
 }
 public partial class MainWindow {
@@ -30,9 +33,9 @@ public partial class MainWindow {
   var row=Current();if(!applicabilityReading54.Add(row.Host))return;
   try{
    if(!reportCache.TryGetValue(row.Host,out var cache)||!cache.Found)throw new InvalidOperationException("Сначала прочитайте отчёт WSUS.");
-   var settings=ReadWsus();var endpoint=ConnectionStore.Capture(row.Target);var text=await remote.Applicability54(settings,cache.Report.RequiredUpdates);
+   var settings=ReadWsus();var endpoint=ConnectionStore.Capture(row.Target);var text=await remote.Applicability54(settings,ConnectionStore.WsusName(row.Host),cache.Report.RequiredUpdates);
    if(!CurrentEndpoint(endpoint)||OverviewServer!=settings.Host+":"+settings.Port)return;
-   Event31(row.Host,"applicability54",Guid.NewGuid().ToString(),"Прочитаны свойства спорных обновлений WSUS","Info",text);
+   bool partial=text.Contains("Не удалось прочитать")||text.Contains("Клиент не найден однозначно");Event31(row.Host,"applicability54",Guid.NewGuid().ToString(),partial?"Сверка свойств WSUS выполнена не полностью":"Прочитаны свойства спорных обновлений WSUS",partial?"Warning":"Info",text);
    if(IsCurrent(row))WsusServerOutput.Text=CurrentReportText41(row)+"\n\n## Сверка применимости · свойства WSUS\n"+text;
   }finally{applicabilityReading54.Remove(row.Host);}
  });

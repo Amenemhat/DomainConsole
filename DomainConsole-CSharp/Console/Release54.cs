@@ -35,7 +35,7 @@ public partial class MainWindow {
    var previous=target.UpdateHistory54.FindIndex(u=>u.Id+"|"+u.Revision+"|"+u.Title+"|"+u.Started54==key);
    if(previous<0)target.UpdateHistory54.Add(Store.Clone<UpdateAttempt54>(update));else if(!target.UpdateHistory54[previous].ResultCode.HasValue||update.ResultCode.HasValue)target.UpdateHistory54[previous]=Store.Clone<UpdateAttempt54>(update);
   }
-  foreach(var update in target.UpdateHistory54){if(!data.Updates.Any(u=>u.Id==update.Id&&u.Revision==update.Revision&&u.Title==update.Title&&u.Started54==update.Started54))data.Updates.Add(System.Text.Json.JsonSerializer.Deserialize<UpdateOutcome>(System.Text.Json.JsonSerializer.Serialize(update,Store.Options),Store.Options)!);}
+  foreach(var update in target.UpdateHistory54){var index=data.Updates.FindIndex(u=>u.Id==update.Id&&u.Revision==update.Revision&&u.Title==update.Title&&u.Started54==update.Started54);var saved=System.Text.Json.JsonSerializer.Deserialize<UpdateOutcome>(System.Text.Json.JsonSerializer.Serialize(update,Store.Options),Store.Options)!;if(index<0)data.Updates.Add(saved);else if(update.ResultCode.HasValue&&!data.Updates[index].ResultCode.HasValue)data.Updates[index]=saved;}
  }
  ClientAssessment41 ApplySourceResult54(ComputerRow row,ClientAssessment41 current,bool active){
   if(active)return current;
@@ -54,12 +54,12 @@ public partial class MainWindow {
   }
   return result;
  }
- static ReportWait30 NewReportWait54(string id,string stamp){var now=DateTimeOffset.UtcNow;var requested=DateTimeOffset.TryParse(stamp,out var at)&&at<=now.AddMinutes(1)?at:now;return new(){Id=id,Requested54=requested,Until=requested.AddMinutes(10),Next=now.AddSeconds(30)};}
+ static ReportWait30 NewReportWait54(string id,string stamp){var now=DateTimeOffset.UtcNow;var requested=DateTimeOffset.TryParse(stamp,out var at)&&at.Year>2000&&at<=now.AddMinutes(1)?at:now;return new(){Id=id,Requested54=requested,Until=requested.AddMinutes(10),Next=now.AddSeconds(30)};}
  string SelectedUpdateSource54()=>UpdateSource54.SelectedIndex switch{1=>"WSUS",2=>"WindowsUpdate",_=>"Policy"};
  void CollectorDetails54_Click(object sender,RoutedEventArgs e){CollectorNotice43.Visibility=Visibility.Visible;((System.Windows.Controls.Expander)CollectorNotice43.Child).IsExpanded=true;CollectorPopup54.IsOpen=!CollectorPopup54.IsOpen;}
  void RecordReportReceipt54(string host,WsusReport report,string server){
   var previous=reportCache.GetValueOrDefault(host);
-  bool valid=DateTimeOffset.TryParse(report.LastReportedUtc,out var incoming)&&incoming<=DateTimeOffset.UtcNow.AddMinutes(1);
+  bool valid=DateTimeOffset.TryParse(report.LastReportedUtc,out var incoming)&&incoming.Year>2000&&incoming<=DateTimeOffset.UtcNow.AddMinutes(1);
   bool newer=valid&&(previous==null||previous.Server!=server||!DateTimeOffset.TryParse(previous.Report.LastReportedUtc,out var old)||incoming>old);
   if(newer)Event31(host,"report-received54",server+"|"+report.LastReportedUtc,"Получен новый отчёт WSUS","Info","Обнаружен консолью сейчас; время отчёта на сервере: "+Display36.Date(report.LastReportedUtc)+". К установке по отчёту: "+report.NeededCount+"; ошибок: "+report.FailedCount+". Сопоставление с результатом клиента — в текущем статусе.",scope:server);
   if(valid&&reportWaiting.TryGetValue(host,out var pending)){

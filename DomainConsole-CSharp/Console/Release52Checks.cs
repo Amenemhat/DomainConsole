@@ -90,7 +90,7 @@ public partial class MainWindow {
     rendered45="";RenderCriteria45(row,new("Warning","Ожидается отчёт",""),false);
     Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);UpdateLayout();
     CaptureContent38("queue52-"+palette+"-"+(size.Item1>1000?"wide":"compact"),size.Item1,size.Item2);
-    var button=Visual33<Button>(ReadinessTree45).Single(b=>b.Content?.ToString()=="Восстановить отчётность");
+    var button=Visual33<Button>(ReadinessTree45).Single(b=>b.Content?.ToString()=="Очистить очередь отчётности");
     if(!button.IsEnabled||button.ToolTip?.ToString()?.Contains("5 файлов · 30 байт")!=true)throw new Exception("Queue action/hint missing in rendered criteria");
    }
   }finally{criteria45.Remove(row.Host);Theme.Apply(theme,false);ComputerGrid.SelectedItem=selected;MainTabs.SelectedItem=tab;rendered45="";ShowCurrent();}
