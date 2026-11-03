@@ -18,7 +18,7 @@ public partial class MainWindow {
   var row=Computers[0];var snapshot=rebootSnapshots[row.Host];var saved=readyProofs43[row.Host];var report=reportCache[row.Host];
   RefreshClientReport35(row);
   if(HeaderReport35.Text.Contains("нет данных")||row.Address40!="192.0.2.41")throw new Exception("Saved report/address disagrees with restored readiness");
-  MainTabs.SelectedItem=WsusTab;ShowCurrent();UpdateLayout();CaptureContent38("restore55-success",1480,940,true);
+  MainTabs.SelectedItem=WsusTab;ShowCurrent();UpdateLayout();CaptureContent38("restore55-success",1480,940);
   installerObservations53[row.Host]=new(row.Host.ToUpperInvariant()+"||",DateTimeOffset.Parse(saved.Reboot).AddSeconds(1).ToString("o"));
   if(!InstallerChanged53(row,saved.Reboot))throw new Exception("Legacy installer evidence was ignored");
   installerObservations53.Remove(row.Host);
