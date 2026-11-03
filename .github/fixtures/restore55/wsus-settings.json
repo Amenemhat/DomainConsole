@@ -1,0 +1,5 @@
+{
+  "Host": "wsus.fixture.invalid",
+  "Port": 8530,
+  "Ssl": false
+}

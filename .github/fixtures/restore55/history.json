@@ -1,0 +1,51 @@
+[
+  {
+    "Id": "11111111-2222-3333-4444-555555555555",
+    "OutputChannel": "WSUS",
+    "Created": "2026-11-03T09:53:06.6548023Z",
+    "Steps": [
+      {
+        "Kind": "UpdateScan",
+        "Name": "Fixture update scan"
+      }
+    ],
+    "Targets": [
+      {
+        "Host": "restore-pc.fixture.invalid",
+        "Name": "RESTORE-PC",
+        "DirectoryId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        "Status": "Completed",
+        "OS": "Windows test",
+        "ConnectionSnapshot": true,
+        "State": {
+          "Status": "Completed",
+          "ManagedSource54": null,
+          "Ended": "2026-11-03T09:54:02.3245161Z",
+          "UpdatesRemaining": 0,
+          "RebootRequired": false,
+          "RebootEvidence": {
+            "Required": false,
+            "CollectedUtc": "2026-11-03T09:54:02.3245161Z",
+            "Error": "",
+            "Sources": [],
+            "PendingFileOperations": [],
+            "ProbeVersion": 2
+          },
+          "Results": [
+            {
+              "Cache50": null,
+              "UpdatesFound50": 0,
+              "Kind": "UpdateScan",
+              "NativeExitCode": null,
+              "Name": "Fixture update scan",
+              "ExitCode": 0,
+              "Started": "2026-11-03T09:53:34.7934997Z",
+              "Ended": "2026-11-03T09:54:02.2932660Z",
+              "Error": ""
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

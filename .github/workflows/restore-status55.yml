@@ -1,0 +1,37 @@
+name: Saved status startup regression
+on:
+  push:
+    branches: ['diagnostic/status-restore55']
+permissions:
+  contents: read
+jobs:
+  restore:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet publish DomainConsole-CSharp/Console/DomainConsole.csproj -c Release -r win-x64 --self-contained true -o RestoreApp
+      - name: Reload persisted status through the actual window startup twice
+        shell: pwsh
+        run: |
+          New-Item RestoreApp/Data -ItemType Directory -Force | Out-Null
+          Copy-Item .github/fixtures/restore55/*.json RestoreApp/Data/
+          $env:DOMAINCONSOLE_UI_SMOKE='1'
+          $env:DOMAINCONSOLE_RESTORE_SMOKE='1'
+          1..2 | ForEach-Object {
+            $p=Start-Process ./RestoreApp/DomainConsole.exe -PassThru
+            if (!$p.WaitForExit(60000)) { Stop-Process -Id $p.Id; throw 'Startup restore timed out' }
+            if (Test-Path RestoreApp/restore-status55.json) { Get-Content RestoreApp/restore-status55.json }
+            if ($p.ExitCode -ne 0) { if(Test-Path RestoreApp/smoke-error.txt){Get-Content RestoreApp/smoke-error.txt}; throw 'Startup restore failed' }
+            if (!(Test-Path RestoreApp/restore-ready55.txt)) { throw 'No restore assertions' }
+          }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: saved-status-startup-evidence
+          path: |
+            RestoreApp/restore-*.json
+            RestoreApp/restore-*.txt
+            RestoreApp/smoke-error.txt
