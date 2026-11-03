@@ -96,10 +96,16 @@ namespace DomainConsole.Agent {
    WriteJson("restored.json",new{RestoredAt=DateTime.UtcNow.ToString("o")});if(State!=null){State.RestoreStatus="Restored";Save();}DeleteTask("Restore");
   }
   static dynamic Com(string name){if(fixtureCom54!=null)return fixtureCom54(name);var type=Type.GetTypeFromProgID(name);if(type==null)throw new Exception("COM component missing: "+name);return Activator.CreateInstance(type);}
-  static int Updates(string prefix,bool scanOnly=false){
-   Stage("Проверка источника обновлений");string source="";int managed=0,blocked=0;
+  static Func<Tuple<string,int,int>> fixturePolicy54;
+  static Tuple<string,int,int> ReadUpdatePolicy54(){
+   if(fixturePolicy54!=null)return fixturePolicy54();
+   string source="";int managed=0,blocked=0;
    using(var key=Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate")){if(key!=null){source=Convert.ToString(key.GetValue("WUServer",""));blocked=Convert.ToInt32(key.GetValue("DoNotConnectToWindowsUpdateInternetLocations",0));}}
    using(var au=Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU")){if(au!=null)managed=Convert.ToInt32(au.GetValue("UseWUServer",0));}
+   return Tuple.Create(source,managed,blocked);
+  }
+  static int Updates(string prefix,bool scanOnly=false){
+   Stage("Проверка источника обновлений");var policy=ReadUpdatePolicy54();string source=policy.Item1;int managed=policy.Item2,blocked=policy.Item3;
    string selected=Job.UpdateSource54??"Policy";
    if(selected=="WSUS"&&(managed!=1||string.IsNullOrWhiteSpace(source)))throw new InvalidOperationException("Выбран WSUS, но политика клиента не задаёт этот источник. Выберите текущие политики или Windows Update; настройки клиента не изменены.");
    if(selected=="WindowsUpdate"&&blocked==1)throw new InvalidOperationException("Обращение к Windows Update в Интернете запрещено политикой клиента. Политика не изменена.");

@@ -23,6 +23,11 @@ namespace DomainConsole.Agent {
   static void UpdateFlow54Smoke(){
    var originalJob=Job;var originalState=State;
    try{
+    fixturePolicy54=()=>Tuple.Create("",0,1);Job=new RemoteJob{UpdateSource54="WindowsUpdate"};State=new RemoteState{Status="Running"};
+    bool denied=false;fixtureCom54=name=>throw new Exception("Blocked source activated COM");
+    try{Updates("flow54-blocked",true);}catch(InvalidOperationException){denied=true;}
+    if(!denied)throw new Exception("Internet policy restriction bypassed");
+    fixturePolicy54=()=>Tuple.Create("",0,0);
     foreach(string mode in new[]{"scan","install","partial","reboot","empty"}){
      var session=new Session54Fixture{FailFirst=mode=="partial",Reboot=mode=="reboot"};
      var updates=new Collection54Fixture();if(mode!="empty")foreach(string name in new[]{"A","B"})updates.Items.Add(new Update54Fixture{Title="KB "+name,Identity=new Identity54Fixture{UpdateID=Guid.NewGuid().ToString()}});
@@ -39,7 +44,7 @@ namespace DomainConsole.Agent {
      if(mode=="scan"&&session.Downloads!=0)throw new Exception("Explicit scan-only downloaded packages");
     }
     Console.WriteLine("0.54: real update flow with isolated WUA fixture: scan-only, auto-install, partial download failure, reboot boundary, empty result, Internet source and retained package metadata passed.");
-   }finally{fixtureCom54=null;Job=originalJob;State=originalState;}
+   }finally{fixturePolicy54=null;fixtureCom54=null;Job=originalJob;State=originalState;}
   }
  }
 }
