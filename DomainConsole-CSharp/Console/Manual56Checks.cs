@@ -19,6 +19,9 @@ public partial class MainWindow {
     var hold=new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
     var first=TransportBudget41.Run(code,CancellationToken.None,_=>hold.Task);
     try{
+     string waiting="";void Activity(string key,string text){if(key==TransportBudget41.Key(target))waiting=text;}
+     PollingControl43.Activity+=Activity;
+     try{using var deadline=new CancellationTokenSource(100);bool cancelled=false;try{await TransportBudget41.Run(code,deadline.Token,_=>throw new Exception("Cancelled wait started a second executor"));}catch(OperationCanceledException){cancelled=true;}if(!cancelled||waiting!="")throw new Exception("Cancelled manual wait retained activity or entered transport");}finally{PollingControl43.Activity-=Activity;}
      using var control=PollingControl43.Manual56("control");
      if(await TransportBudget41.Run(code,CancellationToken.None,_=>Task.FromResult("cancel available"))!="cancel available")throw new Exception("Control blocked behind manual work");
     }finally{hold.SetResult("done");await first;}
