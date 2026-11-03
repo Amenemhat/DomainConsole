@@ -3,7 +3,7 @@ namespace DomainConsole;
 public partial class MainWindow {
  async Task<bool> CompletePreparedSubmission47(RemoteJob job,List<ComputerRow> selected,List<ComputerRow> frozen,Func<Task<(bool Accepted,bool Force,bool Wait)>> prepare,bool beginPlan){
   var targets=frozen.Select(r=>Store.Clone(r.Target)).ToList();
-  var decision=await prepare();if(!decision.Accepted)return false;
+  var decision=job.Manual56&&job.OutputChannel=="Commands"&&job.Steps.All(s=>s.Kind is "PowerShell" or "CMD")?(Accepted:true,Force:false,Wait:false):await prepare();if(!decision.Accepted)return false;
   job.AllowUpdateConflict=decision.Force;job.QueueAfterWsus=decision.Wait;
   job.IndependentControl=IsIndependentControl(job.Steps);job.ExclusiveMaintenance=Maintenance(job.Steps,job.MicrosoftSource);
   job.ContinueOnError&=!job.Steps.Any(t=>t.Kind is "ReportRecovery" or "CacheCleanup"||t.Code.Contains("function Save-Dependents("));

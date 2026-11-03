@@ -8,7 +8,7 @@ public sealed partial class RemoteService {
  static readonly ConcurrentDictionary<string,Lazy<Task<string>>> collectorRepairs47=new();
  static readonly ConcurrentDictionary<string,CancellationTokenSource> snapshotCancellation47=new();
  public Task<string> RepairCollector47(TargetRecord target){
-  if(TransportBudget41.Paused)throw new OperationCanceledException("Опрос выключен; включите его перед восстановлением сборщика.");
+  if(PollingControl43.BackgroundPaused56)throw new OperationCanceledException("Опрос выключен; включите его перед восстановлением сборщика.");
   var frozen=ConnectionStore.Capture(target);string key=TransportBudget41.Key(frozen);
   var flight=collectorRepairs47.GetOrAdd(key,_=>new Lazy<Task<string>>(()=>RepairCore47(frozen,key),LazyThreadSafetyMode.ExecutionAndPublication));
   _=flight.Value.ContinueWith(_=>collectorRepairs47.TryRemove(new KeyValuePair<string,Lazy<Task<string>>>(key,flight)),TaskScheduler.Default);
@@ -44,13 +44,13 @@ public partial class MainWindow {
  readonly HashSet<string> repairingCollectors47=new(StringComparer.OrdinalIgnoreCase);
  static bool EventMatches47(ClientEvent31 item,int filter)=>filter switch{1=>item.Kind is "Error" or "Warning",2=>ServiceEvent50(item),3=>true,_=>!ServiceEvent50(item)};
  async Task<bool> CompleteCollectorRepair47(TargetRecord target,CancellationToken generation,Task<string> repair,Func<Task> refresh,Action<string> publish){
-  bool Current()=>!closing&&!TransportBudget41.Paused&&!generation.IsCancellationRequested&&CurrentEndpoint(target);
+  bool Current()=>!closing&&!PollingControl43.BackgroundPaused56&&!generation.IsCancellationRequested&&CurrentEndpoint(target);
   var result=await repair;if(!Current())return false;
   await refresh();if(!Current())return false;
   publish(result);return true;
  }
  async void CollectorRepair47_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{
-  var row=Current();if(TransportBudget41.Paused){Notify("Для восстановления включите опрос.");return;}
+  using var manual56=PollingControl43.Manual56("control");var row=Current();if(PollingControl43.BackgroundPaused56){Notify("Для восстановления включите опрос.");return;}
   var target=ConnectionStore.Capture(row.Target);var generation=PollingControl43.Token;
   if(!repairingCollectors47.Add(row.Host))return;
   try{RefreshCollector44(row.Host);Event31(row.Host,"collector-repair47",DateTimeOffset.UtcNow.ToString("o"),"Восстановление сборщика","Info","Останавливается только собственный сборщик. Установки обновлений продолжаются.");
