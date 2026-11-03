@@ -96,15 +96,15 @@ public partial class MainWindow {
   Check(journal51.Split(context51).Length==3,"51 equal diagnostic text retains separate attempt context");
   string duplicate51=CompactJournal31("## Диагностика\n"+context51+"\n\n## Диагностика\n"+context51);
   Check(duplicate51.Split(context51).Length==2,"51 exact duplicate diagnostic section compacted");
-  // 0.51: connectivity changes must invalidate every list presentation without
-  // changing the saved result or creating any remote work.
+  // Connectivity invalidates live progress, not the last completed result.
   var row51=new ComputerRow(new(){Status="Running",State=new(){Stage="Скачивание · fixture"}});
   var changed51=new HashSet<string>();row51.PropertyChanged+=(sender,args)=>changed51.Add(args.PropertyName??"");
   row51.SetConnection("Connected", "fresh");row51.SetOutcome("Working","saved running");row51.SetActivity(true,null,"running",false);
   Check(row51.DisplayOutcome51=="Download"&&row51.Working,"51 connected operation uses stage glyph");
   foreach(var outcome51 in new[]{"Working","Success","Error","Reboot"}){
    row51.SetOutcome(outcome51,"saved "+outcome51);row51.SetConnection("Unreachable","last response: fixture");
-   Check(row51.DeviceBrush39.ToString()==Theme.Brush("TextMuted").ToString()&&!row51.Working&&!row51.WorkBusy&&row51.DisplayOutcome51=="Unknown","51 offline "+outcome51);
+   Check(!row51.Working&&!row51.WorkBusy&&row51.DisplayOutcome51==(outcome51=="Working"?"Unknown":outcome51),"55 offline retains completed outcome "+outcome51);
+   Check(outcome51!="Working"||row51.DeviceBrush39.ToString()==Theme.Brush("TextMuted").ToString(),"55 offline work is unconfirmed");
    Check(row51.Outcome==outcome51,"51 saved outcome preserved "+outcome51);
    row51.SetConnection("Connected","returned");Check(row51.Working,"51 presentation resumes after response "+outcome51);
   }
