@@ -1,5 +1,7 @@
 param([Parameter(Mandatory=$true)][string]$Script)
 $ErrorActionPreference='Stop'
+# Production transmits the embedded Unicode script as a string, not an ANSI file.
+$body=[scriptblock]::Create([IO.File]::ReadAllText($Script,[Text.Encoding]::UTF8))
 $oldProgramData=$env:ProgramData
 $fixture=Join-Path $env:TEMP ('control56-'+[guid]::NewGuid())
 $env:ProgramData=$fixture
@@ -14,12 +16,12 @@ try {
  '{}'|Set-Content (Join-Path (Join-Path $root $knownId) 'job.json') -Encoding UTF8
  function Get-ScheduledTask { [pscustomobject]@{TaskName="DomainConsoleCSharp-$taskId";State='Ready';Actions=@()} }
  function Get-CimInstance { param($Filter,$ClassName) [pscustomobject]@{ProcessId=1234;CommandLine="agent run $agentId";CreationDate=Get-Date} }
- $reply=(& $Script)|ConvertFrom-Json
+ $reply=(& $body)|ConvertFrom-Json
  if(@($reply.Removed).Count -ne 1 -or $reply.Removed[0] -ne $orphan){throw 'Repair removed wrong reservation'}
  $after=Get-Content $file -Raw|ConvertFrom-Json
  if(@($after.JobIds).Count -ne 3 -or $after.OwnerId -ne 'fixture-owner' -or $after.PlanId -ne 'fixture-plan'){throw 'Repair changed unrelated state'}
  if(!(Test-Path $reply.Backup)){throw 'Repair backup missing'}
- $again=(& $Script)|ConvertFrom-Json
+ $again=(& $body)|ConvertFrom-Json
  if(@($again.Removed).Count){throw 'Repair is not idempotent'}
  'Control56 repair: orphan removed; scheduled, running and known jobs retained; backup and idempotence verified.'
 } finally {
