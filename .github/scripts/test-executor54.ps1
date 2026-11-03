@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 $fixture=Join-Path $env:RUNNER_TEMP ('executor54-'+[guid]::NewGuid().ToString('N'))
 $env:ProgramData=$fixture
 $id=[guid]::NewGuid().ToString();$mode='executor'
