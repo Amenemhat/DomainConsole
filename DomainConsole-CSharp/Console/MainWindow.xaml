@@ -332,7 +332,7 @@
             <Grid>
               <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition x:Name="WsusJournalRow37" Height="3*" MinHeight="100"/>
+                <RowDefinition x:Name="WsusJournalRow37" Height="3*" MinHeight="150"/>
                 <RowDefinition Height="6"/>
                 <RowDefinition x:Name="WsusReportRow37" Height="2*" MinHeight="80"/>
               </Grid.RowDefinitions>
