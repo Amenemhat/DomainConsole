@@ -21,7 +21,10 @@ public partial class MainWindow {
    report.LastReportedUtc=DateTimeOffset.UtcNow.AddDays(-2).ToString("o");if(OverviewStatus(row).Kind!="Stale")throw new Exception("Old success incorrectly requests intervention");
    report.FailedCount=1;liveReports.Remove(row.Host);if(OverviewStatus(row).Kind!="Error")throw new Exception("Old known failure hidden by freshness");report.FailedCount=0;report.InstalledPendingRebootCount=1;if(OverviewStatus(row).Kind is not ("Warning" or "Stale")||RebootViewFor40(row).Fresh)throw new Exception("Old server-only reboot request treated as current confirmation");report.InstalledPendingRebootCount=0;
    overviewErrors[row.Host]="Server timeout";if(OverviewStatus(row).Kind!="Stale")throw new Exception("Failed WSUS read replaced saved health");overviewErrors.Remove(row.Host);
-   reportCache[row.Host].Found=false;if(OverviewStatus(row).Kind!="NoWsus")throw new Exception("Missing WSUS identity not distinguished");
+   reportCache[row.Host].Found=false;
+   if(OverviewStatus(row).Kind!="Stale")throw new Exception("Saved missing identity presented as current absence");
+   overviewErrors[row.Host]="Server timeout";if(OverviewStatus(row).Kind!="Warning")throw new Exception("Failed read presented as confirmed absence");overviewErrors.Remove(row.Host);
+   liveReports.Add(row.Host);if(OverviewStatus(row).Kind!="NoWsus")throw new Exception("Fresh missing WSUS identity not distinguished");
    clientConnections[row.Host]=new(){Error="Access is denied",LastAttempt=DateTimeOffset.UtcNow};if(LinkKind(row.Host)!="Access"||!StatusTags(row).Contains("NoWsus"))throw new Exception("Access denied confused with offline or server absence");
    clientConnections[row.Host].Error="WinRM timeout";clientConnections[row.Host].Lost38=true;if(LinkKind(row.Host)!="Unreachable")throw new Exception("Unreachable has no dedicated state");clientConnections.Remove(row.Host);
    reportCache[row.Host].Found=true;
