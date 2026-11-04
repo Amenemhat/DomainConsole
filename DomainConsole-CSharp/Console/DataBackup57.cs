@@ -23,7 +23,11 @@ public sealed class DataBackup57 {
   using var parsed=JsonDocument.Parse(span);
  }
  static string Hash(byte[] bytes)=>Convert.ToHexString(SHA256.HashData(bytes));
- static bool SafeName(string name)=>!string.IsNullOrEmpty(name)&&name==Path.GetFileName(name)&&!name.Contains('/')&&!name.Contains('\\')&&name.EndsWith(".json",StringComparison.OrdinalIgnoreCase)&&name!="manifest.json";
+ static bool SafeName(string name){
+  if(string.IsNullOrEmpty(name)||name.Contains('\\')||name.Contains(':')||name.StartsWith('/'))return false;
+  var parts=name.Split('/');if(parts.Any(p=>p.Length==0||p is "." or ".."||p.IndexOfAny(Path.GetInvalidFileNameChars())>=0))return false;
+  return (parts.Length==1&&name.EndsWith(".json",StringComparison.OrdinalIgnoreCase)&&name!="manifest.json")||(parts.Length==3&&parts[0]=="Events"&&name.EndsWith(".jsonl",StringComparison.OrdinalIgnoreCase));
+ }
  public string[] DamagedFiles() {
   Directory.CreateDirectory(data);
   return Directory.GetFiles(data,"*.json").Where(path=>{try{Validate(File.ReadAllBytes(path));return false;}catch(JsonException){return true;}catch(InvalidDataException){return true;}}).Select(Path.GetFileName).Cast<string>().ToArray();
@@ -39,13 +43,17 @@ public sealed class DataBackup57 {
  public string Create(bool automatic=false) {lock(archiveGate)return CreateCore(automatic);}
  string CreateCore(bool automatic) {
   Dictionary<string,byte[]> files=new(StringComparer.OrdinalIgnoreCase);
-  lock(sync) {
-   Directory.CreateDirectory(data);
-   foreach(var path in Directory.GetFiles(data,"*.json")) {
-    var name=Path.GetFileName(path);if(!SafeName(name))throw new InvalidDataException("Недопустимое имя файла данных.");
-    var bytes=File.ReadAllBytes(path);Validate(bytes);files.Add(name,bytes);
-   }
+  long size=0;
+  void AddFile(string path){
+   var name=Path.GetRelativePath(data,path).Replace('\\','/');if(!SafeName(name))throw new InvalidDataException("Недопустимое имя файла данных.");
+   if((size+=new FileInfo(path).Length)>MaxBytes)throw new InvalidDataException("Объём данных превышает 1 ГиБ.");
+   var bytes=File.ReadAllBytes(path);if(name.EndsWith(".json",StringComparison.OrdinalIgnoreCase))Validate(bytes);files.Add(name,bytes);
   }
+  lock(sync){Directory.CreateDirectory(data);foreach(var path in Directory.GetFiles(data,"*.json"))AddFile(path);}
+  // Event logs have their own append pipeline. Do not hold the UI store lock while copying them.
+  var events=Path.Combine(data,"Events");
+  if(Directory.Exists(events)&&(File.GetAttributes(events)&FileAttributes.ReparsePoint)==0)
+   foreach(var path in Directory.EnumerateFiles(events,"*.jsonl",new EnumerationOptions{RecurseSubdirectories=true,AttributesToSkip=FileAttributes.ReparsePoint,IgnoreInaccessible=false}))AddFile(path);
   if(files.Count==0)throw new InvalidOperationException("Нет сохранённых JSON для архивирования.");
   if(files.Values.Sum(x=>(long)x.Length)>MaxBytes)throw new InvalidDataException("Объём данных превышает 1 ГиБ.");
   Directory.CreateDirectory(archives);
@@ -68,9 +76,9 @@ public sealed class DataBackup57 {
  public static Snapshot Read(string path) {
   using var zip=ZipFile.OpenRead(path);
   var index=zip.GetEntry("manifest.json")??throw new InvalidDataException("В архиве нет описания резервной копии DomainConsole.");
-  if(index.Length>1024*1024)throw new InvalidDataException("Слишком большое описание архива.");
+  if(index.Length>16*1024*1024)throw new InvalidDataException("Слишком большое описание архива.");
   Manifest manifest;using(var stream=index.Open())manifest=JsonSerializer.Deserialize<Manifest>(stream)??throw new InvalidDataException("Пустое описание архива.");
-  if(manifest.Format!=1||manifest.Files==null||manifest.Files.Length==0||manifest.Files.Length>10000)throw new InvalidDataException("Неизвестный формат архива.");
+  if(manifest.Format!=1||manifest.Files==null||manifest.Files.Length==0||manifest.Files.Length>100000)throw new InvalidDataException("Неизвестный формат архива.");
   Dictionary<string,byte[]> files=new(StringComparer.OrdinalIgnoreCase);long total=0;
   foreach(var file in manifest.Files){
    if(file==null||!SafeName(file.Name)||file.Length<0||file.Length>MaxBytes||(total+=file.Length)>MaxBytes)throw new InvalidDataException("Недопустимое содержимое архива.");
@@ -78,7 +86,7 @@ public sealed class DataBackup57 {
    if(entry.Length!=file.Length)throw new InvalidDataException("Длина файла не совпадает: "+file.Name);
    using var stream=entry.Open();using var output=new MemoryStream();stream.CopyTo(output);var bytes=output.ToArray();
    if(Hash(bytes)!=file.Sha256)throw new InvalidDataException("Контрольная сумма не совпадает: "+file.Name);
-   Validate(bytes);files.Add(file.Name,bytes);
+   if(file.Name.EndsWith(".json",StringComparison.OrdinalIgnoreCase))Validate(bytes);files.Add(file.Name,bytes);
   }
   if(zip.Entries.Count!=files.Count+1)throw new InvalidDataException("Лишние или повторяющиеся записи архива.");
   return new(path,manifest,files);
@@ -98,7 +106,7 @@ public sealed class DataBackup57 {
   var preserved=Path.Combine(archives,"damaged-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff")+"-"+Guid.NewGuid().ToString("N")[..8]);
   lock(sync){
    Directory.CreateDirectory(preserved);
-   foreach(var name in names){var original=Path.Combine(data,name);if(File.Exists(original))File.Copy(original,Path.Combine(preserved,name));}
+   foreach(var name in names){var original=Path.Combine(data,name);if(File.Exists(original)){var copy=Path.Combine(preserved,name);Directory.CreateDirectory(Path.GetDirectoryName(copy)!);File.Copy(original,copy);}}
    // Provenance is written before replacement; a failed restore remains diagnosable.
    DurableReplace(Path.Combine(preserved,"recovery.txt"),Encoding.UTF8.GetBytes("Archive: "+snapshot.Path+"\nCreated UTC: "+snapshot.Info.CreatedUtc.ToString("O")+"\nRestore UTC: "+DateTimeOffset.UtcNow.ToString("O")+"\nFiles: "+string.Join(", ",names)));
    foreach(var name in names)DurableReplace(Path.Combine(data,name),snapshot.Files[name]);

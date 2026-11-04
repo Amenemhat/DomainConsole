@@ -8,7 +8,9 @@ try{
  var backups=Path.Combine(root,"Backups");var store=new DataBackup57(data,backups,new object());
  var history=Path.Combine(data,"history.json");var good=Encoding.UTF8.GetBytes("[{\"Status\":\"Completed\",\"Text\":\"Проверено\"}]");
  DataBackup57.DurableReplace(history,good);File.WriteAllText(Path.Combine(data,"settings.json"),"{\"Theme\":2}");
- var archive=store.Create();var saved=DataBackup57.Read(archive);Assert(saved.Files.Count==2,"Snapshot omitted data");
+ Directory.CreateDirectory(Path.Combine(data,"Events","fixture"));File.WriteAllText(Path.Combine(data,"Events","fixture","2026-01-01.jsonl"),"{\"Text\":\"event\"}\n");
+ var archive=store.Create();var saved=DataBackup57.Read(archive);Assert(saved.Files.Count==3,"Snapshot omitted data");
+ Assert(saved.Files.ContainsKey("Events/fixture/2026-01-01.jsonl"),"Client event history omitted");
  var damaged=new byte[8000000];Array.Copy(good,damaged,good.Length);File.WriteAllBytes(history,damaged);
  Assert(store.DamagedFiles().SequenceEqual(new[]{"history.json"}),"Zero-filled tail not detected");
  Fails(()=>store.Create(),"Corrupt snapshot accepted");Assert(Directory.GetFiles(backups,"*.zip").Length==1,"Invalid snapshot replaced backup");
