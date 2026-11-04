@@ -29,11 +29,18 @@ public partial class MainWindow {
     }
     var frozen=new ComputerRow(ConnectionStore.Capture(row.Target));
     if(!ConnectionStore.CanConnect(frozen.Target))continue;
+    try{
+     var live=await remote.LiveUpdates(frozen.Target);
+     if(live.Busy||live.Jobs.Count>0||live.Limitation.Length>0||live.InstallationEvidence.Length>0){
+      identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase="Ожидается завершение обслуживания или уточнение состояния",At=DateTimeOffset.UtcNow.ToString("o")};continue;
+     }
+    }catch(Exception ex){identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase="Проверка активности не завершена: "+ConnectionBrief31(ex.Message),At=DateTimeOffset.UtcNow.ToString("o")};continue;}
+    if(!CurrentEndpoint(frozen.Target)||HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target)))continue;
     var job=new RemoteJob{Manual56=manual,AutoInstall54=false,AutoReboot=false,MicrosoftSource=false,OutputChannel="WSUS",Name="Перерегистрация общего SusClientId",Steps=new(){new(){Name="Перерегистрация клиента WSUS",Kind="PowerShell",TouchesUpdates=true,Code=RemoteService.IdentityRepairScript58(identity)}}};
     identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,JobId=job.Id,Phase="Подготовлено; повторный сброс запрещён",At=DateTimeOffset.UtcNow.ToString("o")};
     Store.Write("identity-repairs58.json",identityRepairs58);
     Event31(row.Host,"identity-repair58",job.Id,"Перерегистрация клиента подготовлена","Info","Прежний ID: "+identity.SusClientId,scope:job.Id);
-    bool accepted=await CompletePreparedSubmission47(job,new(){row},new(){frozen},()=>PrepareUpdateAction(new(){frozen},job.Steps,false),false);
+    bool accepted=await CompletePreparedSubmission47(job,new(){row},new(){frozen},()=>Task.FromResult((Accepted:true,Force:false,Wait:false)),false);
     if(accepted){identityRepairs58[key].Phase="Задание создано; ожидается новый ID и регистрация на сервере";await SendQueue(manual?job.Id:"");}
     else identityRepairs58[key].Phase="Передача не подтверждена; требуется проверка задания";
     Store.Write("identity-repairs58.json",identityRepairs58);
