@@ -16,10 +16,10 @@ public partial class MainWindow {
   }
   if(AutoServiceEnabled&&compromisedIds58.Contains(identity.Key))_=RepairIdentityGroup58(host,false);
  }
- bool IdentityConflict58(string host)=>DuplicateRecords58(host)||identities58.TryGetValue(host,out var i)&&compromisedIds58.Contains(i.Key);
+ bool IdentityConflict58(string host)=>identityRepairs58.Values.Any(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&a.Phase!="Подтверждено")||DuplicateRecords58(host)||identities58.TryGetValue(host,out var i)&&compromisedIds58.Contains(i.Key);
  void RefreshIdentity58(string host){
   HeaderIdentity58.Visibility=IdentityConflict58(host)?Visibility.Visible:Visibility.Collapsed;
-  HeaderIdentity58.Content=identities58.TryGetValue(host,out var i)&&compromisedIds58.Contains(i.Key)?"Конфликт ID":"Несколько записей WSUS";
+  HeaderIdentity58.Content=identities58.TryGetValue(host,out var i)&&compromisedIds58.Contains(i.Key)?"Конфликт ID":identityRepairs58.Values.Any(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&a.Phase!="Подтверждено")?"Регистрация WSUS":"Несколько записей WSUS";
  }
  void Identity58_Click(object sender,RoutedEventArgs e){
   var row=Current();var lines=new List<string>();
@@ -28,11 +28,14 @@ public partial class MainWindow {
    foreach(var peer in identities58.Values.Where(x=>x.Key==identity.Key))lines.Add(peer.Name+" · "+Display36.Date(peer.At));
   }
   if(SnapshotMatches58)foreach(var record in serverSnapshot58.Find(ConnectionStore.WsusName(row.Host)))lines.Add("WSUS: "+record.Name+" · ID "+record.Id+" · отчёт "+Display36.Date(record.Summary?.LastReportedUtc??""));
+  foreach(var attempt in identityRepairs58.Values.Where(a=>a.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)))lines.Add("Перерегистрация: "+attempt.Phase+" · "+Display36.Date(attempt.At)+"\nПрежний ID: "+attempt.OldId+"\nНовый ID: "+(attempt.NewId.Length>0?attempt.NewId:"ещё не подтверждён на сервере"));
   lines.Add("Сначала подтвердите связь участников. Одинаковое имя или IP сами по себе не доказывают общий ID. Старые записи сервера не удаляются.");
   var window=new Window{Owner=this,Title="Идентичность WSUS · "+row.Name,Width=650,Height=450,WindowStartupLocation=WindowStartupLocation.CenterOwner};
   var panel=new DockPanel{Margin=new(16)};window.Content=panel;
   var repair=new Button{Content="Перерегистрировать всех участников конфликта…",IsEnabled=identity!=null&&compromisedIds58.Contains(identity.Key)};
   DockPanel.SetDock(repair,Dock.Bottom);panel.Children.Add(repair);
+  var refresh=new Button{Content="Обновить серверный обзор и проверить регистрацию"};DockPanel.SetDock(refresh,Dock.Bottom);panel.Children.Add(refresh);
+  refresh.Click+=async(s,a)=>{window.Close();await RunOverview(true);};
   repair.Click+=async(s,a)=>{window.Close();await RepairIdentityGroup58(row.Host,true);};
   panel.Children.Add(new TextBox{Text=string.Join("\n\n",lines),IsReadOnly=true,TextWrapping=TextWrapping.Wrap,VerticalScrollBarVisibility=ScrollBarVisibility.Auto});window.Show();
  }

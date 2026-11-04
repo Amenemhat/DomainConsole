@@ -60,7 +60,8 @@ public partial class MainWindow {
  DateTimeOffset OverviewNext45()=>overviewPending45.Count==0?DateTimeOffset.UtcNow.AddHours(overviewSettings.Hours):overviewPending45.Select(h=>overviewDue45.GetValueOrDefault(h,DateTimeOffset.UtcNow.AddMinutes(2))).Min();
  static async Task<T> AwaitOverviewResult47<T>(Task<T> pending,CancellationToken token){var result=await pending;token.ThrowIfCancellationRequested();return result;}
  async Task RunOverview(bool manual45=false){
-  if(TransportBudget41.Paused||overviewRunning||closing)return;
+  using var manual58=manual45?PollingControl43.Manual56("wsus-overview"):null;
+  if(PollingControl43.BackgroundPaused56||overviewRunning||closing)return;
   WsusSettings settings;try{settings=ReadWsus();}catch(Exception ex){Notify(ex.Message);return;}
   var server=OverviewServer;var ssl=WsusSsl.IsChecked;
   var rows=OrderForOverview(Computers,workHosts,recentHosts);
