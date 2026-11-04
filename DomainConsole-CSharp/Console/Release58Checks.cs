@@ -20,7 +20,7 @@ public partial class MainWindow {
     Theme.Apply(color,false);RefreshOutcomes();ShowCurrent();RefreshIdentity58(row.Host);
     if(HeaderIdentity58.Visibility!=Visibility.Visible||!IdentityConflict58(row.Host))throw new Exception("Identity conflict is not visible");
     foreach(var tab in new[]{CommandsTab,WsusTab,HistoryTab,SettingsTab}){
-     MainTabs.SelectedItem=tab;UpdateLayout();
+     MainTabs.SelectedItem=tab;UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);UpdateLayout();
      CaptureContent38("release58-"+color+"-"+tab.Name+"-compact",1280,720);
      CaptureContent38("release58-"+color+"-"+tab.Name+"-wide",1920,1080);
     }

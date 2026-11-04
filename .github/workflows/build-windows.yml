@@ -114,6 +114,12 @@ jobs:
         continue-on-error: true
         shell: powershell
         run: ./.github/scripts/test-executor54.ps1
+      - name: Save UI preview after rendering
+        uses: actions/upload-artifact@v4
+        with:
+          name: DomainConsole-UI-preview
+          path: ${{ runner.temp }}/DomainConsole-smoke/ui-*
+          if-no-files-found: error
       - name: Parse generated collector scripts before execution
         shell: pwsh
         run: |
