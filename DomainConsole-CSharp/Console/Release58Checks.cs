@@ -6,11 +6,16 @@ using System.Windows.Media.Imaging;
 namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease58(){
-  var row=Current();var prior=identities58.GetValueOrDefault(row.Host);var selected=MainTabs.SelectedItem;int theme=Theme.Current;
+  var row=Current();var prior=identities58.GetValueOrDefault(row.Host);var selected=MainTabs.SelectedItem;int theme=Theme.Current;var priorSnapshot=serverSnapshot58;
   var fixture=new ClientIdentity58{Host=row.Host,Name="identity-fixture.invalid",Machine="11111111-1111-1111-1111-111111111111",Server="http://wsus.invalid:8530",SusClientId="22222222-2222-2222-2222-222222222222",At=DateTimeOffset.UtcNow.ToString("o")};
   bool hadConflict=compromisedIds58.Contains(fixture.Key);
   try{
-   identities58[row.Host]=fixture;compromisedIds58.Add(fixture.Key);
+   identities58[row.Host]=fixture;
+   serverSnapshot58=new(){Server=OverviewServer+(WsusSsl.IsChecked==true?"|https":"|http"),Complete=true,Records=new(){new(){Id=fixture.SusClientId,Name="other-fixture.invalid"}}};
+   if(!IdentityMismatch58(row.Host)||!IdentityConflict58(row.Host))throw new Exception("Server ID/name mismatch hidden");
+   ObserveIdentity58(row.Host,new(){At=DateTimeOffset.UtcNow.ToString("o"),Error="Fixture: registry read unavailable"});
+   if(identities58[row.Host].SusClientId!=fixture.SusClientId||identities58[row.Host].Fresh(DateTimeOffset.UtcNow))throw new Exception("Failed identity probe lost saved ID or became fresh");
+   compromisedIds58.Add(fixture.Key);
    foreach(int color in new[]{0,1,2}){
     Theme.Apply(color,false);RefreshOutcomes();ShowCurrent();RefreshIdentity58(row.Host);
     if(HeaderIdentity58.Visibility!=Visibility.Visible||!IdentityConflict58(row.Host))throw new Exception("Identity conflict is not visible");
@@ -34,7 +39,7 @@ public partial class MainWindow {
     }
    }
   }finally{
-   if(prior==null)identities58.Remove(row.Host);else identities58[row.Host]=prior;
+   serverSnapshot58=priorSnapshot;if(prior==null)identities58.Remove(row.Host);else identities58[row.Host]=prior;Store.Write("client-identities58.json",identities58);
    if(!hadConflict)compromisedIds58.Remove(fixture.Key);Theme.Apply(theme,false);MainTabs.SelectedItem=selected;RefreshOutcomes();ShowCurrent();
   }
  }

@@ -9,6 +9,7 @@ public partial class MainWindow {
  void ObserveIdentity58(string host,ClientIdentity58? identity){
   if(identity==null||identity.At.Length==0)return;identity.Host=host;
   if(identities58.TryGetValue(host,out var previous)&&string.CompareOrdinal(previous.At,identity.At)>0)return;
+  if(previous!=null&&identity.Error.Length>0){previous.Error=identity.Error;previous.ErrorAt=identity.At;Store.Write("client-identities58.json",identities58);return;}
   identities58[host]=identity;Store.Write("client-identities58.json",identities58);
   if(IdentityPolicy58.Confirmed(identities58.Values,identity,DateTimeOffset.UtcNow)){
    compromisedIds58.Add(identity.Key);Store.Write("compromised-ids58.json",compromisedIds58.ToList());
@@ -16,19 +17,21 @@ public partial class MainWindow {
   }
   if(AutoServiceEnabled&&compromisedIds58.Contains(identity.Key))_=RepairIdentityGroup58(host,false);
  }
- bool IdentityConflict58(string host)=>identityRepairs58.Values.Any(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&a.Phase!="Подтверждено")||DuplicateRecords58(host)||identities58.TryGetValue(host,out var i)&&compromisedIds58.Contains(i.Key);
+ bool IdentityMismatch58(string host)=>SnapshotMatches58&&identities58.TryGetValue(host,out var identity)&&identity.SusClientId.Length>0&&serverSnapshot58.Records.Any(r=>r.Id.Equals(identity.SusClientId,StringComparison.OrdinalIgnoreCase)&&!r.Name.TrimEnd('.').Equals(identity.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase));
+ bool IdentityConflict58(string host)=>IdentityMismatch58(host)||identityRepairs58.Values.Any(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&a.Phase!="Подтверждено")||DuplicateRecords58(host)||identities58.TryGetValue(host,out var i)&&compromisedIds58.Contains(i.Key);
  void RefreshIdentity58(string host){
   HeaderIdentity58.Visibility=IdentityConflict58(host)?Visibility.Visible:Visibility.Collapsed;
-  HeaderIdentity58.Content=identities58.TryGetValue(host,out var i)&&compromisedIds58.Contains(i.Key)?"Конфликт ID":identityRepairs58.Values.Any(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&a.Phase!="Подтверждено")?"Регистрация WSUS":"Несколько записей WSUS";
+  HeaderIdentity58.Content=identities58.TryGetValue(host,out var i)&&compromisedIds58.Contains(i.Key)?"Конфликт ID":identityRepairs58.Values.Any(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&a.Phase!="Подтверждено")?"Регистрация WSUS":IdentityMismatch58(host)?"Проверить идентичность":"Несколько записей WSUS";
  }
  void Identity58_Click(object sender,RoutedEventArgs e)=>IdentityWindow58().Show();
  Window IdentityWindow58(){
   var row=Current();var lines=new List<string>();
   if(identities58.TryGetValue(row.Host,out var identity)){
    lines.Add("Клиент: "+identity.Name+"\nSusClientId: "+identity.SusClientId+"\nИсточник: "+identity.Server+"\nПроверено: "+Display36.Date(identity.At));
+   if(identity.Error.Length>0)lines.Add("Последняя проверка не выполнена: "+Display36.Date(identity.ErrorAt)+" · "+identity.Error+". Показаны прежние сведения.");
    foreach(var peer in identities58.Values.Where(x=>x.Key==identity.Key))lines.Add(peer.Name+" · "+Display36.Date(peer.At));
   }
-  if(SnapshotMatches58)foreach(var record in serverSnapshot58.Find(ConnectionStore.WsusName(row.Host)))lines.Add("WSUS: "+record.Name+" · ID "+record.Id+" · отчёт "+Display36.Date(record.Summary?.LastReportedUtc??""));
+  if(SnapshotMatches58)foreach(var record in serverSnapshot58.Find(ConnectionStore.WsusName(row.Host)).Concat(serverSnapshot58.Records.Where(r=>identity!=null&&r.Id.Equals(identity.SusClientId,StringComparison.OrdinalIgnoreCase))).DistinctBy(r=>r.Id))lines.Add("WSUS: "+record.Name+" · ID "+record.Id+" · отчёт "+Display36.Date(record.Summary?.LastReportedUtc??""));
   foreach(var attempt in identityRepairs58.Values.Where(a=>a.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)))lines.Add("Перерегистрация: "+attempt.Phase+" · "+Display36.Date(attempt.At)+"\nПрежний ID: "+attempt.OldId+"\nНовый ID: "+(attempt.NewId.Length>0?attempt.NewId:"ещё не подтверждён на сервере"));
   lines.Add("Сначала подтвердите связь участников. Одинаковое имя или IP сами по себе не доказывают общий ID. Старые записи сервера не удаляются.");
   var window=new Window{Owner=this,Title="Идентичность WSUS · "+row.Name,Width=650,Height=450,WindowStartupLocation=WindowStartupLocation.CenterOwner};
