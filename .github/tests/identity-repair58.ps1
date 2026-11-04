@@ -16,6 +16,7 @@ $env:ProgramData=$PSScriptRoot
 $global:trace58=New-Object 'System.Collections.Generic.List[string]'
 $global:id58='22222222-2222-2222-2222-222222222222'
 if($env:CASE58 -eq 'already-changed'){$global:id58='33333333-3333-3333-3333-333333333333'}
+if($env:CASE58 -eq 'invalid-id'){$global:id58='00000000-0000-0000-0000-000000000000'}
 $global:service58='Running'
 function Invoke-Fixture58 {param($Name) $global:trace58.Add($Name)}
 function Get-CimInstance {param($ClassName,$ErrorAction)
@@ -40,7 +41,7 @@ $fixtureSession58|Add-Member ScriptMethod CreateUpdateSearcher {$fixtureSearch58
 '@
 $root=Join-Path $env:RUNNER_TEMP ('identity58-'+[guid]::NewGuid().ToString('N'))
 New-Item $root -ItemType Directory|Out-Null
-foreach($case in @('wrong-name','wrong-machine','wrong-server','wrong-policy','busy','already-changed','backup-fails','stop-fails','stop-and-start-fail','remove-fails','after-delete','search-fails','success')){
+foreach($case in @('wrong-name','wrong-machine','wrong-server','wrong-policy','invalid-id','busy','already-changed','backup-fails','stop-fails','stop-and-start-fail','remove-fails','after-delete','search-fails','success')){
  $folder=Join-Path $root $case;New-Item $folder -ItemType Directory|Out-Null
  $file=Join-Path $folder 'case.ps1';$state=Join-Path $folder 'state.json'
  $suffix=@'
@@ -62,7 +63,7 @@ foreach($case in @('wrong-name','wrong-machine','wrong-server','wrong-policy','b
  $data=Get-Content $state -Raw|ConvertFrom-Json
  $expectedSuccess=$case -in @('already-changed','success')
  if(($process.ExitCode -eq 0) -ne $expectedSuccess){throw "Unexpected result for ${case}: $output"}
- if($case -in @('wrong-name','wrong-machine','wrong-server','wrong-policy','busy','already-changed') -and $data.Trace.Count -ne 0){throw "Guard changed state: $case"}
+ if($case -in @('wrong-name','wrong-machine','wrong-server','wrong-policy','invalid-id','busy','already-changed') -and $data.Trace.Count -ne 0){throw "Guard changed state: $case"}
  if($case -eq 'backup-fails' -and ($data.Trace -contains 'Stop')){throw 'Backup failure reached service stop'}
  if($case -in @('stop-fails','remove-fails','after-delete') -and ($data.Service -ne 'Running' -or $data.Trace -notcontains 'Start')){throw "Service not restored: $case"}
  if($case -eq 'stop-and-start-fail' -and ($output -notmatch 'STOP_FIXTURE_FAILURE' -or $output -notmatch 'START_FIXTURE_FAILURE')){throw 'Primary or restoration failure was lost'}

@@ -19,7 +19,7 @@ public partial class MainWindow {
  readonly HashSet<string> identityRepairBusy58=new(StringComparer.OrdinalIgnoreCase);
  async Task RepairIdentityGroup58(string host,bool manual){
   if(closing||App.RecoveryPending57||!identities58.TryGetValue(host,out var observed)||!compromisedIds58.Contains(observed.Key))return;
-  if(!identityRepairBusy58.Add(observed.Key))return;
+  if(!Guid.TryParse(observed.SusClientId,out var oldGuid)||oldGuid==Guid.Empty||!identityRepairBusy58.Add(observed.Key))return;
   try{
    var participants=identities58.Values.Where(x=>x.Key==observed.Key).DistinctBy(x=>x.Machine,StringComparer.OrdinalIgnoreCase).ToList();
    if(manual&&MessageBox.Show(this,"Перерегистрировать всех обнаруженных участников общего ID?\n"+string.Join("\n",participants.Select(x=>x.Name))+"\n\nНедоступные и занятые клиенты остаются в ожидании. Записи сервера не удаляются.","Перерегистрация клиентов",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
@@ -83,6 +83,8 @@ try {
  if((Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -ErrorAction Stop).UseWUServer -ne 1){throw 'UseWUServer=1 не подтверждён; сброс не выполнен'}
  $path58='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
  $id58=[string](Get-ItemProperty $path58 -ErrorAction Stop).SusClientId
+ $parsedId58=[guid]::Empty
+ if(![guid]::TryParse($id58,[ref]$parsedId58) -or $parsedId58 -eq [guid]::Empty){throw 'SusClientId пуст или невалиден; автоматический сброс не выполнен'}
  if($id58 -ne $dcExpectedId58){Write-Output ('ID уже изменён: '+$id58+'. Повторного сброса нет.');exit 0}
  $installer58=New-Object -ComObject Microsoft.Update.Installer
  if($installer58.IsBusy){throw 'Установщик Windows Update занят; перерегистрация отложена'}

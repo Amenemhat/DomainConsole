@@ -52,6 +52,8 @@ try{
  b58.Machine=a58.Machine;Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Alias/rename treated as two machines");
  b58.Machine=Guid.NewGuid().ToString();b58.At=now58.AddDays(-1).ToString("o");Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Stale identity triggered repair");
  b58.At=now58.ToString("o");b58.Server="http://other.invalid:8530";Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Different WSUS servers mixed");
+ b58.Server=a58.Server;a58.SusClientId=b58.SusClientId=Guid.Empty.ToString();
+ Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Zero GUID treated as a confirmed collision");a58.SusClientId=shared58;
  var old58=a58.SusClientId;a58.SusClientId=Guid.NewGuid().ToString();var begin58=now58.AddMinutes(-1).ToString("o");
  Assert(IdentityPolicy58.RegistrationConfirmed(a58,old58,begin58,a58.SusClientId,a58.Name,now58.ToString("o"),now58),"Fresh new registration rejected");
  Assert(!IdentityPolicy58.RegistrationConfirmed(a58,old58,begin58,a58.SusClientId,"renamed.invalid",now58.ToString("o"),now58),"Wrong server name confirmed");
