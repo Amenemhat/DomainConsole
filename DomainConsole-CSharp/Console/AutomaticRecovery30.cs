@@ -28,6 +28,7 @@ public partial class MainWindow {
   var captured=ConnectionStore.Capture(row.Target);captured.State=null;captured.Output="";captured.Status="Queued";reportRecoveries[row.Host]=new(){Target=captured,TriggerId=trigger!.Id,ReportUtc=report.LastReportedUtc,Server=OverviewServer,PolicySource=client.WUServer,ReportingSource=client.WUStatusServer,Next=reportWaiting.TryGetValue(row.Host,out var waiting)?waiting.Until:DateTimeOffset.UtcNow,Detail="Ожидание свежего отчёта WSUS перед повторной диагностикой и возможной очисткой."};SaveReportRecoveries();
  }
  async Task AdvanceReportRecovery(Func<TargetRecord,Task<WsusReport>>? reportProbe=null,Func<TargetRecord,Task<ClientReportProbe>>? queueProbe=null,Func<TargetRecord,Task<LiveUpdateActivity>>? activityProbe=null,bool dispatch=true){
+ if(App.RecoveryPending57)return;
   if(TransportBudget41.Paused||advancingReportRecovery||closing)return;advancingReportRecovery=true;var generation47=PollingControl43.Token;var ssl47=WsusSsl.IsChecked;var serverTarget47=ConnectionStore.Capture(new TargetRecord{Host=WsusHost.Text.Trim()});
   reportProbe??=async _=>{var settings=ReadWsus();return JsonSerializer.Deserialize<WsusReport>(await remote.Wsus(settings.Host,settings.Port,settings.Ssl,ConnectionStore.WsusName(_.Host)),Store.Options)??throw new Exception("Пустой отчёт WSUS");};queueProbe??=remote.ReadReportQueue;activityProbe??=remote.LiveUpdates;
   try{foreach(var entry in reportRecoveries.Where(e=>!e.Value.Done&&e.Value.Next<=DateTimeOffset.UtcNow).Take(1).ToList()){

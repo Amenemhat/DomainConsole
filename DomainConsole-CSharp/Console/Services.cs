@@ -8,11 +8,12 @@ using System.Xml.Linq;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public static class Store {
+ public static readonly object DataLock57=new();
  public static readonly string Root=Path.Combine(AppContext.BaseDirectory,"Data");
  public static readonly JsonSerializerOptions Options=new(){WriteIndented=true,PropertyNameCaseInsensitive=true};
  static Store(){Directory.CreateDirectory(Root);}
- public static T Read<T>(string file,T fallback)=>File.Exists(Path.Combine(Root,file))?JsonSerializer.Deserialize<T>(File.ReadAllText(Path.Combine(Root,file)),Options)??fallback:fallback;
- public static void Write<T>(string file,T value){var path=Path.Combine(Root,file);File.WriteAllText(path+".tmp",JsonSerializer.Serialize(value,Options),Encoding.UTF8);File.Move(path+".tmp",path,true);}
+ public static T Read<T>(string file,T fallback){lock(DataLock57)return File.Exists(Path.Combine(Root,file))?JsonSerializer.Deserialize<T>(File.ReadAllText(Path.Combine(Root,file)),Options)??fallback:fallback;}
+ public static void Write<T>(string file,T value){var bytes=JsonSerializer.SerializeToUtf8Bytes(value,Options);lock(DataLock57)DataBackup57.DurableReplace(Path.Combine(Root,file),bytes);}
  public static T Clone<T>(T item)=>JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(item,Options),Options)!;
 }
 public static partial class PowerShellBridge {
