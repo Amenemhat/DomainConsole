@@ -351,6 +351,9 @@ jobs:
           $env:DOMAINCONSOLE_DIAGNOSTIC_FIXTURE=$fixture
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($harness)))
           if ($LASTEXITCODE -ne 0) { throw 'Diagnostic script check failed' }
+      - name: Verify identity repair failure boundaries without changing Windows
+        shell: powershell
+        run: ./.github/tests/identity-repair58.ps1 -ScriptFolder (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke')
       - name: Verify reporting scripts in Windows PowerShell
         shell: pwsh
         run: |

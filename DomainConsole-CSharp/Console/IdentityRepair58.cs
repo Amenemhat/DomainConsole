@@ -85,12 +85,14 @@ try {
  $backup58=Join-Path $backupFolder58 ('WindowsUpdate-'+$env:COMPUTERNAME+'-'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N')+'.reg')
  & reg.exe export 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate' $backup58 /y | Out-Null
  if($LASTEXITCODE -ne 0){throw 'Не удалось сохранить реестр; сброс отменён'}
+ $resetError58='';$restoreError58=''
  try{
   Stop-Service wuauserv -ErrorAction Stop
   (Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Stopped,[TimeSpan]::FromSeconds(30))
   Remove-ItemProperty $path58 -Name SusClientId -ErrorAction Stop
   if((Get-ItemProperty $path58).PSObject.Properties.Name -contains 'SusClientIdValidation'){Remove-ItemProperty $path58 -Name SusClientIdValidation -ErrorAction Stop}
- }finally{Start-Service wuauserv -ErrorAction Stop}
+ }catch{$resetError58=$_.Exception.Message}finally{try{Start-Service wuauserv -ErrorAction Stop}catch{$restoreError58=$_.Exception.Message}}
+ if($resetError58 -or $restoreError58){throw ('Перерегистрация: '+$resetError58+'; восстановление wuauserv: '+$restoreError58)}
  & "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow
  $session58=New-Object -ComObject Microsoft.Update.Session
  $session58.ClientApplicationID='DomainConsole.Identity58'
