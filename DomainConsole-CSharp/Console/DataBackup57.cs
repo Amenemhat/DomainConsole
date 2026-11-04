@@ -87,7 +87,7 @@ public sealed class DataBackup57 {
   if(!Directory.Exists(archives))return null;
   foreach(var path in Directory.GetFiles(archives,"*.zip").OrderByDescending(File.GetLastWriteTimeUtc)) {
    try {var snapshot=Read(path);if(damaged.All(snapshot.Files.ContainsKey))return snapshot;}
-   catch(Exception ex) when(ex is IOException or JsonException or ArgumentException){ /* Never use an incomplete backup. */ }
+   catch(Exception ex) when(ex is IOException or InvalidDataException or JsonException or ArgumentException){ /* Never use an incomplete backup. */ }
   }
   return null;
  }

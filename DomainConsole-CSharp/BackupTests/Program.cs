@@ -34,4 +34,4 @@ try{
  Console.WriteLine("PASS: archive hashes, corruption, original preservation, restart, invalid archives, missing files, interrupted writes, retention, replacements");
 }finally{Directory.Delete(root,true);}
 static void Assert(bool ok,string why){if(!ok)throw new Exception(why);}
-static void Fails(Action action,string why){try{action();}catch(Exception ex)when(ex is System.Text.Json.JsonException or IOException or ArgumentException){return;}throw new Exception(why);}
+static void Fails(Action action,string why){try{action();}catch(Exception ex)when(ex is System.Text.Json.JsonException or IOException or InvalidDataException or ArgumentException){return;}throw new Exception(why);}
