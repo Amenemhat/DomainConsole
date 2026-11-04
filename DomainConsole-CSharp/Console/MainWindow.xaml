@@ -140,7 +140,7 @@
                     </Border><Border BorderBrush="{DynamicResource Outline}" BorderThickness="1,0,0,0" Padding="8,0,0,0" Margin="0,0,6,0"><Border.Style><Style TargetType="Border"><Style.Triggers><DataTrigger Binding="{Binding Visibility,ElementName=HeaderControl37}" Value="Collapsed"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger><DataTrigger Binding="{Binding Text,ElementName=HeaderControl37,Converter={StaticResource HasText40}}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock x:Name="HeaderControl37" Margin="0,0,8,0" Foreground="{DynamicResource InfoText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </Border><Border BorderBrush="{DynamicResource Outline}" BorderThickness="1,0,0,0" Padding="8,0,0,0" Margin="0,0,6,0"><Border.Style><Style TargetType="Border"><Style.Triggers><DataTrigger Binding="{Binding Visibility,ElementName=HeaderNext31}" Value="Collapsed"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger><DataTrigger Binding="{Binding Text,ElementName=HeaderNext31,Converter={StaticResource HasText40}}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock x:Name="HeaderNext31" Foreground="{DynamicResource InfoText}" FontSize="12" VerticalAlignment="Center"/>
                     </Border><TextBlock x:Name="CollectorStage53" MaxWidth="200" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" Visibility="Collapsed" Margin="4,0" VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}"/><ProgressBar x:Name="CollectorBusy53" Width="28" Height="5" Margin="4,0" Maximum="100" Value="0" Visibility="Collapsed" Foreground="{DynamicResource InfoText}"/><TextBlock x:Name="HeaderContact35" Margin="0,0,8,0" Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" Visibility="Collapsed"/>
-                    <TextBlock x:Name="HeaderWsusStatus" Visibility="Collapsed"/>
+                    <Button x:Name="HeaderIdentity58" Content="Конфликт ID" Visibility="Collapsed" Click="Identity58_Click" Foreground="{DynamicResource WarningText}" ToolTip="Дубли и идентичность клиента WSUS"/><TextBlock x:Name="HeaderWsusStatus" Visibility="Collapsed"/>
                   <ItemsControl x:Name="HeaderRecent31" Margin="0" Visibility="Collapsed">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
@@ -372,9 +372,9 @@
               <CheckBox x:Name="LinkAutomatic31"><TextBlock Text="Постепенно перепроверять связь клиентов" TextWrapping="Wrap"/></CheckBox>
               <TextBlock Text="Интервал на клиент, минут (1–1440)"/>
               <TextBox x:Name="LinkInterval31" Width="100" HorizontalAlignment="Left"/>
-              <TextBlock Text="Хранить события клиента, дней (1–365)"/>
+              <TextBlock Text="Хранить обычные события клиента, дней (1–365)"/>
               <TextBox x:Name="EventDays31" Width="100" HorizontalAlignment="Left"/>
-              <Button Content="Сохранить связь и историю" Click="SaveStatus31_Click" HorizontalAlignment="Left"/>
+              <Button Content="Лимиты истории…" Click="HistoryLimits58_Click" HorizontalAlignment="Left"/><Button Content="Сохранить связь и историю" Click="SaveStatus31_Click" HorizontalAlignment="Left"/>
               <TextBlock Text="Навигация и выполнение" FontSize="18" FontWeight="SemiBold"/>
               <TextBlock Text="Компьютеров в списке последних (5–200); активные задания остаются видимыми" TextWrapping="Wrap"/>
               <TextBox x:Name="RecentLimitBox" Text="20" Width="100" HorizontalAlignment="Left"/>

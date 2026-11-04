@@ -33,6 +33,21 @@ try{
  // Competing replacements use unique temporary files and always leave complete JSON.
  Parallel.For(0,40,i=>{lock(store)DataBackup57.DurableReplace(history,Encoding.UTF8.GetBytes("["+i+"]"));});
  Assert(store.DamagedFiles().Length==0,"Concurrent writes corrupted JSON");
+ var events58=Path.Combine(root,"events58");Directory.CreateDirectory(events58);
+ var eventFile58=Path.Combine(events58,"2026-01-01.jsonl");var now58=DateTimeOffset.UtcNow;
+ string Event58(string op,int age,string text,string kind="Info")=>System.Text.Json.JsonSerializer.Serialize(new{Operation36=op,At=now58.AddDays(-age).ToString("o"),Text=text,Kind=kind,Details=""});
+ File.WriteAllLines(eventFile58,new[]{Event58("poll42",40,"expired"),Event58("update-installed54",100,"installed"),Event58("job-service50|active",200,"active"),Event58("identity58",200,"conflict","Warning"),Event58("poll42",0,"one"),Event58("poll42",1,"two"),Event58("poll42",2,"three"),"malformed"});
+ HistoryRetention58.Compact(events58,new(){OrdinaryCount=2},now58,new HashSet<string>{"active"},true);
+ var retained58=File.ReadAllText(eventFile58);
+ Assert(!retained58.Contains("expired")&&!retained58.Contains("three"),"Ordinary retention failed");
+ Assert(retained58.Contains("installed")&&retained58.Contains("active")&&retained58.Contains("conflict")&&retained58.Contains("malformed"),"Retention lost protected evidence");
+ var once58=File.ReadAllBytes(eventFile58);HistoryRetention58.Compact(events58,new(){OrdinaryCount=2},now58,new HashSet<string>{"active"},true);Assert(once58.SequenceEqual(File.ReadAllBytes(eventFile58)),"Retention is not idempotent");
+ var shared58=Guid.NewGuid().ToString();var a58=new ClientIdentity58{Host="a",Name="a.example.invalid",Machine=Guid.NewGuid().ToString(),Server="http://wsus.invalid:8530",SusClientId=shared58,At=now58.ToString("o")};
+ var b58=new ClientIdentity58{Host="b",Name="b.example.invalid",Machine=Guid.NewGuid().ToString(),Server=a58.Server,SusClientId=shared58,At=now58.ToString("o")};
+ Assert(IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Fresh shared ID not detected");
+ b58.Machine=a58.Machine;Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Alias/rename treated as two machines");
+ b58.Machine=Guid.NewGuid().ToString();b58.At=now58.AddDays(-1).ToString("o");Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Stale identity triggered repair");
+ b58.At=now58.ToString("o");b58.Server="http://other.invalid:8530";Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Different WSUS servers mixed");
  Console.WriteLine("PASS: archive hashes, corruption, original preservation, restart, invalid archives, missing files, interrupted writes, retention, replacements");
 }finally{Directory.Delete(root,true);}
 static void Assert(bool ok,string why){if(!ok)throw new Exception(why);}
