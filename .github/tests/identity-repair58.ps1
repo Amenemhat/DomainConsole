@@ -24,7 +24,7 @@ function Get-CimInstance {param($ClassName,$ErrorAction)
  throw 'Unexpected CIM request'
 }
 function Get-ItemProperty {param($Path,$ErrorAction)
- if($Path -like '*Policies*'){return [pscustomobject]@{WUServer=$(if($env:CASE58 -eq 'wrong-server'){'http://other.invalid:8530'}else{'http://wsus.invalid:8530'})}}
+ if($Path -like '*Policies*'){return [pscustomobject]@{UseWUServer=$(if($env:CASE58 -eq 'wrong-policy'){0}else{1});WUServer=$(if($env:CASE58 -eq 'wrong-server'){'http://other.invalid:8530'}else{'http://wsus.invalid:8530'})}}
  return [pscustomobject]@{SusClientId=$global:id58;SusClientIdValidation='fixture'}
 }
 function Export-Fixture58 {param($Path) Invoke-Fixture58 'Backup';$global:LASTEXITCODE=0;if($env:CASE58 -eq 'backup-fails'){$global:LASTEXITCODE=5}else{[IO.File]::WriteAllText($Path,'fixture registry backup')}}
@@ -40,7 +40,7 @@ $fixtureSession58|Add-Member ScriptMethod CreateUpdateSearcher {$fixtureSearch58
 '@
 $root=Join-Path $env:RUNNER_TEMP ('identity58-'+[guid]::NewGuid().ToString('N'))
 New-Item $root -ItemType Directory|Out-Null
-foreach($case in @('wrong-name','wrong-machine','wrong-server','busy','already-changed','backup-fails','stop-fails','stop-and-start-fail','remove-fails','after-delete','search-fails','success')){
+foreach($case in @('wrong-name','wrong-machine','wrong-server','wrong-policy','busy','already-changed','backup-fails','stop-fails','stop-and-start-fail','remove-fails','after-delete','search-fails','success')){
  $folder=Join-Path $root $case;New-Item $folder -ItemType Directory|Out-Null
  $file=Join-Path $folder 'case.ps1';$state=Join-Path $folder 'state.json'
  $suffix=@'
@@ -62,7 +62,7 @@ foreach($case in @('wrong-name','wrong-machine','wrong-server','busy','already-c
  $data=Get-Content $state -Raw|ConvertFrom-Json
  $expectedSuccess=$case -in @('already-changed','success')
  if(($process.ExitCode -eq 0) -ne $expectedSuccess){throw "Unexpected result for ${case}: $output"}
- if($case -in @('wrong-name','wrong-machine','wrong-server','busy','already-changed') -and $data.Trace.Count -ne 0){throw "Guard changed state: $case"}
+ if($case -in @('wrong-name','wrong-machine','wrong-server','wrong-policy','busy','already-changed') -and $data.Trace.Count -ne 0){throw "Guard changed state: $case"}
  if($case -eq 'backup-fails' -and ($data.Trace -contains 'Stop')){throw 'Backup failure reached service stop'}
  if($case -in @('stop-fails','remove-fails','after-delete') -and ($data.Service -ne 'Running' -or $data.Trace -notcontains 'Start')){throw "Service not restored: $case"}
  if($case -eq 'stop-and-start-fail' -and ($output -notmatch 'STOP_FIXTURE_FAILURE' -or $output -notmatch 'START_FIXTURE_FAILURE')){throw 'Primary or restoration failure was lost'}

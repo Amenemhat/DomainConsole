@@ -5,6 +5,7 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease25(){
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"identity-server58.ps1"),RemoteService.IdentityServerScript58,new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"wsus-snapshot58.ps1"),RemoteService.SnapshotScript58,new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"wsus-details58.ps1"),RemoteService.DetailsScript58,new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"identity-repair58.ps1"),RemoteService.IdentityRepairScript58(new(){Name="fixture.invalid",Machine="11111111-1111-1111-1111-111111111111",SusClientId="22222222-2222-2222-2222-222222222222",Server="http://wsus.invalid:8530"}),new UTF8Encoding(true));
