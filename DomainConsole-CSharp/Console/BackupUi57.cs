@@ -19,6 +19,7 @@ public partial class App {
    var original=await Task.Run(()=>Backups57.Restore(candidate,damaged));
    MessageBox.Show("Восстановлены: "+string.Join(", ",damaged)+".\nКопия от "+candidate.Info.CreatedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")+".\nОригиналы и сведения о восстановлении: "+original+"\n\nАвтоматические действия приостановлены. Ручные команды доступны. Возобновление — в настройках резервного копирования.","Данные восстановлены",MessageBoxButton.OK,MessageBoxImage.Information);
   }
+  if(damaged.Length==0&&RecoveryPending57)MessageBox.Show("После восстановления данных автоматические действия остаются приостановленными. Ручные команды и чтение доступны. Проверьте клиентов и очередь; возобновление — в настройках резервного копирования.","Восстановленные данные",MessageBoxButton.OK,MessageBoxImage.Information);
   if(Directory.GetFiles(Store.Root,"*.json").Length>0)try{await Task.Run(()=>Backups57.Create(true));}catch(Exception ex){MessageBox.Show("Данные прочитаны, но резервная копия не создана: "+ex.Message,"Резервное копирование",MessageBoxButton.OK,MessageBoxImage.Warning);}
   return true;
  }
@@ -28,6 +29,11 @@ public partial class App {
  }
 }
 public partial class MainWindow {
+ async Task BackupOnClose57(){
+  if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_UI_SMOKE")=="1"||Environment.GetEnvironmentVariable("DOMAINCONSOLE_LOCAL_SMOKE")=="1")return;
+  try{await Task.Run(()=>App.Backups57.Create(true));}
+  catch(Exception ex){MessageBox.Show(this,"Последняя резервная копия не создана: "+ex.Message+"\nПредыдущие архивы сохранены.","Резервное копирование",MessageBoxButton.OK,MessageBoxImage.Warning);}
+ }
  async void CreateBackup57_Click(object sender,RoutedEventArgs e){
   var button=sender as System.Windows.Controls.Button;if(button!=null)button.IsEnabled=false;
   try{var path=await Task.Run(()=>App.Backups57.Create());MessageBox.Show(this,"Архив создан и проверен:\n"+path,"Резервная копия",MessageBoxButton.OK,MessageBoxImage.Information);}
