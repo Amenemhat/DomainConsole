@@ -29,7 +29,7 @@ public static class HistoryRetention58 {
    }catch(Exception ex) when(ex is JsonException or InvalidOperationException or FormatException){entries.Add(new(file,raw,null,null,true,true));}
   }
   int ordinary=0,important=0;long outputBytes=0;var kept=new Dictionary<string,List<string>>(StringComparer.OrdinalIgnoreCase);int removed=0;
-  foreach(var entry in entries.OrderByDescending(x=>x.At??DateTimeOffset.MaxValue)){
+  foreach(var entry in entries.OrderByDescending(x=>x.At??DateTimeOffset.MaxValue).ThenBy(x=>x.Raw,StringComparer.Ordinal)){
    bool keep=entry.Protected;
    if(!keep){int rank=entry.Important?++important:++ordinary;keep=rank<=(entry.Important?limits.ImportantCount:limits.OrdinaryCount)&&now-entry.At!.Value<=TimeSpan.FromDays(entry.Important?limits.ImportantDays:limits.OrdinaryDays);}
    if(!keep){removed++;continue;}

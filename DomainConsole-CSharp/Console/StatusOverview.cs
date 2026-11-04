@@ -88,7 +88,7 @@ public partial class MainWindow {
     cancellation.Token.ThrowIfCancellationRequested();if(!Current58())throw new OperationCanceledException();
     OverviewProgress.Text="WSUS: сводки получены · уточнение одобрений "+done+" / "+details.Count;
     try{
-     var replies=await remote.WsusOverview(settings,chunk.Select(r=>r.Host).ToList(),cancellation.Token);
+     var replies=await remote.ReadWsusDetails58(settings,chunk.ToList(),snapshot,cancellation.Token);
      if(!Current58())throw new OperationCanceledException();
      foreach(var row in chunk){if(!ApplyOverviewReply53(row,replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)),server))errors++;}
     }catch(OperationCanceledException){throw;}catch(Exception ex){foreach(var row in chunk)ApplyOverviewReply53(row,new(){Error=ex.Message},server);errors+=chunk.Length;}
