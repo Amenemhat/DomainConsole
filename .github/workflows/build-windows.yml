@@ -365,7 +365,7 @@ jobs:
         run: |
           $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           $check = @'
-          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1','header-reboot.ps1','reboot-state.ps1','cache-cleanup-30.ps1','reboot-system-30.ps1','automatic-queue-recovery.ps1','report-queue-verify52.ps1','applicability54.ps1','wsus-snapshot58.ps1','wsus-details58.ps1','identity-repair58.ps1','identity-server58.ps1')){
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1','header-reboot.ps1','reboot-state.ps1','cache-cleanup-30.ps1','reboot-system-30.ps1','automatic-queue-recovery.ps1','report-queue-verify52.ps1','applicability54.ps1','wsus-snapshot58.ps1','wsus-details58.ps1','identity-repair58.ps1','identity-server58.ps1','manual-reboot59.ps1')){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
             if($errors.Count){throw ($errors|Out-String)}
@@ -526,6 +526,18 @@ jobs:
             Write-Output 'Generated endpoint transport connected by IP and validated real client identity.'
             & ./.github/scripts/test_probe42.ps1 -Session $session -Credential $credential -Fixture (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke')
             & ./.github/scripts/test_collector43.ps1 -Session $session -Fixture (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke')
+            $manual=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/manual-reboot59.ps1'))
+            try {
+              $first=Invoke-Command -Session $session -ScriptBlock ([ScriptBlock]::Create($manual))|ConvertFrom-Json
+              if(!$first.CollectedUtc -or !$first.BootUtc -or $first.Error -match 'WUA:'){throw ('Manual SYSTEM reboot check failed: '+$first.Error)}
+              $second=Invoke-Command -Session $session -ScriptBlock ([ScriptBlock]::Create($manual))|ConvertFrom-Json
+              if([DateTime]$second.CollectedUtc -le [DateTime]$first.CollectedUtc){throw 'Manual check reused stale result'}
+              $tasks=@(Get-ScheduledTask -TaskName 'DomainConsoleCSharp-ManualReboot59')
+              if($tasks.Count -ne 1 -or $tasks[0].State -in @('Running','Queued')){throw 'Manual task duplicated or remained running'}
+              Write-Output 'PASS fresh manual reboot check via real WinRM and local SYSTEM, repeated without duplicate tasks'
+            }finally{
+              Unregister-ScheduledTask -TaskName 'DomainConsoleCSharp-ManualReboot59' -Confirm:$false -ErrorAction SilentlyContinue
+            }
 
           }finally{
             if($session){Remove-PSSession $session}

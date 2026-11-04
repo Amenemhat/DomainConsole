@@ -5,6 +5,7 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease25(){
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"manual-reboot59.ps1"),RemoteService.ManualRebootScript59,new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"identity-server58.ps1"),RemoteService.IdentityServerScript58,new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"wsus-snapshot58.ps1"),RemoteService.SnapshotScript58,new UTF8Encoding(true));
   File.WriteAllText(Path.Combine(Path.GetTempPath(),"wsus-details58.ps1"),RemoteService.DetailsScript58,new UTF8Encoding(true));

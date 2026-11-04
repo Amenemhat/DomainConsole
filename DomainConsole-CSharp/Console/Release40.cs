@@ -96,7 +96,7 @@ public partial class MainWindow {
   RenderAssessmentHeadline51(status);
  }
  void RenderAssessmentHeadline51(ClientAssessment41 status){
-  CurrentStage.Text=status.Title;CurrentStage.Foreground=Theme.Tone(status.HeadlineTone51);OperationGlyph38.Kind=status.Glyph;OperationGlyph38.Tint=Theme.Tone(status.Tone);OperationDetail38.Text=status.Details;OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=Visibility.Collapsed;
+  CurrentStage.Text=status.Title;CurrentStage.Foreground=Theme.Tone(status.HeadlineTone51);OperationGlyph38.Kind=status.Glyph;OperationGlyph38.Tint=status.Glyph is "Warning" or "Discrepancy"?Theme.Brush("AttentionIcon39"):Theme.Tone(status.Tone);OperationDetail38.Text=status.Details;OperationDetail38.Foreground=Theme.Brush("TextMuted");OperationDetail38.Visibility=Visibility.Collapsed;
 
  }
  string WsusSummary40(ComputerRow row,string text){
