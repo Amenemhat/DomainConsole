@@ -348,6 +348,12 @@
         <TabItem x:Name="SettingsTab" Header="Настройки" Style="{StaticResource HiddenSettingsTab}">
           <Border BorderBrush="{DynamicResource Outline}" BorderThickness="1" CornerRadius="5" Background="{DynamicResource PanelSurface}"><DockPanel><TextBlock Text="Настройки" FontSize="17" FontWeight="Bold" Margin="14,10" DockPanel.Dock="Top"/><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="24" MaxWidth="650" HorizontalAlignment="Left">
+              <TextBlock Text="Резервные копии данных" FontSize="18" FontWeight="SemiBold"/>
+              <TextBlock Text="ZIP с сохранёнными настройками, историей и статусами. Автоматически — при запуске; хранятся последние 30 автоматических копий. Ручные архивы не удаляются автоматически. При повреждении JSON восстановление предлагается до открытия консоли." TextWrapping="Wrap" Margin="0,4,0,8"/>
+              <Button Content="Создать резервную копию ZIP" Click="CreateBackup57_Click" HorizontalAlignment="Left"/>
+              <Button Content="Открыть папку архивов" Click="OpenBackups57_Click" HorizontalAlignment="Left"/>
+              <Button Content="Возобновить автоматику после восстановления…" Click="ResumeAfterRecovery57_Click" HorizontalAlignment="Left"/>
+              <Separator Margin="0,12"/>
               <CheckBox x:Name="AutoScrollSetting" Checked="AutoScroll_Changed" Unchecked="AutoScroll_Changed" ToolTip="Следовать за последними записями в журналах команд и WSUS. Настройка сохраняется." Margin="0,0,0,16"><TextBlock Text="Автопрокрутка журналов" TextWrapping="Wrap"/></CheckBox>
               <Button Content="Учётные данные подключения…" Click="ConnectionCredentials_Click" HorizontalAlignment="Left" ToolTip="Текущий вход Windows или одна защищённо сохранённая запись для разных клиентов"/>
               <TextBlock Text="Клиентский сборщик" FontSize="18" FontWeight="SemiBold" Margin="0,12,0,4"/><Button Content="Управление сборщиками…" Click="CollectorCleanup43_Click" HorizontalAlignment="Left"/><TextBlock Text="Диагностика, удаление данных и разрешение повторной установки на текущем, отмеченных или всех компьютерах." TextWrapping="Wrap" Margin="0,0,0,12"/><TextBlock Text="Обзор статусов" FontSize="18" FontWeight="SemiBold"/>

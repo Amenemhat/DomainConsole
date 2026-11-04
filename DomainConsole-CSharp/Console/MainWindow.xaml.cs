@@ -234,9 +234,10 @@ public partial class MainWindow:Window {
  }
  void Sync(RemoteJob job){job.RefreshSummary();foreach(var row in Computers.Where(r=>r.JobId==job.Id)){var t=job.Targets.FirstOrDefault(t=>t.Host==row.Host);if(t==null)continue;if(t.Status=="LaunchRejected"){var previous=History.FirstOrDefault(j=>j.Id!=job.Id&&IsWsusJob(j)==IsWsusJob(job)&&j.Targets.Any(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)&&t.Status!="LaunchRejected"));if(previous!=null){row.JobId=previous.Id;var prior=previous.Targets.First(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase));row.Target.Status=prior.Status;row.Target.State=prior.State;row.Target.Output=prior.Output;row.Refresh();}continue;}row.Target.Status=t.Status;row.Target.State=t.State;row.Target.Output=t.Output;row.Refresh();}RefreshBranches();RefreshOutcomes();}
  async Task SendQueue(string explicitId43=""){
+ if(App.RecoveryPending57&&explicitId43.Length==0)return;
   if(sending||closing)return;sending=true;
   try{while(queue.Count>0&&!closing){
-   var eligible=queue.Where(q=>!TransportBudget41.Paused||q.Job.Manual56||q.Job.Id==explicitId43).ToList();if(eligible.Count==0)break;
+   var eligible=queue.Where(q=>(!App.RecoveryPending57||q.Job.Id==explicitId43)&&(!TransportBudget41.Paused||q.Job.Manual56||q.Job.Id==explicitId43)).ToList();if(eligible.Count==0)break;
    var next=eligible.OrderByDescending(q=>q.Job.Id==explicitId43).ThenByDescending(q=>q.Job.IndependentControl).ThenByDescending(q=>q.Job.Manual56).First();
    int active=History.SelectMany(j=>j.Targets).Count(t=>t.Status is "Sending" or "Submitted" or "Running");
    if(limit>0&&active>=limit&&!next.Job.Manual56&&!next.Job.IndependentControl&&next.Job.Id!=explicitId43)break;
