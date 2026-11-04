@@ -21,7 +21,8 @@ public partial class MainWindow {
   HeaderIdentity58.Visibility=IdentityConflict58(host)?Visibility.Visible:Visibility.Collapsed;
   HeaderIdentity58.Content=identities58.TryGetValue(host,out var i)&&compromisedIds58.Contains(i.Key)?"Конфликт ID":identityRepairs58.Values.Any(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&a.Phase!="Подтверждено")?"Регистрация WSUS":"Несколько записей WSUS";
  }
- void Identity58_Click(object sender,RoutedEventArgs e){
+ void Identity58_Click(object sender,RoutedEventArgs e)=>IdentityWindow58().Show();
+ Window IdentityWindow58(){
   var row=Current();var lines=new List<string>();
   if(identities58.TryGetValue(row.Host,out var identity)){
    lines.Add("Клиент: "+identity.Name+"\nSusClientId: "+identity.SusClientId+"\nИсточник: "+identity.Server+"\nПроверено: "+Display36.Date(identity.At));
@@ -37,7 +38,7 @@ public partial class MainWindow {
   var refresh=new Button{Content="Обновить серверный обзор и проверить регистрацию"};DockPanel.SetDock(refresh,Dock.Bottom);panel.Children.Add(refresh);
   refresh.Click+=async(s,a)=>{window.Close();await RunOverview(true);};
   repair.Click+=async(s,a)=>{window.Close();await RepairIdentityGroup58(row.Host,true);};
-  panel.Children.Add(new TextBox{Text=string.Join("\n\n",lines),IsReadOnly=true,TextWrapping=TextWrapping.Wrap,VerticalScrollBarVisibility=ScrollBarVisibility.Auto});window.Show();
+  panel.Children.Add(new TextBox{Text=string.Join("\n\n",lines),IsReadOnly=true,TextWrapping=TextWrapping.Wrap,VerticalScrollBarVisibility=ScrollBarVisibility.Auto});return window;
  }
 }
 public sealed partial class RemoteService {
