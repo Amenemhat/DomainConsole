@@ -98,7 +98,7 @@ class ReleaseGuards(unittest.TestCase):
             validate_package(truncated, hashlib.sha256(truncated).hexdigest())
 
     def test_user_data_and_unexpected_paths_rejected(self):
-        for path in ['Data/history.json', '../escape', '/absolute', 'Agent\\unexpected.exe']:
+        for path in ['Data/history.json', 'Backups/auto-test.zip', 'backups/auto-test.zip', 'Logs/output.txt', 'Diagnostics/status.json', '../escape', '/absolute', 'Agent\\unexpected.exe']:
             with self.subTest(path=path):
                 data = self.package(path)
                 with self.assertRaises(ValueError):

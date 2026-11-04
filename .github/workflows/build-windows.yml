@@ -929,11 +929,13 @@ jobs:
         shell: pwsh
         run: |
           if ('${{ steps.executor54.outcome }}' -ne 'success' -or '${{ steps.updates54.outcome }}' -ne 'success') { throw 'Executor/update regression failed or was not executed; package is blocked' }
+      - name: Stage clean portable package without test backups or runtime data
+        run: python .github/scripts/stage_package.py Publish Package
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:
           name: DomainConsole-Windows-x64
-          path: Publish/
+          path: Package/
           if-no-files-found: error
       - name: Save UI review images
         if: always()
