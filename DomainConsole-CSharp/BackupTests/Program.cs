@@ -4,6 +4,10 @@ using System.Text;
 var root=Path.Combine(Path.GetTempPath(),"DomainConsole-backup-tests-"+Guid.NewGuid());
 Directory.CreateDirectory(root);
 try{
+ var writes58=new LatestWrite58();var oldTicket58=writes58.Reserve();var newTicket58=writes58.Reserve();var saved58="";
+ Assert(writes58.Commit(newTicket58,()=>saved58="manual"),"Current report write skipped");
+ Assert(!writes58.Commit(oldTicket58,()=>saved58="old batch")&&saved58=="manual","Delayed overview overwrote newer manual report");
+ var finalTicket58=writes58.Reserve();Assert(writes58.Commit(finalTicket58,()=>saved58="next batch")&&saved58=="next batch","Later overview failed to persist");
  var data=Path.Combine(root,"Data");Directory.CreateDirectory(data);
  var backups=Path.Combine(root,"Backups");var store=new DataBackup57(data,backups,new object());
  var history=Path.Combine(data,"history.json");var good=Encoding.UTF8.GetBytes("[{\"Status\":\"Completed\",\"Text\":\"Проверено\"}]");

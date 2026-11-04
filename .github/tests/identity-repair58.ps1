@@ -67,7 +67,9 @@ foreach($case in @('wrong-name','wrong-machine','wrong-server','busy','already-c
  if($case -in @('stop-fails','remove-fails','after-delete') -and ($data.Service -ne 'Running' -or $data.Trace -notcontains 'Start')){throw "Service not restored: $case"}
  if($case -eq 'stop-and-start-fail' -and ($output -notmatch 'STOP_FIXTURE_FAILURE' -or $output -notmatch 'START_FIXTURE_FAILURE')){throw 'Primary or restoration failure was lost'}
  if($case -eq 'success' -and (($data.Trace -join ',') -ne 'Backup,Stop,Remove-SusClientId,Remove-SusClientIdValidation,Start,Authorize,Search,Report' -or $data.Id -ne '33333333-3333-3333-3333-333333333333')){throw 'Successful repair did not follow expected order'}
- if($case -eq 'search-fails' -and $data.Id -ne '33333333-3333-3333-3333-333333333333'){throw 'Partial repair lost new identity'}
+ if($case -in @('search-fails','after-delete') -and $data.Id -ne '33333333-3333-3333-3333-333333333333'){throw ('Partial repair lost new identity: '+($data|ConvertTo-Json -Compress)+'; '+$output)}
+ $expectedErrors=@{'stop-fails'='STOP_FIXTURE_FAILURE';'remove-fails'='REMOVE_FIXTURE_FAILURE';'after-delete'='INTERRUPTED_AFTER_DELETE'}
+ if($expectedErrors.ContainsKey($case) -and $output -notmatch $expectedErrors[$case]){throw ('Failure point was not reached: '+$case+'; '+$output)}
  Write-Output "PASS identity repair: $case"
  $process.Dispose()
 }

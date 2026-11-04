@@ -76,14 +76,15 @@ public partial class MainWindow {
    var details=new List<ComputerRow>();
    foreach(var row in rows){
     var name=ConnectionStore.WsusName(row.Host);var matches=snapshot.Find(name);
-    if(name.Length==0){ApplyOverviewReply53(row,new(){Error="Имя клиента ещё не подтверждено для WSUS"},server);errors++;continue;}
-    if(matches.Count!=1){ApplyOverviewReply53(row,new(){Found=false,Error=matches.Count>1?"Несколько записей WSUS с этим именем; требуется проверка идентичности":""},server);if(matches.Count>1)errors++;continue;}
+    if(name.Length==0){ApplyOverviewReply53(row,new(){Error="Имя клиента ещё не подтверждено для WSUS"},server,false);errors++;continue;}
+    if(matches.Count!=1){ApplyOverviewReply53(row,new(){Found=false,Error=matches.Count>1?"Несколько записей WSUS с этим именем; требуется проверка идентичности":""},server,false);if(matches.Count>1)errors++;continue;}
     var record=matches[0];
-    if(record.Summary==null){ApplyOverviewReply53(row,new(){Error=record.Error},server);errors++;continue;}
+    if(record.Summary==null){ApplyOverviewReply53(row,new(){Error=record.Error},server,false);errors++;continue;}
     // Counts across all updates cannot stand in for effective approvals. Keep the last
     // complete per-client report until the bounded detail read has finished.
     details.Add(row);
    }
+   await PersistReportCacheAsync58();
    RefreshOutcomes();
    foreach(var chunk in details.Chunk(10)){
     cancellation.Token.ThrowIfCancellationRequested();if(!Current58())throw new OperationCanceledException();
@@ -91,9 +92,9 @@ public partial class MainWindow {
     try{
      var replies=await remote.ReadWsusDetails58(settings,chunk.ToList(),snapshot,cancellation.Token);
      if(!Current58())throw new OperationCanceledException();
-     foreach(var row in chunk){if(!ApplyOverviewReply53(row,replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)),server))errors++;}
-    }catch(OperationCanceledException){throw;}catch(Exception ex){foreach(var row in chunk)ApplyOverviewReply53(row,new(){Error=ex.Message},server);errors+=chunk.Length;}
-    done+=chunk.Length;var cache=Store.Clone(reportCache);await Task.Run(()=>Store.Write("wsus-report-cache.json",cache));
+     foreach(var row in chunk){if(!ApplyOverviewReply53(row,replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)),server,false))errors++;}
+    }catch(OperationCanceledException){throw;}catch(Exception ex){foreach(var row in chunk)ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);errors+=chunk.Length;}
+    done+=chunk.Length;await PersistReportCacheAsync58();
     RefreshOutcomes();if(ComputerGrid.SelectedItem is ComputerRow focused&&chunk.Contains(focused))ShowCurrent();
    }
    overviewPending45.Clear();overviewAttempts45.Clear();overviewDue45.Clear();
@@ -102,7 +103,8 @@ public partial class MainWindow {
    errors++;if(Current58()){
     serverSnapshot58.LastError=ex.Message;serverSnapshot58.ErrorUtc=DateTimeOffset.UtcNow.ToString("o");
     var saved=Store.Clone(serverSnapshot58);await Task.Run(()=>Store.Write("wsus-server-snapshot58.json",saved));
-    foreach(var row in rows)ApplyOverviewReply53(row,new(){Error=ex.Message},server);
+    foreach(var row in rows)ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);
+    await PersistReportCacheAsync58();
    }
   }finally{
    overviewRunning=false;overviewCancel=null;SetOverviewAction33(false);

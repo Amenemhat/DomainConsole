@@ -60,12 +60,12 @@ bool NeedsRebootRead53(ComputerRow row){
 
  // A missing or incomplete lookup is not a replacement for a previously read report.
  // Keep its timestamp and identity; expose the failed lookup separately.
- bool ApplyOverviewReply53(ComputerRow row,OverviewReply? reply,string server){
+ bool ApplyOverviewReply53(ComputerRow row,OverviewReply? reply,string server,bool persist58=true){
   string error=reply==null?"Нет ответа WSUS для клиента":reply.Error;
   if(error.Length==0&&reply!.Found&&reply.Report==null)error="WSUS подтвердил клиента, но не вернул отчёт";
   if(error.Length==0&&reply!.Found){
    var started=reportCache.GetValueOrDefault(row.Host)?.Started??"";
-   SaveReportCache(row.Host,reply.Report!,server,started,false);
+   SaveReportCache(row.Host,reply.Report!,server,started,false,persist58);
    overviewErrors.Remove(row.Host);serverReports[row.Host]=reply.Report!.Format(server,started);reportSeverity[row.Host]=reply.Report.Severity(started);return true;
   }
   if(error.Length==0)error="Клиент не найден при последнем чтении WSUS; прежние результаты сохранены";

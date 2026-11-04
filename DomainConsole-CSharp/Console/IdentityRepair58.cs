@@ -65,6 +65,7 @@ public sealed partial class RemoteService {
   "$dcExpectedId58="+PowerShellBridge.Literal(identity.SusClientId)+";$dcExpectedMachine58="+PowerShellBridge.Literal(identity.Machine)+";$dcExpectedName58="+PowerShellBridge.Literal(identity.Name)+";$dcExpectedServer58="+PowerShellBridge.Literal(identity.Server)+";"+IdentityRepairBody58;
  public const string IdentityRepairBody58="""
 $ErrorActionPreference='Stop'
+Add-Type -AssemblyName System.ServiceProcess
 $mutex58=New-Object Threading.Mutex($false,'Global\DomainConsole.WsusIdentity58')
 $owns58=$false
 try {

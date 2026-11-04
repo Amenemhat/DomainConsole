@@ -85,7 +85,7 @@ public partial class MainWindow {
    readFailures34.Remove(row.Host+"|флаги и аптайм");readFailures34.Remove(row.Host+"|фоновая активность");
    installerObservations53.Remove(row.Host);Store.Write("installer-observations53.json",installerObservations53);
    Computers.Remove(row);reportCache.Remove(row.Host);serverReports.Remove(row.Host);reportSeverity.Remove(row.Host);overviewErrors.Remove(row.Host);liveReports.Remove(row.Host);readyProofs43.Remove(row.Host);rebootWatches.Remove(row.Host);
-   Store.Write("ready-proofs43.json",readyProofs43);Store.Write("wsus-report-cache.json",reportCache);Store.Write("reboot-watches.json",rebootWatches);
+   Store.Write("ready-proofs43.json",readyProofs43);PersistReportCache58();Store.Write("reboot-watches.json",rebootWatches);
    if(paused)PollingControl43.Pause();else PollingControl43.Resume();
   }
  }
