@@ -5,6 +5,10 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease25(){
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"wsus-snapshot58.ps1"),RemoteService.SnapshotScript58,new UTF8Encoding(true));
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"wsus-details58.ps1"),RemoteService.DetailsScript58,new UTF8Encoding(true));
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"identity-repair58.ps1"),RemoteService.IdentityRepairScript58(new(){Name="fixture.invalid",Machine="11111111-1111-1111-1111-111111111111",SusClientId="22222222-2222-2222-2222-222222222222",Server="http://wsus.invalid:8530"}),new UTF8Encoding(true));
+
   var row=Computers.Last();var savedCache=reportCache.GetValueOrDefault(row.Host);var savedConnection=clientConnections.GetValueOrDefault(row.Host);bool wasLive=liveReports.Contains(row.Host);var originalSelected=Computers.Select(r=>r.Selected).ToList();var originalRecentAnchor=recentAnchor;var originalTreeAnchor=treeAnchor;RemoteJob? evidenceJob=null;var savedPlan41=maintenancePlans.GetValueOrDefault(row.Host);var savedRecovery41=reportRecoveries.GetValueOrDefault(row.Host);var savedActivity41=backgroundUpdates.GetValueOrDefault(row.Host);var savedJobs41=History.ToList();
   try {
    clientConnections.Remove(row.Host);overviewErrors.Remove(row.Host);maintenancePlans.Remove(row.Host);reportRecoveries.Remove(row.Host);backgroundUpdates.Remove(row.Host);foreach(var existing41 in History.Where(j=>j.Targets.Any(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase))).ToList())History.Remove(existing41);

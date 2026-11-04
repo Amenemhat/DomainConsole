@@ -10,7 +10,8 @@ public sealed class HistoryLimits58 {
  public int ImportantCount {get;set;}=5000;
  public int OutputDays {get;set;}=14;
  public int OutputMiB {get;set;}=20;
- public void Validate(){if(OrdinaryDays<1||ImportantDays<OrdinaryDays||ImportantDays>3650||OrdinaryCount<1||ImportantCount<1||OrdinaryCount>100000||ImportantCount>100000||OutputDays<1||OutputMiB<1||OutputMiB>1024)throw new ArgumentException("Некорректные ограничения истории");}
+ public int TotalOutputMiB {get;set;}=2048;
+ public void Validate(){if(OrdinaryDays<1||ImportantDays<OrdinaryDays||ImportantDays>3650||OrdinaryCount<1||ImportantCount<1||OrdinaryCount>100000||ImportantCount>100000||OutputDays<1||OutputMiB<1||OutputMiB>1024||TotalOutputMiB<OutputMiB||TotalOutputMiB>65536)throw new ArgumentException("Некорректные ограничения истории");}
 }
 public static class HistoryRetention58 {
  sealed record Entry(string File,string Raw,JsonObject? Data,DateTimeOffset? At,bool Important,bool Protected);

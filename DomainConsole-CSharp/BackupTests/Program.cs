@@ -48,6 +48,9 @@ try{
  b58.Machine=a58.Machine;Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Alias/rename treated as two machines");
  b58.Machine=Guid.NewGuid().ToString();b58.At=now58.AddDays(-1).ToString("o");Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Stale identity triggered repair");
  b58.At=now58.ToString("o");b58.Server="http://other.invalid:8530";Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Different WSUS servers mixed");
+ var cap58=new HistoryLimits58{OutputMiB=1,TotalOutputMiB=2};
+ var expired58=OutputRetention58.Expired(new[]{new OutputCandidate58("new","a",now58,800000),new OutputCandidate58("old","a",now58.AddDays(-1),800000),new OutputCandidate58("other","b",now58,800000),new OutputCandidate58("expired","b",now58.AddDays(-15),1)},now58,cap58);
+ Assert(expired58.SetEquals(new[]{"old","expired"}),"Output age/host quota selection failed");
  Console.WriteLine("PASS: archive hashes, corruption, original preservation, restart, invalid archives, missing files, interrupted writes, retention, replacements");
 }finally{Directory.Delete(root,true);}
 static void Assert(bool ok,string why){if(!ok)throw new Exception(why);}

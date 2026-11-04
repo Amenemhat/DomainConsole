@@ -23,7 +23,7 @@ public partial class MainWindow {
     var row=Computers.FirstOrDefault(r=>r.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase));if(row==null||row.Target.AdDisabled)continue;
     string key=identity.Key+"|"+identity.Machine.ToLowerInvariant();
     // A persisted attempt survives a crash, even if delivery acknowledgement was lost.
-    if(identityRepairs58.TryGetValue(key,out var prior)&&prior.JobId.Length>0){if(manual)Notify(identity.Name+": попытка уже зарегистрирована; проверьте задание "+prior.JobId);continue;}
+    if(identityRepairs58.TryGetValue(key,out var prior)&&prior.JobId.Length>0&&(!manual||History.Any(j=>j.Id==prior.JobId&&j.Targets.Any(ActiveTarget)))){if(manual)Notify(identity.Name+": попытка ещё активна; проверьте задание "+prior.JobId);continue;}
     if(!identity.Fresh(DateTimeOffset.UtcNow)||identity.Error.Length>0||!ConnectionFresh(row.Host)||HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target))){
      identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase="Ожидается свежая проверка и завершение активных заданий",At=DateTimeOffset.UtcNow.ToString("o")};continue;
     }

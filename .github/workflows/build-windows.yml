@@ -356,7 +356,7 @@ jobs:
         run: |
           $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           $check = @'
-          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1','header-reboot.ps1','reboot-state.ps1','cache-cleanup-30.ps1','reboot-system-30.ps1','automatic-queue-recovery.ps1','report-queue-verify52.ps1','applicability54.ps1')){
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1','header-reboot.ps1','reboot-state.ps1','cache-cleanup-30.ps1','reboot-system-30.ps1','automatic-queue-recovery.ps1','report-queue-verify52.ps1','applicability54.ps1','wsus-snapshot58.ps1','wsus-details58.ps1','identity-repair58.ps1')){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
             if($errors.Count){throw ($errors|Out-String)}
@@ -703,6 +703,23 @@ jobs:
           if(!$result[3].Found -or $result[3].Error -notmatch 'fixture summary failure'){throw 'Per-client read failure was hidden'}
           if($result[4].Error -notmatch '.'){throw 'Ambiguous WSUS identity accepted'}
           Write-Output 'Exact identities, missing clients, partial errors and ambiguity verified; no WSUS or clients modified.'
+      - name: Verify bulk WSUS summary collection with 450 isolated records
+        shell: powershell
+        run: |
+          $text=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/wsus-snapshot58.ps1'))
+          $text=$text.Replace("[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration')",'')
+          $text=$text.Replace('$s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($env:COMPUTERNAME,$ssl,$port)','$s=$fixtureServer')
+          $text=$text.Replace('New-Object Microsoft.UpdateServices.Administration.ComputerTargetScope','[pscustomobject]@{}').Replace('New-Object Microsoft.UpdateServices.Administration.UpdateScope','[pscustomobject]@{}')
+          $targets=@(1..450|ForEach-Object {[pscustomobject]@{Id=[guid]::NewGuid().ToString();FullDomainName=('pc'+$_+'.invalid');IPAddress='192.0.2.1';OSDescription='fixture';LastReportedStatusTime=[DateTime]::UtcNow;LastSyncTime=[DateTime]::UtcNow;LastSyncResult='Succeeded'}})
+          $summaries=@($targets|Select-Object @{n='ComputerTargetId';e={$_.Id}},@{n='UnknownCount';e={0}},@{n='NotInstalledCount';e={5}},@{n='InstalledCount';e={10}},@{n='DownloadedCount';e={0}},@{n='FailedCount';e={0}},@{n='InstalledPendingRebootCount';e={0}},@{n='NotApplicableCount';e={100}})
+          $script:lists58=0;$script:summaries58=0
+          $fixtureServer=[pscustomobject]@{}
+          $fixtureServer|Add-Member ScriptMethod GetComputerTargets {param($scope) $script:lists58++;return $targets}
+          $fixtureServer|Add-Member ScriptMethod GetSummariesPerComputerTarget {param($u,$c) $script:summaries58++;return $summaries}
+          $result=(& ([ScriptBlock]::Create($text)))|ConvertFrom-Json
+          if(!$result.Complete -or $result.Records.Count -ne 450 -or $lists58 -ne 1 -or $summaries58 -ne 1){throw 'Bulk collection made repeated calls or lost records'}
+          if($result.Records[0].Summary.RequiredComplete -or $null -ne $result.Records[0].Summary.NeededCount){throw 'Unapproved totals presented as installable updates'}
+          Write-Output '450 records: one target query, one summary query, no client connections; effective approvals remain separate.'
       - name: Verify cancellation of a scheduled header reboot without rebooting
         shell: pwsh
         run: |

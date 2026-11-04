@@ -10,9 +10,12 @@ public partial class MainWindow {
   var ordinary=Field("Обычных событий на клиента (дни задаются в настройках связи)",saved.OrdinaryCount);
   var days=Field("Значимые события: срок, дней",saved.ImportantDays);
   var count=Field("Значимые события: максимум на клиента",saved.ImportantCount);
+  var outputDays=Field("Подробные журналы: срок, дней",saved.OutputDays);
+  var outputSize=Field("Подробные журналы: МиБ на клиента",saved.OutputMiB);
+  var totalSize=Field("Подробные журналы: общий предел, МиБ",saved.TotalOutputMiB);
   panel.Children.Add(new TextBlock{Text="Ошибки, результаты установки и ручные действия хранятся дольше. Текущие статусы, незавершённые задания и открытые конфликты ID не очищаются. Перед ручной очисткой историю можно экспортировать кнопкой копирования всех событий.",TextWrapping=TextWrapping.Wrap,Margin=new(0,10,0,10)});
   var save=new Button{Content="Сохранить",IsDefault=true};panel.Children.Add(save);panel.Children.Add(new Button{Content="Отмена",IsCancel=true});
-  save.Click+=(s,a)=>{try{saved.OrdinaryCount=int.Parse(ordinary.Text);saved.ImportantDays=int.Parse(days.Text);saved.ImportantCount=int.Parse(count.Text);saved.OrdinaryDays=Store.Read("event-days31.json",30);saved.Validate();Store.Write("history-limits58.json",saved);historyCompacted58.Clear();window.DialogResult=true;}catch(Exception ex){MessageBox.Show(window,ex.Message,"Лимиты истории");}};
+  save.Click+=(s,a)=>{try{saved.OrdinaryCount=int.Parse(ordinary.Text);saved.ImportantDays=int.Parse(days.Text);saved.ImportantCount=int.Parse(count.Text);saved.OutputDays=int.Parse(outputDays.Text);saved.OutputMiB=int.Parse(outputSize.Text);saved.TotalOutputMiB=int.Parse(totalSize.Text);saved.OrdinaryDays=Store.Read("event-days31.json",30);saved.Validate();Store.Write("history-limits58.json",saved);historyCompacted58.Clear();window.DialogResult=true;}catch(Exception ex){MessageBox.Show(window,ex.Message,"Лимиты истории");}};
   window.ShowDialog();
  }
 }

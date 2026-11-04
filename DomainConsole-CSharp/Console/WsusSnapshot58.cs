@@ -18,11 +18,14 @@ public sealed class WsusServerSnapshot58 {
  public List<WsusServerRecord58> Records {get;set;}=new();
  public string LastError {get;set;}="";
  public string ErrorUtc {get;set;}="";
+ Dictionary<string,List<WsusServerRecord58>>? names58,shortNames58;
  public List<WsusServerRecord58> Find(string name) {
   string key=name.Trim().TrimEnd('.');
   if(key.Length==0)return new();
-  var exact=Records.Where(r=>r.Name.TrimEnd('.').Equals(key,StringComparison.OrdinalIgnoreCase)).ToList();
-  return exact.Count>0||key.Contains('.')?exact:Records.Where(r=>r.Name.Split('.')[0].Equals(key,StringComparison.OrdinalIgnoreCase)).ToList();
+  names58??=Records.GroupBy(r=>r.Name.TrimEnd('.'),StringComparer.OrdinalIgnoreCase).ToDictionary(g=>g.Key,g=>g.ToList(),StringComparer.OrdinalIgnoreCase);
+  shortNames58??=Records.GroupBy(r=>r.Name.Split('.')[0],StringComparer.OrdinalIgnoreCase).ToDictionary(g=>g.Key,g=>g.ToList(),StringComparer.OrdinalIgnoreCase);
+  if(names58.TryGetValue(key,out var exact))return exact;
+  return key.Contains('.')?new():shortNames58.GetValueOrDefault(key)??new();
  }
 }
 public sealed partial class RemoteService {

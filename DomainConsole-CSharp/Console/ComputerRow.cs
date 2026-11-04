@@ -34,6 +34,9 @@ public sealed class ComputerRow : INotifyPropertyChanged {
  public string Address40 {get;private set;}="";public string AddressHint40 {get;private set;}="";
  public System.Windows.Visibility AddressVisibility40=>Address40.Length>0?System.Windows.Visibility.Visible:System.Windows.Visibility.Collapsed;
  public void SetAddress40(string value,string hint){if(Address40==value&&AddressHint40==hint)return;Address40=value;AddressHint40=hint;foreach(var n in new[]{nameof(Address40),nameof(AddressHint40),nameof(AddressVisibility40)})PropertyChanged?.Invoke(this,new(n));}
+ public bool IdentityConflict58 {get;private set;}
+ public System.Windows.Visibility IdentityVisibility58=>IdentityConflict58?System.Windows.Visibility.Visible:System.Windows.Visibility.Collapsed;
+ public void SetIdentityConflict58(bool value){if(value==IdentityConflict58)return;IdentityConflict58=value;PropertyChanged?.Invoke(this,new(nameof(IdentityVisibility58)));}
  public event PropertyChangedEventHandler? PropertyChanged;
 }
 
