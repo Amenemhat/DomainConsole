@@ -35,7 +35,7 @@ public partial class MainWindow {
   if(work!=null){
    var row=ExecutionRow(selected,true);bool error=row.Target.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired";
    if(error){OperationDetail38.Text=work.Text;OperationDetail38.Visibility=Visibility.Visible;}
-   else {CurrentStage.Text=work.Text;CurrentStage.Foreground=Theme.Tone(work.Busy?"Info":"Warning");OperationGlyph38.Kind=work.Busy?"Working":"Warning";OperationGlyph38.Tint=CurrentStage.Foreground;}
+   else {CurrentStage.Text=work.Text;CurrentStage.Foreground=Theme.Tone(work.Busy?"Info":"Warning");OperationGlyph38.Kind=work.Busy?StatusGlyph.ForOperation50(work.Text):"Warning";OperationGlyph38.Tint=CurrentStage.Foreground;}
    CurrentProgress.Visibility=work.Busy?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=work.Busy&&!work.Percent.HasValue;CurrentProgress.Value=work.Percent??0;CurrentProgress.ToolTip="Процесс операции; ожидание результата не является процентом установки";
   }
   var command=WorkState60(selected,false);
