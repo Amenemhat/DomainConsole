@@ -27,7 +27,7 @@ public partial class MainWindow {
   var buttons=new WrapPanel();DockPanel.SetDock(buttons,Dock.Bottom);panel.Children.Add(buttons);
   var choose=new ComboBox{Margin=new(0,0,0,8)};DockPanel.SetDock(choose,Dock.Top);panel.Children.Add(choose);
   var log=new LogViewer{ShellMode="Report",Text="Чтение записей клиента…"};panel.Children.Add(log);
-  var refresh=new Button{Content="Прочитать сейчас"};var release=new Button{Content="Снять оставшиеся резервации"};var stop=new Button{Content="Остановить выбранное"};var force=new Button{Content="Завершить исполнитель…"};
+  var refresh=new Button{Content="Прочитать сейчас"};var release=new Button{Content="Проверить и снять зависшие блокировки"};var stop=new Button{Content="Остановить выбранное"};var force=new Button{Content="Завершить исполнитель…"};
   foreach(var button in new[]{refresh,release,stop,force})buttons.Children.Add(button);
   bool busy=false;
   async Task Read(bool repair=false){using var manual56=PollingControl43.Manual56("control");var raw=await (inspect56!=null?inspect56(repair):remote.InspectControl56(target,repair));if(!window.IsVisible||!CurrentEndpoint(target))return;using var doc=JsonDocument.Parse(raw);var root=doc.RootElement;var previous=choose.SelectedItem as string;choose.Items.Clear();var lines=new List<string>{root.GetProperty("Message").GetString()??""};

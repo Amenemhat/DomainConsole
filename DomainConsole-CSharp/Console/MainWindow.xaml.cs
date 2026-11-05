@@ -230,7 +230,7 @@ public partial class MainWindow:Window {
   if(!await EnsureEndpointCredentials(selected))return;
   var frozen=selected.Select(r=>new ComputerRow(ConnectionStore.Capture(r.Target))).ToList();
   job.Manual56=true;
-  if(await CompletePreparedSubmission47(job,selected,frozen,()=>PrepareUpdateAction(frozen,job.Steps,job.MicrosoftSource),beginPlan))await SendQueue(job.Id);
+  await SubmitTargets60(job,selected,frozen,beginPlan);
  }
  void Sync(RemoteJob job){job.RefreshSummary();foreach(var row in Computers.Where(r=>r.JobId==job.Id)){var t=job.Targets.FirstOrDefault(t=>t.Host==row.Host);if(t==null)continue;if(t.Status=="LaunchRejected"){var previous=History.FirstOrDefault(j=>j.Id!=job.Id&&IsWsusJob(j)==IsWsusJob(job)&&j.Targets.Any(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)&&t.Status!="LaunchRejected"));if(previous!=null){row.JobId=previous.Id;var prior=previous.Targets.First(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase));row.Target.Status=prior.Status;row.Target.State=prior.State;row.Target.Output=prior.Output;row.Refresh();}continue;}row.Target.Status=t.Status;row.Target.State=t.State;row.Target.Output=t.Output;row.Refresh();}RefreshBranches();RefreshOutcomes();}
  async Task SendQueue(string explicitId43=""){

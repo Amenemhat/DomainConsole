@@ -51,6 +51,7 @@ public partial class MainWindow {
    WsusStage.Text=CurrentStage.Text;WsusProgress.IsIndeterminate=CurrentProgress.IsIndeterminate;
   }
   if(active&&OperationGlyph38.Kind=="Working")OperationGlyph38.Kind=StatusGlyph.ForOperation50(CurrentStage.Text);
+  RenderWork60(selected);
   RefreshMode39();
   RefreshHeader31(selected);
  }
