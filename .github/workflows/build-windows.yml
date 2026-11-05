@@ -223,7 +223,16 @@ jobs:
             $st=Get-Content (Join-Path $folders[1] 'status.json') -Raw|ConvertFrom-Json
             if($st.Status -ne 'Completed' -or $processes[0].HasExited){throw 'Parallel lane result invalid'}
             New-Item (Join-Path $folders[0] 'stop-now.flag') -ItemType File|Out-Null
-            if(!$processes[0].WaitForExit(10000)){throw 'WSUS fixture cancellation failed'}
+            if(!$processes[0].WaitForExit(10000)){
+              $st=Get-Content (Join-Path $folders[0] 'status.json') -Raw|ConvertFrom-Json
+              if($st.StopStatus -ne 'ForceRequired'){throw 'WSUS fixture did not explain unaccepted Ctrl+C'}
+              # This disposable CMD fixture may reject Ctrl+C. Exercise the explicit
+              # owned-command force path; never silently kill a Windows update.
+              New-Item (Join-Path $folders[0] 'force-stop.flag') -ItemType File|Out-Null
+              if(!$processes[0].WaitForExit(10000)){throw 'Explicit fixture cancellation failed'}
+            }
+            $st=Get-Content (Join-Path $folders[0] 'status.json') -Raw|ConvertFrom-Json
+            if($st.Status -ne 'Cancelled' -or !$st.Ended){throw 'Parallel fixture cancellation has no terminal result'}
           } finally {foreach($p in $processes){if(!$p.HasExited){Stop-Process -Id $p.Id -Force}}}
       - name: Verify independent control lane and cancellation of waiting commands
         shell: pwsh
