@@ -6,6 +6,7 @@ $held=$false
 try {
  try{$held=$mutex.WaitOne(10000)}catch [Threading.AbandonedMutexException]{$held=$true}
  if(!$held){throw 'Координатор занят более 10 секунд. Изменений нет.'}
+ foreach($protected in @($root,$file)){if((Test-Path -LiteralPath $protected) -and ((Get-Item -LiteralPath $protected).Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Каталог или файл координации является ссылкой. Изменений нет.'}}
  if(!(Test-Path -LiteralPath $file)){@{Rows=@();Removed=@();Message='Сохранённых резерваций нет.'}|ConvertTo-Json -Depth 8 -Compress;return}
  $c=Get-Content -LiteralPath $file -Raw -Encoding UTF8|ConvertFrom-Json
  if($c.Protocol -ne 1){throw 'Неизвестный протокол координации.'}
