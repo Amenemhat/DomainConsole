@@ -262,6 +262,10 @@ jobs:
         run: |
           & ./Publish/Agent/DomainConsole.Agent.exe output-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-output-smoke")
           if ($LASTEXITCODE -ne 0) { throw "Progress output check failed" }
+      - name: Verify live SFC and DISM output on disposable Windows
+        shell: pwsh
+        timeout-minutes: 22
+        run: ./.github/scripts/test-native-progress60.ps1
       - name: Verify bounded diagnostics
         shell: pwsh
         run: |
