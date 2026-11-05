@@ -12,6 +12,11 @@ public partial class MainWindow {
   var job=new RemoteJob{OutputChannel="WSUS",Manual56=true,Steps=new(){new(){Kind="UpdateScan"}},Targets=new(){new(){Host=row.Host,Name=row.Name,Status="Completed",State=state}}};
   Computers.Add(row);History.Insert(0,job);ComputerGrid.SelectedItem=row;MainTabs.SelectedItem=WsusTab;
   try{
+   preparing60[PreparationKey60(row.Host,"WSUS")]=("WSUS","WSUS decision",now);
+   if(WorkState60(row,false)!=null||WorkState60(row,true)?.Text.StartsWith("WSUS decision")!=true)throw new Exception("WSUS preparation leaked into command lane");
+   preparing60[PreparationKey60(row.Host,"Commands")]=("Commands","Command prepare",now);
+   if(WorkState60(row,false)?.Text.StartsWith("Command prepare")!=true)throw new Exception("Independent command preparation missing");
+   preparing60.Remove(PreparationKey60(row.Host,"Commands"));if(WorkState60(row,true)?.Text.StartsWith("WSUS decision")!=true)throw new Exception("Command completion cleared WSUS preparation");preparing60.Remove(PreparationKey60(row.Host,"WSUS"));
    reportWaiting[row.Host]=new(){Id=job.Id,Server54=OverviewServer,Until=now.AddMinutes(10),Requested54=now,Next=now.AddMinutes(1)};
    UpdateWsusStage();RefreshActivity();UpdateLayout();
    if(!CurrentStage.Text.Contains("Ожидаем новый отчёт")||!CurrentProgress.IsIndeterminate||CurrentProgress.Visibility!=Visibility.Visible||!row.WorkBusy)throw new Exception("Completed scan lost end-to-end report waiting progress");
@@ -33,6 +38,6 @@ public partial class MainWindow {
    job.Targets[0].Status=state.Status="Completed";state.Ended=now.ToString("o");UpdateWsusStage();if(CommandActivity60.Visibility!=Visibility.Collapsed)throw new Exception("Command indicator survived completion");
    var choice=new UpdateConflictChoice(this,"Modeless decision fixture",false);var deciding=choice.Decide60();await Task.Delay(30);if(deciding.IsCompleted||!IsEnabled)throw new Exception("Conflict decision blocked parent workspace");choice.Close();if(await deciding)throw new Exception("Closing conflict decision accepted launch");
    File.WriteAllText(Path.Combine(Path.GetTempPath(),"ui-operation60.txt"),"PASS actual moving animation; terminal scan awaiting report; timeout; command with and without percent; completion; modeless conflict decision; three themes and two sizes");
-  }finally{manualLinkReads31.Remove(row.Host);reportWaiting.Remove(row.Host);History.Remove(job);Computers.Remove(row);ComputerGrid.SelectedItem=selected;MainTabs.SelectedItem=tab;Theme.Apply(theme,false);ShowCurrent();}
+  }finally{preparing60.Remove(PreparationKey60(row.Host,"Commands"));preparing60.Remove(PreparationKey60(row.Host,"WSUS"));manualLinkReads31.Remove(row.Host);reportWaiting.Remove(row.Host);History.Remove(job);Computers.Remove(row);ComputerGrid.SelectedItem=selected;MainTabs.SelectedItem=tab;Theme.Apply(theme,false);ShowCurrent();}
  }
 }
