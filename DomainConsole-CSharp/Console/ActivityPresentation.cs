@@ -21,7 +21,7 @@ public partial class MainWindow {
 
   if(RebootReason(selected).Length>0)RecommendationButton.Visibility=Visibility.Collapsed;
   bool progress47=active&&!LostObservation51(row.Host)&&!ObservationStopped51(row)&&(state?.Progress!=null||state?.Stage.StartsWith("Установка",StringComparison.Ordinal)==true||state?.Stage.StartsWith("Скачивание",StringComparison.Ordinal)==true||state?.Stage.Contains("поиск обновлений",StringComparison.OrdinalIgnoreCase)==true);
-  CurrentProgress.Visibility=progress47?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=progress47&&fresh&&state?.Progress==null;CurrentProgress.Value=state?.Progress??0;WsusProgress.IsIndeterminate=CurrentProgress.IsIndeterminate;WsusStage.Text=CurrentStage.Text;
+  CurrentProgress.Visibility=progress47?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=progress47&&fresh&&state?.Progress==null;CurrentProgress.Value=state?.Progress??0;CurrentProgress.ToolTip="Ход выполнения задания";WsusProgress.IsIndeterminate=CurrentProgress.IsIndeterminate;WsusStage.Text=CurrentStage.Text;
   RecommendationButton.Visibility=Visibility.Collapsed;RecommendationButton.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty,"ButtonSurface");RecommendationButton.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty,"WarningText");RecommendationButton.ToolTip=state?.Recommendation;
   DiagnosticStage.Text=state==null?"":"Диагностика: "+DiagnosticLabel(state);DiagnosticStage.Visibility=state!=null&&(state.DiagnosticStatus is "Pending" or "Running" or "LegacyRunning")?Visibility.Visible:Visibility.Collapsed;
   BackgroundGroup.Visibility=Visibility.Collapsed;BackgroundProgress.Visibility=Visibility.Collapsed;DownloadPriorityButton.Visibility=Visibility.Collapsed;
@@ -39,8 +39,19 @@ public partial class MainWindow {
    string observation=(TransportBudget41.Paused&&!ManualJob56(row.JobId))?"Опрос выключен · сохранённый результат":row.Target.Status=="SubmissionUnknown"?"Передача задания не подтверждена":clientConnections.GetValueOrDefault(row.Host)?.Lost38==true?"Связь потеряна · состояние установки неизвестно":ConnectionFresh(row.Host)?"Клиент доступен; состояние задания уточняется":"Нет свежего статуса задания";
    OperationGlyph38.Kind=clientConnections.GetValueOrDefault(row.Host)?.Lost38==true?"Unreachable":"Stale";OperationGlyph38.Tint=Theme.Tone((TransportBudget41.Paused&&!ManualJob56(row.JobId))?"Stale":"Warning");CurrentStage.Foreground=OperationGlyph38.Tint;
    CurrentStage.Text=observation;OperationDetail38.Text="Последний этап: "+(state?.Stage??row.Target.Status)+" · "+Display36.Date(state?.Updated??"");OperationDetail38.Visibility=Visibility.Visible;CurrentProgress.IsIndeterminate=false;CurrentProgress.Visibility=Visibility.Collapsed;
+   bool observingResult=!(TransportBudget41.Paused&&!ManualJob56(row.JobId))&&!ObservationStopped51(row)&&clientConnections.GetValueOrDefault(row.Host)?.Lost38!=true&&row.Target.Status!="SubmissionUnknown";
+   if(observingResult){
+    bool readingResult=polling.Contains(row.JobId+row.Host);
+    CurrentStage.Text=readingResult?"Обслуживание · получаем результат задания":"Обслуживание · ожидаем следующего опроса результата";
+    CurrentStage.Foreground=Theme.Tone("Info");OperationGlyph38.Kind=readingResult?"Working":"Stale";OperationGlyph38.Tint=Theme.Tone("Info");
+    OperationDetail38.Text+="\nТекущее выполнение задания не подтверждено; индикатор относится к чтению результата.";
+    if(readFailures34.TryGetValue(row.Host+"|результат задания",out var retry))OperationDetail38.Text+="\nПовтор чтения: "+Display36.Date(retry.Next.ToString("o"));
+    CurrentProgress.Visibility=readingResult?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=readingResult;CurrentProgress.ToolTip="Получение результата задания; это не прогресс установки";
+   }
+   WsusStage.Text=CurrentStage.Text;WsusProgress.IsIndeterminate=CurrentProgress.IsIndeterminate;
   }
   if(active&&OperationGlyph38.Kind=="Working")OperationGlyph38.Kind=StatusGlyph.ForOperation50(CurrentStage.Text);
+  RenderWork60(selected);
   RefreshMode39();
   RefreshHeader31(selected);
  }

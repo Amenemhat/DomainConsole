@@ -23,13 +23,13 @@ public partial class MainWindow {
  readonly Dictionary<string,int> overviewAttempts45=Store.Read("overview-attempts45.json",new Dictionary<string,int>());
  string treeAnchor="",recentAnchor="";string statusScope=Store.Read("status-scope.json","");
  static readonly (string Key,string Label)[] StatusCategories={
-  ("Working","Выполняется операция"),("AdDisabled","Отключены в AD"),("Error","Ошибка установки / задания"),("SyncError","Последний поиск: ошибка"),("Warning","Требует внимания"),("Discrepancy","Расхождение клиента и WSUS"),("ReportPending","Ожидается подтверждение WSUS"),("Reboot","Нужна перезагрузка"),("Success","Последняя полная проверка успешна"),("Needed","Есть необходимые обновления"),("Stale","Отчёт устарел"),("NoWsus","Нет в WSUS"),("Unreachable","Нет связи WinRM"),("Access","Нет доступа"),("Connected","Связь подтверждена"),("Unknown","Нет данных")};
+  ("IdentityConflict","Дубли / конфликты ID"),("Working","Выполняется операция"),("AdDisabled","Отключены в AD"),("Error","Ошибка установки / задания"),("SyncError","Последний поиск: ошибка"),("Warning","Требует внимания"),("Discrepancy","Расхождение клиента и WSUS"),("ReportPending","Ожидается подтверждение WSUS"),("Reboot","Нужна перезагрузка"),("Success","Последняя полная проверка успешна"),("Needed","Есть необходимые обновления"),("Stale","Отчёт устарел"),("NoWsus","Нет в WSUS"),("Unreachable","Нет связи WinRM"),("Access","Нет доступа"),("Connected","Связь подтверждена"),("Unknown","Нет данных")};
  string OverviewServer=>WsusHost.Text.Trim()+":"+WsusPort.Text.Trim();
  bool CacheMatches(CachedWsusReport cached)=>cached.Server.Equals(OverviewServer,StringComparison.OrdinalIgnoreCase)&&(cached.Host41.Length==0||SavedEvidence55.Matches(cached.Endpoint41,new TargetRecord{Host=cached.Host41}));
  OverviewResult OverviewStatus(ComputerRow row){var status=AssessClient41(row);return new(status.Kind,status.Title+"\n"+status.Details);}
 
  static bool AccessError(string error)=>error.Contains("0x80070005",StringComparison.OrdinalIgnoreCase)||error.Contains("Access is denied",StringComparison.OrdinalIgnoreCase)||error.Contains("отказано в доступе",StringComparison.OrdinalIgnoreCase)||error.Contains("доступ запрещ",StringComparison.OrdinalIgnoreCase)||error.Contains("от имени администратора",StringComparison.OrdinalIgnoreCase);
- IEnumerable<string> StatusTags(ComputerRow row){if(row.Target.AdDisabled)yield return "AdDisabled";var primary=OverviewStatus(row).Kind;yield return primary;if(reportCache.TryGetValue(row.Host,out var cache)&&CacheMatches(cache)){if(!cache.Found&&primary!="NoWsus")yield return "NoWsus";if(cache.Found&&cache.Report.NeededCount>0&&primary!="Needed")yield return "Needed";}if((HeaderRebootJob(row)!=null||RebootReason(row).Length>0)&&primary!="Reboot")yield return "Reboot";var link=LinkKind(row.Host);if(link is "Connected" or "Unreachable" or "Access"&&link!=primary)yield return link;}
+ IEnumerable<string> StatusTags(ComputerRow row){if(IdentityConflict58(row.Host))yield return "IdentityConflict";if(row.Target.AdDisabled)yield return "AdDisabled";var primary=OverviewStatus(row).Kind;yield return primary;if(reportCache.TryGetValue(row.Host,out var cache)&&CacheMatches(cache)){if(!cache.Found&&primary!="NoWsus")yield return "NoWsus";if(cache.Found&&cache.Report.NeededCount>0&&primary!="Needed")yield return "Needed";}if((HeaderRebootJob(row)!=null||RebootReason(row).Length>0)&&primary!="Reboot")yield return "Reboot";var link=LinkKind(row.Host);if(link is "Connected" or "Unreachable" or "Access"&&link!=primary)yield return link;}
  bool MatchesSearch(ComputerRow row)=>(row.Name+" "+row.Host+" "+row.OS+ConnectionStore.Description(row.Host)).Contains(SearchBox.Text,StringComparison.OrdinalIgnoreCase);
  bool MatchesScope(ComputerRow row)=>statusScope=="manual-connections"?row.OU=="Ручные подключения":string.IsNullOrEmpty(statusScope)||row.OU.Equals(statusScope,StringComparison.OrdinalIgnoreCase)||row.OU.EndsWith(","+statusScope,StringComparison.OrdinalIgnoreCase);
  bool MatchesNavigation(ComputerRow row)=>(overviewSettings.ShowDisabled||!row.Target.AdDisabled)&&MatchesSearch(row)&&MatchesScope(row)&&(statusFilter.Count==0||StatusTags(row).Any(statusFilter.Contains));
@@ -59,17 +59,60 @@ public partial class MainWindow {
  static (int Attempts,DateTimeOffset? Next) OverviewRetryPolicy45(bool failed,bool deferred,int attempts,DateTimeOffset now,DateTimeOffset allowed){int count=attempts+(deferred?0:1);return (count,!failed||count>=3||allowed==DateTimeOffset.MaxValue?null:allowed>now.AddMinutes(2)?allowed:now.AddMinutes(2));}
  DateTimeOffset OverviewNext45()=>overviewPending45.Count==0?DateTimeOffset.UtcNow.AddHours(overviewSettings.Hours):overviewPending45.Select(h=>overviewDue45.GetValueOrDefault(h,DateTimeOffset.UtcNow.AddMinutes(2))).Min();
  static async Task<T> AwaitOverviewResult47<T>(Task<T> pending,CancellationToken token){var result=await pending;token.ThrowIfCancellationRequested();return result;}
- async Task RunOverview(bool manual45=false){if(TransportBudget41.Paused){Notify("Опрос выключен. Включите его переключателем рядом с настройками.");return;}if(overviewRunning||closing)return;WsusSettings? settings=null;try{settings=ReadWsus();}catch{}var server=OverviewServer;if(manual45){overviewPending45.Clear();overviewAttempts45.Clear();overviewDue45.Clear();}
- if(overviewPending45.Count==0)overviewAttempts45.Clear();var resume45=overviewPending45.ToHashSet(StringComparer.OrdinalIgnoreCase);var rows=OrderForOverview(Computers.Where(r=>!r.Target.AdDisabled&&(manual45||resume45.Count==0||resume45.Contains(r.Host)&&overviewDue45.GetValueOrDefault(r.Host)<=DateTimeOffset.UtcNow)),(ComputerGrid.SelectedItem is ComputerRow selected48?new[]{selected48.Host}:Array.Empty<string>()).Concat(workHosts),recentHosts);if(rows.Count==0){nextOverview=OverviewNext45();Store.Write("overview-next43.json",nextOverview);return;}overviewRunning=true;using var cancellation=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);overviewCancel=cancellation;SetOverviewAction33(true);int done=0,serverErrors=0,clientErrors=0;bool cancelled=false;int skipped45=0;var visited45=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-  try{OverviewProgress.Text="Обзор: чтение справочных сведений AD…";await RefreshDirectoryActivity(cancellation.Token);cancellation.Token.ThrowIfCancellationRequested();foreach(var chunk in rows.Chunk(10)){cancellation.Token.ThrowIfCancellationRequested();if(TransportBudget41.Paused)throw new OperationCanceledException();if(closing||server!=OverviewServer){cancelled=true;break;}OverviewProgress.Text="Статусы: "+done+" / "+rows.Count+" · чтение WSUS";
-   if(settings!=null){try{var replies=await AwaitOverviewResult47(remote.WsusOverview(settings,chunk.Select(r=>r.Host).ToList(),cancellation.Token),cancellation.Token);if(closing||server!=OverviewServer){cancelled=true;break;}foreach(var row in chunk){var reply=replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase));if(!ApplyOverviewReply53(row,reply,server))serverErrors++;}}catch(Exception ex){if(cancellation.IsCancellationRequested)throw new OperationCanceledException();serverErrors+=chunk.Length;foreach(var row in chunk)ApplyOverviewReply53(row,new(){Error=ex.Message},server);}}
-   OverviewProgress.Text="Статусы: "+done+" / "+rows.Count+" · клиентские флаги и аптайм (до 3 одновременно)";var snapshots=await AwaitOverviewResult47(Task.WhenAll(chunk.Select(row=>ReadClientStatus(row,cancellation.Token))),cancellation.Token);for(int i45=0;i45<chunk.Length;i45++){var host45=chunk[i45].Host;visited45.Add(host45);var outcome45=readOutcome45.GetValueOrDefault(host45,"Не проверено");bool deferred45=outcome45.StartsWith("Отложено")||outcome45.StartsWith("Пропущено");if(deferred45)skipped45++;else if(snapshots[i45]==null||snapshots[i45]!.Required==null)clientErrors++;
-    overviewPending45.RemoveAll(x=>x.Equals(host45,StringComparison.OrdinalIgnoreCase));overviewDue45.Remove(host45);
-    var wait45=RemoteService.SnapshotWait42(ConnectionStore.Capture(chunk[i45].Target));var due45=wait45?.Next??DateTimeOffset.UtcNow;if(readFailures34.TryGetValue(host45+"|флаги и аптайм",out var failure45)&&failure45.Next>due45)due45=failure45.Next;
-    var retry45=OverviewRetryPolicy45(snapshots[i45]==null||snapshots[i45]!.Required==null||overviewErrors.ContainsKey(host45),deferred45,overviewAttempts45.GetValueOrDefault(host45),DateTimeOffset.UtcNow,outcome45.StartsWith("Пропущено")?DateTimeOffset.MaxValue:due45);overviewAttempts45[host45]=retry45.Attempts;
-    if(retry45.Next.HasValue){overviewPending45.Add(host45);overviewDue45[host45]=retry45.Next.Value;}
-   }done+=chunk.Length;Store.Write("wsus-report-cache.json",reportCache);RefreshOutcomes();if(ComputerGrid.SelectedItem is ComputerRow focused&&chunk.Contains(focused))ShowCurrent();await Task.Delay(500,cancellation.Token);
-  }}catch(OperationCanceledException){cancelled=true;}finally{overviewRunning=false;overviewCancel=null;SetOverviewAction33(false);foreach(var unvisited45 in rows.Where(x=>!visited45.Contains(x.Host)))if(!overviewPending45.Contains(unvisited45.Host,StringComparer.OrdinalIgnoreCase))overviewPending45.Add(unvisited45.Host);Store.Write("overview-pending45.json",overviewPending45);Store.Write("overview-attempts45.json",overviewAttempts45);Store.Write("overview-due45.json",overviewDue45);nextOverview=OverviewNext45();Store.Write("overview-next43.json",nextOverview);if(!closing){OverviewProgress.Text=(cancelled?"Остановлено":"Обзор завершён")+" · "+done+" / "+rows.Count+" · WSUS: "+serverErrors+" ошибок; неполных/неудачных проверок: "+clientErrors+"; пропущено/отложено: "+skipped45+(overviewPending45.Count>0?" · ожидают повторного обхода: "+overviewPending45.Count:"")+" · следующий обзор: "+Display36.Date(nextOverview.ToString("o"));RefreshOutcomes();}}}
+ async Task RunOverview(bool manual45=false){
+  using var manual58=manual45?PollingControl43.Manual56("wsus-overview"):null;
+  if(PollingControl43.BackgroundPaused56||overviewRunning||closing)return;
+  WsusSettings settings;try{settings=ReadWsus();}catch(Exception ex){Notify(ex.Message);return;}
+  var server=OverviewServer;var ssl=WsusSsl.IsChecked;
+  var rows=OrderForOverview(Computers,workHosts,recentHosts);
+  overviewRunning=true;using var cancellation=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);overviewCancel=cancellation;SetOverviewAction33(true);
+  bool Current58()=>!closing&&!cancellation.IsCancellationRequested&&server==OverviewServer&&ssl==WsusSsl.IsChecked;
+  int done=0,errors=0;bool cancelled=false;
+  try{
+   OverviewProgress.Text="WSUS: пакетное чтение записей и сводок…";
+   var snapshot=await remote.ReadWsusSnapshot58(settings,cancellation.Token);
+   if(!Current58())throw new OperationCanceledException();
+   serverSnapshot58=snapshot;ConfirmIdentityRepairs58();await Task.Run(()=>Store.Write("wsus-server-snapshot58.json",snapshot));
+   var details=new List<ComputerRow>();
+   foreach(var row in rows){
+    var name=ConnectionStore.WsusName(row.Host);var matches=snapshot.Find(name);
+    if(name.Length==0){ApplyOverviewReply53(row,new(){Error="Имя клиента ещё не подтверждено для WSUS"},server,false);errors++;continue;}
+    if(matches.Count!=1){ApplyOverviewReply53(row,new(){Found=false,Error=matches.Count>1?"Несколько записей WSUS с этим именем; требуется проверка идентичности":""},server,false);if(matches.Count>1)errors++;continue;}
+    var record=matches[0];
+    if(record.Summary==null){ApplyOverviewReply53(row,new(){Error=record.Error},server,false);errors++;continue;}
+    // Counts across all updates cannot stand in for effective approvals. Keep the last
+    // complete per-client report until the bounded detail read has finished.
+    details.Add(row);
+   }
+   await PersistReportCacheAsync58();
+   RefreshOutcomes();
+   foreach(var chunk in details.Chunk(10)){
+    cancellation.Token.ThrowIfCancellationRequested();if(!Current58())throw new OperationCanceledException();
+    OverviewProgress.Text="WSUS: сводки получены · уточнение одобрений "+done+" / "+details.Count;
+    try{
+     var replies=await remote.ReadWsusDetails58(settings,chunk.ToList(),snapshot,cancellation.Token);
+     if(!Current58())throw new OperationCanceledException();
+     foreach(var row in chunk){if(!ApplyOverviewReply53(row,replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)),server,false))errors++;}
+    }catch(OperationCanceledException){throw;}catch(Exception ex){foreach(var row in chunk)ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);errors+=chunk.Length;}
+    done+=chunk.Length;await PersistReportCacheAsync58();
+    RefreshOutcomes();if(ComputerGrid.SelectedItem is ComputerRow focused&&chunk.Contains(focused))ShowCurrent();
+   }
+   overviewPending45.Clear();overviewAttempts45.Clear();overviewDue45.Clear();
+  }catch(OperationCanceledException){cancelled=true;}
+  catch(Exception ex){
+   errors++;if(Current58()){
+    serverSnapshot58.LastError=ex.Message;serverSnapshot58.ErrorUtc=DateTimeOffset.UtcNow.ToString("o");
+    var saved=Store.Clone(serverSnapshot58);await Task.Run(()=>Store.Write("wsus-server-snapshot58.json",saved));
+    foreach(var row in rows)ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);
+    await PersistReportCacheAsync58();
+   }
+  }finally{
+   overviewRunning=false;overviewCancel=null;SetOverviewAction33(false);
+   nextOverview=DateTimeOffset.UtcNow.Add(errors>0?TimeSpan.FromMinutes(5):TimeSpan.FromHours(overviewSettings.Hours));
+   Store.Write("overview-next43.json",nextOverview);
+   if(!closing){OverviewProgress.Text=(cancelled?"Обзор WSUS остановлен":"Обзор WSUS завершён")+" · подробностей: "+done+" · ошибок: "+errors+" · клиентские подключения не выполнялись";RefreshOutcomes();}
+  }
+ }
 
  static bool IsCheckSource(object source){for(var d=source as DependencyObject;d!=null;d=d is Visual?VisualTreeHelper.GetParent(d):LogicalTreeHelper.GetParent(d)){if(d is CheckBox)return true;if(d is TreeViewItem or ListBoxItem)break;}return false;}
  List<ComputerRow> VisibleTreeRows(){var result=new List<ComputerRow>();void Walk(ItemsControl parent){foreach(TreeViewItem item in parent.Items){if(item.Visibility!=Visibility.Visible)continue;if(item.Tag is ComputerRow row)result.Add(row);if(item.IsExpanded)Walk(item);}}Walk(OuTree);return result;}

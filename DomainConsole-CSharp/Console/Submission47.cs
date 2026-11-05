@@ -10,7 +10,7 @@ public partial class MainWindow {
   foreach(var t in targets){t.Status="Queued";t.State=null;t.Output="";job.Targets.Add(t);selected.Single(r=>r.Host==t.Host).JobId=job.Id;confirmedJobs.Add(job.Id+t.Host);queue.Enqueue((job,t));}
   History.Insert(0,job);if(beginPlan){job.BeginPlan38=true;job.PlanId37=job.Id;}
   foreach(var t in targets){RememberComputer(t.Host);if(job.OutputChannel=="WSUS"){wsusFailureDetails.Remove(t.Host);liveReports.Remove(t.Host);if(reportCache.TryGetValue(t.Host,out var cached)){cached.Started=job.Created;serverReports[t.Host]=CachedReportText(cached);reportSeverity[t.Host]=cached.Report.Severity(job.Created);}}}
-  if(job.OutputChannel=="WSUS")Store.Write("wsus-report-cache.json",reportCache);
+  if(job.OutputChannel=="WSUS")PersistReportCache58();
   Save();Sync(job);
   // Background completion never chooses a computer, tab, history entry or new checkbox set.
   if(targets.Any(t=>CurrentHost(t.Host)))ShowCurrent();

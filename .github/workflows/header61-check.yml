@@ -1,0 +1,61 @@
+name: Verify header action layout
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'DomainConsole-CSharp/Console/**'
+      - '.github/workflows/header61-check.yml'
+permissions:
+  contents: read
+jobs:
+  ui:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build executor for UI fixtures
+        run: dotnet build DomainConsole-CSharp/Agent/DomainConsole.Agent.csproj -c Release
+      - name: Build actual WPF window
+        run: dotnet publish DomainConsole-CSharp/Console/DomainConsole.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o Publish
+      - name: Include executor
+        shell: pwsh
+        run: |
+          New-Item Publish/Agent -ItemType Directory -Force | Out-Null
+          Copy-Item DomainConsole-CSharp/Agent/bin/Release/net462/DomainConsole.Agent.exe Publish/Agent/
+      - name: Verify window and history after restart
+        shell: pwsh
+        run: |
+          $env:DOMAINCONSOLE_UI_SMOKE = '1'
+          $env:TEMP = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
+          $env:TMP = $env:TEMP
+          New-Item $env:TEMP -ItemType Directory -Force | Out-Null
+          function Test-Window {
+            Remove-Item Publish/ui-smoke-ready.txt -Force -ErrorAction SilentlyContinue
+            $p = Start-Process ./Publish/DomainConsole.exe -PassThru
+            $until = [DateTime]::UtcNow.AddSeconds(240)
+            while (!(Test-Path Publish/ui-smoke-ready.txt) -and !$p.HasExited -and [DateTime]::UtcNow -lt $until) { Start-Sleep -Milliseconds 200; $p.Refresh() }
+            if (!$p.HasExited -and !(Test-Path Publish/ui-smoke-ready.txt)) { Stop-Process -Id $p.Id; throw 'UI assertions did not finish within 240 seconds' }
+            $p.Refresh()
+            if ($p.HasExited) { if (Test-Path Publish/smoke-error.txt) { Get-Content Publish/smoke-error.txt }; throw "Application exited during startup: $($p.ExitCode)" }
+            if ($p.MainWindowHandle -eq 0) { Stop-Process -Id $p.Id; throw "Application window was not created" }
+            Write-Output "Window created: $($p.MainWindowTitle)"
+            $null = $p.CloseMainWindow()
+            if (!$p.WaitForExit(10000)) { Stop-Process -Id $p.Id; throw "Application did not close normally" }
+            if ($p.ExitCode -ne 0) { if (Test-Path Publish/smoke-error.txt) { Get-Content Publish/smoke-error.txt }; throw "Application exited with code $($p.ExitCode)" }
+          }
+          Test-Window
+          $env:DOMAINCONSOLE_EXPECT_HISTORY = '1'
+          Test-Window
+          Remove-Item Publish/ui-smoke-ready.txt -Force
+          Remove-Item Publish/Data -Recurse -Force
+          Write-Output "History persisted, opened without network, and survived AD list refresh."
+      - name: Save actual UI review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Header61-UI-review
+          path: ${{ runner.temp }}/DomainConsole-smoke/ui-*
+          if-no-files-found: warn

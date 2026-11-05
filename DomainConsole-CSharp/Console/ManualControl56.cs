@@ -27,7 +27,7 @@ public partial class MainWindow {
   var buttons=new WrapPanel();DockPanel.SetDock(buttons,Dock.Bottom);panel.Children.Add(buttons);
   var choose=new ComboBox{Margin=new(0,0,0,8)};DockPanel.SetDock(choose,Dock.Top);panel.Children.Add(choose);
   var log=new LogViewer{ShellMode="Report",Text="Чтение записей клиента…"};panel.Children.Add(log);
-  var refresh=new Button{Content="Прочитать сейчас"};var release=new Button{Content="Снять оставшиеся резервации"};var stop=new Button{Content="Остановить выбранное"};var force=new Button{Content="Завершить исполнитель…"};
+  var refresh=new Button{Content="Прочитать сейчас"};var release=new Button{Content="Проверить и снять зависшие блокировки"};var stop=new Button{Content="Остановить выбранное"};var force=new Button{Content="Завершить исполнитель…"};
   foreach(var button in new[]{refresh,release,stop,force})buttons.Children.Add(button);
   bool busy=false;
   async Task Read(bool repair=false){using var manual56=PollingControl43.Manual56("control");var raw=await (inspect56!=null?inspect56(repair):remote.InspectControl56(target,repair));if(!window.IsVisible||!CurrentEndpoint(target))return;using var doc=JsonDocument.Parse(raw);var root=doc.RootElement;var previous=choose.SelectedItem as string;choose.Items.Clear();var lines=new List<string>{root.GetProperty("Message").GetString()??""};
@@ -35,6 +35,7 @@ public partial class MainWindow {
    foreach(var item in root.GetProperty("Rows").EnumerateArray()){string id=item.GetProperty("Id").GetString()!;choose.Items.Add(id);lines.Add("\nЗадание: "+id+"\n"+item.GetProperty("Status").GetString()+" · "+item.GetProperty("Stage").GetString()+"\nПоследний статус: "+Display36.Date(item.GetProperty("Updated").GetString()??"")+"\nДиагностика: "+item.GetProperty("Diagnostics").GetString()+"; восстановление: "+item.GetProperty("Restore").GetString()+"\nЗадач: "+item.GetProperty("Tasks").GetArrayLength()+"; исполнителей: "+item.GetProperty("Processes").GetArrayLength()+"\nМожно снять оставшуюся резервацию: "+item.GetProperty("CanRelease").GetBoolean());}
    if(previous!=null&&choose.Items.Contains(previous))choose.SelectedItem=previous;else if(choose.Items.Count>0)choose.SelectedIndex=0;
    if(root.TryGetProperty("Backup",out var backup)&&backup.GetString()?.Length>0)lines.Add("Резервная копия: "+backup.GetString());log.Text=string.Join("\n",lines);
+   if(repair)ApplyReconciled60(row.Host,root);
    if(repair)Event31(row.Host,"orphan-repair56",DateTime.UtcNow.ToString("o"),root.GetProperty("Message").GetString()??"Проверка резерваций","Info",log.Text);
   }
   async Task Run(Func<Task> action){if(busy)return;busy=true;foreach(var b in new[]{refresh,release,stop,force})b.IsEnabled=false;try{await action();}catch(Exception ex){log.Text="Действие не подтверждено\n"+ex.Message;}finally{busy=false;foreach(var b in new[]{refresh,release,stop,force})b.IsEnabled=true;}}

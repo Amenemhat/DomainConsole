@@ -30,6 +30,7 @@ public partial class MainWindow {
    var anchor=RecentComputers[(int)viewer.VerticalOffset];
    Editor.Focus();var focus=Keyboard.FocusedElement;
    gates[1].SetResult((true,false,true));await calls[1];
+   if(calls[0].IsCompleted||!queue.Any(q=>q.Job.Id==jobs[1].Id))throw new Exception("Ready target waited for unresolved peer decision");
    gates[0].SetResult((true,true,false));await calls[0];
    UpdateLayout();Dispatcher.Invoke(()=>{},DispatcherPriority.ContextIdle);
    if(RecentComputers[(int)viewer.VerticalOffset]!=anchor)throw new Exception("Background submissions moved the recent-list reading anchor");

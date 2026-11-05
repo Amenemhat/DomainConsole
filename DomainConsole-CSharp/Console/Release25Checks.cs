@@ -5,6 +5,12 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease25(){
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"manual-reboot59.ps1"),RemoteService.ManualRebootScript59,new UTF8Encoding(true));
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"identity-server58.ps1"),RemoteService.IdentityServerScript58,new UTF8Encoding(true));
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"wsus-snapshot58.ps1"),RemoteService.SnapshotScript58,new UTF8Encoding(true));
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"wsus-details58.ps1"),RemoteService.DetailsScript58,new UTF8Encoding(true));
+  File.WriteAllText(Path.Combine(Path.GetTempPath(),"identity-repair58.ps1"),RemoteService.IdentityRepairScript58(new(){Name="fixture.invalid",Machine="11111111-1111-1111-1111-111111111111",SusClientId="22222222-2222-2222-2222-222222222222",Server="http://wsus.invalid:8530"}),new UTF8Encoding(true));
+
   var row=Computers.Last();var savedCache=reportCache.GetValueOrDefault(row.Host);var savedConnection=clientConnections.GetValueOrDefault(row.Host);bool wasLive=liveReports.Contains(row.Host);var originalSelected=Computers.Select(r=>r.Selected).ToList();var originalRecentAnchor=recentAnchor;var originalTreeAnchor=treeAnchor;RemoteJob? evidenceJob=null;var savedPlan41=maintenancePlans.GetValueOrDefault(row.Host);var savedRecovery41=reportRecoveries.GetValueOrDefault(row.Host);var savedActivity41=backgroundUpdates.GetValueOrDefault(row.Host);var savedJobs41=History.ToList();
   try {
    clientConnections.Remove(row.Host);overviewErrors.Remove(row.Host);maintenancePlans.Remove(row.Host);reportRecoveries.Remove(row.Host);backgroundUpdates.Remove(row.Host);foreach(var existing41 in History.Where(j=>j.Targets.Any(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase))).ToList())History.Remove(existing41);
@@ -15,7 +21,10 @@ public partial class MainWindow {
    report.LastReportedUtc=DateTimeOffset.UtcNow.AddDays(-2).ToString("o");if(OverviewStatus(row).Kind!="Stale")throw new Exception("Old success incorrectly requests intervention");
    report.FailedCount=1;liveReports.Remove(row.Host);if(OverviewStatus(row).Kind!="Error")throw new Exception("Old known failure hidden by freshness");report.FailedCount=0;report.InstalledPendingRebootCount=1;if(OverviewStatus(row).Kind is not ("Warning" or "Stale")||RebootViewFor40(row).Fresh)throw new Exception("Old server-only reboot request treated as current confirmation");report.InstalledPendingRebootCount=0;
    overviewErrors[row.Host]="Server timeout";if(OverviewStatus(row).Kind!="Stale")throw new Exception("Failed WSUS read replaced saved health");overviewErrors.Remove(row.Host);
-   reportCache[row.Host].Found=false;if(OverviewStatus(row).Kind!="NoWsus")throw new Exception("Missing WSUS identity not distinguished");
+   reportCache[row.Host].Found=false;
+   if(OverviewStatus(row).Kind!="Stale")throw new Exception("Saved missing identity presented as current absence");
+   overviewErrors[row.Host]="Server timeout";if(OverviewStatus(row).Kind!="Warning")throw new Exception("Failed read presented as confirmed absence");overviewErrors.Remove(row.Host);
+   liveReports.Add(row.Host);if(OverviewStatus(row).Kind!="NoWsus")throw new Exception("Fresh missing WSUS identity not distinguished");
    clientConnections[row.Host]=new(){Error="Access is denied",LastAttempt=DateTimeOffset.UtcNow};if(LinkKind(row.Host)!="Access"||!StatusTags(row).Contains("NoWsus"))throw new Exception("Access denied confused with offline or server absence");
    clientConnections[row.Host].Error="WinRM timeout";clientConnections[row.Host].Lost38=true;if(LinkKind(row.Host)!="Unreachable")throw new Exception("Unreachable has no dedicated state");clientConnections.Remove(row.Host);
    reportCache[row.Host].Found=true;

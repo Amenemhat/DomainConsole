@@ -85,7 +85,7 @@ public partial class MainWindow {
    report.FailureContext=string.Join("\n\n",lines);
    report.FailureSummary=string.Join("\n",report.FailedUpdates.Select(u=>"KB "+u.KB+": сохранённая неудача WSUS; события и коды см. в разделе «Сведения WSUS и клиентская история»."))+(RebootReason(row).Length>0?"\nКлиент подтверждает необходимость перезагрузки. Это приоритетное действие; данные WSUS показаны отдельно от клиентского флага.":"");
    wsusFailureDetails[row.Host]="## Технические подробности · WSUS и история\n"+report.FailureContext;
-   serverReports[row.Host]=report.Format(server,cached.Started);Store.Write("wsus-report-cache.json",reportCache);
+   serverReports[row.Host]=report.Format(server,cached.Started);PersistReportCache58();
    if(IsCurrent(row))ShowCurrent();
   }finally{failureReading.Remove(row.Host);}
  }

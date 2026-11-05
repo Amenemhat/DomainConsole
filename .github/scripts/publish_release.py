@@ -13,6 +13,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
 from acceptance_gate import load_acceptance
+from package_layout import PACKAGE_FILES
 
 API = 'https://api.github.com'
 
@@ -52,6 +53,8 @@ def validate_package(data, expected_digest):
         # ZipInfo.filename normalizes backslashes on Windows even when reading.
         # Validate the original ZIP names before platform-specific normalization.
         names = [entry.orig_filename for entry in archive.infolist()]
+        if len(names) != len(set(names)) or any(n not in PACKAGE_FILES and n != 'Agent/' for n in names):
+            raise ValueError('Package contains unexpected files or duplicate entries')
         if not {'DomainConsole.exe', 'Agent/DomainConsole.Agent.exe'}.issubset(names):
             raise ValueError('Package is missing required executables')
         if any(n.startswith(('Data/', '/')) or '..' in PurePosixPath(n).parts or '\\' in n for n in names):
