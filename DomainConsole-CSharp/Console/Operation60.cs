@@ -7,7 +7,8 @@ public partial class MainWindow {
  Work60? WorkState60(ComputerRow selected,bool wsus){
   var now=DateTimeOffset.UtcNow;
   if(preparing60.TryGetValue(selected.Host,out var prep)&&prep.Channel==(wsus?"WSUS":"Commands"))return new(prep.Stage+" · "+Age(now-prep.At),true);
-  var row=ExecutionRow(selected,wsus);var state=row.Target.State;
+  var liveJob=History.FirstOrDefault(j=>IsWsusJob(j)==wsus&&j.Targets.Any(t=>t.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)));
+  var row=liveJob==null?ExecutionRow(selected,wsus):new ComputerRow(liveJob.Targets.First(t=>t.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)),liveJob.Id);var state=row.Target.State;
   if(ActiveTarget(row.Target)){
    if(ObservationStopped51(row))return new("Наблюдение остановлено · результат задания не подтверждён",false);
    if(LostObservation51(row.Host))return new("Связь потеряна · ожидаем восстановления, результат не подтверждён",false);
@@ -46,16 +47,17 @@ public partial class MainWindow {
  async Task SubmitTargets60(RemoteJob template,List<ComputerRow> selected,List<ComputerRow> frozen,bool beginPlan){
   // Each target owns its decision and submission. A modeless decision cannot hold ready peers.
   var admitted=new List<(ComputerRow Selected,ComputerRow Frozen)>();
-  foreach(var frozenRow in frozen){if(preparing60.ContainsKey(frozenRow.Host)){Notify(frozenRow.Name+": подготовка уже выполняется; повтор не создан.");continue;}preparing60[frozenRow.Host]=(template.OutputChannel,"Подготовка · проверяем возможность запуска",DateTimeOffset.UtcNow);admitted.Add((selected.Single(r=>r.Host==frozenRow.Host),frozenRow));}
+  foreach(var frozenRow in frozen){if(preparing60.ContainsKey(frozenRow.Host)||History.Any(j=>j.OutputChannel==template.OutputChannel&&j.Steps.Count==template.Steps.Count&&j.Steps.Zip(template.Steps).All(p=>p.First.Kind==p.Second.Kind&&p.First.Code==p.Second.Code)&&j.Targets.Any(t=>t.Host.Equals(frozenRow.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)))){Notify(frozenRow.Name+": это действие уже выполняется или подготавливается; повтор не создан.");continue;}preparing60[frozenRow.Host]=(template.OutputChannel,"Подготовка · проверяем возможность запуска",DateTimeOffset.UtcNow);admitted.Add((selected.Single(r=>r.Host==frozenRow.Host),frozenRow));}
   RefreshActivity();UpdateWsusStage();
   using var slots=new SemaphoreSlim(3);
   await Task.WhenAll(admitted.Select(async pair=>{
    var job=Store.Clone(template);job.Id=Guid.NewGuid().ToString();job.Targets.Clear();
+   void FailedPreparation(string message){if(History.Contains(job))return;var target=Store.Clone(pair.Frozen.Target);target.Status="LaunchRejected";target.State=new(){Id=job.Id,Status="LaunchRejected",Ended=DateTime.UtcNow.ToString("o")};target.Output="## Запуск не выполнен\n"+message;job.Targets.Add(target);History.Insert(0,job);Event31(target.Host,"prepare60",job.Id,"Запуск не выполнен","Warning",message);Save();}
    try{
     async Task<(bool Accepted,bool Force,bool Wait)> Prepare(){if(template.OutputChannel=="WSUS"){await slots.WaitAsync();try{var repaired=await remote.InspectControl56(pair.Frozen.Target,true);using var repairDoc=System.Text.Json.JsonDocument.Parse(repaired);if(repairDoc.RootElement.GetProperty("Removed").GetArrayLength()>0)Event31(pair.Frozen.Host,"reconcile60",job.Id,"Освобождены блокировки прерванных заданий","Warning",repairDoc.RootElement.GetProperty("Message").GetString()??"");}finally{slots.Release();}}return await PrepareUpdateAction(new(){pair.Frozen},job.Steps,job.MicrosoftSource,slots);}
-    if(await CompletePreparedSubmission47(job,new(){pair.Selected},new(){pair.Frozen},Prepare,beginPlan))await SendQueue(job.Id);
-   }catch(Exception ex){Event31(pair.Frozen.Host,"prepare60",job.Id,"Запуск не выполнен","Warning",ex.Message);Notify(pair.Frozen.Name+": "+ShortConnectionError(ex.Message));}
-   finally{preparing60.Remove(pair.Frozen.Host);RefreshActivity();if(CurrentHost(pair.Frozen.Host))UpdateWsusStage();}
+    if(await CompletePreparedSubmission47(job,new(){pair.Selected},new(){pair.Frozen},Prepare,beginPlan))await SendQueue(job.Id);else FailedPreparation("Подготовка не подтверждена или действие отменено пользователем. Прежние задания продолжаются.");
+   }catch(Exception ex){FailedPreparation(ex.Message);Notify(pair.Frozen.Name+": "+ShortConnectionError(ex.Message));}
+   finally{preparing60.Remove(pair.Frozen.Host);RefreshActivity();if(CurrentHost(pair.Frozen.Host))ShowCurrent();}
   }));
  }
 }
