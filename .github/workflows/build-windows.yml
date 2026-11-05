@@ -41,6 +41,15 @@ jobs:
           New-Item Publish/Agent -ItemType Directory -Force | Out-Null
           Copy-Item DomainConsole-CSharp/Agent/bin/Release/net462/DomainConsole.Agent.exe Publish/Agent/
           Copy-Item DomainConsole-CSharp/README.txt Publish/README-source.txt
+      - name: Verify redirected progress output
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe output-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-output-smoke")
+          if ($LASTEXITCODE -ne 0) { throw "Progress output check failed" }
+      - name: Verify live SFC and DISM output on disposable Windows
+        shell: pwsh
+        timeout-minutes: 22
+        run: ./.github/scripts/test-native-progress60.ps1
       - name: Verify bounded agent waiting and persisted non-replay checkpoint
         shell: pwsh
         run: |
@@ -266,15 +275,6 @@ jobs:
         run: |
           & ./Publish/Agent/DomainConsole.Agent.exe cleanup-smoke (Join-Path $env:RUNNER_TEMP 'DomainConsole-cleanup-fixture')
           if ($LASTEXITCODE -ne 0) { throw 'Cleanup protection failed' }
-      - name: Verify redirected progress output
-        shell: pwsh
-        run: |
-          & ./Publish/Agent/DomainConsole.Agent.exe output-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-output-smoke")
-          if ($LASTEXITCODE -ne 0) { throw "Progress output check failed" }
-      - name: Verify live SFC and DISM output on disposable Windows
-        shell: pwsh
-        timeout-minutes: 22
-        run: ./.github/scripts/test-native-progress60.ps1
       - name: Verify bounded diagnostics
         shell: pwsh
         run: |

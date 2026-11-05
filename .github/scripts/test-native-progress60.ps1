@@ -9,7 +9,7 @@ foreach($item in @(@{Name='sfc';Code='sfc /verifyonly'},@{Name='dism';Code='dism
  try{
   while(!$p.HasExited -and (Get-Date) -lt $until){
    $out=Join-Path $folder 'step-1.out'
-   if(Test-Path $out){try{$text=[IO.File]::ReadAllText($out);if($text.Length -gt 0){$seen=$true};if($text -match '\d+(?:\.\d+)?\s*%'){$seenPercent=$true}}catch [IO.IOException]{}}
+   if(Test-Path $out){try{$stream=[IO.File]::Open($out,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete));$reader=[IO.StreamReader]::new($stream);try{$text=$reader.ReadToEnd()}finally{$reader.Dispose()};if($text.Length -gt 0){$seen=$true};if($text -match '\d+(?:\.\d+)?\s*%'){$seenPercent=$true}}catch [IO.IOException]{}}
    Start-Sleep -Milliseconds 100
   }
   if(!$p.HasExited){throw ($item.Name+': read-only scan timed out')}

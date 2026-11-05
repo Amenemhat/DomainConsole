@@ -162,7 +162,7 @@ namespace DomainConsole.Agent {
    if(PowerShell("exit -65536","ps-exit47",15000)!=-65536||!File.ReadAllText(FilePath("ps-exit47.failure.txt")).Contains("Код процесса: -65536 (0xFFFF0000)"))throw new Exception("Unknown PowerShell process exit lost context");
    var liveFile=FilePath("live60.out");CurrentKind="CMD";var liveTask=Task.Run(()=>Run(executable,"emit-live60","step-live60"));
    var liveUntil=DateTime.UtcNow.AddSeconds(8);bool seenLive=false;
-   while(DateTime.UtcNow<liveUntil&&!liveTask.IsCompleted){var path=FilePath("step-live60.out");if(File.Exists(path)){try{if(File.ReadAllText(path).Contains("Проверка 10%")){seenLive=true;break;}}catch(IOException){}}Thread.Sleep(50);}
+   while(DateTime.UtcNow<liveUntil&&!liveTask.IsCompleted){var path=FilePath("step-live60.out");if(File.Exists(path)){try{using(var liveStream=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete))using(var liveReader=new StreamReader(liveStream)){if(liveReader.ReadToEnd().Contains("Проверка 10%")){seenLive=true;break;}}}catch(IOException){}}Thread.Sleep(50);}
    if(!seenLive)throw new Exception("No partial stdout before command completion");if(liveTask.Result!=0)throw new Exception("Live fixture failed");CurrentKind="";
    var finalLive=File.ReadAllText(FilePath("step-live60.out"));if(finalLive.Contains("Проверка 10%")||!finalLive.Contains("Проверка 20%")||!finalLive.Contains("Готово"))throw new Exception("Live progress did not replace one line");
    Console.WriteLine("Progress replaced; Cyrillic mixed encoding and raw binary stdout verified.");return 0;}
