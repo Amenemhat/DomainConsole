@@ -66,9 +66,11 @@ public partial class MainWindow {
     var view=await ShowManualJobs56(Current(),_=>Task.FromResult("{\"Rows\":[{\"Id\":\"00000000-0000-0000-0000-000000000056\",\"Status\":\"Результат отсутствует\",\"Stage\":\"Передача не завершена\",\"Updated\":\"\",\"Ended\":\"\",\"Diagnostics\":\"\",\"Restore\":\"\",\"Tasks\":[],\"Processes\":[],\"CanRelease\":true}],\"Removed\":[],\"Owner\":\"Fixture\",\"Message\":\"Прочитана одна оставшаяся резервация\",\"Backup\":\"\"}"));
     try{view.UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap((int)view.ActualWidth,(int)view.ActualHeight,96,96,System.Windows.Media.PixelFormats.Pbgra32);bitmap.Render(view);var encoder=new System.Windows.Media.Imaging.PngBitmapEncoder();encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));using var file=File.Create(Path.Combine(Path.GetTempPath(),"ui-manual56-"+theme+".png"));encoder.Save(file);}finally{view.Close();}
    }}finally{Theme.Apply(theme56,false);}
+   UpdateLayout();double linkWidth61=HeaderLink.ActualWidth,pollWidth61=CollectorDetails54.ActualWidth;
    foreach(var width in new[]{1280d,1920d}){
     Width=width;CollectorStage53.Text=new string('Ж',200);CollectorStage53.Visibility=Visibility.Visible;UpdateLayout();
-    if(Math.Abs(HeaderLink.ActualWidth-140)>1||Math.Abs(CollectorDetails54.ActualWidth-68)>1)throw new Exception("Header controls resized with collector activity");
+    if(Math.Abs(HeaderLink.ActualWidth-linkWidth61)>1||Math.Abs(CollectorDetails54.ActualWidth-pollWidth61)>1)throw new Exception("Header controls resized with collector activity");
+    if(HeaderLink.Padding!=CollectorDetails54.Padding||HeaderLink.Padding!=HeaderReboot.Padding||HeaderLink.ActualHeight!=CollectorDetails54.ActualHeight||HeaderLink.ActualHeight!=HeaderReboot.ActualHeight)throw new Exception("Header action spacing is inconsistent");
    }
   }finally{backgroundRelease.TrySetResult("done");if(background!=null)await background;PollingControl43.Resume();if(paused)PollingControl43.Pause();Width=originalWidth;ShowCurrent();}
  }
