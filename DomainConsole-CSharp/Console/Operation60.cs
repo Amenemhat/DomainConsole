@@ -4,17 +4,17 @@ namespace DomainConsole;
 public partial class MainWindow {
  sealed record Work60(string Text,bool Busy,int? Percent=null);
  readonly Dictionary<string,(string Channel,string Stage,DateTimeOffset At)> preparing60=new(StringComparer.OrdinalIgnoreCase);
- Work60? WorkState60(ComputerRow selected,bool wsus){
+ Work60? WorkState60(ComputerRow selected,bool wsus,IEnumerable<(RemoteJob Job,TargetRecord Target)>? indexed=null){
   var now=DateTimeOffset.UtcNow;
   if(preparing60.TryGetValue(selected.Host,out var prep)&&prep.Channel==(wsus?"WSUS":"Commands"))return new(prep.Stage+" · "+Age(now-prep.At),true);
-  var liveJob=History.FirstOrDefault(j=>IsWsusJob(j)==wsus&&j.Targets.Any(t=>t.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)));
-  var row=liveJob==null?ExecutionRow(selected,wsus):new ComputerRow(liveJob.Targets.First(t=>t.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)),liveJob.Id);var state=row.Target.State;
-  if(ActiveTarget(row.Target)){
+  var live=(indexed??HostJobs39(selected.Host)).FirstOrDefault(x=>IsWsusJob(x.Job)==wsus&&ActiveTarget(x.Target));
+  if(live.Target!=null){
+   var row=new ComputerRow(live.Target,live.Job.Id);var state=live.Target.State;
    if(ObservationStopped51(row))return new("Наблюдение остановлено · результат задания не подтверждён",false);
    if(LostObservation51(row.Host))return new("Связь потеряна · ожидаем восстановления, результат не подтверждён",false);
    if(TransportBudget41.Paused&&!ManualJob56(row.JobId))return new("Опрос приостановлен · результат задания не подтверждён",false);
    string stage=row.Target.Status=="Queued"?"Ожидает отправки":row.Target.Status=="Sending"?"Передаём задание":row.Target.Status=="SubmissionUnknown"?"Проверяем передачу задания":StateFresh(state)?state?.Stage??"Ожидаем результат":"Получаем результат задания · последнее состояние устарело";
-   string since=state?.Started??History.FirstOrDefault(j=>j.Id==row.JobId)?.Created??"";
+   string since=state?.Started??live.Job.Created;
    return new(stage+(DateTimeOffset.TryParse(since,out var at)?" · "+Age(now-at):""),true,StateFresh(state)?state?.Progress:null);
   }
   if(!wsus)return null;
