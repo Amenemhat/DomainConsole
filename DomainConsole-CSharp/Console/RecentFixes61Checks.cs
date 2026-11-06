@@ -50,6 +50,10 @@ public partial class MainWindow {
    overviewRun61=new(){Server=OverviewServer,Phase="WSUS: уточнение одобрений",Total=400,Processed=120,Missing=3,Errors=2};overviewRunning=true;RenderOverview61();
    if(!OverviewBusy61.IsIndeterminate||OverviewBusy61.Visibility!=Visibility.Visible||!OverviewProgress.Text.Contains("120 / 400")||!OverviewDetailsText61().Contains("не найдено: 3"))throw new Exception("Overview progress/counts missing");
    ComputerGrid.SelectedItem=rows[0];MainTabs.SelectedItem=WsusTab;ShowCurrent();
+   Needed37_Click(new System.Windows.Controls.Button{DataContext=rows[0]},new RoutedEventArgs());
+   if(!WsusServerOutput.Text.Contains("Клиент не найден при последнем чтении"))throw new Exception("Opening required updates hides failed last lookup");
+   WsusServerOutput.SetExpanded("Технические подробности",true);
+   UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);UpdateLayout();
    foreach(int color in new[]{0,1,2}){Theme.Apply(color,false);foreach(var size in new[]{(1000d,640d),(1920d,1080d)})CaptureContent38("recent61-"+color+"-"+size.Item1,size.Item1,size.Item2);}
    overviewRunning=false;RenderOverview61();if(OverviewBusy61.IsIndeterminate||OverviewBusy61.Visibility!=Visibility.Collapsed)throw new Exception("Completed overview still animates");
    File.WriteAllText(Path.Combine(Path.GetTempPath(),"ui-recent61.txt"),"PASS metadata in all viewers; preserve raw logs; failed last lookup; stale recent exclusion and pin; deadline without background tick; overview busy/completion; three themes/two sizes");
