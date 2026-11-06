@@ -68,7 +68,7 @@ public partial class MainWindow {
   overviewRunning=true;using var cancellation=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);overviewCancel=cancellation;SetOverviewAction33(true);
   bool Current58()=>!closing&&!cancellation.IsCancellationRequested&&server==OverviewServer&&ssl==WsusSsl.IsChecked;
   int done=0,errors=0;bool cancelled=false;
-  overviewRun61=new(){Server=server,Started=DateTimeOffset.UtcNow.ToString("o"),Total=rows.Count,LastFull=overviewRun61.Server==server?overviewRun61.LastFull:""};
+  overviewRun61=new(){Server=server,Started=DateTimeOffset.UtcNow.ToString("o"),Total=rows.Count,LastPartial=overviewRun61.Server==server?overviewRun61.LastPartial:"",LastFull=overviewRun61.Server==server?overviewRun61.LastFull:""};
   try{
    overviewRun61.Phase="WSUS: чтение записей и сводок…";RenderOverview61();
    var snapshot=await remote.ReadWsusSnapshot58(settings,cancellation.Token);
@@ -114,6 +114,7 @@ public partial class MainWindow {
    overviewRun61.Ended=DateTimeOffset.UtcNow.ToString("o");overviewRun61.Errors=errors;
    overviewRun61.Phase=cancelled?"Обзор WSUS остановлен":errors>0?"Обзор WSUS завершён частично":"Обзор WSUS завершён";
    if(!cancelled&&errors==0)overviewRun61.LastFull=overviewRun61.Ended;
+   else if(done>0)overviewRun61.LastPartial=overviewRun61.Ended;
    Store.Write("overview-run61.json",overviewRun61);
    if(!closing){RenderOverview61();RefreshOutcomes();}
   }

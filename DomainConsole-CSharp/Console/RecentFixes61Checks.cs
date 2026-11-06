@@ -8,9 +8,13 @@ public partial class MainWindow {
   foreach(bool omit in new[]{false,true}){
    var compact=LogViewer.CompactSections61(parts,omit);
    if(compact.Count(p=>p.Title=="Технические подробности")!=1||compact.Any(p=>p.Title=="Актуальность снимка")||compact.Any(p=>p.Title=="Главное")==omit||!compact.Last().Body.Contains("Клиент не найден"))throw new Exception("Compact metadata differs across viewers");
+   var viewer=new LogViewer{OmitMain46=omit,Text=string.Join("\n\n",parts.Select(p=>"## "+p.Title+"\n"+p.Body))};viewer.SetExpanded("Технические подробности",true);
+   if(!viewer.VisibleText().Contains("Клиент не найден")||!viewer.VisibleText().Contains("WSUS: server"))throw new Exception("Compacted metadata lost copyable content");
    var output=new List<(string Title,string Body)>{("Вывод команды","one line"),("Сбор диагностики","diagnostic"),("Технические подробности · вывод операции","raw"),("Предыдущее обслуживание","previous"),("Технические сведения",new string('x',5000))};
    if(!LogViewer.CompactSections61(output,omit).SequenceEqual(output))throw new Exception("Raw logs/previous operations were folded into metadata");
   }
+  var separate=new List<(string Title,string Body)>{("Технические сведения","source A"),("Вывод команды","A"),("Технические сведения","source B")};
+  if(!LogViewer.CompactSections61(separate,false).SequenceEqual(separate))throw new Exception("Independent sources were combined");
   var cache=new CachedWsusReport{Found=true,Report=new(){LastSyncResult="Succeeded",NeededCount=0},LookupError53="Клиент не найден при последнем чтении",LookupUtc53=DateTimeOffset.UtcNow.ToString("o")};
   string report=CachedReportText(cache);
   if(report.IndexOf("Клиент не найден",StringComparison.Ordinal)>report.IndexOf("К установке:",StringComparison.Ordinal)||!report.Contains("## Последнее чтение WSUS"))throw new Exception("Cached zero hides latest lookup warning");

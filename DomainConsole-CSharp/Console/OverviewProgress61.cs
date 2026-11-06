@@ -5,6 +5,7 @@ public sealed class OverviewRun61 {
  public string Server {get;set;}="";
  public string Started {get;set;}="";
  public string Ended {get;set;}="";
+ public string LastPartial {get;set;}="";
  public string LastFull {get;set;}="";
  public string Phase {get;set;}="Обзор ещё не выполнялся";
  public string Error {get;set;}="";
@@ -22,7 +23,7 @@ public partial class MainWindow {
   OverviewProgress.Text=current?overviewRun61.Phase+(overviewRun61.Total>0?" · обработано "+overviewRun61.Processed+" / "+overviewRun61.Total:""):"Обзор выбранного WSUS ещё не выполнялся";
   OverviewDetails61.Content=current&&overviewRun61.Ended.Length>0?"Итоги · "+Display36.Date(overviewRun61.Ended):"Обзор WSUS · подробности";
  }
- string OverviewDetailsText61()=>"Сервер: "+overviewRun61.Server+"\n"+overviewRun61.Phase+"\nНачало: "+Display36.Date(overviewRun61.Started)+"\nЗавершение: "+Display36.Date(overviewRun61.Ended)+"\nПоследний полный обзор: "+Display36.Date(overviewRun61.LastFull)+"\nОбработано: "+overviewRun61.Processed+" из "+overviewRun61.Total+"; не найдено: "+overviewRun61.Missing+"; ошибок: "+overviewRun61.Errors+(overviewRun61.Error.Length>0?"\nПричина: "+overviewRun61.Error:"")+"\nСледующий автоматический обзор: "+(!overviewSettings.Automatic?"выключен":overviewPaused||TransportBudget41.Paused?"приостановлен":Display36.Date(nextOverview.ToString("o")))+"\nЧитается сервер WSUS. Подключения к клиентам, поиск и установка обновлений не выполняются.";
+ string OverviewDetailsText61()=>"Сервер: "+overviewRun61.Server+"\n"+overviewRun61.Phase+"\nНачало: "+Display36.Date(overviewRun61.Started)+"\nЗавершение: "+Display36.Date(overviewRun61.Ended)+"\nПоследний полный обзор: "+Display36.Date(overviewRun61.LastFull)+"\nПоследний частичный обзор: "+Display36.Date(overviewRun61.LastPartial)+"\nОбработано: "+overviewRun61.Processed+" из "+overviewRun61.Total+"; не найдено: "+overviewRun61.Missing+"; ошибок: "+overviewRun61.Errors+(overviewRun61.Error.Length>0?"\nПричина: "+overviewRun61.Error:"")+"\nСледующий автоматический обзор: "+(!overviewSettings.Automatic?"выключен":overviewPaused||TransportBudget41.Paused?"приостановлен":Display36.Date(nextOverview.ToString("o")))+"\nСводки читаются общим запросом; эффективные одобрения уточняются пакетами по 10 клиентов. Подключения к клиентам, поиск и установка обновлений не выполняются.";
  void OverviewDetails61_Click(object sender,RoutedEventArgs e){
   var window=new Window{Owner=this,Title="Обзор WSUS",Width=580,Height=380,WindowStartupLocation=WindowStartupLocation.CenterOwner};
   window.Content=new TextBox{Text=OverviewDetailsText61(),IsReadOnly=true,TextWrapping=TextWrapping.Wrap,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,Margin=new(12)};window.Show();

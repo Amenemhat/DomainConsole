@@ -71,6 +71,9 @@ public sealed class LogViewer:UserControl {
   bool Metadata((string Title,string Body) part)=>
    (part.Title=="Технические подробности"||part.Title.StartsWith("Технические сведения",StringComparison.Ordinal)||part.Title.StartsWith("Техническая статистика",StringComparison.Ordinal)||part.Title.StartsWith("Сведения о задании",StringComparison.Ordinal)||part.Title is "Актуальность снимка" or "Последнее чтение WSUS")
    &&part.Body.Length<=4096&&part.Body.Count(c=>c=='\n')<24;
+  // Repeated job/source metadata can describe independent results in imported history.
+  // Do not combine their sources into a single ambiguous block.
+  if(source.Where(x=>x.Title.StartsWith("Сведения о задании",StringComparison.Ordinal)||x.Title.StartsWith("Технические сведения",StringComparison.Ordinal)).GroupBy(x=>x.Title).Any(g=>g.Select(x=>x.Body).Distinct().Count()>1))return source.Where(x=>!omitMain||x.Title!="Главное").ToList();
   var technical=source.Where(Metadata).ToList();
   var result=source.Where(x=>(!omitMain||x.Title!="Главное")&&!Metadata(x)).ToList();
   if(technical.Count>0)result.Add(("Технические подробности",string.Join("\n\n",technical.Select(x=>(x.Title=="Технические подробности"?"":x.Title+"\n")+x.Body))));

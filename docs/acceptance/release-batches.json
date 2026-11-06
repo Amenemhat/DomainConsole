@@ -834,6 +834,37 @@
         "143.guards",
         "143.readonly"
       ]
+    },
+    {
+      "version": "0.56.0",
+      "priority": "P0",
+      "title": "Последние замечания: ожидание WSUS, обзор, последние клиенты и компактный вывод",
+      "status": "candidate",
+      "issues": [
+        152,
+        154,
+        155,
+        156
+      ],
+      "condition_ids": [
+        "152.deadline",
+        "152.surfaces",
+        "152.late",
+        "152.lost",
+        "154.cycle",
+        "154.result",
+        "154.source",
+        "154.restore",
+        "155.limit",
+        "155.activity",
+        "155.pin",
+        "155.restore",
+        "155.scale",
+        "156.compact",
+        "156.scope",
+        "156.warning",
+        "156.visual"
+      ]
     }
   ],
   "mandatory_scenarios_each_release": [
@@ -858,6 +889,7 @@
     "Do not mark a feature as newly implemented merely because its existing implementation was audited.",
     "No automatic termination of update installations or system service processes; fault tests use isolated owned processes.",
     "Report per-batch accepted/total conditions, fixes, test results, outstanding blockers and exact package identity; avoid a global readiness percentage inferred from evidence counts.",
-    "Update acceptance gate to validate the selected batch plus mandatory regressions without permitting omitted, duplicate or unassigned requirements; keep exact SHA/artifact checks."
+    "Update acceptance gate to validate the selected batch plus mandatory regressions without permitting omitted, duplicate or unassigned requirements; keep exact SHA/artifact checks.",
+    "Новые правки проходят ту же полную приёмку, что прежние недоделки; непроверенные условия не закрываются после одной сборки. Решение владельца 06.11.2026, #158."
   ]
 }

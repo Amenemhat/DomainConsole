@@ -15,7 +15,7 @@ public partial class MainWindow {
  readonly HashSet<string> confirmedJobs=new(StringComparer.OrdinalIgnoreCase);
  bool updatingRecent;int recentLimit=Store.Read("recent-limit.json",20);
  void RestoreNavigation(){recentLimit=Math.Clamp(recentLimit,5,200);RecentLimitBox.Text=recentLimit.ToString();LimitBox.Text=Store.Read("parallel-limit.json",0).ToString();RecentGroup.IsExpanded=viewState.RecentExpanded;TreeGroup.IsExpanded=viewState.TreeExpanded;ApplyNavigationLayout();foreach(var entry in reportCache){if(entry.Value.LookupError53.Length>0)overviewErrors[entry.Key]=entry.Value.LookupError53;serverReports[entry.Key]=CachedReportText(entry.Value);reportSeverity[entry.Key]=entry.Value.Report.Severity(entry.Value.Started);}if(recentHosts.Count==0)foreach(var host in History.SelectMany(j=>j.Targets.Select(t=>t.Host)).Distinct(StringComparer.OrdinalIgnoreCase).Take(recentLimit))recentHosts.Add(host);}
- static string CachedReportText(CachedWsusReport cached)=>!cached.Found?"Сохранённые данные WSUS: компьютер не найден. Получены: "+LocalDateConverter.Format(cached.ReceivedUtc)+". Доступность клиента не проверялась.":System.Text.RegularExpressions.Regex.Replace(ReportLookupWarning61(cached.Report.Format(cached.Server,cached.Started),cached),@"(?m)^Получено:.*$","Снимок: "+LocalDateConverter.Format(cached.ReceivedUtc))+"\n\n## Актуальность снимка\nСохранённые данные; получены: "+LocalDateConverter.Format(cached.ReceivedUtc)+". Текущее состояние не запрашивалось."+(cached.LookupError53.Length>0?"\n\n## Последнее чтение WSUS\n"+Display36.Date(cached.LookupUtc53)+" · "+cached.LookupError53:"");
+ static string CachedReportText(CachedWsusReport cached)=>!cached.Found?"Сохранённые данные WSUS: компьютер не найден. Получены: "+LocalDateConverter.Format(cached.ReceivedUtc)+". Доступность клиента не проверялась.":System.Text.RegularExpressions.Regex.Replace(ReportLookupWarning61(cached.Report.Format(cached.Server,cached.Started),cached),@"(?m)^Получено:.*$","Снимок: "+LocalDateConverter.Format(cached.ReceivedUtc))+"\n\n## Актуальность снимка\nСохранённые данные. "+(cached.LookupError53.Length>0?"Последнее чтение не обновило снимок.":"Текущее состояние после получения снимка не проверялось.")+""+(cached.LookupError53.Length>0?"\n\n## Последнее чтение WSUS\n"+Display36.Date(cached.LookupUtc53)+" · "+cached.LookupError53:"");
  static string ReportLookupWarning61(string text,CachedWsusReport cached){
   if(cached.LookupError53.Length==0)return text;
   const string heading="## Требуется клиенту\n";
@@ -35,6 +35,7 @@ public partial class MainWindow {
   foreach(var job in History)foreach(var target in job.Targets)
    if((ActiveTarget(target)||target.State?.DiagnosticStatus is "Pending" or "Running")&&ActivityConfirmed61(job,target))active.Add(target.Host);
   foreach(var row in Computers)if(preparing60.Keys.Any(k=>k==PreparationKey60(row.Host,"Commands")||k==PreparationKey60(row.Host,"WSUS")))active.Add(row.Host);
+  foreach(var row in Computers)if(!TransportBudget41.Paused&&!LostObservation51(row.Host)&&CurrentReportWait61(row.Host) is { } wait&&!ReportWaitExpired61(wait))active.Add(row.Host);
   return active;
  }
  void RecentMenu61(object sender,ContextMenuEventArgs e){
