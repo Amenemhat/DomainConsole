@@ -25,14 +25,20 @@ public partial class MainWindow {
   try{
    recentHosts.Clear();recentHosts.AddRange(rows.Take(6).Select(r=>r.Host));workHosts.Clear();recentLimit=5;
    RefreshRecent();if(RecentComputers.Count(r=>rows.Contains(r))!=5||RecentComputers.Contains(rows[7]))throw new Exception("Historical running target bypassed recent limit");
+   stale.Targets[0].State!.Updated=DateTimeOffset.UtcNow.ToString("o");if(WorkState60(rows[7],false)?.Busy!=false||ActiveRecent61().Contains(rows[7].Host))throw new Exception("Unconfirmed restored state animates as live");
    workHosts.Add(rows[6].Host);RefreshRecent();if(!RecentComputers.Contains(rows[6])||rows[6].RecentReason61!="Закреплён вручную")throw new Exception("Pinned exception is not explicit");
-   reportWaiting[rows[0].Host]=new(){Id="recent61",Server54=OverviewServer,Until=DateTimeOffset.UtcNow.AddSeconds(-1)};
+   reportWaiting[rows[0].Host]=new(){Id="recent61",Server54=OverviewServer,Next=DateTimeOffset.UtcNow.AddHours(1),Until=DateTimeOffset.UtcNow.AddSeconds(-1)};
    var criterion=new Criterion45("report","old","Success","Success",new());
    var expired=QueueCriterion52(rows[0],criterion,null);
    if(expired.Tone!="Warning"||!expired.Text.Contains("задерживается")||WorkState60(rows[0],true)?.Busy!=false)throw new Exception("Deadline needs a background tick to expire");
    bool paused=TransportBudget41.Paused;try{TransportBudget41.Paused=true;if(WorkState60(rows[0],true)?.Text.Contains("задерживается")!=true)throw new Exception("Pause hides expired deadline");}finally{TransportBudget41.Paused=paused;}
    if(AssessClientCore41(rows[0]).Kind!="Warning")throw new Exception("Expired wait did not reach shared status");
-   reportWaiting[rows[0].Host].Until=DateTimeOffset.UtcNow.AddMinutes(5);
+   reportWaiting[rows[0].Host].Requested54=DateTimeOffset.UtcNow.AddMinutes(-10);
+   RecordReportReceipt54(rows[0].Host,new(){LastReportedUtc=DateTimeOffset.UtcNow.AddMinutes(-20).ToString("o")},OverviewServer);
+   if(!reportWaiting.ContainsKey(rows[0].Host))throw new Exception("Reading an old report now completed waiting");
+   RecordReportReceipt54(rows[0].Host,new(){LastReportedUtc=DateTimeOffset.UtcNow.ToString("o")},OverviewServer);
+   if(reportWaiting.ContainsKey(rows[0].Host)||!AllEvents32(rows[0].Host).Any(e=>e.Text=="Получен отчёт WSUS после срока ожидания"))throw new Exception("Late report did not close waiting with a distinct event");
+   reportWaiting[rows[0].Host]=new(){Id="recent61",Server54=OverviewServer,Next=DateTimeOffset.UtcNow.AddHours(1),Until=DateTimeOffset.UtcNow.AddMinutes(5)};
    if(AssessClientCore41(rows[0]).Kind!="ReportPending")throw new Exception("Report waiting is presented as full success");
    reportCache[rows[0].Host]=cache;cache.Server=OverviewServer;liveReports.Add(rows[0].Host);
    if(!CurrentReportText41(rows[0]).Contains("Клиент не найден при последнем чтении"))throw new Exception("Live cache hides failed later lookup");

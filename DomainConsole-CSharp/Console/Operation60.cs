@@ -14,7 +14,7 @@ public partial class MainWindow {
    if(ObservationStopped51(row))return new("Наблюдение остановлено · результат задания не подтверждён",false);
    if(LostObservation51(row.Host))return new("Связь потеряна · ожидаем восстановления, результат не подтверждён",false);
    if(TransportBudget41.Paused&&!ManualJob56(row.JobId))return new("Опрос приостановлен · результат задания не подтверждён",false);
-   if(!ActivityConfirmed61(live.Job,live.Target)&&!StateFresh(state))return new("Последнее состояние устарело · выполнение не подтверждено",false);
+   if(!ActivityConfirmed61(live.Job,live.Target))return new("Выполнение сейчас не подтверждено · последнее состояние: "+Display36.Date(state?.Updated??""),false);
    string stage=row.Target.Status=="Queued"?"Ожидает отправки":row.Target.Status=="Sending"?"Передаём задание":row.Target.Status=="SubmissionUnknown"?"Проверяем передачу задания":StateFresh(state)?state?.Stage??"Ожидаем результат":"Получаем результат задания · последнее состояние устарело";
    string since=state?.Started??live.Job.Created;
    return new(stage+(DateTimeOffset.TryParse(since,out var at)?" · "+Age(now-at):""),true,StateFresh(state)?state?.Progress:null);

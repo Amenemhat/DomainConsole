@@ -67,7 +67,7 @@ public partial class MainWindow {
   var rows=OrderForOverview(Computers,workHosts,recentHosts);
   overviewRunning=true;using var cancellation=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);overviewCancel=cancellation;SetOverviewAction33(true);
   bool Current58()=>!closing&&!cancellation.IsCancellationRequested&&server==OverviewServer&&ssl==WsusSsl.IsChecked;
-  int done=0,errors=0;bool cancelled=false;
+  int done=0,errors=0,succeeded61=0;bool cancelled=false;
   overviewRun61=new(){Server=server,Started=DateTimeOffset.UtcNow.ToString("o"),Total=rows.Count,LastPartial=overviewRun61.Server==server?overviewRun61.LastPartial:"",LastFull=overviewRun61.Server==server?overviewRun61.LastFull:""};
   try{
    overviewRun61.Phase="WSUS: чтение записей и сводок…";RenderOverview61();
@@ -93,7 +93,7 @@ public partial class MainWindow {
     try{
      var replies=await remote.ReadWsusDetails58(settings,chunk.ToList(),snapshot,cancellation.Token);
      if(!Current58())throw new OperationCanceledException();
-     foreach(var row in chunk){if(!ApplyOverviewReply53(row,replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)),server,false)){errors++;overviewRun61.Error=replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase))?.Error??"Ответ для клиента не получен";}}
+     foreach(var row in chunk){if(!ApplyOverviewReply53(row,replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)),server,false)){errors++;overviewRun61.Error=replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase))?.Error??"Ответ для клиента не получен";}else succeeded61++;}
     }catch(OperationCanceledException){throw;}catch(Exception ex){foreach(var row in chunk)ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);errors+=chunk.Length;overviewRun61.Error=ex.Message;}
     done+=chunk.Length;overviewRun61.Processed+=chunk.Length;RenderOverview61();await PersistReportCacheAsync58();
     RefreshOutcomes();if(ComputerGrid.SelectedItem is ComputerRow focused&&chunk.Contains(focused))ShowCurrent();
@@ -114,7 +114,7 @@ public partial class MainWindow {
    overviewRun61.Ended=DateTimeOffset.UtcNow.ToString("o");overviewRun61.Errors=errors;
    overviewRun61.Phase=cancelled?"Обзор WSUS остановлен":errors>0?"Обзор WSUS завершён частично":"Обзор WSUS завершён";
    if(!cancelled&&errors==0)overviewRun61.LastFull=overviewRun61.Ended;
-   else if(done>0)overviewRun61.LastPartial=overviewRun61.Ended;
+   else if(succeeded61>0)overviewRun61.LastPartial=overviewRun61.Ended;
    Store.Write("overview-run61.json",overviewRun61);
    if(!closing){RenderOverview61();RefreshOutcomes();}
   }
