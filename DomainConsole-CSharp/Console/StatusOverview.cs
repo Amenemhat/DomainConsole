@@ -50,7 +50,7 @@ public partial class MainWindow {
   var window=new Window{Owner=this,Title=mark?"Отметить компьютеры":"Добавить в работу",Width=490,Height=450,WindowStartupLocation=WindowStartupLocation.CenterOwner};var panel=new DockPanel{Margin=new(16)};window.Content=panel;var info=new TextBlock{Text="Компьютеров: "+rows.Count+". Область: "+(statusScope.Length>0?statusScope:"весь список")+"; с учётом поиска.\nСтатусы: "+(problems?"проблемы":statusFilter.Count==0?"все":string.Join(", ",StatusCategories.Where(c=>statusFilter.Contains(c.Key)).Select(c=>c.Label)))+".\nЗадания не запускаются."+(mark?" Галочки остальных ПК сохранятся.":" Галочки не меняются."),TextWrapping=TextWrapping.Wrap,Margin=new(0,0,0,8)};DockPanel.SetDock(info,Dock.Top);panel.Children.Add(info);var buttons=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right};DockPanel.SetDock(buttons,Dock.Bottom);panel.Children.Add(buttons);var yes=new Button{Content=mark?"Отметить":"Добавить",IsDefault=true};yes.Click+=(s,a)=>window.DialogResult=true;buttons.Children.Add(yes);buttons.Children.Add(new Button{Content="Отмена",IsCancel=true});panel.Children.Add(new ListBox{ItemsSource=rows.Select(r=>r.Host+" · "+OverviewStatus(r).Hint.Split('\n')[0]).ToList()});if(window.ShowDialog()!=true)return;
   if(mark){batchSelecting=true;try{foreach(var row in rows)row.Selected=!row.Target.AdDisabled;}finally{batchSelecting=false;}UpdateSelectionCount();}else{var added=rows.Select(r=>r.Host).Distinct(StringComparer.OrdinalIgnoreCase).ToList();workHosts.RemoveAll(h=>added.Contains(h,StringComparer.OrdinalIgnoreCase));workHosts.InsertRange(0,added);Store.Write("work-computers.json",workHosts);statusFilter.Clear();RefreshStatusCounts();RecentGroup.IsExpanded=true;RefreshRecent();}Notify((mark?"Отмечено: ":"Добавлено в работу: ")+rows.Count);
  }
- void SetupOverview(){overviewSettings.Hours=Math.Clamp(overviewSettings.Hours,1,168);OverviewAutomatic.IsChecked=overviewSettings.Automatic;OverviewHours.Text=overviewSettings.Hours.ToString();RequestOverviewSoon();}
+ void SetupOverview(){overviewSettings.Hours=Math.Clamp(overviewSettings.Hours,1,168);OverviewAutomatic.IsChecked=overviewSettings.Automatic;OverviewHours.Text=overviewSettings.Hours.ToString();RequestOverviewSoon();RenderOverview61();}
  void RequestOverviewSoon(){if(nextOverview<=DateTimeOffset.UtcNow)nextOverview=DateTimeOffset.UtcNow.AddSeconds(3);}
  void OverviewTick(){RenderOverview61();RefreshOutcomes();if(!TransportBudget41.Paused&&!closing&&overviewSettings.Automatic&&!overviewPaused&&!overviewRunning&&DateTimeOffset.UtcNow>=nextOverview&&!string.IsNullOrWhiteSpace(WsusHost.Text))_=RunOverview();}
  async void OverviewRefresh_Click(object sender,RoutedEventArgs e){if(overviewRunning){overviewPaused=true;overviewCancel?.Cancel();overviewRun61.Phase="Остановка обзора…";RenderOverview61();return;}overviewPaused=false;await RunOverview(true);}
@@ -93,7 +93,13 @@ public partial class MainWindow {
     try{
      var replies=await remote.ReadWsusDetails58(settings,chunk.ToList(),snapshot,cancellation.Token);
      if(!Current58())throw new OperationCanceledException();
-     foreach(var row in chunk){if(!ApplyOverviewReply53(row,replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)),server,false)){errors++;overviewRun61.Error=replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase))?.Error??"Ответ для клиента не получен";}else succeeded61++;}
+     foreach(var row in chunk){
+      var reply=replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase));
+      try{if(ApplyOverviewReply53(row,reply,server,false))succeeded61++;
+       else if(reply is {Found:false,Error:""})overviewRun61.Missing++;
+       else {errors++;overviewRun61.Error=reply?.Error.Length>0?reply.Error:"Отчёт клиента не получен";}
+      }catch(Exception ex){errors++;overviewRun61.Error=ex.Message;ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);}
+     }
     }catch(OperationCanceledException){throw;}catch(Exception ex){foreach(var row in chunk)ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);errors+=chunk.Length;overviewRun61.Error=ex.Message;}
     done+=chunk.Length;overviewRun61.Processed+=chunk.Length;RenderOverview61();await PersistReportCacheAsync58();
     RefreshOutcomes();if(ComputerGrid.SelectedItem is ComputerRow focused&&chunk.Contains(focused))ShowCurrent();
