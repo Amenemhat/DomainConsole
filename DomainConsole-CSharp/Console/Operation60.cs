@@ -8,7 +8,7 @@ public partial class MainWindow {
  Work60? WorkState60(ComputerRow selected,bool wsus,IEnumerable<(RemoteJob Job,TargetRecord Target)>? indexed=null){
   var now=DateTimeOffset.UtcNow;
   if(preparing60.TryGetValue(PreparationKey60(selected.Host,wsus?"WSUS":"Commands"),out var prep)&&prep.Channel==(wsus?"WSUS":"Commands"))return new(prep.Stage+" · "+Age(now-prep.At),true);
-  var live=(indexed??HostJobs39(selected.Host)).FirstOrDefault(x=>IsWsusJob(x.Job)==wsus&&ActiveTarget(x.Target));
+  var live=RelevantActive61((indexed??HostJobs39(selected.Host)).Where(x=>IsWsusJob(x.Job)==wsus));
   if(live.Target!=null){
    var row=new ComputerRow(live.Target,live.Job.Id);var state=live.Target.State;
    if(ObservationStopped51(row))return new("Наблюдение остановлено · результат задания не подтверждён",false);

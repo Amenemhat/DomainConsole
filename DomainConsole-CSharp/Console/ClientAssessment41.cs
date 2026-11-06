@@ -48,7 +48,7 @@ public partial class MainWindow {
  Dictionary<string,ClientAssessment41>? refreshClientStatus41;
  ClientAssessment41 AssessClient41(ComputerRow row){if(refreshClientStatus41!=null&&refreshClientStatus41.TryGetValue(row.Host,out var cached))return cached;var result=AssessClientCore41(row);if(refreshClientStatus41!=null)refreshClientStatus41[row.Host]=result;return result;}
  ClientAssessment41 AssessClientCore41(ComputerRow row){
-  var jobs=HostJobs39(row.Host).Where(x=>CurrentIdentity(x.Target)).ToList();var operation=jobs.FirstOrDefault(x=>IsCurrentExecution(x.Target.Status)||x.Target.Status=="Queued");
+  var jobs=HostJobs39(row.Host).Where(x=>CurrentIdentity(x.Target)).ToList();var operation=RelevantActive61(jobs);
   var wsus=jobs.FirstOrDefault(x=>IsWsusJob(x.Job));var target=operation.Target??wsus.Target;var state=target?.State;
   if(state!=null&&state.Status!=target!.Status){state=Store.Clone(state);state.Status=target.Status;}
   reportCache.TryGetValue(row.Host,out var cache);if(cache!=null&&!CacheMatches(cache))cache=null;
@@ -64,11 +64,11 @@ public partial class MainWindow {
   if(!active&&cache?.Found==false&&assessment.Kind is not ("Error" or "SyncError" or "Reboot"))assessment=overviewErrors.GetValueOrDefault(row.Host,"").Length>0?new("Warning","Не удалось обновить данные WSUS","Прежний результат: клиент не найден · "+Display36.Date(cache.ReceivedUtc)):!liveReports.Contains(row.Host)?new("Stale","Сохранённый результат: клиент не найден в WSUS","Получен: "+Display36.Date(cache.ReceivedUtc)+" · требуется чтение сервера"):new("NoWsus","Клиент не найден в WSUS","Проверьте регистрацию клиента");
   if(HeaderRebootJob(row)!=null&&assessment.Kind is not ("Error" or "SyncError"))assessment=new("Reboot","Перезагрузка назначена",assessment.Title+"\n"+assessment.Details);
   assessment=PreserveReady43(row,assessment,active,state,cache,proof,scan.Step?.Ended??"");if(assessment.Kind=="Success"&&rebootWatches.TryGetValue(row.Host,out var watch43)&&!watch43.Done&&rebootSnapshots.TryGetValue(row.Host,out var snap43)&&RebootReturned(watch43,snap43)&&ObservedAfter(snap43,watch43.RequestedUtc)&&snap43.Required==false){watch43.Done=true;watch43.Phase="Перезагрузка и готовность подтверждены";Store.Write("reboot-watches.json",rebootWatches);}
-  if(active&&state!=null&&operation.Job!=null&&IsWsusJob(operation.Job)&&HeaderRebootJob(row)==null&&!StateFresh(state))assessment=new("Unknown",ConnectionFresh(row.Host)?"Клиент доступен; состояние задания уточняется":"Нет свежего статуса задания","Последний известный этап: "+(state?.Stage??"не получен")+" · "+Display36.Date(state?.Updated??""));
+  if(operation.Target!=null&&operation.Job!=null&&HeaderRebootJob(row)==null&&!ActivityConfirmed61(operation.Job,operation.Target))assessment=new("Unknown",ConnectionFresh(row.Host)?"Клиент доступен; состояние задания уточняется":"Нет свежего статуса задания","Последний известный этап: "+(state?.Stage??"не получен")+" · "+Display36.Date(state?.Updated??""));
   assessment=ExplainAssessment45(row,assessment,cache,proof,state,active,scan.Step?.Ended??"",scan.State?.UpdatesRemaining);
   assessment=ApplySourceResult54(row,assessment,active);
   if(!active&&rebootWatches.TryGetValue(row.Host,out var observing51)&&!observing51.Done)assessment=new(HeaderRebootJob(row)!=null||observing51.ReadyAfter==default?"Reboot":"Working",RebootHeadline51(observing51,DateTimeOffset.UtcNow),assessment.Title+"\n"+assessment.Details);
-  var observed51=operation.Target!=null?new ComputerRow(operation.Target,operation.Job.Id):new ComputerRow(target??row.Target,wsus.Job?.Id??"");
+  var observed51=operation.Target!=null?new ComputerRow(operation.Target,operation.Job?.Id??""):new ComputerRow(target??row.Target,wsus.Job?.Id??"");
   if(active&&(LostObservation51(row.Host)||(stoppedObservations51.Count>0&&ObservationStopped51(observed51)))){assessment=new("Unknown",IsCurrentExecution(observed51.Target.Status)?ObservationExpired51(observed51)||ObservationStopped51(observed51)?"Ожидание завершено · результат операции неизвестен":"Связь потеряна · результат операции неизвестен":"Связь потеряна · текущее состояние неизвестно",assessment.Title+"\nПоследнее состояние: "+Display36.Date(observed51.Target.State?.Updated??""));}
   if(!active&&assessment.Kind is not ("Error" or "SyncError" or "Reboot" or "Working")&&CurrentReportWait61(row.Host) is { } pending61){
    bool expired=ReportWaitExpired61(pending61);
