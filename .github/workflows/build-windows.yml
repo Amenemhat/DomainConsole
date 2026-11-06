@@ -41,32 +41,6 @@ jobs:
           New-Item Publish/Agent -ItemType Directory -Force | Out-Null
           Copy-Item DomainConsole-CSharp/Agent/bin/Release/net462/DomainConsole.Agent.exe Publish/Agent/
           Copy-Item DomainConsole-CSharp/README.txt Publish/README-source.txt
-      - name: Verify redirected progress output
-        shell: pwsh
-        run: |
-          & ./Publish/Agent/DomainConsole.Agent.exe output-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-output-smoke")
-          if ($LASTEXITCODE -ne 0) { throw "Progress output check failed" }
-      - name: Verify live SFC and DISM output on disposable Windows
-        shell: pwsh
-        timeout-minutes: 22
-        run: ./.github/scripts/test-native-progress60.ps1
-      - name: Verify bounded agent waiting and persisted non-replay checkpoint
-        shell: pwsh
-        run: |
-          & ./Publish/Agent/DomainConsole.Agent.exe waiting-smoke52 (Join-Path $env:RUNNER_TEMP 'DomainConsole-waiting52')
-          if ($LASTEXITCODE -ne 0) { throw 'Bounded agent waiting failed' }
-      - name: Verify recovery after killing the agent process
-        shell: pwsh
-        run: |
-          $root = Join-Path $env:RUNNER_TEMP 'DomainConsole-interruption47'
-          & ./Publish/Agent/DomainConsole.Agent.exe interruption-smoke47 $root
-          if ($LASTEXITCODE -ne 0) { throw 'Abrupt agent termination recovery failed' }
-          "DOMAINCONSOLE_INTERRUPTION47=$root" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-      - name: Verify service restoration after hard PowerShell timeout without touching services
-        shell: pwsh
-        run: |
-          & ./Publish/Agent/DomainConsole.Agent.exe service-recovery-smoke47 (Join-Path $env:RUNNER_TEMP 'service-recovery47')
-          if ($LASTEXITCODE -ne 0) { throw 'Service recovery fault injection failed' }
       - name: Reload persisted status through the actual window startup twice
         shell: pwsh
         run: |
@@ -118,17 +92,43 @@ jobs:
           Remove-Item Publish/ui-smoke-ready.txt -Force
           Remove-Item Publish/Data -Recurse -Force
           Write-Output "History persisted, opened without network, and survived AD list refresh."
-      - name: Verify exact owned executor termination and stale PID rejection
-        id: executor54
-        continue-on-error: true
-        shell: powershell
-        run: ./.github/scripts/test-executor54.ps1
       - name: Save UI preview after rendering
         uses: actions/upload-artifact@v4
         with:
           name: DomainConsole-UI-preview
           path: ${{ runner.temp }}/DomainConsole-smoke/ui-*
           if-no-files-found: error
+      - name: Verify redirected progress output
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe output-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-output-smoke")
+          if ($LASTEXITCODE -ne 0) { throw "Progress output check failed" }
+      - name: Verify live SFC and DISM output on disposable Windows
+        shell: pwsh
+        timeout-minutes: 22
+        run: ./.github/scripts/test-native-progress60.ps1
+      - name: Verify bounded agent waiting and persisted non-replay checkpoint
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe waiting-smoke52 (Join-Path $env:RUNNER_TEMP 'DomainConsole-waiting52')
+          if ($LASTEXITCODE -ne 0) { throw 'Bounded agent waiting failed' }
+      - name: Verify recovery after killing the agent process
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'DomainConsole-interruption47'
+          & ./Publish/Agent/DomainConsole.Agent.exe interruption-smoke47 $root
+          if ($LASTEXITCODE -ne 0) { throw 'Abrupt agent termination recovery failed' }
+          "DOMAINCONSOLE_INTERRUPTION47=$root" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Verify service restoration after hard PowerShell timeout without touching services
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe service-recovery-smoke47 (Join-Path $env:RUNNER_TEMP 'service-recovery47')
+          if ($LASTEXITCODE -ne 0) { throw 'Service recovery fault injection failed' }
+      - name: Verify exact owned executor termination and stale PID rejection
+        id: executor54
+        continue-on-error: true
+        shell: powershell
+        run: ./.github/scripts/test-executor54.ps1
       - name: Parse generated collector scripts before execution
         shell: pwsh
         run: |
@@ -980,4 +980,15 @@ jobs:
         with:
           name: DomainConsole-service-recovery47
           path: ${{ runner.temp }}/service-recovery47/**
+          if-no-files-found: warn
+
+      - name: Save native progress and startup failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DomainConsole-native-progress-evidence
+          path: |
+            ${{ runner.temp }}/DomainConsole-output-smoke/**
+            ${{ runner.temp }}/DomainConsole-native60-*/**
+            Publish/smoke-error.txt
           if-no-files-found: warn
