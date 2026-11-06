@@ -1,11 +1,13 @@
 $ErrorActionPreference='Stop'
 # Read-only scans on the disposable Windows runner, never on production clients.
+# Run 42267450832 showed live SFC progress at 33% after six minutes; allow a
+# bounded full scan here. Production executor deadlines are unchanged.
 foreach($item in @(@{Name='sfc';Code='sfc /verifyonly'},@{Name='dism';Code='dism /Online /Cleanup-Image /ScanHealth'})){
  $folder=Join-Path $env:RUNNER_TEMP ('DomainConsole-native60-'+$item.Name)
  New-Item $folder -ItemType Directory -Force|Out-Null
  @{Id=[guid]::NewGuid().ToString();Manual56=$true;OutputChannel='Commands';Steps=@(@{Name=$item.Name;Kind='PowerShell';Code=$item.Code})}|ConvertTo-Json -Depth 10|Set-Content (Join-Path $folder 'job.json') -Encoding utf8
  $p=Start-Process ./Publish/Agent/DomainConsole.Agent.exe -ArgumentList @('run',('"'+$folder+'"')) -PassThru
- $until=(Get-Date).AddMinutes(10);$seen=$false;$seenPercent=$false
+ $until=(Get-Date).AddMinutes(30);$seen=$false;$seenPercent=$false
  try{
   while(!$p.HasExited -and (Get-Date) -lt $until){
    $out=Join-Path $folder 'step-1.out'

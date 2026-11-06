@@ -103,10 +103,6 @@ jobs:
         run: |
           & ./Publish/Agent/DomainConsole.Agent.exe output-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-output-smoke")
           if ($LASTEXITCODE -ne 0) { throw "Progress output check failed" }
-      - name: Verify live SFC and DISM output on disposable Windows
-        shell: pwsh
-        timeout-minutes: 22
-        run: ./.github/scripts/test-native-progress60.ps1
       - name: Verify bounded agent waiting and persisted non-replay checkpoint
         shell: pwsh
         run: |
@@ -949,6 +945,10 @@ jobs:
           '@
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
           if($LASTEXITCODE -ne 0){throw 'Polling snapshot fixture failed'}
+      - name: Verify live SFC and DISM output on disposable Windows
+        shell: pwsh
+        timeout-minutes: 62
+        run: ./.github/scripts/test-native-progress60.ps1
       - name: Require executor and update regression success before packaging
         if: ${{ !cancelled() }}
         shell: pwsh
