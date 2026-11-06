@@ -54,6 +54,15 @@ public partial class MainWindow {
   }
   return result;
  }
+ void ExpireReportWaits61(){
+  bool changed=false;
+  foreach(var pair in reportWaiting){
+   var wait=pair.Value;if(wait.TimeoutRecorded61||!ReportWaitExpired61(wait))continue;
+   wait.TimeoutRecorded61=true;changed=true;
+   Event31(pair.Key,"report-delay54",wait.Id,"Отчёт WSUS задерживается","Warning","Истёк срок ожидания 10 минут. Результат клиентской операции сохранён; дальнейшее фоновое наблюдение учитывается отдельно. Сервер: "+wait.Server54,scope:wait.Id);
+  }
+  if(changed)Store.Write("report-waits.json",reportWaiting);
+ }
  ReportWait30? CurrentReportWait61(string host){
   if(!reportWaiting.TryGetValue(host,out var wait)||(wait.Server54.Length>0&&!wait.Server54.Equals(OverviewServer,StringComparison.OrdinalIgnoreCase)))return null;
   var job=History.FirstOrDefault(j=>j.Id==wait.Id);var target=job?.Targets.FirstOrDefault(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase));

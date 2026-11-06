@@ -31,7 +31,7 @@ public partial class MainWindow {
    var criterion=new Criterion45("report","old","Success","Success",new());
    var expired=QueueCriterion52(rows[0],criterion,null);
    if(expired.Tone!="Warning"||!expired.Text.Contains("задерживается")||WorkState60(rows[0],true)?.Busy!=false)throw new Exception("Deadline needs a background tick to expire");
-   bool paused=TransportBudget41.Paused;try{TransportBudget41.Paused=true;if(WorkState60(rows[0],true)?.Text.Contains("задерживается")!=true)throw new Exception("Pause hides expired deadline");}finally{TransportBudget41.Paused=paused;}
+   bool paused=TransportBudget41.Paused;try{TransportBudget41.Paused=true;ExpireReportWaits61();ExpireReportWaits61();if(!reportWaiting[rows[0].Host].TimeoutRecorded61||AllEvents32(rows[0].Host).Count(e=>e.Text=="Отчёт WSUS задерживается")!=1)throw new Exception("Paused deadline missing or repeated in history");if(WorkState60(rows[0],true)?.Text.Contains("задерживается")!=true)throw new Exception("Pause hides expired deadline");}finally{TransportBudget41.Paused=paused;}
    if(AssessClientCore41(rows[0]).Kind!="Warning")throw new Exception("Expired wait did not reach shared status");
    reportWaiting[rows[0].Host].Requested54=DateTimeOffset.UtcNow.AddMinutes(-10);
    RecordReportReceipt54(rows[0].Host,new(){LastReportedUtc=DateTimeOffset.UtcNow.AddMinutes(-20).ToString("o")},OverviewServer);

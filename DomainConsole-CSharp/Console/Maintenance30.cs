@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed class AttentionRow30 {public string Host {get;set;}="";public string Text {get;set;}="";public Action Stop {get;set;}=()=>{};}
-public sealed class ReportWait30 {public string Server54 {get;set;}="";public DateTimeOffset Requested54 {get;set;}public bool Delayed54 {get;set;}public int Attempts42 {get;set;}public string Id {get;set;}="";public DateTimeOffset Until {get;set;}public DateTimeOffset Next {get;set;}}
+public sealed class ReportWait30 {public bool TimeoutRecorded61 {get;set;}public string Server54 {get;set;}="";public DateTimeOffset Requested54 {get;set;}public bool Delayed54 {get;set;}public int Attempts42 {get;set;}public string Id {get;set;}="";public DateTimeOffset Until {get;set;}public DateTimeOffset Next {get;set;}}
 public sealed class MaintenancePlan {public string UpdateSource54 {get;set;}="Policy";public bool PollRecoveryAttempted53 {get;set;}public bool RecheckAfterConnection52 {get;set;}public bool SearchAfterBoot49 {get;set;}public bool RecoveryCheck47 {get;set;}public string DeadlineUtc44 {get;set;}="";public bool Released37 {get;set;}public string PlanId37 {get;set;}="";
  public string Host {get;set;}="";public string Identity {get;set;}="";public string JobId {get;set;}="";public string Phase {get;set;}="";public string BootUtc {get;set;}="";public string StartedUtc {get;set;}=DateTime.UtcNow.ToString("o");public string NextJobId {get;set;}="";public bool Install {get;set;}public bool Done {get;set;}public int Cycles {get;set;}public DateTimeOffset Next {get;set;}public DateTimeOffset ReadyAfter {get;set;}public string Detail {get;set;}="";
 }
