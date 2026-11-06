@@ -7,7 +7,8 @@ using System.Collections.Generic;
 using DomainConsole.Shared;
 namespace DomainConsole.Agent {
  internal static partial class Program {
-  static bool ReadOnly37(RemoteJob job)=>job.Steps.Count>0&&job.Steps.All(s=>s.Kind=="Diagnostics"||s.Kind=="ClientDiagnostics"||s.Kind=="DeliveryDiagnostics"||s.Code.Contains("$dcReadOnly37=$true")||s.Code.Contains("$dcUpdateWizard=$true"));
+  static bool ManualCommands56(RemoteJob job)=>job.Manual56&&job.OutputChannel=="Commands"&&job.Steps.Count>0&&job.Steps.All(s=>s.Kind=="PowerShell"||s.Kind=="CMD");
+  static bool ReadOnly37(RemoteJob job)=>ManualCommands56(job)||job.Steps.Count>0&&job.Steps.All(s=>s.Kind=="Diagnostics"||s.Kind=="ClientDiagnostics"||s.Kind=="DeliveryDiagnostics"||s.Code.Contains("$dcReadOnly37=$true")||s.Code.Contains("$dcUpdateWizard=$true"));
   static string ControlFile37=>Path.Combine(Path.GetDirectoryName(Folder),"control37.json");
   static ControlRecord37 ReadControl37(){var value=File.Exists(ControlFile37)?Json.Deserialize<ControlRecord37>(File.ReadAllText(ControlFile37)):new ControlRecord37();if(value.Protocol!=1)throw new InvalidOperationException("Несовместимый протокол управления; обновите консоль.");return value;}
   static void WriteControl37(ControlRecord37 value){var temp=ControlFile37+"."+Guid.NewGuid()+".tmp";try{File.WriteAllText(temp,Json.Serialize(value));if(File.Exists(ControlFile37))File.Replace(temp,ControlFile37,null);else File.Move(temp,ControlFile37);}finally{if(File.Exists(temp))File.Delete(temp);}}
@@ -29,7 +30,7 @@ namespace DomainConsole.Agent {
    if(!string.IsNullOrEmpty(state.ServiceRecoveryError47)&&!RecoverTerminalServices47(file,state))return false;
    return true;
   }
-  static bool NoActiveJobs37(ControlRecord37 record)=>record.JobIds.All(JobFinished37);
+  static bool NoActiveJobs37(ControlRecord37 record){PruneOrphans56(record);return record.JobIds.All(JobFinished37);}
   static void ReserveControl37(){if(ReadOnly37(Job))return;ControlGate37(()=>{
    var record=ReadControl37();if(record.Protocol!=1)throw new InvalidOperationException("Несовместимый протокол управления; обновите консоль.");if(record.JobIds.Contains(Job.Id)&&record.OwnerId==Job.ConsoleId37&&record.PlanId==Job.PlanId37)return true;
    bool idle=NoActiveJobs37(record);

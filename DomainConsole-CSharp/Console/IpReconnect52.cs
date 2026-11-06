@@ -7,12 +7,12 @@ public partial class MainWindow {
   var target=ConnectionStore.Capture(row.Target);
   if(ConnectionStore.Address(target).Length==0)return true;
   var generation=PollingControl43.Token;
-  bool Current52()=>!closing&&!TransportBudget41.Paused&&!generation.IsCancellationRequested&&CurrentEndpoint(target)&&CurrentIdentity(target);
+  bool Current52()=>!closing&&!PollingControl43.BackgroundPaused56&&!generation.IsCancellationRequested&&CurrentEndpoint(target)&&CurrentIdentity(target);
   if(!Current52())return false;
   if(ConnectionFresh(row.Host)&&clientConnections[row.Host].Error.Length==0)return true;
-  string key=TransportBudget41.Key(target);
+  string key=TransportBudget41.Key(target)+(PollingControl43.IsManual56?"|manual":"");
   if(ipConnectionFlights52.TryGetValue(key,out var flight))return await flight&&Current52();
-  if(ipConnectionRetry52.TryGetValue(key,out var next)&&DateTimeOffset.UtcNow<next)return false;
+  if(!PollingControl43.IsManual56&&ipConnectionRetry52.TryGetValue(key,out var next)&&DateTimeOffset.UtcNow<next)return false;
   var completion=new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
   ipConnectionFlights52[key]=completion.Task;
   var started=DateTimeOffset.UtcNow;bool success=false;

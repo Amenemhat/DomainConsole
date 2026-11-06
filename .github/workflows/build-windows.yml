@@ -29,6 +29,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Reference rebuild failed' }
           git diff --exit-code -- docs/error-reference/catalog.json docs/error-reference/REFERENCE.ru.md docs/error-reference/manifest.json
           if ($LASTEXITCODE -ne 0) { throw 'Reference generated files differ' }
+      - name: Verify data archives and corruption recovery
+        run: dotnet run --project DomainConsole-CSharp/BackupTests/BackupTests.csproj -c Release
       - name: Build native C# remote executor
         run: dotnet build DomainConsole-CSharp/Agent/DomainConsole.Agent.csproj -c Release
       - name: Publish portable Windows app
@@ -39,23 +41,6 @@ jobs:
           New-Item Publish/Agent -ItemType Directory -Force | Out-Null
           Copy-Item DomainConsole-CSharp/Agent/bin/Release/net462/DomainConsole.Agent.exe Publish/Agent/
           Copy-Item DomainConsole-CSharp/README.txt Publish/README-source.txt
-      - name: Verify bounded agent waiting and persisted non-replay checkpoint
-        shell: pwsh
-        run: |
-          & ./Publish/Agent/DomainConsole.Agent.exe waiting-smoke52 (Join-Path $env:RUNNER_TEMP 'DomainConsole-waiting52')
-          if ($LASTEXITCODE -ne 0) { throw 'Bounded agent waiting failed' }
-      - name: Verify recovery after killing the agent process
-        shell: pwsh
-        run: |
-          $root = Join-Path $env:RUNNER_TEMP 'DomainConsole-interruption47'
-          & ./Publish/Agent/DomainConsole.Agent.exe interruption-smoke47 $root
-          if ($LASTEXITCODE -ne 0) { throw 'Abrupt agent termination recovery failed' }
-          "DOMAINCONSOLE_INTERRUPTION47=$root" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-      - name: Verify service restoration after hard PowerShell timeout without touching services
-        shell: pwsh
-        run: |
-          & ./Publish/Agent/DomainConsole.Agent.exe service-recovery-smoke47 (Join-Path $env:RUNNER_TEMP 'service-recovery47')
-          if ($LASTEXITCODE -ne 0) { throw 'Service recovery fault injection failed' }
       - name: Reload persisted status through the actual window startup twice
         shell: pwsh
         run: |
@@ -107,6 +92,34 @@ jobs:
           Remove-Item Publish/ui-smoke-ready.txt -Force
           Remove-Item Publish/Data -Recurse -Force
           Write-Output "History persisted, opened without network, and survived AD list refresh."
+      - name: Save UI preview after rendering
+        uses: actions/upload-artifact@v4
+        with:
+          name: DomainConsole-UI-preview
+          path: ${{ runner.temp }}/DomainConsole-smoke/ui-*
+          if-no-files-found: error
+      - name: Verify redirected progress output
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe output-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-output-smoke")
+          if ($LASTEXITCODE -ne 0) { throw "Progress output check failed" }
+      - name: Verify bounded agent waiting and persisted non-replay checkpoint
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe waiting-smoke52 (Join-Path $env:RUNNER_TEMP 'DomainConsole-waiting52')
+          if ($LASTEXITCODE -ne 0) { throw 'Bounded agent waiting failed' }
+      - name: Verify recovery after killing the agent process
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'DomainConsole-interruption47'
+          & ./Publish/Agent/DomainConsole.Agent.exe interruption-smoke47 $root
+          if ($LASTEXITCODE -ne 0) { throw 'Abrupt agent termination recovery failed' }
+          "DOMAINCONSOLE_INTERRUPTION47=$root" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Verify service restoration after hard PowerShell timeout without touching services
+        shell: pwsh
+        run: |
+          & ./Publish/Agent/DomainConsole.Agent.exe service-recovery-smoke47 (Join-Path $env:RUNNER_TEMP 'service-recovery47')
+          if ($LASTEXITCODE -ne 0) { throw 'Service recovery fault injection failed' }
       - name: Verify exact owned executor termination and stale PID rejection
         id: executor54
         continue-on-error: true
@@ -115,11 +128,16 @@ jobs:
       - name: Parse generated collector scripts before execution
         shell: pwsh
         run: |
-          foreach($file in Get-ChildItem (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke') -Filter '*.ps1'|Where-Object {$_.Name -like 'probe42-*' -or $_.Name -like 'collector43-*'}){
+          foreach($file in Get-ChildItem (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke') -Filter '*.ps1'|Where-Object {$_.Name -like 'probe42-*' -or $_.Name -like 'collector43-*' -or $_.Name -like 'collector56-*'}){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile($file.FullName,[ref]$tokens,[ref]$errors)
             if($errors){throw ($file.Name+': '+($errors|Out-String))}
           }
+      - name: Verify targeted orphan reservation repair without touching client state
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File .github/scripts/test-control56.ps1 -Script (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/collector56-control.ps1')
+          if ($LASTEXITCODE -ne 0) { throw 'Targeted orphan reservation repair failed' }
       - name: Verify safe maintenance executor upgrades
         shell: powershell
         run: |
@@ -210,7 +228,16 @@ jobs:
             $st=Get-Content (Join-Path $folders[1] 'status.json') -Raw|ConvertFrom-Json
             if($st.Status -ne 'Completed' -or $processes[0].HasExited){throw 'Parallel lane result invalid'}
             New-Item (Join-Path $folders[0] 'stop-now.flag') -ItemType File|Out-Null
-            if(!$processes[0].WaitForExit(10000)){throw 'WSUS fixture cancellation failed'}
+            if(!$processes[0].WaitForExit(10000)){
+              $st=Get-Content (Join-Path $folders[0] 'status.json') -Raw|ConvertFrom-Json
+              if($st.StopStatus -ne 'ForceRequired'){throw 'WSUS fixture did not explain unaccepted Ctrl+C'}
+              # This disposable CMD fixture may reject Ctrl+C. Exercise the explicit
+              # owned-command force path; never silently kill a Windows update.
+              New-Item (Join-Path $folders[0] 'force-stop.flag') -ItemType File|Out-Null
+              if(!$processes[0].WaitForExit(10000)){throw 'Explicit fixture cancellation failed'}
+            }
+            $st=Get-Content (Join-Path $folders[0] 'status.json') -Raw|ConvertFrom-Json
+            if($st.Status -ne 'Cancelled' -or !$st.Ended){throw 'Parallel fixture cancellation has no terminal result'}
           } finally {foreach($p in $processes){if(!$p.HasExited){Stop-Process -Id $p.Id -Force}}}
       - name: Verify independent control lane and cancellation of waiting commands
         shell: pwsh
@@ -244,11 +271,6 @@ jobs:
         run: |
           & ./Publish/Agent/DomainConsole.Agent.exe cleanup-smoke (Join-Path $env:RUNNER_TEMP 'DomainConsole-cleanup-fixture')
           if ($LASTEXITCODE -ne 0) { throw 'Cleanup protection failed' }
-      - name: Verify redirected progress output
-        shell: pwsh
-        run: |
-          & ./Publish/Agent/DomainConsole.Agent.exe output-smoke (Join-Path $env:RUNNER_TEMP "DomainConsole-output-smoke")
-          if ($LASTEXITCODE -ne 0) { throw "Progress output check failed" }
       - name: Verify bounded diagnostics
         shell: pwsh
         run: |
@@ -344,12 +366,15 @@ jobs:
           $env:DOMAINCONSOLE_DIAGNOSTIC_FIXTURE=$fixture
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($harness)))
           if ($LASTEXITCODE -ne 0) { throw 'Diagnostic script check failed' }
+      - name: Verify identity repair failure boundaries without changing Windows
+        shell: powershell
+        run: ./.github/tests/identity-repair58.ps1 -ScriptFolder (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke')
       - name: Verify reporting scripts in Windows PowerShell
         shell: pwsh
         run: |
           $env:DOMAINCONSOLE_REPORT_SCRIPTS = Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
           $check = @'
-          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1','header-reboot.ps1','reboot-state.ps1','cache-cleanup-30.ps1','reboot-system-30.ps1','automatic-queue-recovery.ps1','report-queue-verify52.ps1','applicability54.ps1')){
+          foreach($name in @('delivery-client.ps1','delivery-server.ps1','report-recovery.ps1','cache-cleanup.ps1','force-update.ps1','defender-diagnose.ps1','defender-recover.ps1','live-updates.ps1','live-probe-wrapper.ps1','report-queue.ps1','restart-services.ps1','update-wizard.ps1','priority-control.ps1','priority-restore.ps1','download-diagnostic.ps1','cancel-job.ps1','memory-diagnostic.ps1','wsus-overview.ps1','header-reboot.ps1','reboot-state.ps1','cache-cleanup-30.ps1','reboot-system-30.ps1','automatic-queue-recovery.ps1','report-queue-verify52.ps1','applicability54.ps1','wsus-snapshot58.ps1','wsus-details58.ps1','identity-repair58.ps1','identity-server58.ps1','manual-reboot59.ps1')){
             $tokens=$null;$errors=$null
             $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $env:DOMAINCONSOLE_REPORT_SCRIPTS $name),[ref]$tokens,[ref]$errors)
             if($errors.Count){throw ($errors|Out-String)}
@@ -510,6 +535,18 @@ jobs:
             Write-Output 'Generated endpoint transport connected by IP and validated real client identity.'
             & ./.github/scripts/test_probe42.ps1 -Session $session -Credential $credential -Fixture (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke')
             & ./.github/scripts/test_collector43.ps1 -Session $session -Fixture (Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke')
+            $manual=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/manual-reboot59.ps1'))
+            try {
+              $first=Invoke-Command -Session $session -ScriptBlock ([ScriptBlock]::Create($manual))|ConvertFrom-Json
+              if(!$first.CollectedUtc -or !$first.BootUtc -or $first.Error -match 'WUA:'){throw ('Manual SYSTEM reboot check failed: '+$first.Error)}
+              $second=Invoke-Command -Session $session -ScriptBlock ([ScriptBlock]::Create($manual))|ConvertFrom-Json
+              if([DateTime]$second.CollectedUtc -le [DateTime]$first.CollectedUtc){throw 'Manual check reused stale result'}
+              $tasks=@(Get-ScheduledTask -TaskName 'DomainConsoleCSharp-ManualReboot59')
+              if($tasks.Count -ne 1 -or $tasks[0].State -in @('Running','Queued')){throw 'Manual task duplicated or remained running'}
+              Write-Output 'PASS fresh manual reboot check via real WinRM and local SYSTEM, repeated without duplicate tasks'
+            }finally{
+              Unregister-ScheduledTask -TaskName 'DomainConsoleCSharp-ManualReboot59' -Confirm:$false -ErrorAction SilentlyContinue
+            }
 
           }finally{
             if($session){Remove-PSSession $session}
@@ -696,6 +733,23 @@ jobs:
           if(!$result[3].Found -or $result[3].Error -notmatch 'fixture summary failure'){throw 'Per-client read failure was hidden'}
           if($result[4].Error -notmatch '.'){throw 'Ambiguous WSUS identity accepted'}
           Write-Output 'Exact identities, missing clients, partial errors and ambiguity verified; no WSUS or clients modified.'
+      - name: Verify bulk WSUS summary collection with 450 isolated records
+        shell: powershell
+        run: |
+          $text=[IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/wsus-snapshot58.ps1'))
+          $text=$text.Replace("[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration')",'')
+          $text=$text.Replace('$s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($env:COMPUTERNAME,$ssl,$port)','$s=$fixtureServer')
+          $text=$text.Replace('New-Object Microsoft.UpdateServices.Administration.ComputerTargetScope','[pscustomobject]@{}').Replace('New-Object Microsoft.UpdateServices.Administration.UpdateScope','[pscustomobject]@{}')
+          $targets=@(1..450|ForEach-Object {[pscustomobject]@{Id=[guid]::NewGuid().ToString();FullDomainName=('pc'+$_+'.invalid');IPAddress='192.0.2.1';OSDescription='fixture';LastReportedStatusTime=[DateTime]::UtcNow;LastSyncTime=[DateTime]::UtcNow;LastSyncResult='Succeeded'}})
+          $summaries=@($targets|Select-Object @{n='ComputerTargetId';e={$_.Id}},@{n='UnknownCount';e={0}},@{n='NotInstalledCount';e={5}},@{n='InstalledCount';e={10}},@{n='DownloadedCount';e={0}},@{n='FailedCount';e={0}},@{n='InstalledPendingRebootCount';e={0}},@{n='NotApplicableCount';e={100}})
+          $script:lists58=0;$script:summaries58=0
+          $fixtureServer=[pscustomobject]@{}
+          $fixtureServer|Add-Member ScriptMethod GetComputerTargets {param($scope) $script:lists58++;return $targets}
+          $fixtureServer|Add-Member ScriptMethod GetSummariesPerComputerTarget {param($u,$c) $script:summaries58++;return $summaries}
+          $result=(& ([ScriptBlock]::Create($text)))|ConvertFrom-Json
+          if(!$result.Complete -or $result.Records.Count -ne 450 -or $lists58 -ne 1 -or $summaries58 -ne 1){throw 'Bulk collection made repeated calls or lost records'}
+          if($result.Records[0].Summary.RequiredComplete -or $null -ne $result.Records[0].Summary.NeededCount){throw 'Unapproved totals presented as installable updates'}
+          Write-Output '450 records: one target query, one summary query, no client connections; effective approvals remain separate.'
       - name: Verify cancellation of a scheduled header reboot without rebooting
         shell: pwsh
         run: |
@@ -891,16 +945,22 @@ jobs:
           '@
           & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -EncodedCommand ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($check)))
           if($LASTEXITCODE -ne 0){throw 'Polling snapshot fixture failed'}
+      - name: Verify live SFC and DISM output on disposable Windows
+        shell: pwsh
+        timeout-minutes: 62
+        run: ./.github/scripts/test-native-progress60.ps1
       - name: Require executor and update regression success before packaging
         if: ${{ !cancelled() }}
         shell: pwsh
         run: |
           if ('${{ steps.executor54.outcome }}' -ne 'success' -or '${{ steps.updates54.outcome }}' -ne 'success') { throw 'Executor/update regression failed or was not executed; package is blocked' }
+      - name: Stage clean portable package without test backups or runtime data
+        run: python .github/scripts/stage_package.py Publish Package
       - name: Save portable package
         uses: actions/upload-artifact@v4
         with:
           name: DomainConsole-Windows-x64
-          path: Publish/
+          path: Package/
           if-no-files-found: error
       - name: Save UI review images
         if: always()
@@ -920,4 +980,15 @@ jobs:
         with:
           name: DomainConsole-service-recovery47
           path: ${{ runner.temp }}/service-recovery47/**
+          if-no-files-found: warn
+
+      - name: Save native progress and startup failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DomainConsole-native-progress-evidence
+          path: |
+            ${{ runner.temp }}/DomainConsole-output-smoke/**
+            ${{ runner.temp }}/DomainConsole-native60-*/**
+            Publish/smoke-error.txt
           if-no-files-found: warn

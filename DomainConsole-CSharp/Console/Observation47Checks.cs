@@ -41,7 +41,8 @@ public partial class MainWindow {
     var job=new RemoteJob{Targets=new(){target}};History.Insert(0,job);var row=new ComputerRow(target,job.Id);
     try{
      var reply=new TaskCompletionSource<PollResult>(TaskCreationOptions.RunContinuationsAsynchronously);bool entered=false;
-     var pending=Poll(row,true,(_,_,_)=>{entered=true;return reply.Task;});
+     // Background observation must be invalidated by Master OFF; explicit manual reads have their own lifetime (Manual56Checks).
+     var pending=Poll(row,false,(_,_,_)=>{entered=true;return reply.Task;});
      if(!entered)throw new Exception("Job observation fixture never entered transport");
      if(cancel){PollingControl43.Pause();PollingControl43.Resume();}else ConnectionStore.Profiles[host].Address="192.0.2.62";
      if(fail)reply.SetException(new RemoteDataException("obsolete malformed result"));else reply.SetResult(new(){State=new(){Id=job.Id,Status="Completed",Ended=DateTimeOffset.UtcNow.ToString("o")}});
