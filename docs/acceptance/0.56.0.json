@@ -1,0 +1,307 @@
+{
+  "schema": 1,
+  "version": "0.56.0",
+  "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+  "run_id": 42276862194,
+  "sha256": "7ea8d027fa2027d20774224cb8fd542f99ed7263324ba3c9f824520971bff817",
+  "registry_sha256": "6df8a8aec6898ab3befcc2ee3752bc14cd743a9d9d3f64dd92e450348f2afa91",
+  "batch_plan_sha256": "ebf93157e3c6dfe95b9e9def9d26873335c0e69eac5caf1465f3af04b2fb949c",
+  "reviewer": "Codex — проверка кода, Windows CI и просмотр фактических снимков",
+  "reviewed_at": "2026-11-06T22:32:35+03:00",
+  "issues": [
+    {
+      "issue": 152,
+      "current_requirement": "Ожидание подтверждения WSUS; последние уточнения владельца 06.11.2026",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "152.deadline",
+          "requirement": "Общее ожидание ограничено 10 минутами; срок определяется текущим временем даже при паузе или перезапуске.",
+          "scenario": "Истёкший срок без тика фонового опроса; пауза; повторная регистрация события",
+          "expected": "Общее ожидание ограничено 10 минутами; срок определяется текущим временем даже при паузе или перезапуске.",
+          "actual": "RecentFixes61Checks проверил предупреждение и остановку Busy, однократную историю при паузе. Operation60Checks проверил реальную движущуюся анимацию до срока и её окончание. Сохранённый Until читается без продления от времени запуска.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "152.surfaces",
+          "requirement": "Плашка, критерии, дерево, последние клиенты и счётчики согласованы; локальный успех отделён от подтверждения WSUS.",
+          "scenario": "Клиентская часть завершена, отчёт ещё ожидается; единый статус для представлений",
+          "expected": "Плашка, критерии, дерево, последние клиенты и счётчики согласованы; локальный успех отделён от подтверждения WSUS.",
+          "actual": "RecentFixes61Checks проверил общий assessment ReportPending/Warning и одинаковый состав активности. Release39 проверил дерево и представления; завершение клиентской части имеет отдельное информационное событие.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "152.late",
+          "requirement": "Поздний отчёт отражается отдельным событием; старый отчёт, прочитанный сейчас, не завершает ожидание.",
+          "scenario": "Старый отчёт прочитан сейчас; затем новый отчёт после срока",
+          "expected": "Поздний отчёт отражается отдельным событием; старый отчёт, прочитанный сейчас, не завершает ожидание.",
+          "actual": "Старый LastReportedUtc не снял ожидание. Свежий поздний отчёт снял ожидание и создал отдельное событие; проверка прошла на двух запусках окна.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "152.lost",
+          "requirement": "При потере наблюдения сохраняется последний результат; нет бесконечной анимации или повторных установок.",
+          "scenario": "Старый и свежий неподтверждённый Running; новая завершённая операция",
+          "expected": "При потере наблюдения сохраняется последний результат; нет бесконечной анимации или повторных установок.",
+          "actual": "RecentFixes61Checks исключил анимацию неподтверждённого состояния и перекрытие нового результата старым Running. Operation60Checks/Release51 проверили потерю наблюдения. Изменения не отправляют повторных установок.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        }
+      ]
+    },
+    {
+      "issue": 154,
+      "current_requirement": "Видимый серверный обзор WSUS; последние уточнения владельца 06.11.2026",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "154.cycle",
+          "requirement": "Индикатор виден весь цикл чтения сводок и уточнения одобрений; останавливается при успехе, ошибке и отмене.",
+          "scenario": "Чтение сводки и пакетов; завершение, ошибка и отмена",
+          "expected": "Индикатор виден весь цикл чтения сводок и уточнения одобрений; останавливается при успехе, ошибке и отмене.",
+          "actual": "RecentFixes61Checks проверил видимость и IsIndeterminate во время работы и выключение после завершения; обзорный серверный smoke прошёл ошибки/частичные ответы. По коду один finally снимает overviewRunning при всех исходах.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "154.result",
+          "requirement": "Доступны сервер, даты последнего полного/частичного обзора, обработано/не найдено/ошибки, причина сбоя и следующий запуск.",
+          "scenario": "Открытые подробности и повторное нажатие; обновление счётчиков",
+          "expected": "Доступны сервер, даты последнего полного/частичного обзора, обработано/не найдено/ошибки, причина сбоя и следующий запуск.",
+          "actual": "RecentFixes61Checks подтвердил одно окно и изменение числа обработанных в открытом окне. Сверены поля источника, начала/конца, последних полного/частичного проходов, отсутствующих записей, ошибок и расписания.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "154.source",
+          "requirement": "Подсказки описывают чтение сервера без подключения к клиентам; дата чтения не подменяет дату отчёта.",
+          "scenario": "Подсказки обзора и даты сохранённого отчёта",
+          "expected": "Подсказки описывают чтение сервера без подключения к клиентам; дата чтения не подменяет дату отчёта.",
+          "actual": "Сверены MainWindow.xaml, Chrome33 и OverviewDetailsText61: описано чтение WSUS и пакеты по 10, без обещания подключения к клиенту. Проверки отчётов различают LastReportedUtc и время получения.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "154.restore",
+          "requirement": "Итоги сохраняются после перезапуска и не выдаются за обзор другого сервера.",
+          "scenario": "Сохранение результата обзора; смена выбранного сервера",
+          "expected": "Итоги сохраняются после перезапуска и не выдаются за обзор другого сервера.",
+          "actual": "Проверены запись overview-run61.json в finally и чтение Store при создании окна; общие тесты Store/архивов и два запуска окна прошли. RenderOverview61 сравнивает Server с OverviewServer и не показывает прежний обзор как результат другого сервера. Отдельное ручное переключение настоящих WSUS-серверов не выполнялось.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        }
+      ]
+    },
+    {
+      "issue": 155,
+      "current_requirement": "Ограничение последних клиентов; последние уточнения владельца 06.11.2026",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "155.limit",
+          "requirement": "Обычные последние ограничены настройкой N; офлайн сам по себе не исключает последние N.",
+          "scenario": "Настройка 5, шесть обычных последних, старый Running",
+          "expected": "Обычные последние ограничены настройкой N; офлайн сам по себе не исключает последние N.",
+          "actual": "RecentFixes61Checks получил ровно пять обычных последних; старое Running не создало исключение. В RefreshRecent нет исключения обычной записи только по офлайн-статусу.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "155.activity",
+          "requirement": "Один состав активности для счётчика и исключения из лимита, включая команды и диагностику; старое Running не закрепляет навсегда.",
+          "scenario": "Подтверждённая операция, неподтверждённый Running, диагностика, более новый результат",
+          "expected": "Один состав активности для счётчика и исключения из лимита, включая команды и диагностику; старое Running не закрепляет навсегда.",
+          "actual": "RecentFixes61Checks проверил старое/свежее неподтверждённое Running и новое Completed. ActiveRecent61 используется для дерева, счётчиков и исключений; проверены диагностические состояния. Неизменные ветки не рассылают повторные уведомления.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "155.pin",
+          "requirement": "Ручные закрепления явно помечены; можно закрепить, открепить и убрать из последних без удаления AD/истории и остановки задания.",
+          "scenario": "Дополнительное закрепление и действия контекстного меню",
+          "expected": "Ручные закрепления явно помечены; можно закрепить, открепить и убрать из последних без удаления AD/истории и остановки задания.",
+          "actual": "RecentFixes61Checks подтвердил дополнительную закреплённую строку и явную подпись. Обработчики закрепления/снятия/удаления проверены по коду: меняют только workHosts/recentHosts и Store; History/AD и запуск/остановка задания не затрагиваются.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "155.restore",
+          "requirement": "Настройка, закрепления и удаление из списка переживают перезапуск.",
+          "scenario": "Запись лимита, закрепления и удаления; повторное чтение состояния",
+          "expected": "Настройка, закрепления и удаление из списка переживают перезапуск.",
+          "actual": "Сверены SaveNavigation_Click, RecentMenu61, RestoreNavigation и инициализация списков: читаются те же ключи Store, которые записывают действия. Общие тесты сериализации, архивов и повторного запуска прошли. Ручная приёмка меню на производственной Data не выполнялась.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "155.scale",
+          "requirement": "400+ клиентов и большая история сохраняют отзывчивость, выделение и прокрутку.",
+          "scenario": "450 строк, 1006 заданий, 10000 событий; 100 повторных обновлений",
+          "expected": "400+ клиентов и большая история сохраняют отзывчивость, выделение и прокрутку.",
+          "actual": "Release39: 13.92–31.11 мс на пять обновлений; ноль повторных чтений диска и уведомлений неизменных строк. 100 циклов: 2457 мс, удерживаемая память −280232 байта. Проверки ввода, выделения и прокрутки прошли.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        }
+      ]
+    },
+    {
+      "issue": 156,
+      "current_requirement": "Общие технические подробности; последние уточнения владельца 06.11.2026",
+      "status": "passed",
+      "checks": [
+        {
+          "condition_id": "156.compact",
+          "requirement": "Короткие служебные сведения одного результата объединяются в один технический раздел во всех аналогичных выводах.",
+          "scenario": "Одинаковые небольшие метаданные во всех LogViewer, оба режима OmitMain",
+          "expected": "Короткие служебные сведения одного результата объединяются в один технический раздел во всех аналогичных выводах.",
+          "actual": "RecentFixes61Checks получил один раздел Технические подробности без отдельных Актуальность снимка/Последнее чтение. На фактическом серверном отчёте просмотрены обычные подписи внутри одного раздела.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "156.scope",
+          "requirement": "Большие журналы, содержательная диагностика, вывод команд и разные операции/источники не смешиваются.",
+          "scenario": "Полный вывод команды, диагностика, предыдущая операция, большой блок, два источника",
+          "expected": "Большие журналы, содержательная диагностика, вывод команд и разные операции/источники не смешиваются.",
+          "actual": "RecentFixes61Checks сохранил самостоятельные разделы и не смешал два разных источника. Содержимое исходных журналов и коды сохраняются; проверки полного командного вывода прошли.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "156.warning",
+          "requirement": "Существенная ошибка последнего чтения видна у основного результата; сохранённый счётчик не выглядит свежим подтверждением.",
+          "scenario": "Последнее чтение не нашло клиента при сохранённом нуле; открытие через счётчик",
+          "expected": "Существенная ошибка последнего чтения видна у основного результата; сохранённый счётчик не выглядит свежим подтверждением.",
+          "actual": "RecentFixes61Checks проверил порядок предупреждения перед счётчиком и обработчик Needed37_Click. Предупреждение видно на Windows-снимке основного отчёта; полные подробности сохранены в общем техническом разделе.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        },
+        {
+          "condition_id": "156.visual",
+          "requirement": "Проверены реальные команды, WSUS, опрос, диагностика и история в трёх темах и двух размерах; сохранены поиск, копирование, даты и ошибки.",
+          "scenario": "Четыре режима × три темы × два размера; поиск/копирование/подробности",
+          "expected": "Проверены реальные команды, WSUS, опрос, диагностика и история в трёх темах и двух размерах; сохранены поиск, копирование, даты и ошибки.",
+          "actual": "Просмотрены реальные ui-release39 снимки окончательного main и ui-recent61. Windows smoke проверил копируемый текст, поиск, сохранение выделения и исходного вывода; диагностические/опросные сценарии входят в тот же полный прогон.",
+          "result": "passed",
+          "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+          "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; DomainConsole-UI-preview 13534345565; RecentFixes61Checks.cs; Operation60Checks.cs; ui-recent61.txt; ui-operation60.txt; ui-release39-performance.txt; ui-memory52.txt; исходники точного коммита."
+        }
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "single-instance",
+      "result": "passed",
+      "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+      "expected": "Повторный запуск и восстановление сохранённого состояния",
+      "actual": "Windows startup выполнен дважды, история и сохранённые подтверждения восстановлены без сетевых заданий; single-instance проверки выполнены в UI smoke.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; полный журнал job 128095291389; DomainConsole-UI-preview 13534345565; ui-restore-ready55.txt, ui-status50-matrix.txt, ui-operation60.txt, ui-recent61.txt, ui-memory52.txt."
+    },
+    {
+      "id": "two-consoles",
+      "result": "passed",
+      "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+      "expected": "Отсутствие дублирующих собственных исполнителей на одном endpoint",
+      "actual": "Пройдены cross-console ownership, параллельные очереди, independent control lane и реальный WinRM probe/collector; проверяются блокировки и число собственных задач. Это изолированный стенд, не несколько производственных консолей.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; полный журнал job 128095291389; DomainConsole-UI-preview 13534345565; ui-restore-ready55.txt, ui-status50-matrix.txt, ui-operation60.txt, ui-recent61.txt, ui-memory52.txt."
+    },
+    {
+      "id": "reboot-mid-operation",
+      "result": "passed",
+      "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+      "expected": "После прерывания неизвестный исход сохраняется, повторной установки вслепую нет",
+      "actual": "Пройдены interruption-smoke47 с завершением собственного процесса и проверки persisted non-replay checkpoint, новых boot и восстановления. Физическое отключение питания не выполнялось.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; полный журнал job 128095291389; DomainConsole-UI-preview 13534345565; ui-restore-ready55.txt, ui-status50-matrix.txt, ui-operation60.txt, ui-recent61.txt, ui-memory52.txt."
+    },
+    {
+      "id": "collector-remove-enable-recover",
+      "result": "passed",
+      "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+      "expected": "Удаление, запрет, включение и восстановление сохраняют ограниченное число собственных ресурсов",
+      "actual": "Пройдены probe42/collector43 через настоящий WinRM, локальный SYSTEM и безопасные upgrades; принадлежащий процесс проверяется по PID/времени. Повторный manual reboot probe проверил одну завершённую задачу.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; полный журнал job 128095291389; DomainConsole-UI-preview 13534345565; ui-restore-ready55.txt, ui-status50-matrix.txt, ui-operation60.txt, ui-recent61.txt, ui-memory52.txt."
+    },
+    {
+      "id": "offline-and-reconnect",
+      "result": "passed",
+      "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+      "expected": "Поздний ответ и другой endpoint не подменяют текущие данные",
+      "actual": "Windows UI матрицы и IP session identity/credential isolation прошли; восстановление истории не отправляет новые задания. Обрывы моделируются изолированными ответами и процессами, физический VPN не отключался.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; полный журнал job 128095291389; DomainConsole-UI-preview 13534345565; ui-restore-ready55.txt, ui-status50-matrix.txt, ui-operation60.txt, ui-recent61.txt, ui-memory52.txt."
+    },
+    {
+      "id": "polling-master-off",
+      "result": "passed",
+      "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+      "expected": "OFF применяется до фоновых таймеров и отменяет прежнее поколение чтений",
+      "actual": "Пройдена отдельная проверка persisted master OFF before startup timers, общий UI smoke поколений/отмены и независимые ручные очереди. Собственная установка не прекращается только из-за OFF.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; полный журнал job 128095291389; DomainConsole-UI-preview 13534345565; ui-restore-ready55.txt, ui-status50-matrix.txt, ui-operation60.txt, ui-recent61.txt, ui-memory52.txt."
+    },
+    {
+      "id": "status-evidence-consistency",
+      "result": "passed",
+      "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+      "expected": "Один набор фактов согласует общий статус и отдельные признаки связи/отчёта/reboot",
+      "actual": "Пройдены матрицы статусов, Operation60Checks и RecentFixes61Checks. Старый отчёт не завершает ожидание; просроченный срок даёт Warning; свежий поздний отчёт создаёт отдельное событие.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; полный журнал job 128095291389; DomainConsole-UI-preview 13534345565; ui-restore-ready55.txt, ui-status50-matrix.txt, ui-operation60.txt, ui-recent61.txt, ui-memory52.txt."
+    },
+    {
+      "id": "ui-all-modes-themes-sizes",
+      "result": "passed",
+      "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+      "expected": "Все режимы, три темы и два размера сохраняют действия и читаемость",
+      "actual": "Windows smoke прошёл проверки размещения и масштабирования WPF; просмотрены 24 ui-release39 снимка окончательного main и новые ui-recent61. Физическая смена DPI монитора не выполнялась.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; полный журнал job 128095291389; DomainConsole-UI-preview 13534345565; ui-restore-ready55.txt, ui-status50-matrix.txt, ui-operation60.txt, ui-recent61.txt, ui-memory52.txt."
+    },
+    {
+      "id": "selection-scroll-preservation",
+      "result": "passed",
+      "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+      "expected": "Фоновые обновления не меняют выбранного клиента, вкладку, отметки и позицию чтения",
+      "actual": "Пройдены проверки Submission47, поиска, клавиатурной навигации, истории и UI-нагрузки; 450 строк, 1006 заданий, 10000 событий, 100 циклов, ноль повторных чтений диска.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; полный журнал job 128095291389; DomainConsole-UI-preview 13534345565; ui-restore-ready55.txt, ui-status50-matrix.txt, ui-operation60.txt, ui-recent61.txt, ui-memory52.txt."
+    },
+    {
+      "id": "full-command-output",
+      "result": "passed",
+      "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+      "expected": "Исходный вывод и коды сохраняются; проценты не засоряют итог",
+      "actual": "Пройдены redirected output, native exit capture, command failure, cancelled output preservation и bounded snapshot recovery. SFC /verifyonly и DISM /ScanHealth завершились с Completed и native exit 0; текст и проценты наблюдались до завершения, итоговый прогресс компактный.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; полный журнал job 128095291389; DomainConsole-UI-preview 13534345565; ui-restore-ready55.txt, ui-status50-matrix.txt, ui-operation60.txt, ui-recent61.txt, ui-memory52.txt."
+    },
+    {
+      "id": "cache-reset-failure-and-restoration",
+      "result": "passed",
+      "commit": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+      "expected": "Первичная ошибка и неполное восстановление не становятся успехом",
+      "actual": "Пройдены service recovery hard timeout, targeted BITS restoration, cache protection/backups, long-path/link isolation и injected failure boundaries; реальные службы для fault injection заменены изолированными doubles.",
+      "evidence": "https://github.com/Amenemhat/DomainConsole/actions/runs/42276862194; полный журнал job 128095291389; DomainConsole-UI-preview 13534345565; ui-restore-ready55.txt, ui-status50-matrix.txt, ui-operation60.txt, ui-recent61.txt, ui-memory52.txt."
+    }
+  ],
+  "close_issues": [
+    152,
+    154,
+    155,
+    156
+  ]
+}

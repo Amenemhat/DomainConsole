@@ -839,7 +839,7 @@
       "version": "0.56.0",
       "priority": "P0",
       "title": "Последние замечания: ожидание WSUS, обзор, последние клиенты и компактный вывод",
-      "status": "candidate",
+      "status": "accepted",
       "issues": [
         152,
         154,
@@ -864,7 +864,10 @@
         "156.scope",
         "156.warning",
         "156.visual"
-      ]
+      ],
+      "source": "8a0ad0ad581966848cb4fa5a9863095a2ba48f08",
+      "run": 42276862194,
+      "artifact_sha256": "7ea8d027fa2027d20774224cb8fd542f99ed7263324ba3c9f824520971bff817"
     }
   ],
   "mandatory_scenarios_each_release": [
