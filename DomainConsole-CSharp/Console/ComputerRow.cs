@@ -37,6 +37,10 @@ public sealed class ComputerRow : INotifyPropertyChanged {
  public bool IdentityConflict58 {get;private set;}
  public System.Windows.Visibility IdentityVisibility58=>IdentityConflict58?System.Windows.Visibility.Visible:System.Windows.Visibility.Collapsed;
  public void SetIdentityConflict58(bool value){if(value==IdentityConflict58)return;IdentityConflict58=value;PropertyChanged?.Invoke(this,new(nameof(IdentityVisibility58)));}
+ string recentReason61="";
+ public string RecentReason61=>recentReason61;
+ public System.Windows.Visibility RecentReasonVisibility61=>recentReason61.Length>0?System.Windows.Visibility.Visible:System.Windows.Visibility.Collapsed;
+ public void SetRecentReason61(string value){if(value==recentReason61)return;recentReason61=value;PropertyChanged?.Invoke(this,new(nameof(RecentReason61)));PropertyChanged?.Invoke(this,new(nameof(RecentReasonVisibility61)));}
  public event PropertyChangedEventHandler? PropertyChanged;
 }
 

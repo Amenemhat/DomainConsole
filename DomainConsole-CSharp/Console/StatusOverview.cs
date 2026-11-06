@@ -52,8 +52,8 @@ public partial class MainWindow {
  }
  void SetupOverview(){overviewSettings.Hours=Math.Clamp(overviewSettings.Hours,1,168);OverviewAutomatic.IsChecked=overviewSettings.Automatic;OverviewHours.Text=overviewSettings.Hours.ToString();RequestOverviewSoon();}
  void RequestOverviewSoon(){if(nextOverview<=DateTimeOffset.UtcNow)nextOverview=DateTimeOffset.UtcNow.AddSeconds(3);}
- void OverviewTick(){RefreshOutcomes();if(!TransportBudget41.Paused&&!closing&&overviewSettings.Automatic&&!overviewPaused&&!overviewRunning&&DateTimeOffset.UtcNow>=nextOverview&&!string.IsNullOrWhiteSpace(WsusHost.Text))_=RunOverview();}
- async void OverviewRefresh_Click(object sender,RoutedEventArgs e){if(overviewRunning){overviewPaused=true;overviewCancel?.Cancel();OverviewProgress.Text="Остановка обзора…";return;}overviewPaused=false;await RunOverview(true);}
+ void OverviewTick(){RenderOverview61();RefreshOutcomes();if(!TransportBudget41.Paused&&!closing&&overviewSettings.Automatic&&!overviewPaused&&!overviewRunning&&DateTimeOffset.UtcNow>=nextOverview&&!string.IsNullOrWhiteSpace(WsusHost.Text))_=RunOverview();}
+ async void OverviewRefresh_Click(object sender,RoutedEventArgs e){if(overviewRunning){overviewPaused=true;overviewCancel?.Cancel();overviewRun61.Phase="Остановка обзора…";RenderOverview61();return;}overviewPaused=false;await RunOverview(true);}
  void SaveOverview_Click(object sender,RoutedEventArgs e)=>Guard(()=>{if(!int.TryParse(OverviewHours.Text,out var hours)||hours<1||hours>168)throw new Exception("Интервал: 1–168 часов.");overviewSettings=new(){Automatic=OverviewAutomatic.IsChecked==true,Hours=hours,ShowDisabled=overviewSettings.ShowDisabled};Store.Write("overview-settings.json",overviewSettings);if(!overviewSettings.Automatic){overviewCancel?.Cancel();}else{overviewPaused=false;RequestOverviewSoon();}Notify("Настройки обзора WSUS сохранены.");});
  public static List<ComputerRow> OrderForOverview(IEnumerable<ComputerRow> computers,IEnumerable<string> work,IEnumerable<string> recent){var priority=work.Concat(recent).Distinct(StringComparer.OrdinalIgnoreCase).ToList();return computers.OrderBy(r=>{int i=priority.FindIndex(h=>h.Equals(r.Host,StringComparison.OrdinalIgnoreCase));return i<0?int.MaxValue:i;}).DistinctBy(r=>r.Host,StringComparer.OrdinalIgnoreCase).ToList();}
  static (int Attempts,DateTimeOffset? Next) OverviewRetryPolicy45(bool failed,bool deferred,int attempts,DateTimeOffset now,DateTimeOffset allowed){int count=attempts+(deferred?0:1);return (count,!failed||count>=3||allowed==DateTimeOffset.MaxValue?null:allowed>now.AddMinutes(2)?allowed:now.AddMinutes(2));}
@@ -68,18 +68,19 @@ public partial class MainWindow {
   overviewRunning=true;using var cancellation=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);overviewCancel=cancellation;SetOverviewAction33(true);
   bool Current58()=>!closing&&!cancellation.IsCancellationRequested&&server==OverviewServer&&ssl==WsusSsl.IsChecked;
   int done=0,errors=0;bool cancelled=false;
+  overviewRun61=new(){Server=server,Started=DateTimeOffset.UtcNow.ToString("o"),Total=rows.Count,LastFull=overviewRun61.Server==server?overviewRun61.LastFull:""};
   try{
-   OverviewProgress.Text="WSUS: пакетное чтение записей и сводок…";
+   overviewRun61.Phase="WSUS: чтение записей и сводок…";RenderOverview61();
    var snapshot=await remote.ReadWsusSnapshot58(settings,cancellation.Token);
    if(!Current58())throw new OperationCanceledException();
    serverSnapshot58=snapshot;ConfirmIdentityRepairs58();await Task.Run(()=>Store.Write("wsus-server-snapshot58.json",snapshot));
    var details=new List<ComputerRow>();
    foreach(var row in rows){
     var name=ConnectionStore.WsusName(row.Host);var matches=snapshot.Find(name);
-    if(name.Length==0){ApplyOverviewReply53(row,new(){Error="Имя клиента ещё не подтверждено для WSUS"},server,false);errors++;continue;}
-    if(matches.Count!=1){ApplyOverviewReply53(row,new(){Found=false,Error=matches.Count>1?"Несколько записей WSUS с этим именем; требуется проверка идентичности":""},server,false);if(matches.Count>1)errors++;continue;}
+    if(name.Length==0){ApplyOverviewReply53(row,new(){Error="Имя клиента ещё не подтверждено для WSUS"},server,false);errors++;overviewRun61.Processed++;continue;}
+    if(matches.Count!=1){ApplyOverviewReply53(row,new(){Found=false,Error=matches.Count>1?"Несколько записей WSUS с этим именем; требуется проверка идентичности":""},server,false);if(matches.Count>1){errors++;overviewRun61.Error="Несколько записей WSUS с этим именем";}else overviewRun61.Missing++;overviewRun61.Processed++;continue;}
     var record=matches[0];
-    if(record.Summary==null){ApplyOverviewReply53(row,new(){Error=record.Error},server,false);errors++;continue;}
+    if(record.Summary==null){ApplyOverviewReply53(row,new(){Error=record.Error},server,false);errors++;overviewRun61.Error=record.Error;overviewRun61.Processed++;continue;}
     // Counts across all updates cannot stand in for effective approvals. Keep the last
     // complete per-client report until the bounded detail read has finished.
     details.Add(row);
@@ -88,19 +89,19 @@ public partial class MainWindow {
    RefreshOutcomes();
    foreach(var chunk in details.Chunk(10)){
     cancellation.Token.ThrowIfCancellationRequested();if(!Current58())throw new OperationCanceledException();
-    OverviewProgress.Text="WSUS: сводки получены · уточнение одобрений "+done+" / "+details.Count;
+    overviewRun61.Phase="WSUS: уточнение одобрений";RenderOverview61();
     try{
      var replies=await remote.ReadWsusDetails58(settings,chunk.ToList(),snapshot,cancellation.Token);
      if(!Current58())throw new OperationCanceledException();
-     foreach(var row in chunk){if(!ApplyOverviewReply53(row,replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)),server,false))errors++;}
-    }catch(OperationCanceledException){throw;}catch(Exception ex){foreach(var row in chunk)ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);errors+=chunk.Length;}
-    done+=chunk.Length;await PersistReportCacheAsync58();
+     foreach(var row in chunk){if(!ApplyOverviewReply53(row,replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)),server,false)){errors++;overviewRun61.Error=replies.FirstOrDefault(r=>r.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase))?.Error??"Ответ для клиента не получен";}}
+    }catch(OperationCanceledException){throw;}catch(Exception ex){foreach(var row in chunk)ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);errors+=chunk.Length;overviewRun61.Error=ex.Message;}
+    done+=chunk.Length;overviewRun61.Processed+=chunk.Length;RenderOverview61();await PersistReportCacheAsync58();
     RefreshOutcomes();if(ComputerGrid.SelectedItem is ComputerRow focused&&chunk.Contains(focused))ShowCurrent();
    }
    overviewPending45.Clear();overviewAttempts45.Clear();overviewDue45.Clear();
   }catch(OperationCanceledException){cancelled=true;}
   catch(Exception ex){
-   errors++;if(Current58()){
+   errors++;overviewRun61.Error=ex.Message;if(Current58()){
     serverSnapshot58.LastError=ex.Message;serverSnapshot58.ErrorUtc=DateTimeOffset.UtcNow.ToString("o");
     var saved=Store.Clone(serverSnapshot58);await Task.Run(()=>Store.Write("wsus-server-snapshot58.json",saved));
     foreach(var row in rows)ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);
@@ -110,7 +111,11 @@ public partial class MainWindow {
    overviewRunning=false;overviewCancel=null;SetOverviewAction33(false);
    nextOverview=DateTimeOffset.UtcNow.Add(errors>0?TimeSpan.FromMinutes(5):TimeSpan.FromHours(overviewSettings.Hours));
    Store.Write("overview-next43.json",nextOverview);
-   if(!closing){OverviewProgress.Text=(cancelled?"Обзор WSUS остановлен":"Обзор WSUS завершён")+" · подробностей: "+done+" · ошибок: "+errors+" · клиентские подключения не выполнялись";RefreshOutcomes();}
+   overviewRun61.Ended=DateTimeOffset.UtcNow.ToString("o");overviewRun61.Errors=errors;
+   overviewRun61.Phase=cancelled?"Обзор WSUS остановлен":errors>0?"Обзор WSUS завершён частично":"Обзор WSUS завершён";
+   if(!cancelled&&errors==0)overviewRun61.LastFull=overviewRun61.Ended;
+   Store.Write("overview-run61.json",overviewRun61);
+   if(!closing){RenderOverview61();RefreshOutcomes();}
   }
  }
 

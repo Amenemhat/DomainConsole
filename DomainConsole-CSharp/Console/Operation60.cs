@@ -14,14 +14,15 @@ public partial class MainWindow {
    if(ObservationStopped51(row))return new("Наблюдение остановлено · результат задания не подтверждён",false);
    if(LostObservation51(row.Host))return new("Связь потеряна · ожидаем восстановления, результат не подтверждён",false);
    if(TransportBudget41.Paused&&!ManualJob56(row.JobId))return new("Опрос приостановлен · результат задания не подтверждён",false);
+   if(!ActivityConfirmed61(live.Job,live.Target)&&!StateFresh(state))return new("Последнее состояние устарело · выполнение не подтверждено",false);
    string stage=row.Target.Status=="Queued"?"Ожидает отправки":row.Target.Status=="Sending"?"Передаём задание":row.Target.Status=="SubmissionUnknown"?"Проверяем передачу задания":StateFresh(state)?state?.Stage??"Ожидаем результат":"Получаем результат задания · последнее состояние устарело";
    string since=state?.Started??live.Job.Created;
    return new(stage+(DateTimeOffset.TryParse(since,out var at)?" · "+Age(now-at):""),true,StateFresh(state)?state?.Progress:null);
   }
   if(!wsus)return null;
-  if(reportWaiting.TryGetValue(selected.Host,out var wait)&&(wait.Server54.Length==0||wait.Server54==OverviewServer)){
+  if(CurrentReportWait61(selected.Host) is { } wait){
+   if(ReportWaitExpired61(wait))return new("Отчёт WSUS задерживается · срок ожидания истёк",false);
    if(TransportBudget41.Paused)return new("Ожидание отчёта WSUS · опрос приостановлен",false);
-   if(wait.Delayed54||now>=wait.Until)return new("Отчёт WSUS задерживается · срок ожидания истёк",false);
    int sec=Math.Max(0,(int)Math.Ceiling((wait.Until-now).TotalSeconds));
    return new((reportReading.Contains(selected.Host)?"Получаем отчёт WSUS":"Ожидаем новый отчёт WSUS")+" · до срока ожидания "+sec/60+" мин "+sec%60+" с",true);
   }
