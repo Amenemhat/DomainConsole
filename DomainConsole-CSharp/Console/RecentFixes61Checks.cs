@@ -49,6 +49,8 @@ public partial class MainWindow {
    if(!CurrentReportText41(rows[0]).Contains("Клиент не найден при последнем чтении"))throw new Exception("Live cache hides failed later lookup");
    overviewRun61=new(){Server=OverviewServer,Phase="WSUS: уточнение одобрений",Total=400,Processed=120,Missing=3,Errors=2};overviewRunning=true;RenderOverview61();
    if(!OverviewBusy61.IsIndeterminate||OverviewBusy61.Visibility!=Visibility.Visible||!OverviewProgress.Text.Contains("120 / 400")||!OverviewDetailsText61().Contains("не найдено: 3"))throw new Exception("Overview progress/counts missing");
+   OverviewDetails61_Click(this,new RoutedEventArgs());var detailsWindow61=overviewWindow61;
+   try{OverviewDetails61_Click(this,new RoutedEventArgs());if(overviewWindow61!=detailsWindow61)throw new Exception("Overview click duplicates windows");overviewRun61.Processed=130;RenderOverview61();if(overviewText61?.Text.Contains("Обработано: 130 из 400")!=true)throw new Exception("Open overview details stopped updating");}finally{detailsWindow61?.Close();}
    ComputerGrid.SelectedItem=rows[0];MainTabs.SelectedItem=WsusTab;ShowCurrent();
    Needed37_Click(new System.Windows.Controls.Button{DataContext=rows[0]},new RoutedEventArgs());
    if(!WsusServerOutput.Text.Contains("Клиент не найден при последнем чтении"))throw new Exception("Opening required updates hides failed last lookup");

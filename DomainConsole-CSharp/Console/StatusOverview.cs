@@ -101,7 +101,7 @@ public partial class MainWindow {
       }catch(Exception ex){errors++;overviewRun61.Error=ex.Message;ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);}
      }
     }catch(OperationCanceledException){throw;}catch(Exception ex){foreach(var row in chunk)ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);errors+=chunk.Length;overviewRun61.Error=ex.Message;}
-    done+=chunk.Length;overviewRun61.Processed+=chunk.Length;RenderOverview61();await PersistReportCacheAsync58();
+    done+=chunk.Length;overviewRun61.Processed+=chunk.Length;overviewRun61.Errors=errors;RenderOverview61();await PersistReportCacheAsync58();
     RefreshOutcomes();if(ComputerGrid.SelectedItem is ComputerRow focused&&chunk.Contains(focused))ShowCurrent();
    }
    overviewPending45.Clear();overviewAttempts45.Clear();overviewDue45.Clear();
