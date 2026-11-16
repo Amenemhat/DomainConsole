@@ -30,11 +30,11 @@ def exercise(nodes, ps, system, evidence, save, root, gui):
     wsus_api = "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');$s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530);"
     ps("DCWSUS", wsus_api + "$null=$s.CreateComputerTargetGroup('DCLabClients')")
     settings = f"$p='{policy}';New-Item $p -Force|Out-Null;New-Item ($p+'\\AU') -Force|Out-Null;" + """
-foreach($key in @('WUServer','WUStatusServer')){New-ItemProperty $p $key 'http://dcwsus.dc057.test:8530' -PropertyType String -Force|Out-Null}
-New-ItemProperty $p TargetGroupEnabled 1 -PropertyType DWord -Force|Out-Null
-New-ItemProperty $p TargetGroup 'DCLabClients' -PropertyType String -Force|Out-Null
-New-ItemProperty ($p+'\\AU') UseWUServer 1 -PropertyType DWord -Force|Out-Null
-New-ItemProperty ($p+'\\AU') AUOptions 2 -PropertyType DWord -Force|Out-Null
+foreach($key in @('WUServer','WUStatusServer')){New-ItemProperty -Path $p -Name $key -Value 'http://dcwsus.dc057.test:8530' -PropertyType String -Force|Out-Null}
+New-ItemProperty -Path $p -Name TargetGroupEnabled -Value 1 -PropertyType DWord -Force|Out-Null
+New-ItemProperty -Path $p -Name TargetGroup -Value 'DCLabClients' -PropertyType String -Force|Out-Null
+New-ItemProperty -Path ($p+'\\AU') -Name UseWUServer -Value 1 -PropertyType DWord -Force|Out-Null
+New-ItemProperty -Path ($p+'\\AU') -Name AUOptions -Value 2 -PropertyType DWord -Force|Out-Null
 Restart-Service wuauserv -Force
 $session=New-Object -ComObject Microsoft.Update.Session
 $searcher=$session.CreateUpdateSearcher();$searcher.ServerSelection=1;$searcher.Online=$true
@@ -47,17 +47,30 @@ $scan=$searcher.Search('IsInstalled=0 and IsHidden=0');if([int]$scan.ResultCode 
             raise RuntimeError(node + ": incomplete real registry/CIM observation: " + str(result.get("Error")))
         uuid.UUID(result["SusClientId"])
         return result
-    def configure(node):
-        system(node, "configure-wua", settings, minutes=22)
+    def configure(node,shared=None):
+        marker="Restart-Service wuauserv -Force"
+        policy_only,scan=settings.split(marker,1)
+        if node==clients[-2]:
+            policy_only=policy_only.replace("http://dcwsus.dc057.test:8530","http://dcwsus:8530")
+        if shared is None:
+            job=policy_only+marker+scan
+        else:
+            # These four clones have never reported separately to this WSUS.
+            job=policy_only+"Stop-Service wuauserv -Force;"+f"New-ItemProperty -Path '{reg}' -Name SusClientId -Value {quote(shared)} -PropertyType String -Force|Out-Null;Start-Service wuauserv"
+        system(node,"configure-wua",job,minutes=22)
+    configure(clients[0])
+    shared=probe_client(clients[0])["SusClientId"]
+    def seed_clone(node):
+        configure(node,shared)
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-        list(pool.map(configure, clients))
+        list(pool.map(seed_clone,clients[1:]))
     def resources(label, active):
         sample = r"""
 $p=@(Get-CimInstance Win32_Process|Where-Object Name -in 'DomainConsole.Agent.exe','wsmprovhost.exe','powershell.exe')
 $jobs=@(Get-ScheduledTask|Where-Object TaskName -like 'DomainConsole*')
 $store=Join-Path $env:ProgramData 'DomainConsoleCSharp'
 $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -Property Length -Sum).Sum}else{0}
-@{Agent=@($p|Where-Object Name -eq 'DomainConsole.Agent.exe').Count;WinRM=@($p|Where-Object Name -eq 'wsmprovhost.exe').Count;PowerShell=@($p|Where-Object Name -eq 'powershell.exe').Count;OwnedTasks=$jobs.Count;WorkingSetBytes=($p|Measure-Object -Property WorkingSetSize -Sum).Sum;CPU100ns=[double]($p|Measure-Object -Property KernelModeTime -Sum).Sum+[double]($p|Measure-Object -Property UserModeTime -Sum).Sum;DataBytes=$size;Utc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json -Compress
+@{Agent=@($p|Where-Object Name -eq 'DomainConsole.Agent.exe').Count;WinRM=@($p|Where-Object Name -eq 'wsmprovhost.exe').Count;PowerShell=@($p|Where-Object Name -eq 'powershell.exe').Count;OwnedTasks=$jobs.Count;WorkingSetBytes=($p|Measure-Object -Property WorkingSetSize -Sum).Sum;CPU100ns=[double]($p|Measure-Object -Property KernelModeTime -Sum).Sum+[double]($p|Measure-Object -Property UserModeTime -Sum).Sum;DataBytes=$size;RegistryBackups=@(Get-ChildItem (Join-Path $env:ProgramData 'DomainConsole-Backups/WindowsUpdate-*.reg') -ErrorAction SilentlyContinue).Count;Utc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json -Compress
 """
         def read(node):
             return node,json.loads(ps(node,sample))
@@ -65,15 +78,15 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
             evidence["checks"].setdefault("resource_samples",{})[label]=dict(pool.map(read,active))
         save()
     resources("before",clients)
-    originals = {node: probe_client(node) for node in clients}
-    shared = originals[clients[0]]["SusClientId"]
-    # Deliberately reproduce the reported cloning defect only inside these ephemeral VMs.
-    for node in clients[1:]:
-        ps(node, f"Stop-Service wuauserv -Force;Set-ItemProperty '{reg}' SusClientId {quote(shared)};Start-Service wuauserv")
     before = {node: probe_client(node) for node in clients}
     if len({r["Machine"].lower() for r in before.values()}) != len(clients) or any(r["SusClientId"].lower()!=shared.lower() for r in before.values()):
         raise RuntimeError("Did not reproduce a shared ID on distinct devices")
     evidence["checks"]["before"] = before
+    query="$t=@($s.GetComputerTargets()|Where-Object FullDomainName -like 'clone*'|Select-Object Id,FullDomainName);ConvertTo-Json -InputObject $t -Compress"
+    initial=json.loads(ps("DCWSUS",wsus_api+query))
+    if len(initial)!=1 or initial[0]["Id"].lower()!=shared.lower():
+        raise RuntimeError("Expected exactly one server record hiding five distinct clients: "+str(initial))
+    evidence["checks"]["initial_server_records"]=initial
     ous = json.loads(ps("DCAD", "Get-ADComputer -Filter \"Name -like 'CLONE*'\"|Select-Object Name,DistinguishedName|ConvertTo-Json -Compress", True))
     if len(ous)!=len(clients) or len({r["DistinguishedName"].split(",")[1] for r in ous})<2:
         raise RuntimeError("Incorrect AD scope")
@@ -90,7 +103,14 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
         except OSError:
             evidence["checks"]["offline"] = held
         gui.start(before)
-        gui.wait("first-consent.done", 800)
+        gui.wait("read-only.done",900)
+        resources("diagnosis",clients[:-1])
+        for node,m in evidence["checks"]["resource_samples"]["diagnosis"].items():
+            baseline=evidence["checks"]["resource_samples"]["before"][node]
+            if m["RegistryBackups"]!=baseline["RegistryBackups"] or m["Agent"]>baseline["Agent"] or m["OwnedTasks"]>baseline["OwnedTasks"]:
+                raise RuntimeError("Read-only diagnosis changed the client on "+node)
+        gui.mark("allow-consent.done")
+        gui.wait("first-consent.done",800)
         resources("during",clients[:-1])
         def changed(active):
             deadline=time.monotonic()+900
@@ -148,6 +168,8 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
     evidence["checks"]["packaged-console"]=gui.finish()
     resources("after",clients)
     for node,m in evidence["checks"]["resource_samples"]["after"].items():
+        if m["RegistryBackups"]!=evidence["checks"]["resource_samples"]["before"][node]["RegistryBackups"]+1:
+            raise RuntimeError("Expected one reset per confirmed client: "+node)
         if m["Agent"]>1:
             raise RuntimeError("Multiple agents remained on "+node)
     save()

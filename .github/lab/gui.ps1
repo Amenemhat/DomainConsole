@@ -71,6 +71,8 @@ try{
  $window=Wait-For {Element $root ([Windows.Automation.AutomationElement]::NameProperty) 'Идентичность WSUS · CLONE1'} 'WSUS identity window'
  Complete-Survey 5
  Browse-Domain $window
+ Set-Content "$lab\read-only.done" 'checked'
+ Wait-For {Test-Path "$lab\allow-consent.done"} 'read-only resource measurements' 120|Out-Null
  Run-Repair $window 'Исправить общий ID'
  Set-Content "$lab\first-consent.done" '4'
  Wait-For {Test-Path "$lab\fifth-online.done"} 'new network observation' 1100|Out-Null

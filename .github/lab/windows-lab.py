@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import secrets
 import shutil
+import select
 import socket
 import subprocess
 import sys
@@ -29,6 +30,8 @@ nodes = {"DCWSUS": 10, "DCAD": 11, **{f"CLONE{i}": 20 + i for i in range(1, 6)}}
 bootstrap_only=os.environ.get("DC_BOOTSTRAP_ONLY")=="1"
 if bootstrap_only:
     nodes={"DCWSUS":10}
+private_addresses=["10.77.57."+str(n) for n in nodes.values()]
+os.environ["NO_PROXY"]=os.environ["no_proxy"]=",".join(["localhost","127.0.0.1",*private_addresses,os.environ.get("NO_PROXY","")])
 evidence = {"source": os.environ["GITHUB_SHA"], "booted": {}, "checks": {}}
 evidence_file = root / "evidence.json"
 processes = {}
@@ -138,9 +141,14 @@ def capture_console(node):
     path=root/(node+"-boot.ppm")
     try:
         with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as handle:
-            handle.settimeout(4);handle.connect(str(root/(node+".sock")));handle.recv(4096)
+            handle.settimeout(4);handle.connect(str(root/(node+".sock")))
+            if select.select([handle],[],[],0.4)[0]:
+                handle.recv(4096)
             handle.sendall(("screendump "+str(path)+"\n").encode())
-            time.sleep(2)
+            limit=time.monotonic()+6
+            while not path.exists() and time.monotonic()<limit:
+                if select.select([handle],[],[],0.2)[0]:
+                    handle.recv(16384)
         from PIL import Image
         with Image.open(path) as shot:
             shot.save(root/(node+"-boot.png"))
@@ -150,6 +158,7 @@ def capture_console(node):
 
 def wait(node, domain=False, minutes=24):
     until = time.monotonic() + 60 * minutes
+    last_problem="No reply"
     while time.monotonic() < until:
         if processes[node].poll() is not None:
             raise RuntimeError(node + " stopped: " + (root / (node + ".log")).read_text()[-900:])
@@ -157,14 +166,19 @@ def wait(node, domain=False, minutes=24):
             with socket.create_connection((ip(node), 5985), timeout=2):
                 pass
             actual = ps(node, "$env:COMPUTERNAME", domain)
+            last_problem="Unexpected guest name "+actual
             if actual == node:
                 evidence["booted"][node] = actual
                 save()
                 log("WinRM ready: " + node)
                 return
-        except Exception:
-            pass
+        except Exception as exc:
+            last_problem=str(exc).replace(password,"***")[:350]
+        if not int((until-time.monotonic())//9)%8:
+            log(node+" waiting for WinRM: "+last_problem[:240])
         time.sleep(8)
+    evidence.setdefault("winrm_failure",{})[node]=last_problem
+    save()
     capture_console(node)
     raise TimeoutError("WinRM did not become ready on " + node)
 
@@ -271,6 +285,6 @@ finally:
             log(node + " QEMU: " + errorlog[-450:])
     for node in set(processes) - set(evidence["booted"]):
         disk = root / (node + ".qcow2")
-        for logpath in ["/DomainConsoleLab/setup.log", "/Windows/Panther/setuperr.log", "/Windows/Panther/setupact.log", "/Windows/Panther/UnattendGC/setupact.log"]:
+        for logpath in ["/DomainConsoleLab/network.log", "/DomainConsoleLab/network-ready.txt", "/DomainConsoleLab/setup.log", "/Windows/Panther/setuperr.log", "/Windows/Panther/setupact.log", "/Windows/Panther/UnattendGC/setupact.log"]:
             result = subprocess.run(["guestfish", "--ro", "-a", str(disk), "-i", "cat", logpath], capture_output=True, text=True, errors="replace", timeout=90)
-            log(node + " " + logpath + ": " + result.stdout.replace(password, "***")[-1400:])
+            log(node + " " + logpath + ": " + result.stdout.replace(password, "***")[-2400:])
