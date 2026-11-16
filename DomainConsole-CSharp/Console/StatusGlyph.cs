@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 namespace DomainConsole;
 public sealed class StatusGlyph:FrameworkElement {
  public static readonly DependencyProperty KindProperty=DependencyProperty.Register(nameof(Kind),typeof(string),typeof(StatusGlyph),new FrameworkPropertyMetadata("Unknown",FrameworkPropertyMetadataOptions.AffectsRender));
@@ -7,6 +9,7 @@ public sealed class StatusGlyph:FrameworkElement {
  public static readonly DependencyProperty StrokeWeightProperty=DependencyProperty.Register(nameof(StrokeWeight),typeof(double),typeof(StatusGlyph),new FrameworkPropertyMetadata(2.6,FrameworkPropertyMetadataOptions.AffectsRender));
  public double StrokeWeight{get=>(double)GetValue(StrokeWeightProperty);set=>SetValue(StrokeWeightProperty,value);}
  public string Kind{get=>(string)GetValue(KindProperty);set=>SetValue(KindProperty,value);}public Brush Tint{get=>(Brush)GetValue(TintProperty);set=>SetValue(TintProperty,value);}
+ protected override AutomationPeer? OnCreateAutomationPeer()=>string.IsNullOrWhiteSpace(AutomationProperties.GetName(this))?base.OnCreateAutomationPeer():new FrameworkElementAutomationPeer(this);
  public StatusGlyph(){Width=20;Height=20;VerticalAlignment=VerticalAlignment.Center;SnapsToDevicePixels=true;}
  public static string ForTone50(string tone)=>tone switch {"Success"=>"Success","Error" or "SyncError"=>"Error","Warning"=>"Warning","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Info"};
  public static string ForOperation50(string stage){

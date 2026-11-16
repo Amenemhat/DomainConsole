@@ -83,7 +83,7 @@ public partial class MainWindow {
  }
  void VerifyRecentOrder057(){
   var saved=recentHosts.ToList();var pins=workHosts.ToList();int limit=recentLimit;int color=Theme.Current;bool expanded=RecentGroup.IsExpanded;
-  var rows=Enumerable.Range(0,8).Select(i=>new ComputerRow(new(){Name="Lab-"+i,Host="recent057-"+i+".invalid",OS=i==4?"Windows Server":"Windows",AdDisabled=i==4})).ToList();
+  var rows=Enumerable.Range(0,8).Select(i=>new ComputerRow(new(){Name="Lab-"+i,Host="recent057-"+i+".invalid",OS=i==4?"Windows Server":"Windows",AdDisabled=i==3||i==4})).ToList();
   foreach(var item in rows)Computers.Add(item);
   var ready=rows[1];var now=DateTimeOffset.UtcNow;
   var job=new RemoteJob{OutputChannel="WSUS",Steps=new(){new(){Kind="UpdateScan"}},Targets=new(){new(){Name=ready.Name,Host=ready.Host,Status="Completed",State=new(){Status="Completed",Started=now.AddMinutes(-3).ToString("o"),Ended=now.ToString("o"),UpdatesRemaining=0,ReportRequested=true,Results=new(){new(){Kind="UpdateScan",ExitCode=0,Ended=now.AddMinutes(-2).ToString("o")}}}}}};
@@ -99,12 +99,16 @@ public partial class MainWindow {
    History.Insert(0,job);liveReports.Add(ready.Host);
    reportCache[ready.Host]=new(){Found=true,Server=OverviewServer,ReceivedUtc=now.ToString("o"),Report=new(){NeededCount=0,RequiredComplete=true,LastReportedUtc=now.ToString("o"),LastSyncUtc=now.ToString("o"),LastSyncResult="Succeeded"}};
    rebootSnapshots[ready.Host]=new(){Required=false,CollectedUtc=now.ToString("o")};
-   workHosts.Clear();recentHosts.Clear();recentHosts.AddRange(new[]{rows[7].Host,rows[6].Host,rows[4].Host,ready.Host});
+   workHosts.Clear();recentHosts.Clear();recentHosts.AddRange(new[]{rows[7].Host,rows[6].Host,rows[3].Host,rows[4].Host,ready.Host});
    Tree();RefreshOutcomes();RefreshRecent();RecentList.ScrollIntoView(rows[7]);
    foreach(int theme in new[]{0,1,2}){
     Theme.Apply(theme,false);RefreshOutcomes();RefreshRecent();UpdateLayout();
     if(!ready.StartsReady||RecentComputers.Last()!=ready||RecentComputers.Count(x=>x.StartsReady)!=1)throw new Exception("Ready divider missing from rendered list");
-    foreach(var size in new[]{(1000d,740d),(1920d,1080d)})
+    foreach(var disabled in rows.Where(r=>r.Target.AdDisabled)){
+     var glyph=Visual33<StatusGlyph>(RecentList).FirstOrDefault(g=>g.DataContext==disabled&&g.Kind=="AdDisabled"&&g.IsVisible);
+     if(glyph==null||System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(glyph)?.GetName()!="Учётная запись отключена в AD")throw new Exception("AD mark missing from the visible row or the accessibility tree");
+    }
+    foreach(var size in new[]{(1000d,800d),(1920d,1080d)})
      foreach(double dpi in new[]{96d,120d,144d})CaptureContent38($"priority57-navigation-{theme}-{size.Item1}-{dpi}",size.Item1,size.Item2,dpi:dpi);
    }
   }finally{

@@ -7,6 +7,7 @@ public sealed class ComputerRow : INotifyPropertyChanged {
  public double NavigationStroke=>Target.AdDisabled?1.6:2.6;
  public string NavigationOutcomeHint=>Target.AdDisabled?"Учётная запись отключена в AD":OutcomeHint;
  public System.Windows.Visibility OperationalVisibility=>Target.AdDisabled?System.Windows.Visibility.Collapsed:System.Windows.Visibility.Visible;
+ public System.Windows.Visibility DisabledMarkVisibility=>Target.AdDisabled?System.Windows.Visibility.Visible:System.Windows.Visibility.Collapsed;
  public System.Windows.Visibility ReadyDividerVisibility=>StartsReady?System.Windows.Visibility.Visible:System.Windows.Visibility.Collapsed;
  public bool StartsReady {get;private set;}
  public void MarkReadyDivider(bool value){if(value==StartsReady)return;StartsReady=value;PropertyChanged?.Invoke(this,new(nameof(ReadyDividerVisibility)));}
@@ -15,7 +16,7 @@ public sealed class ComputerRow : INotifyPropertyChanged {
  public string Status=>StatusText(Target.Status);public string Stage=>Target.State?.Stage??"";public int Progress=>Target.Status is "Completed" or "VerifiedAfterReboot" or "AwaitingReboot" or "RebootScheduled"?100:Target.State?.Progress??0;
  public bool Busy=>(Target.Status is "Sending" or "Submitted" or "Running") && Target.State?.Progress==null;
  public ComputerRow(TargetRecord target,string id=""){Target=target;JobId=id;}
- public void Refresh(){foreach(var name in new[]{"Status","Stage","Progress","Busy","Outcome","DisplayOutcome51","OutcomeIcon","OutcomeBrush","OutcomeHint","NavigationOutcomeHint","NavigationStroke","OperationalVisibility","NameBrush","NameHint36","DeviceKind38","DeviceBrush39","NeededText37","NeededHint37","NeededVisibility37","NeededBrush37","UserText37","LinkBrush","ProgressBrush37","ActivityBrush"})PropertyChanged?.Invoke(this,new(name));}
+ public void Refresh(){foreach(var name in new[]{"Status","Stage","Progress","Busy","Outcome","DisplayOutcome51","OutcomeIcon","OutcomeBrush","OutcomeHint","NavigationOutcomeHint","NavigationStroke","OperationalVisibility","DisabledMarkVisibility","NameBrush","NameHint36","DeviceKind38","DeviceBrush39","NeededText37","NeededHint37","NeededVisibility37","NeededBrush37","UserText37","LinkBrush","ProgressBrush37","ActivityBrush"})PropertyChanged?.Invoke(this,new(name));}
  bool working,focused,workBusy,linkGrace;int workProgress;string recentHint="";
  public bool Offline51=>LinkKind is "Unreachable" or "Access";
  public string DisplayOutcome51=>Target.AdDisabled?"AdDisabled":linkGrace?StatusGlyph.ForOperation50(recentHint):Working&&Outcome is not ("Error" or "SyncError")?StatusGlyph.ForOperation50(Outcome=="Working"?Stage:recentHint):Offline51&&Outcome=="Working"?"Unknown":Outcome=="Working"?StatusGlyph.ForOperation50(Stage):Outcome;
