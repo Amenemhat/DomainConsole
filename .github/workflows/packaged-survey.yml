@@ -1,0 +1,62 @@
+name: Verify WSUS survey interruption, scope and restore in the release ZIP
+on:
+  workflow_dispatch:
+  push:
+    branches: ['lab/0.57-wsus']
+    paths: ['docs/testing/candidate-0.57.sha','.github/tests/packaged-survey/**','.github/workflows/packaged-survey.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  clock:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build Windows survey driver
+        run: dotnet build .github/tests/packaged-survey/Survey.csproj -o SurveyDriver
+      - name: Exercise live WPF survey with interrupted and partially readable peers, then reopen the same Data
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $commit=(Get-Content docs/testing/candidate-0.57.sha -Raw).Trim()
+          $api="repos/$env:GITHUB_REPOSITORY/actions"
+          $deadline=(Get-Date).AddMinutes(48)
+          do {
+            $runs=(gh api "$api/workflows/build-windows.yml/runs?branch=main&head_sha=$commit"|ConvertFrom-Json).workflow_runs
+            $run=$runs|Where-Object { $_.head_sha -eq $commit -and $_.head_branch -eq 'main' }|Select-Object -First 1
+            if($run.conclusion -eq 'success'){break}
+            if($run.conclusion){throw "Windows build ended with $($run.conclusion)"}
+            Start-Sleep -Seconds 30
+          } while ((Get-Date) -lt $deadline)
+          if(!$run -or $run.conclusion -ne 'success'){throw 'No successful main run for this revision'}
+          $meta=(gh api "$api/runs/$($run.id)/artifacts"|ConvertFrom-Json).artifacts|Where-Object { $_.name -eq 'DomainConsole-Windows-x64' -and !$_.expired }
+          if(@($meta).Count -ne 1){throw 'Expected one exact package'}
+          $zip="$env:RUNNER_TEMP\clock-package.zip"
+          & curl.exe --fail --silent --show-error --location -H "Authorization: Bearer $env:GH_TOKEN" "$env:GITHUB_API_URL/$api/artifacts/$($meta.id)/zip" -o $zip
+          if($LASTEXITCODE -or "sha256:$((Get-FileHash $zip).Hash.ToLowerInvariant())" -ne $meta.digest){throw 'Invalid release archive'}
+          Expand-Archive $zip "$env:RUNNER_TEMP\clock-app"
+          $dir="$env:RUNNER_TEMP\clock-app"
+          $data=New-Item "$dir/Data" -ItemType Directory -Force
+          $rows=@(0..5|ForEach-Object {@{Name="ID-$_";Host="id$_.survey.invalid";OU=("Lab"+($_%2));OS="Windows"}})
+          ConvertTo-Json -InputObject $rows -Depth 4|Set-Content "$data/computers.json"
+          'true'|Set-Content "$data/poll-paused41.json"
+          'true'|Set-Content "$data/auto-service31.json"
+          $env:DOMAINCONSOLE_PAUSE_SMOKE43='1'
+          $env:DOTNET_STARTUP_HOOKS=(Resolve-Path SurveyDriver/Survey.dll).Path
+          foreach($phase in 0,1){
+            $env:DC_SURVEY_RESTART=[string]$phase
+            $env:DC_SURVEY_EVIDENCE="$env:RUNNER_TEMP/survey-phase-$phase.json"
+            $p=Start-Process "$dir/DomainConsole.exe" -WorkingDirectory $dir -ArgumentList '--software-rendering' -PassThru
+            try {
+              if(!$p.WaitForExit(90000)){throw "Survey phase $phase timed out"}
+              Get-Content $env:DC_SURVEY_EVIDENCE
+              if($p.ExitCode -ne 0){throw "Survey phase $phase failed"}
+            }finally{if(!$p.HasExited){$p.Kill()}}
+          }
+          Write-Output "Artifact $($meta.id) $($meta.digest), source $commit"
