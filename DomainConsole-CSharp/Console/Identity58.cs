@@ -36,11 +36,13 @@ public partial class MainWindow {
   if(identities58.TryGetValue(row.Host,out var identity)){
    lines.Add("Клиент: "+identity.Name+(identity.Address.Length>0?"\nАдрес подключения: "+identity.Address:"")+"\nSusClientId: "+identity.SusClientId+"\nИсточник: "+identity.Server+"\nПроверено: "+Display36.Date(identity.At));
    lines.Add("Сервер отчётов: "+identity.StatusServer+"\nUseWUServer: "+(identity.UseWUServer?.ToString()??"неизвестно")+"\nTargetGroupEnabled: "+(identity.TargetGroupEnabled?.ToString()??"неизвестно")+"; группа: "+identity.TargetGroup+"\nSusClientIdValidation: "+(identity.ValidationBytes.HasValue?identity.ValidationBytes+" байт":"неизвестно"));
+   if(identity.Activity.Length>0)lines.Add(identity.Activity);
    if(identity.Error.Length>0)lines.Add("Последняя проверка не выполнена: "+Display36.Date(identity.ErrorAt)+" · "+identity.Error+". Показаны прежние сведения.");
    foreach(var peer in identities58.Values.Where(x=>x.Key==identity.Key))lines.Add(peer.Name+" · "+Display36.Date(peer.At));
   }
   if(SnapshotMatches58)foreach(var record in serverSnapshot58.Find(ConnectionStore.WsusName(row.Host)).Concat(serverSnapshot58.Records.Where(r=>identity!=null&&r.Id.Equals(identity.SusClientId,StringComparison.OrdinalIgnoreCase))).DistinctBy(r=>r.Id))lines.Add("WSUS: "+record.Name+" · ID "+record.Id+" · отчёт "+Display36.Date(record.Summary?.LastReportedUtc??""));
   foreach(var attempt in identityRepairs58.Values.Where(a=>a.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)))lines.Add("Перерегистрация: "+attempt.Phase+" · "+Display36.Date(attempt.At)+(attempt.GroupNote.Length>0?"\n"+attempt.GroupNote:"")+"\nПрежний ID: "+attempt.OldId+"\nНовый ID: "+(attempt.NewId.Length>0?attempt.NewId:"ещё не прочитан")+"\nПроверка до: "+Display36.Date(attempt.DeadlineUtc)+"\nГруппы новой записи: "+(attempt.Groups.Count>0?string.Join(", ",attempt.Groups):"ещё не прочитаны"));
+  lines.Add("Фоновая автоматическая перерегистрация: "+(AutoServiceEnabled?"включена":"выключена")+". Для обнаруженной вручную группы сохраняется отдельное согласие.");
   lines.Add("Ручная диагностика читает данные. Изменение ID обнаруженных участников требует подтверждения состава группы.");
   lines.Add("Сначала подтвердите связь участников. Одинаковое имя или IP сами по себе не доказывают общий ID. Старые записи сервера не удаляются. При серверном назначении групп новая запись может потребовать повторного назначения групп администратором WSUS.");
   return string.Join("\n\n",lines);}
@@ -57,8 +59,19 @@ public partial class MainWindow {
   var pages=new TabControl();panel.Children.Add(pages);
   var resultPanel=new DockPanel();
   var headline=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new(4,4,4,8)};DockPanel.SetDock(headline,Dock.Top);resultPanel.Children.Add(headline);
+  var clock=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new(4,0,4,4)};DockPanel.SetDock(clock,Dock.Top);resultPanel.Children.Add(clock);
+  void RefreshClock(){
+   var now=DateTimeOffset.UtcNow;
+   var remaining=RepairGroupFor(row.Host).Where(a=>a.JobId.Length>0&&a.Phase!="Подтверждено")
+    .Select(a=>DateTimeOffset.TryParse(a.DeadlineUtc,out var limit)?limit-now:TimeSpan.Zero).Where(t=>t>TimeSpan.Zero).ToList();
+   string phase=surveyRun!=null&&survey.Owner.Equals(row.Host,StringComparison.OrdinalIgnoreCase)?"Идёт проверка · прошло "+Age(now-survey.Started):"";
+   if(remaining.Count>0)phase+=(phase.Length>0?" · ":"")+"до ближайшего срока подтверждения "+remaining.Min().ToString(@"mm\:ss");
+   clock.Text=phase;clock.Visibility=phase.Length>0?Visibility.Visible:Visibility.Collapsed;
+  }
+  var clockTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromSeconds(5)};
+  clockTimer.Tick+=(s,a)=>RefreshClock();
   var table=new DataGrid{IsReadOnly=true,CanUserAddRows=false,AutoGenerateColumns=false,EnableRowVirtualization=true,HeadersVisibility=DataGridHeadersVisibility.Column,SelectionUnit=DataGridSelectionUnit.FullRow};
-  foreach(var col in new[]{("Компьютер","Host"),("Проверка","Status"),("Время","At"),("SusClientId","Id"),("Источник WSUS","Server"),("Результат исправления","Repair")}){
+  foreach(var col in new[]{("Компьютер","Host"),("Проверка","Status"),("Время","At"),("SusClientId","Id"),("Источник WSUS","Server"),("Занятость","Activity"),("Результат исправления","Repair")}){
    table.Columns.Add(new DataGridTextColumn{Header=col.Item1,Binding=new System.Windows.Data.Binding(col.Item2),MaxWidth=280});
   }
   resultPanel.Children.Add(table);pages.Items.Add(new TabItem{Header="Проверка участников",Content=resultPanel});
@@ -67,6 +80,7 @@ public partial class MainWindow {
   copy.Click+=(s,e)=>Guard(()=>Clipboard.SetText(pages.SelectedIndex==1?output.Text:headline.Text));
   copy.ToolTip="Скопировать итог или технические сведения открытой вкладки";
   void Refresh(){
+   RefreshClock();
    bool owner=survey.Owner.Equals(row.Host,StringComparison.OrdinalIgnoreCase);
    var anchor=RepairAnchor58(row.Host);
    bool repairing=anchor!=null&&identityRepairBusy58.Contains(anchor.Key);
@@ -90,7 +104,7 @@ public partial class MainWindow {
     var known=identities58.GetValueOrDefault(h);
     bool done=survey.Results.TryGetValue(h,out var result);
     bool ok=done&&known!=null&&IdentityPolicy58.Usable(known)&&result!.Contains(known.SusClientId,StringComparison.OrdinalIgnoreCase);
-    return new{Host=h,Status=ok?"Прочитано":done?result:"Ожидает проверки",At=Display36.Date(known?.Error.Length>0?known.ErrorAt:known?.At??""),Id=known?.SusClientId,Server=known?.Server,Repair=identityRepairs58.Values.Where(a=>a.Host.Equals(h,StringComparison.OrdinalIgnoreCase)).OrderByDescending(a=>a.At).FirstOrDefault()?.Phase};
+    return new{Host=h,Status=ok?"Прочитано":done?result:"Ожидает проверки",At=Display36.Date(known?.Error.Length>0?known.ErrorAt:known?.At??""),Id=known?.SusClientId,Server=known?.Server,Activity=known?.Activity,Repair=identityRepairs58.Values.Where(a=>a.Host.Equals(h,StringComparison.OrdinalIgnoreCase)).OrderByDescending(a=>a.At).FirstOrDefault()?.Phase};
    }).ToList();
    string detail=Detail();if(output.Text!=detail)output.Text=detail;
   }
@@ -98,7 +112,7 @@ public partial class MainWindow {
   verify.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,false,verifyRegistration:true));
   stop.Click+=(s,a)=>{surveyRun?.Cancel();StopIdentityRepair58(row.Host);};resume.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,survey.Domain,true));
   repair.Click+=async(s,a)=>{await RepairIdentityGroup58(row.Host,true);Refresh();};
-  window.Loaded+=(s,a)=>{refreshSurvey=Refresh;Refresh();};Refresh();return window;
+  window.Loaded+=(s,a)=>{refreshSurvey=Refresh;Refresh();clockTimer.Start();};window.Closed+=(s,a)=>clockTimer.Stop();Refresh();return window;
  }
 }
 public sealed partial class RemoteService {

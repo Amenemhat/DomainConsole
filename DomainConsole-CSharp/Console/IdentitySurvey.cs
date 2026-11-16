@@ -60,6 +60,7 @@ public partial class MainWindow {
      var result=await (readClient??remote.ReadIdentity)(target,stop.Token);
      stop.Token.ThrowIfCancellationRequested();
      if(!CurrentEndpoint(target)||!CurrentIdentity(target))throw new InvalidOperationException("Цель изменилась во время чтения");
+     if(maintenancePlans.TryGetValue(host,out var plan))result.Activity+=" · план консоли: "+plan.Phase;
      result.Address=string.IsNullOrWhiteSpace(target.ConnectionAddress)?target.Host:target.ConnectionAddress;
      if(readClient==null)await ResolveIdentitySource(result,ReadWsus(),checkedSources,stop.Token);
      stop.Token.ThrowIfCancellationRequested();
@@ -73,7 +74,7 @@ public partial class MainWindow {
        survey.ServerName=server.Name;survey.ServerNames=server.Names;survey.ServerResult=server.Id.Length>0?"WSUS · "+server.Name+" · отчёт "+Display36.Date(server.ReportedUtc):"Запись по ID не подтверждена";if(server.LookupError.Length>0)survey.ServerResult+=" · "+ConnectionBrief31(server.LookupError);
       }catch(Exception ex) when(!stop.IsCancellationRequested){survey.ServerResult="Серверный ID не проверен · "+ConnectionBrief31(ex.Message);}
      }
-     survey.Results[host]=result.Error.Length>0?"Не удалось проверить · "+result.Error:!IdentityPolicy58.Usable(result)?"Неполные сведения":result.Name+" · "+result.SusClientId+" · "+result.Server+" · "+Display36.Date(result.At);
+     survey.Results[host]=result.Error.Length>0?"Не удалось проверить · "+result.Error:!Guid.TryParse(result.SusClientId,out var valid)||valid==Guid.Empty?"Неполные сведения · отсутствует или некорректен SusClientId":!IdentityPolicy58.Usable(result)?"Неполные сведения · проверьте имя, аппаратный идентификатор и источник WSUS":result.Name+" · "+result.SusClientId+" · "+result.Server+" · "+Display36.Date(result.At);
     }catch(OperationCanceledException) when(stop.IsCancellationRequested){throw;}
     catch(Exception ex){survey.Results[host]="Не удалось проверить · "+ConnectionBrief31(ex.Message);ObserveIdentity58(host,new(){At=DateTimeOffset.UtcNow.ToString("o"),Error=ex.Message},false);}
     if(i==0&&!domain&&!survey.VerifyRegistration)foreach(var peer in IdentityCandidates(selected,false).ToList())if(!survey.Hosts.Contains(peer,StringComparer.OrdinalIgnoreCase))survey.Hosts.Add(peer);
@@ -95,7 +96,17 @@ public sealed partial class RemoteService {
  public async Task<ClientIdentity58> ReadIdentity(TargetRecord target,CancellationToken token){
   using var read=PollingControl43.Read();
   using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(TimeSpan.FromSeconds(30));
-  string json=await PowerShellBridge.Execute(Invoke(target,IdentityProbe58+"\n$dcIdentity58 | ConvertTo-Json -Compress"),timeout.Token);
+  string json=await PowerShellBridge.Execute(Invoke(target,IdentityProbe58+"\n"+ManualIdentityActivity+"\n$dcIdentity58 | ConvertTo-Json -Compress"),timeout.Token);
   return JsonSerializer.Deserialize<ClientIdentity58>(json,Store.Options)??throw new InvalidOperationException("Клиент вернул пустой ответ");
  }
+ // Read local process metadata inside the existing manual WinRM call. No scheduled task or agent is started.
+ const string ManualIdentityActivity="""
+try {
+ $dcWork=@(Get-CimInstance Win32_Process -Filter "Name='DomainConsole.Agent.exe' OR Name='TiWorker.exe' OR Name='TrustedInstaller.exe' OR Name='msiexec.exe'" -ErrorAction Stop)
+ $dcExecutors=@($dcWork|Where-Object {$_.Name -eq 'DomainConsole.Agent.exe' -and $_.CommandLine -match '\brun\s+'})
+ $dcServicing=@($dcWork|Where-Object {$_.Name -ne 'DomainConsole.Agent.exe'}|Select-Object -ExpandProperty Name -Unique)
+ $dcIdentity58.Activity="Исполнителей заданий: "+$dcExecutors.Count
+ if($dcServicing.Count){$dcIdentity58.Activity+=" · процессы обслуживания: "+($dcServicing -join ', ')}
+} catch {$dcIdentity58.Activity="Активность не уточнена: "+$_.Exception.Message}
+""";
 }

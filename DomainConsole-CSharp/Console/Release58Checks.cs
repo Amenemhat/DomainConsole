@@ -32,6 +32,22 @@ public partial class MainWindow {
     foreach(var window in new[]{IdentityWindow58(),HistoryLimitsWindow58()}){
      try{
       window.Show();window.UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);
+      if(window.Title.StartsWith("Идентичность")){
+       var tabs=Visual33<TabControl>(window).Single();
+       var copy=Visual33<Button>(window).Single(b=>Equals(b.Content,"Копировать"));
+       tabs.SelectedIndex=1;window.UpdateLayout();copy.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+       if(!Clipboard.GetText().Contains(fixture.SusClientId))throw new Exception("Identity details did not copy the original ID");
+       tabs.SelectedIndex=0;window.UpdateLayout();copy.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+       if(string.IsNullOrWhiteSpace(Clipboard.GetText())||Clipboard.GetText().Contains(fixture.SusClientId))throw new Exception("Identity summary copy mismatch");
+       foreach(var width in new[]{490,1000}){
+        window.Width=width;window.UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);
+        var view=(FrameworkElement)window.Content;
+        var shot=new RenderTargetBitmap((int)Math.Ceiling(view.ActualWidth),(int)Math.Ceiling(view.ActualHeight),96,96,PixelFormats.Pbgra32);
+        shot.Render(view);var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(shot));
+        using var snapshot=File.Create(Path.Combine(Path.GetTempPath(),$"ui-identity-dialog-{color}-{width}.png"));png.Save(snapshot);
+       }
+       window.Width=750;window.UpdateLayout();
+      }
       foreach(var button in Visual33<Button>(window).Where(b=>b.IsVisible)){
        var edge=button.TranslatePoint(new Point(button.ActualWidth,button.ActualHeight),window);
        if(edge.X>window.ActualWidth+1||edge.Y>window.ActualHeight+1)throw new Exception("New dialog action clipped: "+button.Content);

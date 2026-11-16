@@ -1,6 +1,7 @@
 namespace DomainConsole;
 public sealed class ClientIdentity58 {
  public string Address {get;set;}="";
+ public string Activity {get;set;}="";
  public string Host {get;set;}="";
  public string Name {get;set;}="";
  public string Machine {get;set;}="";
