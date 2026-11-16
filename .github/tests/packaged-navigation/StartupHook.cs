@@ -112,6 +112,7 @@ internal class StartupHook
         Check(names[0]==Host(rows[20]) && !pinned.Contains(names[0]),"actual overview submission promotes a client without pinning it");
         Check(history.Count==jobs && !File.Exists(Path.Combine(AppContext.BaseDirectory,"poll-network43.txt")),"local changes create zero jobs and zero remote transports");
         QueueAndProof.Run(win,history,rows[160],rows[161],Check);
+        DisabledViews.Verify(win,new[]{rows[6],rows[8]},Check);
         File.WriteAllText(result,JsonSerializer.Serialize(facts));
     }
 }

@@ -47,6 +47,9 @@ jobs:
             $name='NAV-{0:000}' -f $_
             @{Name=$name;Host="$($name.ToLowerInvariant()).test.invalid";OU='Test';OS='Windows'}
           })
+          $rows[6].AdDisabled=$true
+          $rows[8].AdDisabled=$true
+          $rows[8].OS='Windows Server 2022'
           ConvertTo-Json -InputObject $rows -Depth 4|Set-Content "$data/computers.json"
           ConvertTo-Json -InputObject @($rows[400].Host)|Set-Content "$data/work-computers.json"
           ConvertTo-Json -InputObject @($rows[0..4].Host)|Set-Content "$data/recent-computers.json"
