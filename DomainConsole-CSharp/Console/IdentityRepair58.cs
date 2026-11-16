@@ -9,6 +9,8 @@ public sealed class IdentityRepairAttempt58 {
  public string JobId {get;set;}="";
  public string StartedUtc {get;set;}="";
  public string DeadlineUtc {get;set;}="";
+ public bool Manual {get;set;}
+ public string LastClientReadUtc {get;set;}="";
  public string LastCheckUtc {get;set;}="";
  public List<string> Groups {get;set;}=new();
  public string GroupNote {get;set;}="";
@@ -90,7 +92,7 @@ public partial class MainWindow {
     if(stop.IsCancellationRequested)break;
     if(!CurrentEndpoint(frozen.Target)||HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target)))continue;
     var job=new RemoteJob{Manual56=manual,AutoInstall54=false,AutoReboot=false,MicrosoftSource=false,OutputChannel="WSUS",Name="Перерегистрация общего SusClientId",Steps=new(){new(){Name="Перерегистрация клиента WSUS",Kind="PowerShell",TouchesUpdates=true,Code=RemoteService.IdentityRepairScript58(identity)}}};
-    identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,JobId=job.Id,StartedUtc=DateTimeOffset.UtcNow.ToString("o"),DeadlineUtc=DateTimeOffset.UtcNow.AddMinutes(10).ToString("o"),Phase="Подготовлено; повторный сброс запрещён",At=DateTimeOffset.UtcNow.ToString("o")};
+    identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Manual=manual,JobId=job.Id,StartedUtc=DateTimeOffset.UtcNow.ToString("o"),DeadlineUtc=DateTimeOffset.UtcNow.AddMinutes(10).ToString("o"),Phase="Подготовлено; повторный сброс запрещён",At=DateTimeOffset.UtcNow.ToString("o")};
     Store.Write("identity-repairs58.json",identityRepairs58);
     Event31(row.Host,"identity-repair58",job.Id,"Перерегистрация клиента подготовлена","Info","Прежний ID: "+identity.SusClientId,scope:job.Id);
     bool accepted=await CompletePreparedSubmission47(job,new(){row},new(){frozen},()=>Task.FromResult((Accepted:true,Force:false,Wait:false)),false);
@@ -100,7 +102,7 @@ public partial class MainWindow {
    }
    Store.Write("identity-repairs58.json",identityRepairs58);
   }catch(Exception ex){Event31(host,"identity-repair58-error",ex.Message,"Перерегистрация требует проверки","Warning",ex.Message);}
-  finally{identityRepairStops.Remove(observed.Key);identityRepairBusy58.Remove(observed.Key);refreshSurvey?.Invoke();}
+  finally{identityRepairStops.Remove(observed.Key);identityRepairBusy58.Remove(observed.Key);refreshSurvey?.Invoke();if(manual)_=ObserveManualRepairs58();}
  }
  void ConfirmIdentityRepairs58(){
   if(!SnapshotMatches58)return;

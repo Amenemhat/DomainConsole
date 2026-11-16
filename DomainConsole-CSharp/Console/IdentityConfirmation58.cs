@@ -10,6 +10,35 @@ public sealed class IdentityServerReply58 {
 }
 public partial class MainWindow {
  readonly HashSet<string> identityChecks58=new(StringComparer.OrdinalIgnoreCase);
+ bool readingManualRepairs;
+ async Task ObserveManualRepairs58(){
+  if(readingManualRepairs||closing||App.RecoveryPending57)return;
+  readingManualRepairs=true;
+  using var manual=PollingControl43.Manual56("identity");
+  try{
+   while(!closing&&!App.RecoveryPending57){
+    var now=DateTimeOffset.UtcNow;
+    var pending=identityRepairs58.Values.Where(a=>a.Manual&&a.JobId.Length>0&&a.Phase!="Подтверждено"&&DateTimeOffset.TryParse(a.DeadlineUtc,out var limit)&&limit>now).ToList();
+    if(pending.Count==0)break;
+    foreach(var attempt in pending){
+     if(closing||App.RecoveryPending57)break;
+     if(surveyRun!=null||identityChecks58.Contains(attempt.Host)||DateTimeOffset.TryParse(attempt.LastClientReadUtc,out var previous)&&DateTimeOffset.UtcNow-previous<TimeSpan.FromMinutes(1))continue;
+     var row=Computers.FirstOrDefault(r=>r.Host.Equals(attempt.Host,StringComparison.OrdinalIgnoreCase));
+     if(row==null||row.Target.AdDisabled||!ConnectionStore.CanConnect(row.Target))continue;
+     var target=ConnectionStore.Capture(row.Target);
+     attempt.LastClientReadUtc=DateTimeOffset.UtcNow.ToString("o");Store.Write("identity-repairs58.json",identityRepairs58);
+     try{
+      var observed=await remote.ReadIdentity(target,CancellationToken.None);
+      if(closing||!CurrentEndpoint(target)||!CurrentIdentity(target))continue;
+      ObserveIdentity58(row.Host,observed,false);
+      await VerifyIdentityRegistration58(row.Host);
+     }catch(Exception ex){if(!closing)Event31(row.Host,"identity-registration-read58",attempt.JobId,"Проверка регистрации ожидает связи","Warning",ConnectionBrief31(ex.Message),scope:attempt.JobId);}
+     refreshSurvey?.Invoke();
+    }
+    await Task.Delay(TimeSpan.FromSeconds(30));
+   }
+  }finally{readingManualRepairs=false;if(!closing){ExpireIdentityRepairs58();refreshSurvey?.Invoke();}}
+ }
  void ExpireIdentityRepairs58(){
   bool changed=false;var now=DateTimeOffset.UtcNow;
   foreach(var attempt in identityRepairs58.Values.Where(a=>a.JobId.Length>0&&a.Phase!="Подтверждено")){
