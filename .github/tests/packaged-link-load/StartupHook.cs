@@ -109,6 +109,49 @@ internal class StartupHook
             tests["overlapping_native_reads"]=Transports()-before;
             tests["client_jobs_after"]=history.Count;
             if(history.Count!=3)throw new Exception("Link probing created client jobs");
+            var views=new List<string>();
+            var wpfTabs=(System.Windows.Controls.TabControl)Field("MainTabs");
+            var targetByHost=history.Cast<object>().Select(j=>((IList)Get(j,"Targets")!)[0]!)
+                .ToDictionary(t=>(string)Get(t,"Host")!);
+            foreach(var minutes in new[]{2,16})
+            {
+                var observation=DateTimeOffset.UtcNow.AddMinutes(-minutes);
+                for(int index=0;index<2;index++)
+                {
+                    var row=machines[index];var host=Host(row);
+                    var link=links[host]!;
+                    Set(link,"LossConfirmedUtc",observation);
+                    Set(link,"FailureObservedSince",observation.AddMinutes(-1));
+                    Set(link,"LastSuccess",observation.AddMinutes(-2));
+                    var target=targetByHost[host];var state=Get(target,"State")!;
+                    Set(target,"OutputReceivedUtc58",observation.AddMinutes(-1).ToString("o"));
+                    Set(state,"Stage",index==0?"Скачивание":"Установка");
+                }
+                foreach(var tab in new[]{"WsusTab","CommandsTab"})
+                {
+                    wpfTabs.SelectedItem=Field(tab);
+                    type.GetMethod("RefreshOutcomes",flags)!.Invoke(win,null);
+                    for(int index=0;index<2;index++)
+                    {
+                        var row=machines[index];var host=Host(row);
+                        var work=type.GetMethod("WorkState60",flags)!.Invoke(win,[row,true,null])!;
+                        var assessment=type.GetMethod("AssessClient41",flags)!.Invoke(win,[row])!;
+                        var criteria=(IList)((IDictionary)Field("criteria45"))[host]!;
+                        string expected=(string)Get(work,"Text")!;
+                        string stage=index==0?"Скачивание":"Установка";
+                        bool during=minutes<15;
+                        if(!expected.Contains(stage)||!expected.Contains("24%")||
+                            !(during?expected.Contains("временно отсутствует"):expected.Contains("последняя связь"))||
+                            !Equals(Get(row,"RecentHint"),expected)||!Equals(Get(row,"NavigationOutcomeHint"),expected)||
+                            !Equals(Get(assessment,"Title"),expected)||!Equals(Get(criteria[0]!,"Text"),"Обновления · "+expected)||
+                            !Equals(Get(row,"LinkKind"),"Unreachable")||!Equals(Get(row,"Working"),during)||
+                            !Equals(Get(row,"DisplayOutcome51"),during?(index==0?"Download":"Install"):"Unknown"))
+                            throw new Exception($"Different connectivity facts after {minutes} min in {tab}: row={Get(row,"RecentHint")} glyph={Get(row,"DisplayOutcome51")} link={Get(row,"LinkKind")} card={expected} assessment={Get(assessment,"Title")} criterion={Get(criteria[0]!,"Text")}");
+                        views.Add($"{stage}, {minutes} min, {tab}: {expected}");
+                    }
+                }
+            }
+            tests["card_criterion_recent_tree_and_connection"]=views;
             File.WriteAllText(result,JsonSerializer.Serialize(tests));
         }
         finally {control.GetMethod("Pause")!.Invoke(null,null);}
