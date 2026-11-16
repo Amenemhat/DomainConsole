@@ -25,6 +25,20 @@ public partial class MainWindow {
  Window? surveyWindow;
  Action? refreshSurvey;
 
+ string DescribeSurveyResult(ComputerRow selected,IReadOnlyList<ClientIdentity58> confirmed,int failed,bool running){
+  if(confirmed.Count>=2)return "Одинаковый SusClientId у "+string.Join(", ",confirmed.Take(5).Select(x=>x.Name))+(confirmed.Count>5?$" и ещё {confirmed.Count-5}":"");
+  if(running)return "Идёт чтение участников";
+  if(!survey.Results.ContainsKey(selected.Host)||!identities58.TryGetValue(selected.Host,out var anchor)||!anchor.Fresh(DateTimeOffset.UtcNow))return "Проверка неполная · требуется свежий ответ выбранного клиента";
+  if(!Guid.TryParse(anchor.SusClientId,out var id)||id==Guid.Empty)return "Выбранный клиент вернул пустой или некорректный SusClientId";
+  if(!IdentityPolicy58.Usable(anchor))return "Проверка неполная · не подтверждены устройство или источник WSUS";
+  bool ambiguous=survey.Hosts.Select(h=>identities58.GetValueOrDefault(h)).Any(peer=>peer!=null&&peer.Fresh(DateTimeOffset.UtcNow)&&peer.Key==anchor.Key&&peer.Machine.Equals(anchor.Machine,StringComparison.OrdinalIgnoreCase)&&!peer.Name.TrimEnd('.').Equals(anchor.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase));
+  if(ambiguous)return "Один аппаратный идентификатор у разных имён · возможны переименование или клонирование. Исправление неоднозначных устройств недоступно";
+  if(survey.ServerName.Length>0&&!survey.ServerName.TrimEnd('.').Equals(anchor.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase))return "Имя записи WSUS отличается от имени клиента · возможны переименование или устаревшая запись";
+  if(failed>0)return "Проверка неполная · общий ID у доступных участников не подтверждён";
+  if(survey.Hosts.Any(h=>identities58.TryGetValue(h,out var peer)&&peer.Fresh(DateTimeOffset.UtcNow)&&IdentityPolicy58.Usable(peer)&&peer.Source.Equals(anchor.Source,StringComparison.OrdinalIgnoreCase)&&!peer.SusClientId.Equals(anchor.SusClientId,StringComparison.OrdinalIgnoreCase)))return "Идентификаторы проверенных устройств различаются · общий ID не подтверждён";
+  return "На проверенных устройствах общий ID не подтверждён";
+ }
+
  IEnumerable<string> IdentityCandidates(ComputerRow selected,bool domain){
   var names=new HashSet<string>(StringComparer.OrdinalIgnoreCase){selected.Host,selected.Name};
   if(identities58.TryGetValue(selected.Host,out var identity)&&Guid.TryParse(identity.SusClientId,out _)){

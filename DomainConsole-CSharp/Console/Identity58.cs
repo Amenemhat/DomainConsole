@@ -99,7 +99,8 @@ public partial class MainWindow {
    int complete=attempts.Count(a=>a.Phase=="Подтверждено");
    string groupState=attempts.Count==0?"":complete==attempts.Count?" · регистрации подтверждены":complete>0?" · частично выполнено":" · ожидается подтверждение";
    string fixedCount=attempts.Count>0?$" · регистрация подтверждена у {attempts.Count(a=>a.Phase=="Подтверждено")} из {attempts.Count}":"";
-   headline.Text=coverage+fixedCount+groupState+(repairing?" · передаётся исправление":"")+(owner?" · без подтверждения "+failed+"\n"+survey.ScopeMessage+(survey.Started==default?"":" · "+Age((busy?DateTimeOffset.UtcNow:survey.Updated)-survey.Started))+"\n"+survey.ServerResult:"");
+   string finding=owner&&!survey.VerifyRegistration&&attempts.Count==0?DescribeSurveyResult(row,confirmed?members:new List<ClientIdentity58>(),failed,busy):"";
+   headline.Text=(finding.Length>0?finding+"\n":"")+coverage+fixedCount+groupState+(repairing?" · передаётся исправление":"")+(owner?" · без подтверждения "+failed+"\n"+survey.ScopeMessage+(survey.Started==default?"":" · "+Age((busy?DateTimeOffset.UtcNow:survey.Updated)-survey.Started))+"\n"+survey.ServerResult:"");
    if(owner)table.ItemsSource=survey.Hosts.Select(h=>{
     var known=identities58.GetValueOrDefault(h);
     bool done=survey.Results.TryGetValue(h,out var result);

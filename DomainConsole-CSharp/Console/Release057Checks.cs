@@ -62,6 +62,8 @@ public partial class MainWindow {
    delayed.SetResult(reports[0]);await run;
    if(survey.Results.Count!=5||survey.Hosts.Count!=5||reads.Distinct().Count()!=5||reads.Count!=5||History.Count!=jobCount||!manualIdentityScopes.TryGetValue(key,out var allowed)||allowed.Count!=0)throw new Exception("Scoped WSUS identity survey lost candidates or authorized a write");
    if(!IdentityPolicy58.Confirmed(identities58.Values,reports[0],DateTimeOffset.UtcNow))throw new Exception("Five fresh identities not confirmed");
+   var summary=DescribeSurveyResult(rows[0],reports,0,false);
+   if(!reports.All(r=>summary.Contains(r.Name,StringComparison.OrdinalIgnoreCase))||!DescribeSurveyResult(rows[0],Array.Empty<ClientIdentity58>(),0,false).Contains("переименование"))throw new Exception("Identity summary lost confirmed members or competing server name");
    var repairKey=key+"|"+reports[0].Machine;
    var established=new IdentityRepairAttempt58{Key=repairKey,Host=reports[0].Host,OldId=id,JobId="lab-proof"};
    try{
