@@ -492,6 +492,8 @@
       </Style.Triggers>
     </Style>
     <Style TargetType="TabControl">
+      <Setter Property="Background" Value="{DynamicResource PanelSurface}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Outline}" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     </Style>
     <Style TargetType="MenuItem">

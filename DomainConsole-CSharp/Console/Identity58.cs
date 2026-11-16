@@ -57,7 +57,7 @@ public partial class MainWindow {
   foreach(var button in new[]{peers,all,stop,resume,verify})buttons.Children.Add(button);
   var copy=new Button{Content="Копировать"};buttons.Children.Add(copy);
   var pages=new TabControl();panel.Children.Add(pages);
-  var resultPanel=new DockPanel();
+  var resultPanel=new DockPanel();resultPanel.SetResourceReference(Panel.BackgroundProperty,"PanelSurface");
   var headline=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new(4,4,4,8)};DockPanel.SetDock(headline,Dock.Top);resultPanel.Children.Add(headline);
   var clock=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new(4,0,4,4)};DockPanel.SetDock(clock,Dock.Top);resultPanel.Children.Add(clock);
   void RefreshClock(){

@@ -34,6 +34,9 @@ public partial class MainWindow {
       window.Show();window.UpdateLayout();Dispatcher.Invoke(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);
       if(window.Title.StartsWith("Идентичность")){
        var tabs=Visual33<TabControl>(window).Single();
+       var panel=(DockPanel)((TabItem)tabs.Items[0]).Content;
+       var heading=panel.Children.OfType<TextBlock>().First();
+       if(Contrast33(heading.Foreground,panel.Background)<4.5)throw new Exception("WSUS identity summary has insufficient contrast");
        var copy=Visual33<Button>(window).Single(b=>Equals(b.Content,"Копировать"));
        tabs.SelectedIndex=1;window.UpdateLayout();copy.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
        if(!Clipboard.GetText().Contains(fixture.SusClientId))throw new Exception("Identity details did not copy the original ID");
