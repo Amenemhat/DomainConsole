@@ -235,6 +235,9 @@ def main():
     boot("DCWSUS",part=="gpt")
     wait("DCWSUS",minutes=12)
     if bootstrap_only:
+        if os.getenv("DC_TEST_ACTUAL_REBOOT") == "1":
+            from reboot_guest import exercise as reboot_exercise
+            reboot_exercise(root,ps,session,evidence,save)
         checkpoint("winrm")
         return
     remaining=[n for n in nodes if n!="DCWSUS"]

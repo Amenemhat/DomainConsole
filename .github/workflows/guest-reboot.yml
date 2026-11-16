@@ -1,0 +1,78 @@
+name: Verify the actual client reboot under concurrent WinRM load
+on:
+  workflow_dispatch:
+  push:
+    branches: ['lab/0.57-reboot']
+    paths: ['.github/lab/**','.github/tests/link-clock/**','.github/workflows/guest-reboot.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  clock:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build the isolated clock driver
+        run: dotnet build .github/tests/link-clock/ClockChecks.csproj -o ClockDriver
+      - name: Run production state transitions inside the verified application executable
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $commit=(Get-Content .github/lab/app-source -Raw).Trim()
+          $api="repos/$env:GITHUB_REPOSITORY/actions"
+          $runs=(gh api "$api/workflows/build-windows.yml/runs?branch=main&head_sha=$commit" | ConvertFrom-Json).workflow_runs
+          $run=$runs|Where-Object { $_.head_sha -eq $commit -and $_.head_branch -eq 'main' -and $_.conclusion -eq 'success' }|Select-Object -First 1
+          if(!$run){throw 'No successful main run for this revision'}
+          $meta=(gh api "$api/runs/$($run.id)/artifacts"|ConvertFrom-Json).artifacts|Where-Object { $_.name -eq 'DomainConsole-Windows-x64' -and !$_.expired }
+          if(@($meta).Count -ne 1){throw 'Expected one exact package'}
+          $zip="$env:RUNNER_TEMP\clock-package.zip"
+          & curl.exe --fail --silent --show-error --location -H "Authorization: Bearer $env:GH_TOKEN" "$env:GITHUB_API_URL/$api/artifacts/$($meta.id)/zip" -o $zip
+          if($LASTEXITCODE -or "sha256:$((Get-FileHash $zip).Hash.ToLowerInvariant())" -ne $meta.digest){throw 'Invalid release archive'}
+          Expand-Archive $zip "$env:RUNNER_TEMP\clock-app"
+          $env:DC_REBOOT_PAYLOAD="$env:RUNNER_TEMP\reboot-payload"
+          New-Item -ItemType Directory -Path $env:DC_REBOOT_PAYLOAD|Out-Null
+          @{commit=$commit;sha256=$meta.digest;artifact=$meta.id}|ConvertTo-Json|Set-Content "$env:DC_REBOOT_PAYLOAD\source.json" -Encoding utf8
+          $env:DC_TEST_LINK_CLOCK_RESULT="$env:RUNNER_TEMP\clock-results.json"
+          $env:DOTNET_STARTUP_HOOKS=(Resolve-Path ClockDriver/ClockChecks.dll).Path
+          $p=Start-Process "$env:RUNNER_TEMP\clock-app\DomainConsole.exe" -PassThru
+          try {
+            if(!$p.WaitForExit(30000)){throw 'Test hook did not finish'}
+            Get-Content $env:DC_TEST_LINK_CLOCK_RESULT
+            if($p.ExitCode -ne 0){throw 'Clock assertions failed'}
+          } finally {if(!$p.HasExited){$p.Kill()}}
+          Write-Output "Artifact $($meta.id) $($meta.digest), source $commit"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packaged-reboot-payload
+          path: ${{ runner.temp }}/reboot-payload/
+          retention-days: 7
+  guest:
+    needs: clock
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      DC_BOOTSTRAP_ONLY: '1'
+      DC_TEST_ACTUAL_REBOOT: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: packaged-reboot-payload
+          path: ${{ runner.temp }}/dc-wsus-lab/payload/
+      - name: Start one Windows guest on the host-only network
+        run: bash .github/lab/prepare-guests.sh
+      - name: Run the packaged request against Windows and read the new boot time
+        run: bash .github/lab/wait-for-guests.sh guest-exit 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: actual-reboot-evidence
+          path: ${{ runner.temp }}/dc-wsus-lab/evidence.json
+          retention-days: 7

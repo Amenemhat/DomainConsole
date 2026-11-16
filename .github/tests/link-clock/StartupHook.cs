@@ -76,6 +76,11 @@ internal class StartupHook
                 var old = expire.Invoke(null,[proof,now.AddHours(24)])!;
                 Check(Equals(Get(valid,"Required"),needed) && Get(old,"Required") is null && Equals(Get(old,"Stamp"),now.ToString("o")), "24h source expiry retains original stamp, required="+needed);
             }
+            var scripts = Environment.GetEnvironmentVariable("DC_REBOOT_PAYLOAD");
+            if (scripts is not null) {
+                var build = window.GetMethod("HeaderRebootCode",BindingFlags.Public|BindingFlags.Static)!;
+                File.WriteAllText(Path.Combine(scripts,"header-reboot.ps1"), (string)build.Invoke(null,[45,"DCLab isolated reboot validation",false])!);
+            }
             IdentityCases.Run(assembly,Check);
             File.WriteAllText(marker,JsonSerializer.Serialize(results));
             Environment.Exit(0);
