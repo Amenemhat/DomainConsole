@@ -40,3 +40,12 @@ jobs:
           url='https://go.microsoft.com/fwlink/p/?clcid=0x409&country=us&culture=en-us&linkid=2195166'
           curl --fail --location --retry 2 --max-time 80 --range 0-511 --max-filesize 1048576 "$url" -o "$RUNNER_TEMP/vhd-header" -w 'HTTP %{http_code} %{url_effective}\n'
           file "$RUNNER_TEMP/vhd-header"
+      - name: Provision seven isolated Windows guests, domain and WSUS
+        run: bash .github/lab/prepare-guests.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: isolated-wsus-evidence
+          path: ${{ runner.temp }}/dc-wsus-lab/evidence.json
+          if-no-files-found: warn
+          retention-days: 7
