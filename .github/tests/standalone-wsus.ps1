@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 if($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_OS -ne 'Windows' -or (Get-CimInstance Win32_ComputerSystem).PartOfDomain){throw 'Dedicated non-domain test runner required'}
 function Body($file,$name){
  $s=[IO.File]::ReadAllText((Join-Path $pwd ("_app/DomainConsole-CSharp/Console/"+$file)))
@@ -33,9 +33,53 @@ $dcExpectedMachine58=$before.Machine
 $dcExpectedName58=$before.Name
 $dcExpectedServer58=$before.Server
 $began=[datetime]::UtcNow
-& ([ScriptBlock]::Create((Body 'IdentityRepair58.cs' 'IdentityRepairBody58')))
+$labPath=Join-Path $env:RUNNER_TEMP 'concurrent-wsus-acceptance'
+New-Item $labPath -ItemType Directory -Force|Out-Null
+$bodyPath=Join-Path $labPath 'requested-repair.ps1'
+function Literal($text){"'"+$text.Replace("'","''")+"'"}
+$prefix='$dcExpectedId58='+(Literal $before.SusClientId)+';$dcExpectedMachine58='+(Literal $before.Machine)+';$dcExpectedName58='+(Literal $before.Name)+';$dcExpectedServer58='+(Literal $before.Server)+';'
+$utf8=New-Object Text.UTF8Encoding($true)
+[IO.File]::WriteAllText($bodyPath,$prefix+(Body 'IdentityRepair58.cs' 'IdentityRepairBody58'),$utf8)
+$exe=Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe'
+function Start-Attempt([string]$label) {
+ $wrapper=Join-Path $labPath ($label+'.ps1')
+ $rescue='try { & '+(Literal $bodyPath)+' }catch{[IO.File]::WriteAllText('+(Literal ($wrapper+'.error'))+',$_.Exception.Message);exit 1}'
+ [IO.File]::WriteAllText($wrapper,$rescue,$utf8)
+ return Start-Process $exe -ArgumentList ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$wrapper+'"') -PassThru
+}
+function End-Attempt($process) {
+ if(!$process.WaitForExit(180000)){$process.Kill();throw 'Isolated WUA test process exceeded its time limit'}
+ $process.Refresh()
+ return $process.ExitCode
+}
+function Backup-Count {@(Get-ChildItem "$env:ProgramData\DomainConsole-Backups\WindowsUpdate-*.reg" -ErrorAction SilentlyContinue).Count}
+$beforeCopies=Backup-Count
+$machineGuid=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography').MachineGuid
+$marker=Join-Path $env:windir 'SoftwareDistribution\Download\DomainConsole-test-marker'
+New-Item (Split-Path $marker) -ItemType Directory -Force|Out-Null
+[IO.File]::WriteAllText($marker,'Keep cached downloads')
+# Independent process must refuse an occupied client operation before touching WUA.
+$mutex=New-Object Threading.Mutex($false,'Global\DomainConsole.WsusIdentity58')
+try{
+ if(!$mutex.WaitOne(0)){throw 'Unexpected pre-existing repair'}
+ $blocked=Start-Attempt 'held'
+ if((End-Attempt $blocked) -eq 0 -or [IO.File]::ReadAllText((Join-Path $labPath 'held.ps1.error')) -notmatch 'уже выполняется'){throw 'Cross-process exclusion not observed'}
+}finally{$mutex.ReleaseMutex();$mutex.Dispose()}
+if((Backup-Count) -ne $beforeCopies -or (Read-Identity).SusClientId -ne $before.SusClientId){throw 'Rejected concurrent request changed the client'}
+$one=Start-Attempt 'first'
+$two=Start-Attempt 'second'
+$codes=@((End-Attempt $one),(End-Attempt $two))
+if(0 -notin $codes){throw 'Neither concurrent request completed'}
+foreach($label in 'first','second'){
+ $errorPath=Join-Path $labPath ($label+'.ps1.error')
+ if((Test-Path $errorPath) -and [IO.File]::ReadAllText($errorPath) -notmatch 'уже выполняется'){throw ('Unexpected operation failure: '+[IO.File]::ReadAllText($errorPath))}
+}
 $after=Read-Identity
 if($after.Error -or [guid]$after.SusClientId -eq [guid]$before.SusClientId -or (Get-Service wuauserv).Status -ne 'Running'){throw 'Client registration did not change cleanly'}
+$replay=Start-Attempt 'replay'
+if((End-Attempt $replay) -ne 0 -or (Read-Identity).SusClientId -ne $after.SusClientId -or (Backup-Count) -ne $beforeCopies+1){throw 'Replayed request changed the new ID or repeated a backup'}
+if((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography').MachineGuid -ne $machineGuid -or !(Test-Path $marker) -or (Get-ItemProperty $p).WUServer -ne $url){throw 'Machine identity, policy or existing download cache was modified'}
+Write-Output ('PASS client mutex, two independent repair processes and replay: exits '+($codes -join ',')+'; one backup; MachineGuid, policy and cached downloads preserved')
 $read=Body 'IdentityConfirmation58.cs' 'IdentityServerScript58'
 $identityId58=$after.SusClientId;$ssl=$false;$port=8530
 $end=[datetime]::UtcNow.AddMinutes(10)
