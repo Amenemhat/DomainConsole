@@ -22,8 +22,12 @@ public partial class MainWindow {
   }
   if(changed)Store.Write("identity-repairs58.json",identityRepairs58);
  }
+ static bool SameServer(string policy,WsusSettings settings){
+  if(!Uri.TryCreate(policy,UriKind.Absolute,out var client)||string.IsNullOrWhiteSpace(settings.Host))return false;
+  return client.Scheme==(settings.Ssl?"https":"http")&&client.Port==settings.Port&&client.Host.TrimEnd('.').Equals(settings.Host.Trim().TrimEnd('.'),StringComparison.OrdinalIgnoreCase);
+ }
  bool CompleteIdentityRegistration58(IdentityRepairAttempt58 attempt,ClientIdentity58 identity,IdentityServerReply58 reply){
-  if(attempt.JobId.Length==0||!IdentityPolicy58.SameServer(identity.Server,ReadWsus())||!attempt.Key.StartsWith(identity.Key[..(identity.Key.LastIndexOf('|')+1)]+attempt.OldId+"|",StringComparison.OrdinalIgnoreCase)||!IdentityPolicy58.IndependentNewId(identities58.Values,identity,DateTimeOffset.UtcNow)||compromisedIds58.Contains(identity.Key)||!IdentityPolicy58.RegistrationConfirmed(identity,attempt.OldId,attempt.StartedUtc.Length>0?attempt.StartedUtc:attempt.At,reply.Id,reply.Name,reply.ReportedUtc,DateTimeOffset.UtcNow))return false;
+  if(attempt.JobId.Length==0||!SameServer(identity.Server,ReadWsus())||!attempt.Key.StartsWith(identity.Key[..(identity.Key.LastIndexOf('|')+1)]+attempt.OldId+"|",StringComparison.OrdinalIgnoreCase)||!IdentityPolicy58.IndependentNewId(identities58.Values,identity,DateTimeOffset.UtcNow)||compromisedIds58.Contains(identity.Key)||!IdentityPolicy58.RegistrationConfirmed(identity,attempt.OldId,attempt.StartedUtc.Length>0?attempt.StartedUtc:attempt.At,reply.Id,reply.Name,reply.ReportedUtc,DateTimeOffset.UtcNow))return false;
   // A bulk overview contains no group data. Read the exact target before reporting registration.
   if(reply.Groups.Count==0&&reply.GroupError.Length==0)return false;
   var expected=identity.TargetGroup.Split(';',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries);
