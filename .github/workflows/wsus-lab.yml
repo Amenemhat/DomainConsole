@@ -16,17 +16,6 @@ jobs:
     timeout-minutes: 270
     steps:
       - uses: actions/checkout@v4
-      - name: Read candidate revision
-        id: package
-        run: |
-          sha=$(cat .github/lab/app-source)
-          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.package.outputs.sha }}
-          path: _app
-          persist-credentials: false
       - name: Check virtualization and official evaluation media
         run: |
           set -eu
@@ -37,10 +26,6 @@ jobs:
           file "$RUNNER_TEMP/vhd-header"
       - name: Prepare host-only switch, base Windows disk and signed NIC drivers
         run: bash .github/lab/prepare-guests.sh
-      - name: Verify packaged Windows build and artifact digest
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash .github/lab/fetch-package.sh
       - name: Personalize seven independent Windows system disks
         run: bash .github/lab/wait-for-guests.sh disks 30
       - name: Finish Windows setup on each disk with full guest resources
@@ -51,6 +36,23 @@ jobs:
         run: bash .github/lab/wait-for-guests.sh domain 40
       - name: Install WSUS and verify its administrative endpoint
         run: bash .github/lab/wait-for-guests.sh wsus 40
+      - name: Read candidate revision
+        id: package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(gh api "repos/$GITHUB_REPOSITORY/contents/docs/testing/candidate-0.57.sha?ref=lab/0.57-wsus" --jq .content | base64 -d)
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.package.outputs.sha }}
+          path: _app
+          persist-credentials: false
+      - name: Verify packaged Windows build and artifact digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/lab/fetch-package.sh
       - name: Verify five registrations and one confirmed client reboot with the packaged console
         run: bash .github/lab/wait-for-guests.sh guest-exit 90
       - uses: actions/upload-artifact@v4
