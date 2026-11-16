@@ -2,6 +2,8 @@ using System.Text.Json;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public sealed class IdentityServerReply58 {
+ public List<string> Names {get;set;}=new();
+ public string LookupError {get;set;}="";
  public string Id {get;set;}="";
  public string Name {get;set;}="";
  public string ReportedUtc {get;set;}="";
@@ -98,18 +100,28 @@ public partial class MainWindow {
  }
 }
 public sealed partial class RemoteService {
- public async Task<IdentityServerReply58> ReadIdentityRegistration58(WsusSettings settings,string id,CancellationToken token){
+ public Task<IdentityServerReply58> ReadIdentityRegistration58(WsusSettings settings,string id,CancellationToken token)=>FindIdentityRecords(settings,id,"",token);
+ public async Task<IdentityServerReply58> FindIdentityRecords(WsusSettings settings,string id,string name,CancellationToken token){
   using var read=PollingControl43.Read();using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(TimeSpan.FromSeconds(60));
-  var script="$port="+settings.Port+";$ssl="+(settings.Ssl?"$true":"$false")+";$identityId58="+PowerShellBridge.Literal(id)+";"+IdentityServerScript58;
+  var script="$port="+settings.Port+";$ssl="+(settings.Ssl?"$true":"$false")+";$lookupName58="+PowerShellBridge.Literal(name)+";$identityId58="+PowerShellBridge.Literal(id)+";"+IdentityServerScript58;
   return JsonSerializer.Deserialize<IdentityServerReply58>(await PowerShellBridge.Execute(Invoke(settings.Host,script),timeout.Token),Store.Options)??throw new Exception("Пустое подтверждение WSUS");
  }
  public const string IdentityServerScript58="""
 $ErrorActionPreference='Stop'
 [void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration')
 $s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($env:COMPUTERNAME,$ssl,$port)
-$target58=$s.GetComputerTarget([string]$identityId58)
-$groups58=@();$groupError58=''
-try{$groups58=@($target58.GetComputerTargetGroups()|ForEach-Object {[string]$_.Name})}catch{$groupError58=$_.Exception.Message}
-@{Id=[string]$target58.Id;Name=[string]$target58.FullDomainName;ReportedUtc=$target58.LastReportedStatusTime.ToUniversalTime().ToString('o');Groups=@($groups58);GroupError=$groupError58}|ConvertTo-Json -Depth 4 -Compress
+$names58=@();$lookupError58=''
+if($lookupName58){
+ try{$names58=@($s.SearchComputerTargets($lookupName58)|Where-Object {$_.FullDomainName.TrimEnd('.') -eq $lookupName58.TrimEnd('.')}|ForEach-Object {$_.FullDomainName})}
+ catch{$lookupError58=$_.Exception.Message}
+}
+$reply58=@{Id='';Name='';ReportedUtc='';Groups=@();GroupError='';Names=@($names58);LookupError=$lookupError58}
+try{$target58=$s.GetComputerTarget([string]$identityId58)}catch{if(!$lookupName58){throw};$reply58.LookupError=$_.Exception.Message;$target58=$null}
+if($target58){
+ $reply58.Id=[string]$target58.Id;$reply58.Name=[string]$target58.FullDomainName
+ $reply58.ReportedUtc=$target58.LastReportedStatusTime.ToUniversalTime().ToString('o')
+ try{$reply58.Groups=@($target58.GetComputerTargetGroups()|ForEach-Object {[string]$_.Name})}catch{$reply58.GroupError=$_.Exception.Message}
+}
+$reply58|ConvertTo-Json -Depth 4 -Compress
 """;
 }

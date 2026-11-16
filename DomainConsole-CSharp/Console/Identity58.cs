@@ -31,10 +31,10 @@ public partial class MainWindow {
   HeaderIdentity58.Content=identities58.TryGetValue(host,out var i)&&compromisedIds58.Contains(i.Key)?"Конфликт ID":identityRepairs58.Values.Any(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&a.Phase!="Подтверждено")?"Регистрация WSUS":IdentityMismatch58(host)?"Проверить идентичность":"Несколько записей WSUS";
  }
  void Identity58_Click(object sender,RoutedEventArgs e)=>OpenIdentitySurvey(Current());
- Window IdentityWindow58(){
-  var row=Current();string Detail(){var lines=new List<string>();
+ Window IdentityWindow58(ComputerRow? selected=null){
+  var row=selected??Current();string Detail(){var lines=new List<string>();
   if(identities58.TryGetValue(row.Host,out var identity)){
-   lines.Add("Клиент: "+identity.Name+"\nSusClientId: "+identity.SusClientId+"\nИсточник: "+identity.Server+"\nПроверено: "+Display36.Date(identity.At));
+   lines.Add("Клиент: "+identity.Name+(identity.Address.Length>0?"\nАдрес подключения: "+identity.Address:"")+"\nSusClientId: "+identity.SusClientId+"\nИсточник: "+identity.Server+"\nПроверено: "+Display36.Date(identity.At));
    lines.Add("Сервер отчётов: "+identity.StatusServer+"\nUseWUServer: "+(identity.UseWUServer?.ToString()??"неизвестно")+"\nTargetGroupEnabled: "+(identity.TargetGroupEnabled?.ToString()??"неизвестно")+"; группа: "+identity.TargetGroup+"\nSusClientIdValidation: "+(identity.ValidationBytes.HasValue?identity.ValidationBytes+" байт":"неизвестно"));
    if(identity.Error.Length>0)lines.Add("Последняя проверка не выполнена: "+Display36.Date(identity.ErrorAt)+" · "+identity.Error+". Показаны прежние сведения.");
    foreach(var peer in identities58.Values.Where(x=>x.Key==identity.Key))lines.Add(peer.Name+" · "+Display36.Date(peer.At));
@@ -53,6 +53,7 @@ public partial class MainWindow {
   var stop=new Button{Content="Остановить"};var resume=new Button{Content="Продолжить"};
   var verify=new Button{Content="Повторить проверку результата"};
   foreach(var button in new[]{peers,all,stop,resume,verify})buttons.Children.Add(button);
+  var copy=new Button{Content="Копировать"};buttons.Children.Add(copy);
   var pages=new TabControl();panel.Children.Add(pages);
   var resultPanel=new DockPanel();
   var headline=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new(4,4,4,8)};DockPanel.SetDock(headline,Dock.Top);resultPanel.Children.Add(headline);
@@ -63,6 +64,8 @@ public partial class MainWindow {
   resultPanel.Children.Add(table);pages.Items.Add(new TabItem{Header="Проверка участников",Content=resultPanel});
   var output=new TextBox{IsReadOnly=true,TextWrapping=TextWrapping.Wrap,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};
   pages.Items.Add(new TabItem{Header="Подробности",Content=output});
+  copy.Click+=(s,e)=>Guard(()=>Clipboard.SetText(pages.SelectedIndex==1?output.Text:headline.Text));
+  copy.ToolTip="Скопировать итог или технические сведения открытой вкладки";
   void Refresh(){
    bool owner=survey.Owner.Equals(row.Host,StringComparison.OrdinalIgnoreCase);
    var anchor=RepairAnchor58(row.Host);

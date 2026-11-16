@@ -7,6 +7,7 @@ namespace DomainConsole;
 
 public sealed class IdentitySurvey {
  public string Owner {get;set;}="";
+ public List<string> ServerNames {get;set;}=new();
  public string ServerName {get;set;}="";
  public string ServerResult {get;set;}="";
  public DateTimeOffset Started {get;set;}
@@ -32,8 +33,10 @@ public partial class MainWindow {
   }
   foreach(var past in RepairGroupFor(selected.Host))names.Add(past.Host);
   if(survey.Owner.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)&&survey.ServerName.Length>0)names.Add(survey.ServerName);
+  if(survey.Owner.Equals(selected.Host,StringComparison.OrdinalIgnoreCase))names.UnionWith(survey.ServerNames);
   var lookup=names.Select(n=>n.TrimEnd('.')).ToHashSet(StringComparer.OrdinalIgnoreCase);
-  return Computers.Where(r=>!r.Target.AdDisabled&&(domain||lookup.Contains(r.Host.TrimEnd('.'))||lookup.Contains(r.Name.TrimEnd('.'))||lookup.Contains(ConnectionStore.WsusName(r.Host).TrimEnd('.')))).OrderByDescending(r=>r.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)).Select(r=>r.Host).Distinct(StringComparer.OrdinalIgnoreCase);
+  bool Known(ComputerRow r)=>lookup.Contains(r.Host.TrimEnd('.'))||lookup.Contains(r.Name.TrimEnd('.'))||lookup.Contains(ConnectionStore.WsusName(r.Host).TrimEnd('.'));
+  return Computers.Where(r=>!r.Target.AdDisabled&&(domain||Known(r))).OrderByDescending(r=>r.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)).ThenByDescending(Known).Select(r=>r.Host).Distinct(StringComparer.OrdinalIgnoreCase);
  }
  async Task RunIdentitySurvey(ComputerRow selected,bool domain,bool resume=false,Func<TargetRecord,CancellationToken,Task<ClientIdentity58>>? readClient=null,Func<WsusSettings,string,CancellationToken,Task<IdentityServerReply58>>? readServer=null,bool verifyRegistration=false){
   if(surveyRun!=null)return;
@@ -57,6 +60,7 @@ public partial class MainWindow {
      var result=await (readClient??remote.ReadIdentity)(target,stop.Token);
      stop.Token.ThrowIfCancellationRequested();
      if(!CurrentEndpoint(target)||!CurrentIdentity(target))throw new InvalidOperationException("Цель изменилась во время чтения");
+     result.Address=string.IsNullOrWhiteSpace(target.ConnectionAddress)?target.Host:target.ConnectionAddress;
      if(readClient==null)await ResolveIdentitySource(result,ReadWsus(),checkedSources,stop.Token);
      stop.Token.ThrowIfCancellationRequested();
      if(!CurrentEndpoint(target)||!CurrentIdentity(target))throw new InvalidOperationException("Цель изменилась во время проверки источника WSUS");
@@ -65,8 +69,8 @@ public partial class MainWindow {
      if(survey.VerifyRegistration&&result.Error.Length==0)await VerifyIdentityRegistration58(host,true,stop.Token);
      if(!survey.VerifyRegistration&&host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)&&IdentityPolicy58.Usable(result)){
       try{
-       var settings=ReadWsus();var server=await (readServer??remote.ReadIdentityRegistration58)(settings,result.SusClientId,stop.Token);stop.Token.ThrowIfCancellationRequested();
-       survey.ServerName=server.Name;survey.ServerResult="WSUS · "+server.Name+" · отчёт "+Display36.Date(server.ReportedUtc);
+       var settings=ReadWsus();var server=readServer==null?await remote.FindIdentityRecords(settings,result.SusClientId,result.Name,stop.Token):await readServer(settings,result.SusClientId,stop.Token);stop.Token.ThrowIfCancellationRequested();
+       survey.ServerName=server.Name;survey.ServerNames=server.Names;survey.ServerResult=server.Id.Length>0?"WSUS · "+server.Name+" · отчёт "+Display36.Date(server.ReportedUtc):"Запись по ID не подтверждена";if(server.LookupError.Length>0)survey.ServerResult+=" · "+ConnectionBrief31(server.LookupError);
       }catch(Exception ex) when(!stop.IsCancellationRequested){survey.ServerResult="Серверный ID не проверен · "+ConnectionBrief31(ex.Message);}
      }
      survey.Results[host]=result.Error.Length>0?"Не удалось проверить · "+result.Error:!IdentityPolicy58.Usable(result)?"Неполные сведения":result.Name+" · "+result.SusClientId+" · "+result.Server+" · "+Display36.Date(result.At);
@@ -80,9 +84,10 @@ public partial class MainWindow {
  }
  async void OpenIdentitySurvey(ComputerRow selected){
   if(surveyWindow!=null){surveyWindow.Activate();return;}
-  var window=IdentityWindow58();surveyWindow=window;
+  if(surveyRun!=null)selected=Computers.FirstOrDefault(r=>r.Host.Equals(survey.Owner,StringComparison.OrdinalIgnoreCase))??selected;
+  var window=IdentityWindow58(selected);surveyWindow=window;
   window.Closed+=(s,e)=>{surveyWindow=null;refreshSurvey=null;};window.Show();
-  if(surveyRun==null&&(!survey.Owner.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)||!survey.Domain&&survey.Results.Count==survey.Hosts.Count))await Guard(()=>RunIdentitySurvey(selected,false));
+  if(surveyRun==null&&identityRepairBusy58.Count==0&&(!survey.Owner.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)||!survey.Domain&&survey.Results.Count==survey.Hosts.Count))await Guard(()=>RunIdentitySurvey(selected,false));
  }
 }
 
