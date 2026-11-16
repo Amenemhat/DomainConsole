@@ -4,6 +4,8 @@ namespace DomainConsole;
 public sealed class StatusGlyph:FrameworkElement {
  public static readonly DependencyProperty KindProperty=DependencyProperty.Register(nameof(Kind),typeof(string),typeof(StatusGlyph),new FrameworkPropertyMetadata("Unknown",FrameworkPropertyMetadataOptions.AffectsRender));
  public static readonly DependencyProperty TintProperty=DependencyProperty.Register(nameof(Tint),typeof(Brush),typeof(StatusGlyph),new FrameworkPropertyMetadata(Brushes.LightSlateGray,FrameworkPropertyMetadataOptions.AffectsRender));
+ public static readonly DependencyProperty StrokeWeightProperty=DependencyProperty.Register(nameof(StrokeWeight),typeof(double),typeof(StatusGlyph),new FrameworkPropertyMetadata(2.6,FrameworkPropertyMetadataOptions.AffectsRender));
+ public double StrokeWeight{get=>(double)GetValue(StrokeWeightProperty);set=>SetValue(StrokeWeightProperty,value);}
  public string Kind{get=>(string)GetValue(KindProperty);set=>SetValue(KindProperty,value);}public Brush Tint{get=>(Brush)GetValue(TintProperty);set=>SetValue(TintProperty,value);}
  public StatusGlyph(){Width=20;Height=20;VerticalAlignment=VerticalAlignment.Center;SnapsToDevicePixels=true;}
  public static string ForTone50(string tone)=>tone switch {"Success"=>"Success","Error" or "SyncError"=>"Error","Warning"=>"Warning","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Info"};
@@ -39,6 +41,6 @@ public sealed class StatusGlyph:FrameworkElement {
  "DisabledServer"=>Shape("Server")+" M 17,13 A 4,4 0 1 0 9,13 A 4,4 0 1 0 17,13 M 10,16 L 16,10",
  "NoWsus"=>"M 9,2 A 7,7 0 1 1 8.99,2 M 4,14 L 14,4",
  _=>"M 5,5 C 5,0 15,0 13,7 L 9,10 L 9,12 M 9,15 L 9,16"};
- protected override void OnRender(DrawingContext drawing){base.OnRender(drawing);drawing.DrawRectangle(Brushes.Transparent,null,new Rect(RenderSize));double scale=Math.Min(ActualWidth,ActualHeight)/20;drawing.PushTransform(new TranslateTransform((ActualWidth-20*scale)/2,(ActualHeight-20*scale)/2));drawing.PushTransform(new ScaleTransform(scale,scale));drawing.PushTransform(new TranslateTransform(1,1));var pen=new Pen(Tint,2.6){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};drawing.DrawGeometry(null,pen,Geometry.Parse(Shape(Kind)));drawing.Pop();drawing.Pop();drawing.Pop();}
+ protected override void OnRender(DrawingContext drawing){base.OnRender(drawing);drawing.DrawRectangle(Brushes.Transparent,null,new Rect(RenderSize));double scale=Math.Min(ActualWidth,ActualHeight)/20;drawing.PushTransform(new TranslateTransform((ActualWidth-20*scale)/2,(ActualHeight-20*scale)/2));drawing.PushTransform(new ScaleTransform(scale,scale));drawing.PushTransform(new TranslateTransform(1,1));var pen=new Pen(Tint,StrokeWeight){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};drawing.DrawGeometry(null,pen,Geometry.Parse(Shape(Kind)));drawing.Pop();drawing.Pop();drawing.Pop();}
 }
 

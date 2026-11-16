@@ -16,14 +16,29 @@ public sealed class IdentityRepairAttempt58 {
 }
 public partial class MainWindow {
  readonly Dictionary<string,IdentityRepairAttempt58> identityRepairs58=Store.Read("identity-repairs58.json",new Dictionary<string,IdentityRepairAttempt58>());
+ readonly Dictionary<string,List<string>> manualIdentityScopes=Store.Read("identity-scope-approvals.json",new Dictionary<string,List<string>>());
+ static string MemberIdentity(ClientIdentity58 i)=>i.Machine.ToLowerInvariant()+"|"+i.Name.TrimEnd('.').ToLowerInvariant();
+ void RememberDiagnosticScope(ClientIdentity58 identity){
+  if(!IdentityPolicy58.Usable(identity)||manualIdentityScopes.ContainsKey(identity.Key))return;
+  var retained=identities58.Values.Select(x=>x.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+  foreach(var key in manualIdentityScopes.Keys.Where(k=>!retained.Contains(k)).ToList())manualIdentityScopes.Remove(key);
+  manualIdentityScopes[identity.Key]=new();Store.Write("identity-scope-approvals.json",manualIdentityScopes);
+ }
  readonly HashSet<string> identityRepairBusy58=new(StringComparer.OrdinalIgnoreCase);
  async Task RepairIdentityGroup58(string host,bool manual){
   if(closing||App.RecoveryPending57||!identities58.TryGetValue(host,out var observed)||!compromisedIds58.Contains(observed.Key))return;
   if(!Guid.TryParse(observed.SusClientId,out var oldGuid)||oldGuid==Guid.Empty||!identityRepairBusy58.Add(observed.Key))return;
   try{
    var participants=IdentityPolicy58.Participants(identities58.Values,observed,DateTimeOffset.UtcNow);
-   if(!IdentityPolicy58.Confirmed(participants,observed,DateTimeOffset.UtcNow))return;
+   bool confirmed=IdentityPolicy58.Confirmed(participants,observed,DateTimeOffset.UtcNow);
+   manualIdentityScopes.TryGetValue(observed.Key,out var approved);
+   if(!confirmed||!manual&&approved!=null)participants=participants.Where(i=>approved?.Contains(MemberIdentity(i))==true).ToList();
+   if(participants.Count==0)return;
    if(manual&&MessageBox.Show(this,"Перерегистрировать всех обнаруженных участников общего ID?\n"+string.Join("\n",participants.Select(x=>x.Name))+"\n\nНедоступные и занятые клиенты остаются в ожидании. Записи сервера не удаляются.","Перерегистрация клиентов",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
+   if(manual){
+    manualIdentityScopes[observed.Key]=(approved??new List<string>()).Concat(participants.Select(MemberIdentity)).Distinct().ToList();
+    Store.Write("identity-scope-approvals.json",manualIdentityScopes);
+   }
    foreach(var identity in participants){
     var row=Computers.FirstOrDefault(r=>r.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase));if(row==null||row.Target.AdDisabled)continue;
     string key=identity.Key+"|"+identity.Machine.ToLowerInvariant();

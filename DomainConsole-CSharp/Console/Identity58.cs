@@ -11,6 +11,7 @@ public partial class MainWindow {
   if(identities58.TryGetValue(host,out var previous)&&string.CompareOrdinal(previous.At,identity.At)>0)return;
   if(previous!=null&&identity.Error.Length>0){previous.Error=identity.Error;previous.ErrorAt=identity.At;Store.Write("client-identities58.json",identities58);return;}
   identities58[host]=identity;Store.Write("client-identities58.json",identities58);
+  if(!allowRepair)RememberDiagnosticScope(identity);
   if(IdentityPolicy58.Confirmed(identities58.Values,identity,DateTimeOffset.UtcNow)){
    compromisedIds58.Add(identity.Key);Store.Write("compromised-ids58.json",compromisedIds58.ToList());
    foreach(var member in IdentityPolicy58.Participants(identities58.Values,identity,DateTimeOffset.UtcNow))Event31(member.Host,"identity58",identity.Key,"Подтверждён общий SusClientId","Warning","ID: "+identity.SusClientId+". Участники: "+string.Join(", ",IdentityPolicy58.Participants(identities58.Values,identity,DateTimeOffset.UtcNow).Select(r=>r.Name))+". Требуется перерегистрация всех участников.");
@@ -36,6 +37,7 @@ public partial class MainWindow {
   }
   if(SnapshotMatches58)foreach(var record in serverSnapshot58.Find(ConnectionStore.WsusName(row.Host)).Concat(serverSnapshot58.Records.Where(r=>identity!=null&&r.Id.Equals(identity.SusClientId,StringComparison.OrdinalIgnoreCase))).DistinctBy(r=>r.Id))lines.Add("WSUS: "+record.Name+" · ID "+record.Id+" · отчёт "+Display36.Date(record.Summary?.LastReportedUtc??""));
   foreach(var attempt in identityRepairs58.Values.Where(a=>a.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)))lines.Add("Перерегистрация: "+attempt.Phase+" · "+Display36.Date(attempt.At)+"\nПрежний ID: "+attempt.OldId+"\nНовый ID: "+(attempt.NewId.Length>0?attempt.NewId:"ещё не прочитан")+"\nПроверка до: "+Display36.Date(attempt.DeadlineUtc)+"\nГруппы новой записи: "+(attempt.Groups.Count>0?string.Join(", ",attempt.Groups):"ещё не прочитаны"));
+  lines.Add("Ручная диагностика читает данные. Изменение ID обнаруженных участников требует подтверждения состава группы.");
   lines.Add("Сначала подтвердите связь участников. Одинаковое имя или IP сами по себе не доказывают общий ID. Старые записи сервера не удаляются. При серверном назначении групп новая запись может потребовать повторного назначения групп администратором WSUS.");
   return string.Join("\n\n",lines);}
   var window=new Window{Owner=this,Title="Идентичность WSUS · "+row.Name,Width=750,Height=560,MinWidth=470,MinHeight=360,WindowStartupLocation=WindowStartupLocation.CenterOwner};
@@ -61,8 +63,11 @@ public partial class MainWindow {
    bool busy=surveyRun!=null;peers.IsEnabled=all.IsEnabled=!busy;stop.IsEnabled=busy;resume.IsEnabled=!busy&&owner&&survey.Results.Count<survey.Hosts.Count;
    identities58.TryGetValue(row.Host,out var current);
    var members=current==null?new List<ClientIdentity58>():IdentityPolicy58.Participants(identities58.Values,current,DateTimeOffset.UtcNow);
-   repair.IsEnabled=!busy&&current!=null&&IdentityPolicy58.Confirmed(members,current,DateTimeOffset.UtcNow);
-   var coverage=owner?$"{(survey.Domain?"Область AD":"Клиент и известные кандидаты")} · проверено {survey.Results.Count} из {survey.Hosts.Count} · ожидают {survey.Hosts.Count-survey.Results.Count} · общий ID подтверждён у {(members.Count>=2?members.Count:0)}": "Выберите область проверки.";
+   bool confirmed=current!=null&&IdentityPolicy58.Confirmed(members,current,DateTimeOffset.UtcNow);
+   bool approved=current!=null&&manualIdentityScopes.TryGetValue(current.Key,out var allowed)&&members.Any(m=>allowed.Contains(MemberIdentity(m)));
+   repair.IsEnabled=!busy&&(confirmed||approved);
+   repair.Content=confirmed?"Исправить общий ID · подтверждённых участников: "+members.Count:approved?"Продолжить ранее согласованное исправление":"Исправить подтверждённый конфликт";
+   var coverage=owner?$"{(survey.Domain?"Область AD":"Клиент и известные кандидаты")} · проверено {survey.Results.Count} из {survey.Hosts.Count} · ожидают {survey.Hosts.Count-survey.Results.Count} · общий ID подтверждён у {(confirmed?members.Count:0)}": "Выберите область проверки.";
    int failed=owner?survey.Results.Count(p=>p.Value.StartsWith("Не удалось")||p.Value.StartsWith("Неполные")||p.Value.StartsWith("Пропущен")):0;
    headline.Text=coverage+(owner?" · без подтверждения "+failed+"\n"+survey.ScopeMessage+(survey.Started==default?"":" · "+Age((busy?DateTimeOffset.UtcNow:survey.Updated)-survey.Started))+"\n"+survey.ServerResult:"");
    if(owner)table.ItemsSource=survey.Hosts.Select(h=>{
