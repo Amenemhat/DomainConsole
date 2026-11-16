@@ -135,25 +135,32 @@ def session(node, domain=False):
 def ps(node, script, domain=False):
     shell=session(node,domain)
     command="$ErrorActionPreference='Stop';"+script
-    if len(command.encode("utf-16-le"))*4//3 < 7000:
-        result=shell.run_ps(command)
-        status,stdout,stderr=result.status_code,result.std_out,result.std_err
-    else:
-        protocol=shell.protocol
-        shell_id=protocol.open_shell()
+    protocol=shell.protocol
+    # Only retry creation of the transport shell. At this point no caller command has been submitted.
+    deadline=time.monotonic()+150
+    while True:
         try:
-            wrapper="$data=[Console]::In.ReadToEnd();&([ScriptBlock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($data))))"
-            encoded=base64.b64encode(wrapper.encode("utf-16-le")).decode()
-            command_id=protocol.run_command(shell_id,"powershell.exe",["-NoProfile","-NonInteractive","-EncodedCommand",encoded])
-            try:
-                stream=base64.b64encode(command.encode("utf-8"))
+            shell_id=protocol.open_shell()
+            break
+        except Exception as exc:
+            if time.monotonic()>=deadline or not any(v in str(exc).lower() for v in ("marked for deletion","2147943418","connection reset","connection refused","read timed out","remote end closed connection")):
+                raise
+            time.sleep(5)
+    try:
+        stream=base64.b64encode(command.encode("utf-8"))
+        send_input=len(command.encode("utf-16-le"))*4//3>=7000
+        wrapper="$data=[Console]::In.ReadToEnd();&([ScriptBlock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($data))))" if send_input else command
+        encoded=base64.b64encode(wrapper.encode("utf-16-le")).decode()
+        command_id=protocol.run_command(shell_id,"powershell.exe",["-NoProfile","-NonInteractive","-EncodedCommand",encoded])
+        try:
+            if send_input:
                 for start in range(0,len(stream),12000):
                     protocol.send_command_input(shell_id,command_id,stream[start:start+12000],end=start+12000>=len(stream))
-                stdout,stderr,status=protocol.get_command_output(shell_id,command_id)
-            finally:
-                protocol.cleanup_command(shell_id,command_id)
+            stdout,stderr,status=protocol.get_command_output(shell_id,command_id)
         finally:
-            protocol.close_shell(shell_id)
+            protocol.cleanup_command(shell_id,command_id)
+    finally:
+        protocol.close_shell(shell_id)
     if status:
         raise RuntimeError(node+": "+stderr.decode(errors="replace").replace(password,"***")[-2400:])
     return stdout.decode("utf-8-sig",errors="replace").strip()
@@ -228,24 +235,73 @@ def system(node, name, script, domain=False, minutes=20):
     raise TimeoutError(node + " " + name)
 
 
+def start_role_task(node, label, body):
+    # Promotion/domain join can invalidate the initiating WinRM logon. The local task owns this operation through restart.
+    path="C:\\DomainConsoleLab\\"+label
+    wrapped="$ErrorActionPreference='Stop';try{"+body+";'ok'|Set-Content '"+path+".done';shutdown.exe /r /t 4}catch{($_|Out-String)|Set-Content '"+path+".error';exit 1}"
+    encoded=base64.b64encode(wrapped.encode("utf-8-sig")).decode()
+    ps(node,f"$p='{path}';[IO.File]::WriteAllBytes($p+'.ps1',[Convert]::FromBase64String('{encoded}'));"+
+       f"$a=New-ScheduledTaskAction -Execute powershell.exe -Argument '-NoProfile -ExecutionPolicy Bypass -File {path}.ps1';"+
+       f"Register-ScheduledTask -TaskName 'DCLab-{label}' -Action $a -User SYSTEM -RunLevel Highest -Force|Out-Null;Start-ScheduledTask 'DCLab-{label}'")
+
+
+def wait_role(node,label,domain,minutes):
+    limit=time.monotonic()+minutes*60
+    query=("$p='C:\\DomainConsoleLab\\"+label+"';if(Test-Path ($p+'.error')){'FAIL '+(Get-Content ($p+'.error') -Raw)}"+
+           "elseif((Test-Path ($p+'.done')) -and (Get-CimInstance Win32_ComputerSystem).Domain -eq 'dc057.test' -and "+
+           "(Get-CimInstance Win32_OperatingSystem).LastBootUpTime -gt (Get-Item ($p+'.done')).LastWriteTime){'READY'}")
+    last=""
+    while time.monotonic()<limit:
+        try:
+            result=ps(node,query,domain)
+        except Exception as exc:
+            last=str(exc).replace(password,"***")[:250]
+            if domain and "credentials" in last.lower():
+                try:
+                    local_error=ps(node,"$p='C:\\DomainConsoleLab\\"+label+".error';if(Test-Path $p){Get-Content $p -Raw}")
+                except Exception:
+                    local_error=""
+                if local_error:
+                    raise RuntimeError(node+" "+local_error.replace(password,"***")[:1000])
+            time.sleep(6)
+            continue
+        if result.startswith("FAIL"):
+            raise RuntimeError(node+" "+label+" "+result[:1000].replace(password,"***"))
+        if result=="READY":
+            return
+        time.sleep(7)
+    raise TimeoutError(node+" "+label+" did not return after restart: "+last)
+
+
 def setup_domain():
-    ps("DCAD", "Install-WindowsFeature AD-Domain-Services -IncludeManagementTools | Out-Null")
-    ps("DCAD", "$pw=ConvertTo-SecureString '" + password + "' -AsPlainText -Force;"
-       "Install-ADDSForest -DomainName dc057.test -DomainNetbiosName DCLAB -InstallDns -Force -NoRebootOnCompletion -SafeModeAdministratorPassword $pw | Out-Null")
-    ps("DCAD", "shutdown.exe /r /t 2")
-    time.sleep(20)
-    wait("DCAD", True, 18)
-    for name in ["LabA", "LabB"]:
-        ps("DCAD", f"New-ADOrganizationalUnit -Name {name} -Path 'DC=dc057,DC=test' -ProtectedFromAccidentalDeletion $false", True)
+    start_role_task("DCAD","promote",r"$feature=Install-WindowsFeature AD-Domain-Services -IncludeManagementTools;if(!$feature.Success){throw 'AD DS role installation failed'};"
+                    +"$pw=ConvertTo-SecureString '"+password+"' -AsPlainText -Force;"
+                    +"Install-ADDSForest -DomainName dc057.test -DomainNetbiosName DCLAB -InstallDns -Force -NoRebootOnCompletion -SafeModeAdministratorPassword $pw | Out-Null")
+    time.sleep(24)
+    wait_role("DCAD","promote",True,22)
+    until=time.monotonic()+300
+    while True:
+        try:
+            found=ps("DCAD","if((Get-ADDomain -Server localhost).DNSRoot -eq 'dc057.test'){'READY'}",True)
+            if found=="READY":
+                break
+        except Exception:
+            if time.monotonic()>=until:
+                raise
+        if time.monotonic()>=until:
+            raise TimeoutError("AD Web Services not ready")
+        time.sleep(5)
+    for name in ["LabA","LabB"]:
+        ps("DCAD",f"New-ADOrganizationalUnit -Server localhost -Name {name} -Path 'DC=dc057,DC=test' -ProtectedFromAccidentalDeletion $false",True)
 
 
 def join(node):
-    ou = "LabA" if nodes[node] % 2 else "LabB"
-    ps(node, "Get-NetAdapter|Where-Object Status -eq Up|Set-DnsClientServerAddress -ServerAddresses 10.77.57.11;"
-       "$cred=[pscredential]::new('DCLAB\\Administrator',(ConvertTo-SecureString '" + password + "' -AsPlainText -Force));" +
-       f"Add-Computer -DomainName dc057.test -OUPath 'OU={ou},DC=dc057,DC=test' -Credential $cred -Force;shutdown.exe /r /t 2")
+    ou="LabA" if nodes[node]%2 else "LabB"
+    start_role_task(node,"join-domain","Get-NetAdapter|Where-Object Status -eq Up|Set-DnsClientServerAddress -ServerAddresses 10.77.57.11;"
+                    +"$cred=[pscredential]::new('DCLAB\\Administrator',(ConvertTo-SecureString '"+password+"' -AsPlainText -Force));"
+                    +f"Add-Computer -DomainName dc057.test -OUPath 'OU={ou},DC=dc057,DC=test' -Credential $cred -Force")
     time.sleep(15)
-    wait(node)
+    wait_role(node,"join-domain",False,14)
 
 
 def main():
