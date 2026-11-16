@@ -1,0 +1,31 @@
+name: Validate isolated Windows first boot
+on:
+  workflow_dispatch:
+  push:
+    branches: ['lab/0.57-wsus']
+    paths: ['.github/lab/windows-lab.py','.github/lab/guest-init.ps1','.github/workflows/wsus-bootstrap.yml']
+permissions:
+  contents: read
+jobs:
+  first-boot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      DC_BOOTSTRAP_ONLY: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare official media and isolated network
+        run: bash .github/lab/prepare-guests.sh
+      - name: Personalize the first Windows disk
+        run: bash .github/lab/wait-for-guests.sh disks 15
+      - name: Verify private WinRM and guest identity
+        run: bash .github/lab/wait-for-guests.sh guest-exit 28
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-first-boot-evidence
+          path: |
+            ${{ runner.temp }}/dc-wsus-lab/evidence.json
+            ${{ runner.temp }}/dc-wsus-lab/*-boot.png
+          if-no-files-found: warn
+          retention-days: 7

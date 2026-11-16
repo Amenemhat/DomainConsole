@@ -13,6 +13,7 @@ import socket
 import subprocess
 import sys
 import time
+import threading
 import uuid
 from xml.sax.saxutils import escape
 
@@ -25,6 +26,9 @@ if os.getenv("GITHUB_ACTIONS") != "true" or not root.name == "dc-wsus-lab":
 password = "Dc!7" + secrets.token_hex(20)
 print("::add-mask::" + password, flush=True)
 nodes = {"DCWSUS": 10, "DCAD": 11, **{f"CLONE{i}": 20 + i for i in range(1, 6)}}
+bootstrap_only=os.environ.get("DC_BOOTSTRAP_ONLY")=="1"
+if bootstrap_only:
+    nodes={"DCWSUS":10}
 evidence = {"source": os.environ["GITHUB_SHA"], "booted": {}, "checks": {}}
 evidence_file = root / "evidence.json"
 processes = {}
@@ -36,7 +40,7 @@ def log(message):
     print(message, flush=True)
 
 
-evidence_lock = __import__("threading").Lock()
+evidence_lock = threading.Lock()
 def save():
     with evidence_lock:
         tmp = evidence_file.with_suffix(".tmp")
@@ -62,8 +66,10 @@ def unattended(node):
     pw = escape(password)
     return f'''<?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
-<settings pass="specialize"><component name="Microsoft-Windows-Shell-Setup" {component}><ComputerName>{node}</ComputerName><TimeZone>UTC</TimeZone></component></settings>
-<settings pass="oobeSystem"><component name="Microsoft-Windows-Shell-Setup" {component}>
+<settings pass="specialize"><component name="Microsoft-Windows-Deployment" {component}>
+<RunSynchronous><RunSynchronousCommand wcm:action="add"><Order>1</Order><Description>Initialize private test adapter</Description><Path>powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\\DomainConsoleLab\\guest-init.ps1</Path></RunSynchronousCommand></RunSynchronous></component>
+<component name="Microsoft-Windows-Shell-Setup" {component}><ComputerName>{node}</ComputerName><TimeZone>UTC</TimeZone></component></settings>
+<settings pass="oobeSystem"><component name="Microsoft-Windows-International-Core" {component}><InputLocale>en-US</InputLocale><SystemLocale>en-US</SystemLocale><UILanguage>en-US</UILanguage><UserLocale>en-US</UserLocale></component><component name="Microsoft-Windows-Shell-Setup" {component}>
 <OOBE><HideEULAPage>true</HideEULAPage><HideLocalAccountScreen>true</HideLocalAccountScreen><ProtectYourPC>3</ProtectYourPC></OOBE>
 <UserAccounts><AdministratorPassword><Value>{pw}</Value><PlainText>true</PlainText></AdministratorPassword></UserAccounts>
 <AutoLogon><Password><Value>{pw}</Value><PlainText>true</PlainText></Password><Enabled>true</Enabled><Username>Administrator</Username><LogonCount>1</LogonCount></AutoLogon>
@@ -77,13 +83,18 @@ def prepare(node):
     answer = root / (node + ".xml")
     answer.write_text(unattended(node))
     config = root / (node + ".json")
-    config.write_text(json.dumps({"ip": ip(node), "name": node}))
+    config.write_text(json.dumps({"ip": ip(node), "name": node, "temporaryAdmin":password}))
     commands = ["mkdir-p /DomainConsoleLab", "mkdir-p /Windows/Panther",
-                "mkdir-p /Windows/Setup/Scripts", f"upload {answer} /Windows/Panther/unattend.xml",
+                "mkdir-p /Windows/Setup/Scripts", f"upload {answer} /DomainConsoleLab/unattend.xml",
+                "mkdir-p /Windows/Panther/Unattend",f"upload {answer} /Windows/Panther/Unattend/Unattend.xml",
+                f"upload {answer} /Windows/Panther/unattend.xml",
                 f"upload {here / 'guest-init.ps1'} /DomainConsoleLab/guest-init.ps1",
                 f"upload {config} /DomainConsoleLab/node.json",
                 f"upload {root / 'SetupComplete.cmd'} /Windows/Setup/Scripts/SetupComplete.cmd"]
     call("guestfish", "--rw", "-a", disk, "-i", input="\n".join(commands) + "\n", text=True)
+    pointer=root/"setup-location.reg"
+    pointer.write_text('Windows Registry Editor Version 5.00\n\n[HKEY_LOCAL_MACHINE\\SYSTEM\\Setup]\n"UnattendFile"="C:\\\\DomainConsoleLab\\\\unattend.xml"\n')
+    call("virt-win-reg","--merge",disk,pointer)
     answer.unlink()
     tap = "dclab" + str(nodes[node])
     call("ip", "tuntap", "add", tap, "mode", "tap")
@@ -123,7 +134,21 @@ def ps(node, script, domain=False):
     return result.std_out.decode("utf-8-sig", errors="replace").strip()
 
 
-def wait(node, domain=False, minutes=16):
+def capture_console(node):
+    path=root/(node+"-boot.ppm")
+    try:
+        with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as handle:
+            handle.settimeout(4);handle.connect(str(root/(node+".sock")));handle.recv(4096)
+            handle.sendall(("screendump "+str(path)+"\n").encode())
+            time.sleep(2)
+        from PIL import Image
+        with Image.open(path) as shot:
+            shot.save(root/(node+"-boot.png"))
+        path.unlink()
+    except (OSError,ValueError) as exc:
+        log("Boot screen unavailable: "+str(exc))
+
+def wait(node, domain=False, minutes=24):
     until = time.monotonic() + 60 * minutes
     while time.monotonic() < until:
         if processes[node].poll() is not None:
@@ -140,6 +165,7 @@ def wait(node, domain=False, minutes=16):
         except Exception:
             pass
         time.sleep(8)
+    capture_console(node)
     raise TimeoutError("WinRM did not become ready on " + node)
 
 
@@ -191,10 +217,19 @@ def main():
         log("Creating distinct Windows guest " + node)
         prepare(node)
     checkpoint("disks")
-    for node in nodes:
-        boot(node, part == "gpt")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=7) as pool:
-        list(pool.map(wait, nodes))
+    # First drive one guest through specialization with the runner CPU to itself.
+    boot("DCWSUS",part=="gpt")
+    wait("DCWSUS")
+    if bootstrap_only:
+        checkpoint("winrm")
+        return
+    remaining=[n for n in nodes if n!="DCWSUS"]
+    for start in range(0,len(remaining),3):
+        batch=remaining[start:start+3]
+        for node in batch:
+            boot(node, part=="gpt")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+            list(pool.map(wait,batch))
     checkpoint("winrm")
     setup_domain()
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
@@ -216,7 +251,8 @@ def main():
 
 
 try:
-    evidence["package"]=json.loads((root / "package.json").read_text())
+    if not bootstrap_only:
+        evidence["package"]=json.loads((root / "package.json").read_text())
     main()
 except Exception as exc:
     evidence["failure"]=str(exc).replace(password,"***")[:1800]
@@ -235,6 +271,6 @@ finally:
             log(node + " QEMU: " + errorlog[-450:])
     for node in set(processes) - set(evidence["booted"]):
         disk = root / (node + ".qcow2")
-        for logpath in ["/DomainConsoleLab/setup.log", "/Windows/Panther/setuperr.log"]:
-            result = subprocess.run(["guestfish", "--ro", "-a", str(disk), "-i", "cat", logpath], capture_output=True, text=True, timeout=90)
-            log(node + " " + logpath + ": " + result.stdout.replace(password, "***")[-800:])
+        for logpath in ["/DomainConsoleLab/setup.log", "/Windows/Panther/setuperr.log", "/Windows/Panther/setupact.log", "/Windows/Panther/UnattendGC/setupact.log"]:
+            result = subprocess.run(["guestfish", "--ro", "-a", str(disk), "-i", "cat", logpath], capture_output=True, text=True, errors="replace", timeout=90)
+            log(node + " " + logpath + ": " + result.stdout.replace(password, "***")[-1400:])

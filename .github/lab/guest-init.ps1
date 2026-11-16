@@ -1,9 +1,13 @@
 $ErrorActionPreference='Stop'
 # Only present in the offline-personalized disposable guest image.
 if (!(Test-Path C:\DomainConsoleLab\node.json)){throw 'Missing lab guest identity'}
-if(Test-Path C:\DomainConsoleLab\network-ready.txt){return}
 $node=Get-Content C:\DomainConsoleLab\node.json -Raw|ConvertFrom-Json
 Start-Transcript -Path C:\DomainConsoleLab\setup.log -Append
+if($node.temporaryAdmin){
+ $admin=Get-LocalUser|Where-Object {$_.SID.Value -match '-500$'}|Select-Object -First 1
+ $admin|Enable-LocalUser
+ $admin|Set-LocalUser -Password (ConvertTo-SecureString $node.temporaryAdmin -AsPlainText -Force)
+}
 $drivers=Get-Volume | Where-Object {$_.DriveLetter -and (Test-Path ($_.DriveLetter+':\NetKVM\2k22\amd64\netkvm.inf'))} | Select-Object -First 1
 if($drivers){& pnputil.exe /add-driver ($drivers.DriveLetter+':\NetKVM\2k22\amd64\netkvm.inf') /install | Out-Null}
 $adapter=$null
@@ -19,5 +23,7 @@ New-NetFirewallRule -DisplayName 'DC lab private WinRM' -Direction Inbound -Acti
 if($node.name -eq 'DCWSUS'){
  New-NetFirewallRule -DisplayName 'DC lab private WSUS' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8530 -RemoteAddress 10.77.57.0/24|Out-Null
 }
+$node.PSObject.Properties.Remove('temporaryAdmin')
+$node|ConvertTo-Json|Set-Content C:\DomainConsoleLab\node.json
 Set-Content C:\DomainConsoleLab\network-ready.txt ([DateTime]::UtcNow.ToString('o'))
 Stop-Transcript

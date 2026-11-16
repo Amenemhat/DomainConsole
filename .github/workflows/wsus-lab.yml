@@ -9,11 +9,11 @@ permissions:
   actions: read
 concurrency:
   group: wsus-lab-057
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   guests:
     runs-on: ubuntu-24.04
-    timeout-minutes: 175
+    timeout-minutes: 270
     steps:
       - uses: actions/checkout@v4
       - name: Read candidate revision
@@ -44,7 +44,7 @@ jobs:
       - name: Personalize seven independent Windows system disks
         run: bash .github/lab/wait-for-guests.sh disks 30
       - name: Boot seven Windows guests and validate their independent WinRM sessions
-        run: bash .github/lab/wait-for-guests.sh winrm 24
+        run: bash .github/lab/wait-for-guests.sh winrm 80
       - name: Promote the domain controller and join two OUs
         run: bash .github/lab/wait-for-guests.sh domain 40
       - name: Install WSUS and verify its administrative endpoint
@@ -55,6 +55,8 @@ jobs:
         if: always()
         with:
           name: isolated-wsus-evidence
-          path: ${{ runner.temp }}/dc-wsus-lab/evidence.json
+          path: |
+            ${{ runner.temp }}/dc-wsus-lab/evidence.json
+            ${{ runner.temp }}/dc-wsus-lab/*-boot.png
           if-no-files-found: warn
           retention-days: 7
