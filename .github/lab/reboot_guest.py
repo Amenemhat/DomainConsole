@@ -3,6 +3,7 @@ import base64
 import concurrent.futures
 from datetime import datetime
 import json
+import hashlib
 import time
 import uuid
 
@@ -34,17 +35,23 @@ def exercise(root, ps, session, evidence, save):
         raise TimeoutError("Missing guest evidence: "+script[:80]+", last response "+last[:120])
 
     def launch(job):
-        payload=base64.b64encode(template.replace("{{REBOOT_JOB}}",job).encode("utf-8-sig")).decode()
+        data=template.replace("{{REBOOT_JOB}}",job).encode("utf-8-sig")
         folder="C:\\ProgramData\\DomainConsoleCSharp\\"+job
+        destination=folder+"\\body.ps1"
+        ps(target,"New-Item -ItemType Directory -Path '"+folder+"' -Force|Out-Null;[IO.File]::WriteAllBytes('"+destination+"',[byte[]]@())")
+        for offset in range(0,len(data),768):
+            part=base64.b64encode(data[offset:offset+768]).decode()
+            ps(target,"$part=[Convert]::FromBase64String('"+part+"');$stream=[IO.File]::OpenWrite('"+destination+"');try{$null=$stream.Seek(0,'End');$stream.Write($part,0,$part.Length)}finally{$stream.Dispose()}")
+        if ps(target,"(Get-FileHash '"+destination+"').Hash").lower()!=hashlib.sha256(data).hexdigest():
+            raise RuntimeError("Reboot body changed during private WinRM transfer")
         script=r"""
 $folder='FOLDER';New-Item -ItemType Directory -Path $folder -Force|Out-Null
-[IO.File]::WriteAllBytes("$folder\body.ps1",[Convert]::FromBase64String('PAYLOAD'))
 $wrapped="try { & '$folder\body.ps1' } catch { [IO.File]::WriteAllText('$folder\error.txt',\$_.Exception.Message);exit 1 }"
 [IO.File]::WriteAllText("$folder\run.ps1",$wrapped,(New-Object Text.UTF8Encoding($true)))
 $a=New-ScheduledTaskAction -Execute powershell.exe -Argument "-NoProfile -ExecutionPolicy Bypass -File $folder\run.ps1"
 Register-ScheduledTask -TaskName 'DCLab-Priority-JOB' -Action $a -User SYSTEM -RunLevel Highest -Force|Out-Null
 Start-ScheduledTask -TaskName 'DCLab-Priority-JOB'
-""".replace("\\$_","\x60$_").replace("FOLDER",folder).replace("PAYLOAD",payload).replace("JOB",job)
+""".replace("\\$_","\x60$_").replace("FOLDER",folder).replace("JOB",job)
         ps(target,script)
         return folder
 
