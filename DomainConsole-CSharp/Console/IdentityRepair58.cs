@@ -11,6 +11,7 @@ public sealed class IdentityRepairAttempt58 {
  public string DeadlineUtc {get;set;}="";
  public string LastCheckUtc {get;set;}="";
  public List<string> Groups {get;set;}=new();
+ public string GroupNote {get;set;}="";
  public string Phase {get;set;}="Ожидается проверка";
  public string At {get;set;}="";
 }
@@ -20,26 +21,56 @@ public partial class MainWindow {
  static string MemberIdentity(ClientIdentity58 i)=>i.Machine.ToLowerInvariant()+"|"+i.Name.TrimEnd('.').ToLowerInvariant();
  void RememberDiagnosticScope(ClientIdentity58 identity){
   if(!IdentityPolicy58.Usable(identity)||manualIdentityScopes.ContainsKey(identity.Key))return;
-  var retained=identities58.Values.Select(x=>x.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+  var retained=identities58.Values.Select(x=>x.Key).Concat(identityRepairs58.Values.Where(a=>a.Key.LastIndexOf('|')>0).Select(a=>a.Key[..a.Key.LastIndexOf('|')])).ToHashSet(StringComparer.OrdinalIgnoreCase);
   foreach(var key in manualIdentityScopes.Keys.Where(k=>!retained.Contains(k)).ToList())manualIdentityScopes.Remove(key);
   manualIdentityScopes[identity.Key]=new();Store.Write("identity-scope-approvals.json",manualIdentityScopes);
  }
+ readonly Dictionary<string,CancellationTokenSource> identityRepairStops=new(StringComparer.OrdinalIgnoreCase);
+ void StopIdentityRepair58(string host){
+  var anchor=RepairAnchor58(host);
+  if(anchor==null||!identityRepairStops.TryGetValue(anchor.Key,out var stop))return;
+  stop.Cancel();
+  manualIdentityScopes[anchor.Key]=new();
+  Store.Write("identity-scope-approvals.json",manualIdentityScopes);
+  Event31(host,"identity-stop58",anchor.Key,"Остановлена передача новым участникам","Info","Уже принятые клиентами задания завершают восстановление служб.");
+ }
  readonly HashSet<string> identityRepairBusy58=new(StringComparer.OrdinalIgnoreCase);
+ // A solitary returning clone can extend only a previously proven, explicitly approved repair.
+ List<ClientIdentity58> RepairCandidates58(ClientIdentity58 seen,bool manual){
+  var now=DateTimeOffset.UtcNow;
+  var members=IdentityPolicy58.Participants(identities58.Values,seen,now);
+  manualIdentityScopes.TryGetValue(seen.Key,out var approved);
+  bool confirmed=IdentityPolicy58.Confirmed(members,seen,now);
+  bool established=approved?.Distinct().Count()>=2&&identityRepairs58.Values.Any(a=>a.Key.StartsWith(seen.Key+"|",StringComparison.OrdinalIgnoreCase)&&a.JobId.Length>0);
+  if(manual&&(confirmed||established)||!manual&&approved==null&&confirmed)return members;
+  return members.Where(i=>approved?.Contains(MemberIdentity(i))==true).ToList();
+ }
+ ClientIdentity58? RepairAnchor58(string owner){
+  if(identities58.TryGetValue(owner,out var current)&&compromisedIds58.Contains(current.Key))return current;
+  var past=RepairGroupFor(owner).FirstOrDefault();
+  if(past==null||past.Key.LastIndexOf('|')<1)return null;
+  var key=past.Key[..past.Key.LastIndexOf('|')];
+  return identities58.Values.FirstOrDefault(i=>i.Key==key&&i.Fresh(DateTimeOffset.UtcNow));
+ }
  async Task RepairIdentityGroup58(string host,bool manual){
-  if(closing||App.RecoveryPending57||!identities58.TryGetValue(host,out var observed)||!compromisedIds58.Contains(observed.Key))return;
+  using var foreground=manual?PollingControl43.Manual56("identity"):null;
+  var observed=manual?RepairAnchor58(host):identities58.GetValueOrDefault(host);
+  if(closing||App.RecoveryPending57||observed==null||!compromisedIds58.Contains(observed.Key))return;
   if(!Guid.TryParse(observed.SusClientId,out var oldGuid)||oldGuid==Guid.Empty||!identityRepairBusy58.Add(observed.Key))return;
+  using var stop=new CancellationTokenSource();identityRepairStops[observed.Key]=stop;refreshSurvey?.Invoke();
   try{
-   var participants=IdentityPolicy58.Participants(identities58.Values,observed,DateTimeOffset.UtcNow);
-   bool confirmed=IdentityPolicy58.Confirmed(participants,observed,DateTimeOffset.UtcNow);
+   var participants=RepairCandidates58(observed,manual);
    manualIdentityScopes.TryGetValue(observed.Key,out var approved);
-   if(!confirmed||!manual&&approved!=null)participants=participants.Where(i=>approved?.Contains(MemberIdentity(i))==true).ToList();
    if(participants.Count==0)return;
-   if(manual&&MessageBox.Show(this,"Перерегистрировать всех обнаруженных участников общего ID?\n"+string.Join("\n",participants.Select(x=>x.Name))+"\n\nНедоступные и занятые клиенты остаются в ожидании. Записи сервера не удаляются.","Перерегистрация клиентов",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
+   bool expanded=approved?.Count>0&&participants.Any(p=>!approved.Contains(MemberIdentity(p)));
+   string question=expanded?"Добавить новых участников в ранее подтверждённое исправление?":"Перерегистрировать обнаруженных участников общего ID?";
+   if(manual&&MessageBox.Show(this,question+"\n"+string.Join("\n",participants.Select(x=>x.Name))+"\n\nНедоступные и занятые клиенты остаются в ожидании. Записи сервера сохраняются.","Перерегистрация клиентов",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
    if(manual){
     manualIdentityScopes[observed.Key]=(approved??new List<string>()).Concat(participants.Select(MemberIdentity)).Distinct().ToList();
     Store.Write("identity-scope-approvals.json",manualIdentityScopes);
    }
    foreach(var identity in participants){
+    if(stop.IsCancellationRequested)break;
     var row=Computers.FirstOrDefault(r=>r.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase));if(row==null||row.Target.AdDisabled)continue;
     string key=identity.Key+"|"+identity.Machine.ToLowerInvariant();
     // A persisted attempt survives a crash, even if delivery acknowledgement was lost.
@@ -56,6 +87,7 @@ public partial class MainWindow {
       identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase="Ожидается завершение обслуживания или уточнение состояния",At=DateTimeOffset.UtcNow.ToString("o")};continue;
      }
     }catch(Exception ex){identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase="Проверка активности не завершена: "+ConnectionBrief31(ex.Message),At=DateTimeOffset.UtcNow.ToString("o")};continue;}
+    if(stop.IsCancellationRequested)break;
     if(!CurrentEndpoint(frozen.Target)||HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target)))continue;
     var job=new RemoteJob{Manual56=manual,AutoInstall54=false,AutoReboot=false,MicrosoftSource=false,OutputChannel="WSUS",Name="Перерегистрация общего SusClientId",Steps=new(){new(){Name="Перерегистрация клиента WSUS",Kind="PowerShell",TouchesUpdates=true,Code=RemoteService.IdentityRepairScript58(identity)}}};
     identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,JobId=job.Id,StartedUtc=DateTimeOffset.UtcNow.ToString("o"),DeadlineUtc=DateTimeOffset.UtcNow.AddMinutes(10).ToString("o"),Phase="Подготовлено; повторный сброс запрещён",At=DateTimeOffset.UtcNow.ToString("o")};
@@ -68,7 +100,7 @@ public partial class MainWindow {
    }
    Store.Write("identity-repairs58.json",identityRepairs58);
   }catch(Exception ex){Event31(host,"identity-repair58-error",ex.Message,"Перерегистрация требует проверки","Warning",ex.Message);}
-  finally{identityRepairBusy58.Remove(observed.Key);}
+  finally{identityRepairStops.Remove(observed.Key);identityRepairBusy58.Remove(observed.Key);refreshSurvey?.Invoke();}
  }
  void ConfirmIdentityRepairs58(){
   if(!SnapshotMatches58)return;

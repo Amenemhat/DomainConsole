@@ -26,6 +26,12 @@ public static class IdentityPolicy58 {
    .GroupBy(r=>Guid.Parse(r.Machine)).Where(g=>g.Select(r=>r.Name.TrimEnd('.')).Distinct(StringComparer.OrdinalIgnoreCase).Count()==1)
    .Select(g=>g.OrderByDescending(r=>r.At).First()).ToList();
  }
+ public static bool SameServer(string policy,WsusSettings settings){
+  if(!Uri.TryCreate(policy,UriKind.Absolute,out var client)||string.IsNullOrWhiteSpace(settings.Host))return false;
+  return client.Scheme==(settings.Ssl?"https":"http")&&client.Port==settings.Port&&client.Host.TrimEnd('.').Equals(settings.Host.Trim().TrimEnd('.'),StringComparison.OrdinalIgnoreCase);
+ }
+ public static bool IndependentNewId(IEnumerable<ClientIdentity58> known,ClientIdentity58 item,DateTimeOffset now)=>
+  !known.Any(other=>other.Key==item.Key&&other.Fresh(now)&&Usable(other)&&(!other.Machine.Equals(item.Machine,StringComparison.OrdinalIgnoreCase)||!other.Name.TrimEnd('.').Equals(item.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase)));
  public static bool RegistrationConfirmed(ClientIdentity58 identity,string oldId,string started,string serverId,string serverName,string reportTime,DateTimeOffset now)=>
   identity.Fresh(now)&&Guid.TryParse(identity.SusClientId,out var id)&&id!=Guid.Empty&&!identity.SusClientId.Equals(oldId,StringComparison.OrdinalIgnoreCase)&&
   identity.SusClientId.Equals(serverId,StringComparison.OrdinalIgnoreCase)&&identity.Name.TrimEnd('.').Equals(serverName.TrimEnd('.'),StringComparison.OrdinalIgnoreCase)&&

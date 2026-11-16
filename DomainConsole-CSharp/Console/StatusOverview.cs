@@ -150,11 +150,13 @@ public partial class MainWindow {
  readonly Dictionary<string,RebootAdmission> rebootAdmissions=new(StringComparer.OrdinalIgnoreCase);
  bool HoldForHeaderReboot(RemoteJob job,TargetRecord target)=>rebootWatches.TryGetValue(target.Host,out var watch)&&!watch.Done&&watch.JobId!=job.Id&&watch.FollowupId!=job.Id&&History.Any(j=>j.Id==watch.JobId&&j.Name=="Перезагрузка текущего компьютера");
  void RetireQueuedAfterBoot(string host,RebootWatch watch){
-  var pending=queue.ToList();queue.Clear();bool changed=false;
-  foreach(var item in pending){
-   if(!item.Target.Host.Equals(host,StringComparison.OrdinalIgnoreCase)||item.Job.Id==watch.FollowupId||item.Target.Status!="Queued"){queue.Enqueue(item);continue;}
-   item.Target.Status="InterventionRequired";item.Target.Output="Клиент перезагрузился. Задание не передано. Проверьте его актуальность перед новым запуском.";
-   Sync(item.Job);changed=true;
+  bool Retire(RemoteJob job,TargetRecord t)=>job.Id!=watch.JobId&&job.Id!=watch.FollowupId&&t.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&t.Status=="Queued";
+  var keep=queue.Where(x=>!Retire(x.Job,x.Target)).ToList();queue.Clear();foreach(var x in keep)queue.Enqueue(x);
+  bool changed=false;
+  foreach(var job in History){
+   var targets=job.Targets.Where(t=>Retire(job,t)).ToList();if(targets.Count==0)continue;
+   foreach(var target in targets){target.Status="InterventionRequired";target.Output="Клиент перезагрузился. Задание не передано. Проверьте его актуальность перед новым запуском.";}
+   Sync(job);changed=true;
   }
   if(changed)Save();
  }

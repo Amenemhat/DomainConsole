@@ -36,7 +36,7 @@ public partial class MainWindow {
    foreach(var peer in identities58.Values.Where(x=>x.Key==identity.Key))lines.Add(peer.Name+" · "+Display36.Date(peer.At));
   }
   if(SnapshotMatches58)foreach(var record in serverSnapshot58.Find(ConnectionStore.WsusName(row.Host)).Concat(serverSnapshot58.Records.Where(r=>identity!=null&&r.Id.Equals(identity.SusClientId,StringComparison.OrdinalIgnoreCase))).DistinctBy(r=>r.Id))lines.Add("WSUS: "+record.Name+" · ID "+record.Id+" · отчёт "+Display36.Date(record.Summary?.LastReportedUtc??""));
-  foreach(var attempt in identityRepairs58.Values.Where(a=>a.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)))lines.Add("Перерегистрация: "+attempt.Phase+" · "+Display36.Date(attempt.At)+"\nПрежний ID: "+attempt.OldId+"\nНовый ID: "+(attempt.NewId.Length>0?attempt.NewId:"ещё не прочитан")+"\nПроверка до: "+Display36.Date(attempt.DeadlineUtc)+"\nГруппы новой записи: "+(attempt.Groups.Count>0?string.Join(", ",attempt.Groups):"ещё не прочитаны"));
+  foreach(var attempt in identityRepairs58.Values.Where(a=>a.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)))lines.Add("Перерегистрация: "+attempt.Phase+" · "+Display36.Date(attempt.At)+(attempt.GroupNote.Length>0?"\n"+attempt.GroupNote:"")+"\nПрежний ID: "+attempt.OldId+"\nНовый ID: "+(attempt.NewId.Length>0?attempt.NewId:"ещё не прочитан")+"\nПроверка до: "+Display36.Date(attempt.DeadlineUtc)+"\nГруппы новой записи: "+(attempt.Groups.Count>0?string.Join(", ",attempt.Groups):"ещё не прочитаны"));
   lines.Add("Ручная диагностика читает данные. Изменение ID обнаруженных участников требует подтверждения состава группы.");
   lines.Add("Сначала подтвердите связь участников. Одинаковое имя или IP сами по себе не доказывают общий ID. Старые записи сервера не удаляются. При серверном назначении групп новая запись может потребовать повторного назначения групп администратором WSUS.");
   return string.Join("\n\n",lines);}
@@ -61,18 +61,24 @@ public partial class MainWindow {
   pages.Items.Add(new TabItem{Header="Подробности",Content=output});
   void Refresh(){
    bool owner=survey.Owner.Equals(row.Host,StringComparison.OrdinalIgnoreCase);
-   bool busy=surveyRun!=null;peers.IsEnabled=all.IsEnabled=!busy;stop.IsEnabled=busy;resume.IsEnabled=!busy&&owner&&survey.Results.Count<survey.Hosts.Count;
-   identities58.TryGetValue(row.Host,out var current);
+   var anchor=RepairAnchor58(row.Host);
+   bool repairing=anchor!=null&&identityRepairBusy58.Contains(anchor.Key);
+   bool busy=surveyRun!=null||repairing;peers.IsEnabled=all.IsEnabled=!busy;stop.IsEnabled=busy;resume.IsEnabled=!busy&&owner&&survey.Results.Count<survey.Hosts.Count;
+   var current=anchor;
    var members=current==null?new List<ClientIdentity58>():IdentityPolicy58.Participants(identities58.Values,current,DateTimeOffset.UtcNow);
    bool confirmed=current!=null&&IdentityPolicy58.Confirmed(members,current,DateTimeOffset.UtcNow);
    bool approved=current!=null&&manualIdentityScopes.TryGetValue(current.Key,out var allowed)&&members.Any(m=>allowed.Contains(MemberIdentity(m)));
-   repair.IsEnabled=!busy&&(confirmed||approved);
-   repair.Content=confirmed?"Исправить общий ID · подтверждённых участников: "+members.Count:approved?"Продолжить ранее согласованное исправление":"Исправить подтверждённый конфликт";
+   var candidates=current==null?new List<ClientIdentity58>():RepairCandidates58(current,true);
+   bool expanded=current!=null&&manualIdentityScopes.TryGetValue(current.Key,out var existing)&&existing.Count>0&&candidates.Any(p=>!existing.Contains(MemberIdentity(p)));
+   repair.IsEnabled=!busy&&candidates.Count>0;
+   repair.Content=expanded?"Подтвердить расширение группы · "+string.Join(", ",candidates.Select(p=>p.Name)):confirmed?"Исправить общий ID · подтверждённых участников: "+members.Count:approved?"Продолжить ранее согласованное исправление":"Исправить подтверждённый конфликт";
    var attempts=RepairGroupFor(row.Host);verify.IsEnabled=!busy&&attempts.Count>0;
    var coverage=owner?$"{(survey.Domain?"Область AD":"Клиент и известные кандидаты")} · проверено {survey.Results.Count} из {survey.Hosts.Count} · ожидают {survey.Hosts.Count-survey.Results.Count} · общий ID подтверждён у {(confirmed?members.Count:0)}": "Выберите область проверки.";
    int failed=owner?survey.Results.Count(p=>p.Value.StartsWith("Не удалось")||p.Value.StartsWith("Неполные")||p.Value.StartsWith("Пропущен")):0;
+   int complete=attempts.Count(a=>a.Phase=="Подтверждено");
+   string groupState=attempts.Count==0?"":complete==attempts.Count?" · регистрации подтверждены":complete>0?" · частично выполнено":" · ожидается подтверждение";
    string fixedCount=attempts.Count>0?$" · регистрация подтверждена у {attempts.Count(a=>a.Phase=="Подтверждено")} из {attempts.Count}":"";
-   headline.Text=coverage+fixedCount+(owner?" · без подтверждения "+failed+"\n"+survey.ScopeMessage+(survey.Started==default?"":" · "+Age((busy?DateTimeOffset.UtcNow:survey.Updated)-survey.Started))+"\n"+survey.ServerResult:"");
+   headline.Text=coverage+fixedCount+groupState+(repairing?" · передаётся исправление":"")+(owner?" · без подтверждения "+failed+"\n"+survey.ScopeMessage+(survey.Started==default?"":" · "+Age((busy?DateTimeOffset.UtcNow:survey.Updated)-survey.Started))+"\n"+survey.ServerResult:"");
    if(owner)table.ItemsSource=survey.Hosts.Select(h=>{
     var known=identities58.GetValueOrDefault(h);
     bool done=survey.Results.TryGetValue(h,out var result);
@@ -83,7 +89,7 @@ public partial class MainWindow {
   }
   peers.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,false));all.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,true));
   verify.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,false,verifyRegistration:true));
-  stop.Click+=(s,a)=>surveyRun?.Cancel();resume.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,survey.Domain,true));
+  stop.Click+=(s,a)=>{surveyRun?.Cancel();StopIdentityRepair58(row.Host);};resume.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,survey.Domain,true));
   repair.Click+=async(s,a)=>{await RepairIdentityGroup58(row.Host,true);Refresh();};
   window.Loaded+=(s,a)=>{refreshSurvey=Refresh;Refresh();};Refresh();return window;
  }

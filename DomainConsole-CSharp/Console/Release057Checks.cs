@@ -55,6 +55,16 @@ public partial class MainWindow {
    delayed.SetResult(reports[0]);await run;
    if(survey.Results.Count!=5||survey.Hosts.Count!=5||reads.Distinct().Count()!=5||reads.Count!=5||History.Count!=jobCount||!manualIdentityScopes.TryGetValue(key,out var allowed)||allowed.Count!=0)throw new Exception("Scoped WSUS identity survey lost candidates or authorized a write");
    if(!IdentityPolicy58.Confirmed(identities58.Values,reports[0],DateTimeOffset.UtcNow))throw new Exception("Five fresh identities not confirmed");
+   var repairKey=key+"|"+reports[0].Machine;
+   var established=new IdentityRepairAttempt58{Key=repairKey,Host=reports[0].Host,OldId=id,JobId="lab-proof"};
+   try{
+    manualIdentityScopes[key]=reports.Take(4).Select(MemberIdentity).ToList();
+    identityRepairs58[repairKey]=established;
+    foreach(var repaired in reports.Take(4)){var after=Store.Clone(repaired);after.SusClientId=Guid.NewGuid().ToString();identities58[repaired.Host]=after;}
+    if(RepairAnchor58(rows[0].Host)?.Host!=rows[4].Host||RepairCandidates58(reports[4],false).Count!=0||RepairCandidates58(reports[4],true).Count!=1)throw new Exception("Returning clone was lost or silently authorized");
+    var replacement=Store.Clone(reports[4]);replacement.SusClientId=identities58[reports[0].Host].SusClientId;
+    if(IdentityPolicy58.IndependentNewId(identities58.Values,replacement,DateTimeOffset.UtcNow))throw new Exception("Another member already uses the replacement ID");
+   }finally{identityRepairs58.Remove(repairKey);}
    var checkpoint=Store.Read("identity-survey.json",new IdentitySurvey());
    if(checkpoint.Owner!=rows[0].Host||checkpoint.Results.Count!=5||checkpoint.ServerName!=rows[1].Host)throw new Exception("Survey checkpoint not restored");
   }finally{

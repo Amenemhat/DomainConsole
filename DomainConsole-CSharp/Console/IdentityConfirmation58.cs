@@ -23,9 +23,16 @@ public partial class MainWindow {
   if(changed)Store.Write("identity-repairs58.json",identityRepairs58);
  }
  bool CompleteIdentityRegistration58(IdentityRepairAttempt58 attempt,ClientIdentity58 identity,IdentityServerReply58 reply){
-  if(compromisedIds58.Contains(identity.Key)||!IdentityPolicy58.RegistrationConfirmed(identity,attempt.OldId,attempt.StartedUtc.Length>0?attempt.StartedUtc:attempt.At,reply.Id,reply.Name,reply.ReportedUtc,DateTimeOffset.UtcNow))return false;
+  if(attempt.JobId.Length==0||!IdentityPolicy58.SameServer(identity.Server,ReadWsus())||!attempt.Key.StartsWith(identity.Key[..(identity.Key.LastIndexOf('|')+1)]+attempt.OldId+"|",StringComparison.OrdinalIgnoreCase)||!IdentityPolicy58.IndependentNewId(identities58.Values,identity,DateTimeOffset.UtcNow)||compromisedIds58.Contains(identity.Key)||!IdentityPolicy58.RegistrationConfirmed(identity,attempt.OldId,attempt.StartedUtc.Length>0?attempt.StartedUtc:attempt.At,reply.Id,reply.Name,reply.ReportedUtc,DateTimeOffset.UtcNow))return false;
+  // A bulk overview contains no group data. Read the exact target before reporting registration.
+  if(reply.Groups.Count==0&&reply.GroupError.Length==0)return false;
+  var expected=identity.TargetGroup.Split(';',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries);
+  attempt.GroupNote=reply.GroupError.Length>0?"Не удалось прочитать группы WSUS: "+reply.GroupError:
+   identity.TargetGroupEnabled!=1?"Проверьте серверное назначение групп у администратора WSUS.":
+   expected.Any(g=>!reply.Groups.Contains(g,StringComparer.OrdinalIgnoreCase))?"Новая запись зарегистрирована. Требуется проверить назначение группы "+identity.TargetGroup:"";
   attempt.NewId=identity.SusClientId;attempt.Groups=reply.Groups;attempt.Phase="Подтверждено";attempt.At=DateTimeOffset.UtcNow.ToString("o");
   Event31(attempt.Host,"identity-confirmed58",attempt.NewId,"Новая регистрация и отчёт WSUS подтверждены","Success","Прежний ID: "+attempt.OldId+"; новый ID: "+attempt.NewId+"; имя: "+identity.Name+"; отчёт: "+Display36.Date(reply.ReportedUtc)+". Группы: "+(reply.Groups.Count>0?string.Join(", ",reply.Groups):"не прочитаны")+(reply.GroupError.Length>0?". "+reply.GroupError:""),scope:attempt.JobId);
+  if(attempt.GroupNote.Length>0)Event31(attempt.Host,"identity-group58",attempt.NewId,"Проверить группы новой записи WSUS","Warning",attempt.GroupNote,scope:attempt.JobId);
   return true;
  }
  List<IdentityRepairAttempt58> RepairGroupFor(string host){

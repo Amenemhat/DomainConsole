@@ -30,6 +30,7 @@ public partial class MainWindow {
    foreach(var peer in identities58.Values.Where(p=>p.Key==identity.Key)){names.Add(peer.Host);names.Add(peer.Name);}
    if(SnapshotMatches58)foreach(var record in serverSnapshot58.Records.Where(r=>r.Id.Equals(identity.SusClientId,StringComparison.OrdinalIgnoreCase)))names.Add(record.Name);
   }
+  foreach(var past in RepairGroupFor(selected.Host))names.Add(past.Host);
   if(survey.Owner.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)&&survey.ServerName.Length>0)names.Add(survey.ServerName);
   var lookup=names.Select(n=>n.TrimEnd('.')).ToHashSet(StringComparer.OrdinalIgnoreCase);
   return Computers.Where(r=>!r.Target.AdDisabled&&(domain||lookup.Contains(r.Host.TrimEnd('.'))||lookup.Contains(r.Name.TrimEnd('.'))||lookup.Contains(ConnectionStore.WsusName(r.Host).TrimEnd('.')))).OrderByDescending(r=>r.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)).Select(r=>r.Host).Distinct(StringComparer.OrdinalIgnoreCase);
@@ -76,7 +77,7 @@ public partial class MainWindow {
  async void OpenIdentitySurvey(ComputerRow selected){
   if(surveyWindow!=null){surveyWindow.Activate();return;}
   var window=IdentityWindow58();surveyWindow=window;
-  window.Closed+=(s,e)=>{surveyRun?.Cancel();surveyWindow=null;refreshSurvey=null;};window.Show();
+  window.Closed+=(s,e)=>{surveyWindow=null;refreshSurvey=null;};window.Show();
   if(surveyRun==null&&(!survey.Owner.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)||!survey.Domain&&survey.Results.Count==survey.Hosts.Count))await Guard(()=>RunIdentitySurvey(selected,false));
  }
 }
