@@ -34,7 +34,7 @@ def exercise(root, ps, session, evidence, save):
             time.sleep(1)
         raise TimeoutError("Missing guest evidence: "+script[:80]+", last response "+last[:120])
 
-    def launch(job):
+    def stage(job):
         data=template.replace("{{REBOOT_JOB}}",job).encode("utf-8-sig")
         folder="C:\\ProgramData\\DomainConsoleCSharp\\"+job
         destination=folder+"\\body.ps1"
@@ -50,20 +50,25 @@ $wrapped="try { & '$folder\body.ps1' } catch { [IO.File]::WriteAllText('$folder\
 [IO.File]::WriteAllText("$folder\run.ps1",$wrapped,(New-Object Text.UTF8Encoding($true)))
 $a=New-ScheduledTaskAction -Execute powershell.exe -Argument "-NoProfile -ExecutionPolicy Bypass -File $folder\run.ps1"
 Register-ScheduledTask -TaskName 'DCLab-Priority-JOB' -Action $a -User SYSTEM -RunLevel Highest -Force|Out-Null
-Start-ScheduledTask -TaskName 'DCLab-Priority-JOB'
 """.replace("\\$_","\x60$_").replace("FOLDER",folder).replace("JOB",job)
         ps(target,script)
+        return job,folder
+
+    def launch(staged):
+        job,folder=staged
+        ps(target,"Start-ScheduledTask -TaskName 'DCLab-Priority-"+job+"'")
         return folder
 
     def receipt(folder):
         return json.loads(watch("if(Test-Path '"+folder+"\\reboot-plan.json'){Get-Content -Raw '"+folder+"\\reboot-plan.json'}"))
 
     # Keep a real concurrent WinRM read alive while scheduling the first request.
+    staged=[stage(str(uuid.uuid4())) for _ in range(3)]
     pool=concurrent.futures.ThreadPoolExecutor(max_workers=1)
     try:
         hold=pool.submit(session(target).run_ps,"'ready'|Set-Content C:\\DomainConsoleLab\\held-read.txt;Start-Sleep -Seconds 120")
         watch("if(Test-Path C:\\DomainConsoleLab\\held-read.txt){'busy'}")
-        cancelled=launch(str(uuid.uuid4()))
+        cancelled=launch(staged[0])
         first=receipt(cancelled)
         if hold.done() or first.get("DispatchUtc"):
             raise RuntimeError("The independent live read was not active during the delivery")
@@ -73,11 +78,11 @@ Start-ScheduledTask -TaskName 'DCLab-Priority-JOB'
             raise RuntimeError("Cancelled countdown rebooted Windows")
         info["cancelled_while_reading"]=True
         save()
-        active=launch(str(uuid.uuid4()))
+        active=launch(staged[1])
         acknowledged=receipt(active)
         if hold.done() or not acknowledged.get("BeforeBootUtc"):
             raise RuntimeError("Missing live reboot admission while WinRM read is active")
-        duplicate=launch(str(uuid.uuid4()))
+        duplicate=launch(staged[2])
         rejected=watch("if(Test-Path '"+duplicate+"\\error.txt'){Get-Content -Raw -Encoding UTF8 '"+duplicate+"\\error.txt'}")
         if ps(target,"Test-Path '"+duplicate+"\\reboot-plan.json'")!="False":
             raise RuntimeError("Duplicate request acquired its own reboot receipt")

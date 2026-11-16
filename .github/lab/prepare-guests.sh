@@ -11,12 +11,16 @@ sudo test -c /dev/kvm
 OPENSSL_CONF="$PWD/.github/lab/ntlm-openssl.cnf" /usr/bin/python3 -c 'import hashlib; assert hashlib.new("md4", "password".encode("utf-16-le")).hexdigest()=="8846f7eaee8fb117ad06bdd830b7586c"'
 
 sudo apt-get update -qq
-sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils seabios ovmf libguestfs-tools python3-winrm python3-pil libguestfs-perl ntfs-3g
+sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils seabios ovmf libguestfs-tools python3-winrm python3-pil libguestfs-perl ntfs-3g genisoimage
 # Reclaim space from unused SDKs on this disposable runner before writing seven overlays.
 sudo rm -rf /usr/local/lib/android/sdk /usr/share/dotnet /opt/ghc
 df -h "$lab"
 curl --fail --location --retry 3 --max-time 1200 'https://go.microsoft.com/fwlink/p/?clcid=0x409&country=us&culture=en-us&linkid=2195166' -o "$lab/windows.vhd"
-curl --fail --location --retry 3 --max-time 240 https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso -o "$lab/drivers.iso"
+if python3 .github/lab/driver-files.py "$lab/drivers/NetKVM/2k22/amd64"; then
+  genisoimage -quiet -R -J -o "$lab/drivers.iso" "$lab/drivers"
+else
+  curl --fail --silent --show-error --location --retry 2 --max-time 1200 https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso -o "$lab/drivers.iso"
+fi
 file "$lab/windows.vhd"
 qemu-img info "$lab/windows.vhd"
 sha256sum "$lab/windows.vhd" "$lab/drivers.iso"
