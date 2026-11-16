@@ -25,25 +25,33 @@ Save 'view-state.json' @{Host=$h;Tab=1}
 $live=Get-Content '.github/tests/domain-scenario/gui.ps1' -Raw -Encoding UTF8
 $functions=$live.Substring($live.IndexOf(' Add-Type -AssemblyName UIAutomationClient'),$live.IndexOf(' New-Item $data')-$live.IndexOf(' Add-Type -AssemblyName UIAutomationClient'))
 $wait=$live.Substring($live.IndexOf('function Wait-For('),$live.IndexOf('$process=$null')-$live.IndexOf('function Wait-For('))
-$start='$ErrorActionPreference="Stop";$lab="C:\DCLabAutomation";$process=$null;try{'+[Environment]::NewLine+$wait+$functions
+$discovery=Get-Content '.github/tests/window-discovery.ps1' -Raw -Encoding UTF8
+$start='$ErrorActionPreference="Stop";$lab="C:\DCLabAutomation";$process=$null;try{'+[Environment]::NewLine+$wait+$functions+[Environment]::NewLine+$discovery+[Environment]::NewLine
 $body=@'
  $process=Start-Process "$lab\package\DomainConsole.exe" -ArgumentList '--software-rendering' -WorkingDirectory "$lab\package" -PassThru
- $main=Wait-For {Element $root ([Windows.Automation.AutomationElement]::ProcessIdProperty) $process.Id} 'main' 70
+ $main=Wait-For {Application-Window "DomainConsole" $true} 'main' 70
  $id=Wait-For {Element $main ([Windows.Automation.AutomationElement]::AutomationIdProperty) 'HeaderIdentity58'} 'identity action' 45
  Click $id
- $w=Wait-For {Element $root ([Windows.Automation.AutomationElement]::NameProperty) 'Идентичность WSUS · CLONE1'} 'live identity dialog' 45
+ $w=Wait-For {Application-Window 'Идентичность WSUS · CLONE1'} 'live identity dialog' 45
  $w.GetCurrentPattern([Windows.Automation.WindowPattern]::Pattern).Close()
  $restart=Wait-For {Element $main ([Windows.Automation.AutomationElement]::AutomationIdProperty) 'HeaderReboot'} 'header reboot' 30
  $async=[PowerShell]::Create()
  [void]$async.AddScript('param($b) $b.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()').AddArgument($restart)
  $call=$async.BeginInvoke()
- $dialog=Wait-For {Element $root ([Windows.Automation.AutomationElement]::NameProperty) 'Перезагрузка · client1.isolated.invalid'} 'real reboot confirmation' 45
+ $dialog=Wait-For {Application-Window 'Перезагрузка · client1.isolated.invalid'} 'real reboot confirmation' 45
  $delay=Element $dialog ([Windows.Automation.AutomationElement]::ControlTypeProperty) ([Windows.Automation.ControlType]::Edit)
  $delay.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).SetValue('0')
  $dialog.GetCurrentPattern([Windows.Automation.WindowPattern]::Pattern).Close()
  [void]$async.EndInvoke($call);$async.Dispose()
  'PASS: actual identity window, live zero-delay confirmation and cancel in the same scheduled Windows desktop'|Set-Content "$lab\done"
-}catch{($_|Out-String)|Set-Content "$lab\error"}finally{if($process -and !$process.HasExited){$process.Kill()}}
+}catch{
+ $problem=($_|Out-String)
+ if($process){$process.Refresh();$problem+="
+AppExited=$($process.HasExited) AppSession=$($process.SessionId) HostSession=$((Get-Process -Id $PID).SessionId)"
+ if(!$process.HasExited){$problem+="
+Native windows="+[DCLabNativeWindows]::Inventory($process.Id)}}
+ $problem|Set-Content "$lab\error"
+}finally{if($process -and !$process.HasExited){$process.Kill()}}
 '@
 [IO.File]::WriteAllText("$root\operator.ps1",$start+$body,(New-Object Text.UTF8Encoding($true)))
 $user='DCLabAutomation'

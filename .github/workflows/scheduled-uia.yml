@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: ['lab/0.57-wsus']
-    paths: ['.github/workflows/scheduled-uia.yml','.github/tests/scheduled-uia.ps1']
+    paths: ['.github/workflows/scheduled-uia.yml','.github/tests/scheduled-uia.ps1','.github/tests/window-discovery.ps1']
 permissions:
   contents: read
   actions: read
