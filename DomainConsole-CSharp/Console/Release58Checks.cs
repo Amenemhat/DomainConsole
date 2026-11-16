@@ -9,6 +9,15 @@ public partial class MainWindow {
   if(LogViewer.LineTone("Проверка неполная: 0x80070005 — отказано в доступе")!="Warning")throw new Exception("Incomplete status check presented as installation failure");
   var row=Current();var prior=identities58.GetValueOrDefault(row.Host);var selected=MainTabs.SelectedItem;int theme=Theme.Current;var priorSnapshot=serverSnapshot58;
   var fixture=new ClientIdentity58{Host=row.Host,Name="identity-fixture.invalid",Machine="11111111-1111-1111-1111-111111111111",Server="http://wsus.invalid:8530",UseWUServer=1,SusClientId="22222222-2222-2222-2222-222222222222",At=DateTimeOffset.UtcNow.ToString("o")};
+  var approved=Store.Clone(fixture);
+  approved.At=DateTimeOffset.UtcNow.AddMinutes(-12).ToString("o");
+  if(!IdentityPolicy58.SameApprovedDevice(approved,fixture,DateTimeOffset.UtcNow))throw new Exception("A fresh reading of an approved device was rejected after a long survey");
+  foreach(var change in new Action<ClientIdentity58>[]{
+   r=>r.Machine=Guid.NewGuid().ToString(),r=>r.Name="different.invalid",r=>r.SusClientId=Guid.NewGuid().ToString(),
+   r=>r.Server="http://different.invalid:8530",r=>r.UseWUServer=0,r=>r.At=approved.At,r=>r.Error="unavailable"}){
+   var different=Store.Clone(fixture);change(different);
+   if(IdentityPolicy58.SameApprovedDevice(approved,different,DateTimeOffset.UtcNow))throw new Exception("A changed or stale device inherited the approved repair");
+  }
   bool hadConflict=compromisedIds58.Contains(fixture.Key);var timeoutKey="fixture-timeout58";
   try{
    identities58[row.Host]=fixture;

@@ -71,26 +71,47 @@ public partial class MainWindow {
     manualIdentityScopes[observed.Key]=(approved??new List<string>()).Concat(participants.Select(MemberIdentity)).Distinct().ToList();
     Store.Write("identity-scope-approvals.json",manualIdentityScopes);
    }
+   var verifiedSources=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
    foreach(var identity in participants){
     if(stop.IsCancellationRequested)break;
     var row=Computers.FirstOrDefault(r=>r.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase));if(row==null||row.Target.AdDisabled)continue;
     string key=identity.Key+"|"+identity.Machine.ToLowerInvariant();
     // A persisted attempt survives a crash, even if delivery acknowledgement was lost.
     if(identityRepairs58.TryGetValue(key,out var prior)&&prior.JobId.Length>0&&(!manual||!History.Any(j=>j.Id==prior.JobId&&j.Targets.All(t=>t.Status is "LaunchRejected" or "AccessDenied")))){if(manual)Notify(identity.Name+": попытка ещё активна; проверьте задание "+prior.JobId);continue;}
-    if(!identity.Fresh(DateTimeOffset.UtcNow)||identity.Error.Length>0||!ConnectionFresh(row.Host)||HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target))){
-     identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase="Ожидается свежая проверка и завершение активных заданий",At=DateTimeOffset.UtcNow.ToString("o")};continue;
+    void Defer(string reason){
+     identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase=reason,At=DateTimeOffset.UtcNow.ToString("o")};
+     Store.Write("identity-repairs58.json",identityRepairs58);refreshSurvey?.Invoke();
     }
-    if(identity.UseWUServer!=1){identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase="Политика UseWUServer=1 не подтверждена; требуется диагностика источника",At=DateTimeOffset.UtcNow.ToString("o")};continue;}
     var frozen=new ComputerRow(ConnectionStore.Capture(row.Target));
-    if(!ConnectionStore.CanConnect(frozen.Target))continue;
+    bool Available()=>!closing&&!stop.IsCancellationRequested&&!row.Target.AdDisabled&&CurrentEndpoint(frozen.Target)&&CurrentIdentity(frozen.Target);
+    if(!Available()||!ConnectionStore.CanConnect(frozen.Target)){Defer("Подключение к согласованной цели недоступно");continue;}
+    if(HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target))){Defer("Ожидается завершение активного задания");continue;}
+    if(!identity.Fresh(DateTimeOffset.UtcNow)||!ConnectionFresh(row.Host)){
+     if(!manual){Defer("Ожидается свежая проверка клиента");continue;}
+     var began=DateTimeOffset.UtcNow;
+     try{
+      var current=await remote.ReadIdentity(frozen.Target,stop.Token);
+      await ResolveIdentitySource(current,ReadWsus(),verifiedSources,stop.Token);
+      if(!Available())continue;
+      current.Address=string.IsNullOrWhiteSpace(frozen.Target.ConnectionAddress)?frozen.Host:frozen.Target.ConnectionAddress;
+      ObserveIdentity58(row.Host,current,false);
+      if(!IdentityPolicy58.SameApprovedDevice(identity,current,DateTimeOffset.UtcNow)){
+       Defer("Участник, прежний ID или источник WSUS больше не подтверждены. Повторите диагностику");continue;
+      }
+      ConnectionSucceeded(row.Host,began,true);
+     }catch(OperationCanceledException) when(stop.IsCancellationRequested){break;}
+     catch(Exception ex){Defer("Не удалось повторно прочитать согласованного клиента: "+ConnectionBrief31(ex.Message));continue;}
+    }
+    if(identity.UseWUServer!=1){Defer("Политика UseWUServer=1 не подтверждена");continue;}
     try{
      var live=await remote.LiveUpdates(frozen.Target);
      if(live.Busy||live.Jobs.Count>0||live.Limitation.Length>0||live.InstallationEvidence.Length>0){
-      identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase="Ожидается завершение обслуживания или уточнение состояния",At=DateTimeOffset.UtcNow.ToString("o")};continue;
+      var reason=live.Limitation.Length>0?live.Limitation:live.InstallationEvidence.Length>0?live.InstallationEvidence:live.Jobs.Count>0?"активное задание клиента":"Windows Update занят";
+      Defer("Ожидается завершение обслуживания или уточнение состояния · "+reason);continue;
      }
-    }catch(Exception ex){identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase="Проверка активности не завершена: "+ConnectionBrief31(ex.Message),At=DateTimeOffset.UtcNow.ToString("o")};continue;}
+    }catch(Exception ex){Defer("Проверка активности не завершена: "+ConnectionBrief31(ex.Message));continue;}
     if(stop.IsCancellationRequested)break;
-    if(!CurrentEndpoint(frozen.Target)||HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target)))continue;
+    if(!Available()||HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target)))continue;
     var job=new RemoteJob{Manual56=manual,AutoInstall54=false,AutoReboot=false,MicrosoftSource=false,OutputChannel="WSUS",Name="Перерегистрация общего SusClientId",Steps=new(){new(){Name="Перерегистрация клиента WSUS",Kind="PowerShell",TouchesUpdates=true,Code=RemoteService.IdentityRepairScript58(identity)}}};
     identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Manual=manual,JobId=job.Id,StartedUtc=DateTimeOffset.UtcNow.ToString("o"),DeadlineUtc=DateTimeOffset.UtcNow.AddMinutes(10).ToString("o"),Phase="Подготовлено; повторный сброс запрещён",At=DateTimeOffset.UtcNow.ToString("o")};
     Store.Write("identity-repairs58.json",identityRepairs58);

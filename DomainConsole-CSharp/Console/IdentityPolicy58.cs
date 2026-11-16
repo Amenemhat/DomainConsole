@@ -25,6 +25,11 @@ public sealed class ClientIdentity58 {
 }
 public static class IdentityPolicy58 {
  public static bool Usable(ClientIdentity58 r)=>r.UseWUServer==1&&r.Error.Length==0&&Guid.TryParse(r.SusClientId,out var id)&&id!=Guid.Empty&&Guid.TryParse(r.Machine,out var hardware)&&hardware!=Guid.Empty&&hardware!=Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff")&&Uri.TryCreate(r.Server,UriKind.Absolute,out var uri)&&(uri.Scheme=="http"||uri.Scheme=="https")&&!string.IsNullOrWhiteSpace(r.Name);
+ public static bool SameApprovedDevice(ClientIdentity58 approved,ClientIdentity58 current,DateTimeOffset now)=>
+  current.Fresh(now)&&Usable(current)&&current.Key==approved.Key&&
+  current.Name.TrimEnd('.').Equals(approved.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase)&&
+  Guid.TryParse(approved.Machine,out var hardware)&&hardware==Guid.Parse(current.Machine)&&
+  current.Server.TrimEnd('/').Equals(approved.Server.TrimEnd('/'),StringComparison.OrdinalIgnoreCase);
  public static List<ClientIdentity58> Participants(IEnumerable<ClientIdentity58> records,ClientIdentity58 selected,DateTimeOffset now){
   // Two aliases returning one hardware ID and one FQDN identify one device.
   // A hardware ID reported by different FQDNs is ambiguous, including on cloned VMs.
