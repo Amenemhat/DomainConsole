@@ -47,6 +47,7 @@ jobs:
           ConvertTo-Json -InputObject $rows -Depth 4|Set-Content "$data/computers.json"
           'true'|Set-Content "$data/poll-paused41.json"
           'true'|Set-Content "$data/auto-service31.json"
+          '{"Host":"wsus.survey.invalid","Port":8530,"Ssl":false}'|Set-Content "$data/wsus-settings.json"
           $env:DOMAINCONSOLE_PAUSE_SMOKE43='1'
           $env:DOTNET_STARTUP_HOOKS=(Resolve-Path SurveyDriver/Survey.dll).Path
           foreach($phase in 0,1){

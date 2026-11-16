@@ -69,7 +69,7 @@ internal class StartupHook
             Open(rows[0]);var d=Dialog();d.UpdateLayout();
             Check(Visual<DataGrid>(d).Single().Items.Count==6&&Combined(d).Contains("Серверный ID не проверен"),"reopened domain result displays the saved server outage and six actual survey rows");
             Check(history.Count==originalJobs && !File.Exists(Path.Combine(AppContext.BaseDirectory,"poll-network43.txt")),"opening saved diagnostics with master OFF creates no network transport");
-            d.Close();File.WriteAllText(path,JsonSerializer.Serialize(facts));return;
+            RepairCases.Exercise(win,rows,true,Check);d.Close();File.WriteAllText(path,JsonSerializer.Serialize(facts));return;
         }
         string shared=Guid.NewGuid().ToString(),mode="cancel";
         var hardware=rows.ToDictionary(Host,_=>Guid.NewGuid().ToString());
@@ -112,6 +112,6 @@ internal class StartupHook
         Check(heading.Contains("Идентификаторы проверенных устройств различаются")&&heading.Contains("Серверный ID не проверен"),"distinct client IDs and an unavailable server have independent visible findings");
         var table=Visual<DataGrid>(dialog).Single();
         Check(table.Items.Count==6&&File.Exists(Dat("identity-survey.json")),"all six new observations saved with the UI still open");
-        dialog.Close();File.WriteAllText(path,JsonSerializer.Serialize(facts));
+        RepairCases.Exercise(win,rows,false,Check);dialog.Close();File.WriteAllText(path,JsonSerializer.Serialize(facts));
     }
 }
