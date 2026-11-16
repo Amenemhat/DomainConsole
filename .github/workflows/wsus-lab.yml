@@ -43,6 +43,8 @@ jobs:
         run: bash .github/lab/fetch-package.sh
       - name: Personalize seven independent Windows system disks
         run: bash .github/lab/wait-for-guests.sh disks 30
+      - name: Finish Windows setup on each disk with full guest resources
+        run: bash .github/lab/wait-for-guests.sh specialized 100
       - name: Boot seven Windows guests and validate their independent WinRM sessions
         run: bash .github/lab/wait-for-guests.sh winrm 80
       - name: Promote the domain controller and join two OUs

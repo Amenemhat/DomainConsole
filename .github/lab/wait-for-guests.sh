@@ -14,7 +14,9 @@ for line in [s for s in lines if not s.startswith("::add-mask::")][-int(sys.argv
     print(line)
 PYTAIL
 }
+next_report=$((SECONDS + 90))
 while [[ $SECONDS -lt $deadline ]]; do
+  if [[ $SECONDS -ge $next_report && -s "$lab/guest.log" ]]; then safe_tail 5; next_report=$((SECONDS + 90)); fi
   if [[ -f "$lab/$milestone.ready" ]]; then echo "$milestone ready"; exit 0; fi
   if [[ -f "$lab/guest-exit" ]]; then
     # Never emit the add-mask command containing the temporary domain password.

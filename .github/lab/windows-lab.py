@@ -35,6 +35,7 @@ os.environ["NO_PROXY"]=os.environ["no_proxy"]=",".join(["localhost","127.0.0.1",
 evidence = {"source": os.environ["GITHUB_SHA"], "booted": {}, "checks": {}}
 evidence_file = root / "evidence.json"
 processes = {}
+hardware_ids={node:str(uuid.uuid4()) for node in nodes}
 qemu = shutil.which("qemu-system-x86_64")
 base = root / "windows.vhd"
 
@@ -105,11 +106,11 @@ def prepare(node):
     call("ip", "link", "set", tap, "up")
 
 
-def boot(node, gpt):
-    memory = 3584 if node == "DCWSUS" else 1536
+def boot(node, gpt, specialize=False):
+    memory = 3584 if specialize or node == "DCWSUS" else 2048 if node=="DCAD" else 1536
     tap = "dclab" + str(nodes[node])
     args = [qemu, "-accel", "kvm", "-cpu", "host", "-smp", "2", "-m", str(memory),
-            "-machine", "q35" if gpt else "pc", "-uuid", str(uuid.uuid4()), "-name", node,
+            "-machine", "q35" if gpt else "pc", "-uuid", hardware_ids[node], "-name", node,
             "-drive", f"file={root / (node + '.qcow2')},format=qcow2,if=ide",
             "-cdrom", str(root / "drivers.iso"), "-boot", "c", "-display", "none",
             "-monitor", f"unix:{root / (node + '.sock')},server=on,wait=off", "-serial", "none",
@@ -118,7 +119,8 @@ def boot(node, gpt):
     if gpt:
         code = Path("/usr/share/OVMF/OVMF_CODE_4M.fd")
         nvram = root / (node + "-vars.fd")
-        shutil.copy("/usr/share/OVMF/OVMF_VARS_4M.fd", nvram)
+        if not nvram.exists():
+            shutil.copy("/usr/share/OVMF/OVMF_VARS_4M.fd", nvram)
         args += ["-drive", f"if=pflash,format=raw,readonly=on,file={code}", "-drive", f"if=pflash,format=raw,file={nvram}"]
     with (root / (node + ".log")).open("w") as output:
         processes[node] = subprocess.Popen(args, stdout=output, stderr=output)
@@ -131,10 +133,30 @@ def session(node, domain=False):
 
 
 def ps(node, script, domain=False):
-    result = session(node, domain).run_ps("$ErrorActionPreference='Stop';" + script)
-    if result.status_code:
-        raise RuntimeError(node + ": " + result.std_err.decode(errors="replace").replace(password, "***")[-2400:])
-    return result.std_out.decode("utf-8-sig", errors="replace").strip()
+    shell=session(node,domain)
+    command="$ErrorActionPreference='Stop';"+script
+    if len(command.encode("utf-16-le"))*4//3 < 7000:
+        result=shell.run_ps(command)
+        status,stdout,stderr=result.status_code,result.std_out,result.std_err
+    else:
+        protocol=shell.protocol
+        shell_id=protocol.open_shell()
+        try:
+            wrapper="$data=[Console]::In.ReadToEnd();&([ScriptBlock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($data))))"
+            encoded=base64.b64encode(wrapper.encode("utf-16-le")).decode()
+            command_id=protocol.run_command(shell_id,"powershell.exe",["-NoProfile","-NonInteractive","-EncodedCommand",encoded])
+            try:
+                stream=base64.b64encode(command.encode("utf-8"))
+                for start in range(0,len(stream),12000):
+                    protocol.send_command_input(shell_id,command_id,stream[start:start+12000],end=start+12000>=len(stream))
+                stdout,stderr,status=protocol.get_command_output(shell_id,command_id)
+            finally:
+                protocol.cleanup_command(shell_id,command_id)
+        finally:
+            protocol.close_shell(shell_id)
+    if status:
+        raise RuntimeError(node+": "+stderr.decode(errors="replace").replace(password,"***")[-2400:])
+    return stdout.decode("utf-8-sig",errors="replace").strip()
 
 
 def capture_console(node):
@@ -156,7 +178,7 @@ def capture_console(node):
     except (OSError,ValueError) as exc:
         log("Boot screen unavailable: "+str(exc))
 
-def wait(node, domain=False, minutes=24):
+def wait(node, domain=False, minutes=24, specialized=False):
     until = time.monotonic() + 60 * minutes
     last_problem="No reply"
     while time.monotonic() < until:
@@ -165,7 +187,10 @@ def wait(node, domain=False, minutes=24):
         try:
             with socket.create_connection((ip(node), 5985), timeout=2):
                 pass
-            actual = ps(node, "$env:COMPUTERNAME", domain)
+            probe="$env:COMPUTERNAME"
+            if specialized:
+                probe=r"if((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\State').ImageState -eq 'IMAGE_STATE_COMPLETE' -and (Test-Path C:\DomainConsoleLab\network-ready.txt)){$env:COMPUTERNAME}else{'Specializing'}"
+            actual = ps(node,probe,domain)
             last_problem="Unexpected guest name "+actual
             if actual == node:
                 evidence["booted"][node] = actual
@@ -231,19 +256,31 @@ def main():
         log("Creating distinct Windows guest " + node)
         prepare(node)
     checkpoint("disks")
-    # First drive one guest through specialization with the runner CPU to itself.
-    boot("DCWSUS",part=="gpt")
-    wait("DCWSUS",minutes=12)
+    gpt=part=="gpt"
     if bootstrap_only:
+        boot("DCWSUS",gpt,True)
+        wait("DCWSUS",minutes=12,specialized=True)
         checkpoint("winrm")
         return
-    remaining=[n for n in nodes if n!="DCWSUS"]
-    for start in range(0,len(remaining),3):
-        batch=remaining[start:start+3]
-        for node in batch:
-            boot(node, part=="gpt")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
-            list(pool.map(wait,batch))
+    # Specialization and OOBE require substantially more RAM than an idle member.
+    # Finish each pristine disk on its own, then start the already-configured machines.
+    for node in nodes:
+        log("Specialize "+node+" with the runner to itself")
+        boot(node,gpt,True)
+        wait(node,minutes=16,specialized=True)
+        if node=="DCWSUS":
+            if ps(node,"#"+("x"*6000)+"\n'private WinRM stdin ready'")!="private WinRM stdin ready":
+                raise RuntimeError("Long WinRM stdin transfer failed")
+            evidence["checks"]["bounded_winrm_stdin"]=True
+        ps(node,"shutdown.exe /s /t 2 /c 'Complete private lab image initialization'")
+        processes[node].wait(timeout=120)
+        processes.pop(node)
+        evidence.setdefault("specialized",{})[node]=evidence["booted"].pop(node)
+        save()
+    checkpoint("specialized")
+    for node in nodes:
+        boot(node,gpt)
+        wait(node,minutes=12)
     checkpoint("winrm")
     setup_domain()
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
