@@ -1,0 +1,42 @@
+name: Isolated Windows and WSUS lab
+on:
+  workflow_dispatch:
+  push:
+    branches: ['lab/0.57-wsus']
+    paths: ['.github/lab/**', '.github/workflows/wsus-lab.yml']
+permissions:
+  contents: read
+concurrency:
+  group: wsus-lab-057
+  cancel-in-progress: false
+jobs:
+  wsus:
+    runs-on: windows-2022
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - name: Provision real WSUS with WID on the disposable server
+        shell: powershell
+        run: ./.github/lab/wsus.ps1
+      - name: Verify the real client web service and administration API
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          [void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration')
+          $server=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530)
+          $http=Invoke-WebRequest -UseBasicParsing 'http://localhost:8530/ClientWebService/client.asmx?WSDL'
+          if($http.StatusCode -ne 200 -or !$server.Version){throw 'WSUS not ready'}
+          Write-Output "WSUS $($server.Version), client web service $($http.StatusCode), $($server.GetComputerTargets().Count) registered clients"
+  guests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 175
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check virtualization and official evaluation media
+        run: |
+          set -eu
+          sudo test -c /dev/kvm
+          df -h / /mnt
+          url='https://go.microsoft.com/fwlink/p/?clcid=0x409&country=us&culture=en-us&linkid=2195166'
+          curl --fail --location --retry 2 --max-time 80 --range 0-511 --max-filesize 1048576 "$url" -o "$RUNNER_TEMP/vhd-header" -w 'HTTP %{http_code} %{url_effective}\n'
+          file "$RUNNER_TEMP/vhd-header"
