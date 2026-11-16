@@ -36,7 +36,7 @@ public partial class MainWindow {
    return assessment;
   }
   if(!readyProofs43.TryGetValue(row.Host,out var saved))return assessment;
-  bool contradiction=InstallerChanged53(row,saved.Reboot)||active||row.Target.AdDisabled||!SavedEvidence55.Matches(saved.Key,ConnectionStore.Capture(row.Target),"|"+OverviewServer+"|ssl="+(WsusSsl.IsChecked==true)+"|"+row.Target.DirectoryId)||saved.Job!=job||(boot.Length>0&&saved.Boot!=boot)||assessment.Kind is "Error" or "SyncError" or "Reboot" or "Needed" or "Discrepancy" or "ReportPending" or "NoWsus" or "Working"||reboot.Required==true||cache?.Found==false||cache?.Report.NeededCount>0||cache?.Report.FailedCount>0||cache?.Report.ApprovedUnknownCount>0||cache?.Report.LastSyncResult is "Failed" or "FailedWithErrors";
+  bool contradiction=reboot.Expired&&reboot.PreviouslyRequired||InstallerChanged53(row,saved.Reboot)||active||row.Target.AdDisabled||!SavedEvidence55.Matches(saved.Key,ConnectionStore.Capture(row.Target),"|"+OverviewServer+"|ssl="+(WsusSsl.IsChecked==true)+"|"+row.Target.DirectoryId)||saved.Job!=job||(boot.Length>0&&saved.Boot!=boot)||assessment.Kind is "Error" or "SyncError" or "Reboot" or "Needed" or "Discrepancy" or "ReportPending" or "NoWsus" or "Working"||reboot.Required==true||cache?.Found==false||cache?.Report.NeededCount>0||cache?.Report.FailedCount>0||cache?.Report.ApprovedUnknownCount>0||cache?.Report.LastSyncResult is "Failed" or "FailedWithErrors";
   // Keep the historical proof through transient reads and active work.
   // The contradiction still takes precedence; it never paints a current failure green.
   if(contradiction)return assessment;

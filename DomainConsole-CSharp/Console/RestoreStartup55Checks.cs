@@ -35,7 +35,12 @@ public partial class MainWindow {
    Expect("Unknown","Current evidence crossed a reconnect generation");
    ConnectionStore.Profiles.Remove(row.Host);report.Endpoint41=oldEndpoint;saved.Key=oldKey;
    target.Status="Failed";Expect("Error","A real failure was hidden by saved success");target.Status=oldStatus;
-   snapshot.Required=true;snapshot.Sources=new(){"RebootRequired"};Expect("Reboot","A new reboot requirement was hidden");snapshot.Required=false;snapshot.Sources.Clear();
+   string oldProofTime=snapshot.CollectedUtc;
+   snapshot.Required=true;snapshot.Sources=new(){"RebootRequired"};
+   try{
+    snapshot.CollectedUtc=DateTimeOffset.UtcNow.AddHours(-25).ToString("o");Expect("Unknown","Expired reboot flags were promoted to a current result");
+    snapshot.CollectedUtc=DateTimeOffset.UtcNow.ToString("o");Expect("Reboot","A new reboot requirement was hidden");
+   }finally{snapshot.CollectedUtc=oldProofTime;}snapshot.Required=false;snapshot.Sources.Clear();
    Expect("Success","Legacy proof did not survive the restart fixture");
   }finally{ConnectionStore.Profiles.Remove(row.Host);report.Endpoint41=oldEndpoint;saved.Key=oldKey;target.Status=oldStatus;snapshot.Required=false;snapshot.Sources.Clear();}
   if(queue.Count!=0)throw new Exception("Restoration enqueued remote work");

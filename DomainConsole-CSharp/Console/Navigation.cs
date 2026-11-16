@@ -56,8 +56,8 @@ public partial class MainWindow {
   var item=ItemsControl.ContainerFromElement(RecentList,e.OriginalSource as DependencyObject) as ListBoxItem;
   if((item?.DataContext??RecentList.SelectedItem) is not ComputerRow row)return;
   var menu=new ContextMenu();bool pinned=workHosts.Contains(row.Host,StringComparer.OrdinalIgnoreCase);
-  var pin=new MenuItem{Header=pinned?"Открепить из списка":"Закрепить в списке"};
-  pin.Click+=(s,a)=>{if(pinned)workHosts.RemoveAll(h=>h.Equals(row.Host,StringComparison.OrdinalIgnoreCase));else workHosts.Insert(0,row.Host);Store.Write("work-computers.json",workHosts);RefreshRecent();};menu.Items.Add(pin);
+  var pin=new MenuItem{Header=pinned?"Открепить · вернуть в обычную очередь":"Закрепить в списке"};
+  pin.Click+=(s,a)=>{if(pinned){workHosts.RemoveAll(h=>h.Equals(row.Host,StringComparison.OrdinalIgnoreCase));if(!recentHosts.Contains(row.Host,StringComparer.OrdinalIgnoreCase))RememberComputer(row.Host);}else workHosts.Insert(0,row.Host);Store.Write("work-computers.json",workHosts);RefreshRecent();};menu.Items.Add(pin);
   var remove=new MenuItem{Header="Убрать из последних / закреплённых",ToolTip="История и AD сохраняются. Выполняющаяся операция остаётся видна до завершения."};
   remove.Click+=(s,a)=>{recentHosts.RemoveAll(h=>h.Equals(row.Host,StringComparison.OrdinalIgnoreCase));workHosts.RemoveAll(h=>h.Equals(row.Host,StringComparison.OrdinalIgnoreCase));Store.Write("recent-computers.json",recentHosts);Store.Write("work-computers.json",workHosts);RefreshRecent();};menu.Items.Add(remove);menu.PlacementTarget=RecentList;menu.IsOpen=true;e.Handled=true;
  }

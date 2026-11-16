@@ -54,7 +54,8 @@ public partial class MainWindow {
    var members=current==null?new List<ClientIdentity58>():IdentityPolicy58.Participants(identities58.Values,current,DateTimeOffset.UtcNow);
    repair.IsEnabled=!busy&&current!=null&&IdentityPolicy58.Confirmed(members,current,DateTimeOffset.UtcNow);
    var coverage=owner?$"{(survey.Domain?"Область AD":"Клиент и известные кандидаты")} · проверено {survey.Results.Count} из {survey.Hosts.Count} · ожидают {survey.Hosts.Count-survey.Results.Count} · общий ID подтверждён у {(members.Count>=2?members.Count:0)}": "Выберите область проверки.";
-   output.Text=coverage+"\n"+(owner?string.Join("\n",survey.Results.Select(p=>p.Key+" · "+p.Value)):"")+"\n\n"+Detail();
+   int failed=owner?survey.Results.Count(p=>p.Value.StartsWith("Не удалось")||p.Value.StartsWith("Неполные")||p.Value.StartsWith("Пропущен")):0;
+   output.Text=coverage+(owner?" · без подтверждения "+failed+"\n"+survey.ScopeMessage+" · "+Age((busy?DateTimeOffset.UtcNow:survey.Updated)-survey.Started)+"\n"+survey.ServerResult:"")+"\n"+(owner?string.Join("\n",survey.Results.Select(p=>p.Key+" · "+p.Value)):"")+"\n\n"+Detail();
   }
   peers.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,false));all.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,true));
   stop.Click+=(s,a)=>surveyRun?.Cancel();resume.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,survey.Domain,true));
