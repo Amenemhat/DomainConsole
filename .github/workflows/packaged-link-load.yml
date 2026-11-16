@@ -1,0 +1,67 @@
+name: Measure real elapsed WinRM retry intervals in the release ZIP
+on:
+  workflow_dispatch:
+  push:
+    branches: ['lab/0.57-wsus']
+    paths: ['.github/tests/packaged-link-load/**','.github/workflows/packaged-link-load.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  clock:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build connectivity driver
+        run: dotnet build .github/tests/packaged-link-load/LinkLoad.csproj -o LoadDriver
+      - name: Measure failed WinRM transports, spacing and coalescing on the Windows runner
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $commit=(Get-Content .github/lab/app-source -Raw).Trim()
+          $api="repos/$env:GITHUB_REPOSITORY/actions"
+          $deadline=(Get-Date).AddMinutes(48)
+          do {
+            $runs=(gh api "$api/workflows/build-windows.yml/runs?branch=main&head_sha=$commit"|ConvertFrom-Json).workflow_runs
+            $run=$runs|Where-Object { $_.head_sha -eq $commit -and $_.head_branch -eq 'main' }|Select-Object -First 1
+            if($run.conclusion -eq 'success'){break}
+            if($run.conclusion){throw "Windows build ended with $($run.conclusion)"}
+            Start-Sleep -Seconds 30
+          } while ((Get-Date) -lt $deadline)
+          if(!$run -or $run.conclusion -ne 'success'){throw 'No successful main run for this revision'}
+          $meta=(gh api "$api/runs/$($run.id)/artifacts"|ConvertFrom-Json).artifacts|Where-Object { $_.name -eq 'DomainConsole-Windows-x64' -and !$_.expired }
+          if(@($meta).Count -ne 1){throw 'Expected one exact package'}
+          $zip="$env:RUNNER_TEMP\clock-package.zip"
+          & curl.exe --fail --silent --show-error --location -H "Authorization: Bearer $env:GH_TOKEN" "$env:GITHUB_API_URL/$api/artifacts/$($meta.id)/zip" -o $zip
+          if($LASTEXITCODE -or "sha256:$((Get-FileHash $zip).Hash.ToLowerInvariant())" -ne $meta.digest){throw 'Invalid release archive'}
+          Expand-Archive $zip "$env:RUNNER_TEMP\clock-app"
+          $dir="$env:RUNNER_TEMP\clock-app"
+          $data=New-Item "$dir/Data" -ItemType Directory -Force
+          $rows=@(1..4|ForEach-Object {@{Name="LABLINK$_";Host="link$_.isolated.invalid";OU='Lab';OS='Windows'}})
+          $hostsPath="$env:SystemRoot/System32/drivers/etc/hosts"
+          foreach($r in $rows){Add-Content $hostsPath ("127.0.0.1 "+$r.Host)}
+          Stop-Service WinRM -Force -ErrorAction Stop
+          ConvertTo-Json -InputObject $rows -Depth 4|Set-Content "$data/computers.json"
+          'true'|Set-Content "$data/poll-paused41.json"
+          $history=@(0..2|ForEach-Object {
+            $r=$rows[$_];$old=[DateTimeOffset]::UtcNow.AddHours(-1).ToString('o')
+            @{Id=[guid]::NewGuid().ToString();Name='Active Windows transfer';OutputChannel='WSUS';Created=$old;Steps=@(@{Kind='UpdateInstall';Name='Install'});
+              Targets=@(@{Host=$r.Host;Name=$r.Name;Status='Running';State=@{Status='Running';Stage='Установка';Updated=$old;Progress=24}})}
+          })
+          ConvertTo-Json -InputObject $history -Depth 8|Set-Content "$data/history.json"
+          $env:DC_LINK_LOAD="$env:RUNNER_TEMP/link-load.json"
+          $env:DOMAINCONSOLE_PAUSE_SMOKE43='1'
+          $env:DOTNET_STARTUP_HOOKS=(Resolve-Path LoadDriver/LinkLoad.dll).Path
+          $p=Start-Process "$dir/DomainConsole.exe" -WorkingDirectory $dir -ArgumentList '--software-rendering' -PassThru
+          try {
+            if(!$p.WaitForExit(460000)){throw 'Connectivity load test timed out'}
+            Get-Content $env:DC_LINK_LOAD
+            if($p.ExitCode -ne 0){throw 'Connectivity timing assertions failed'}
+          } finally {if(!$p.HasExited){$p.Kill()};Start-Service WinRM}
+          Write-Output "Artifact $($meta.id) $($meta.digest), source $commit"
