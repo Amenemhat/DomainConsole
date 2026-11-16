@@ -69,7 +69,7 @@ internal class StartupHook
             Open(rows[0]);var d=Dialog();d.UpdateLayout();
             Check(Visual<DataGrid>(d).Single().Items.Count==6&&Combined(d).Contains("Серверный ID не проверен"),"reopened domain result displays the saved server outage and six actual survey rows");
             Check(history.Count==originalJobs && !File.Exists(Path.Combine(AppContext.BaseDirectory,"poll-network43.txt")),"opening saved diagnostics with master OFF creates no network transport");
-            RepairCases.Exercise(win,rows,true,Check);d.Close();File.WriteAllText(path,JsonSerializer.Serialize(facts));return;
+            RepairCases.Exercise(win,rows,true,Check);await RepairStopCases.Exercise(win,rows,Check);d.Close();File.WriteAllText(path,JsonSerializer.Serialize(facts));return;
         }
         string shared=Guid.NewGuid().ToString(),mode="cancel";
         var hardware=rows.ToDictionary(Host,_=>Guid.NewGuid().ToString());
