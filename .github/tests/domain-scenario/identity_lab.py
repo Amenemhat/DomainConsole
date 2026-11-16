@@ -23,8 +23,44 @@ def quote(value):
     return "'" + value.replace("'", "''") + "'"
 
 
+def verify_windows_firmware(nodes, ps, root, evidence, save):
+    # These guests run under SeaBIOS. Windows Server 2022 cannot enumerate a type-1 table
+    # advertised solely through the 64-bit entry point on affected QEMU versions (QEMU #2008).
+    import os
+    from __main__ import processes, wait
+    if os.environ.get("GITHUB_ACTIONS")!="true" or root.name!="dc-wsus-lab":
+        raise RuntimeError("Disposable lab firmware only")
+    def verify(node):
+        proc=processes[node]
+        args=list(proc.args)
+        if not Path(args[0]).name.startswith("qemu-system-") or args[args.index("-name")+1]!=node:
+            raise RuntimeError("Unexpected lab VM process: "+node)
+        expected=uuid.UUID(args[args.index("-uuid")+1])
+        read="([string](Get-CimInstance Win32_ComputerSystemProduct).UUID).Trim()"
+        observed=ps(node,read)
+        if not observed:
+            ps(node,"shutdown.exe /s /t 2 /c 'Use Windows-compatible SMBIOS firmware entry point'")
+            proc.wait(timeout=150)
+            machine=args.index("-machine")+1
+            args[machine]=args[machine]+",smbios-entry-point-type=32"
+            with (root/(node+".log")).open("a") as log:
+                processes[node]=subprocess.Popen(args,stdout=log,stderr=log)
+            wait(node,minutes=12)
+            observed=ps(node,read)
+        if not observed or uuid.UUID(observed)!=expected:
+            raise RuntimeError(f"{node}: configured UUID {expected}, Windows CIM UUID {observed!r}")
+        return node,observed
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        readings=dict(pool.map(verify,[n for n in nodes if n.startswith("CLONE")]))
+    if len(set(v.lower() for v in readings.values()))!=5:
+        raise RuntimeError("Expected five different firmware-backed Windows CIM identifiers")
+    evidence["checks"]["firmware_uuids"]=readings
+    save()
+
+
 def exercise(nodes, ps, system, evidence, save, root, gui):
     clients = [n for n in nodes if n.startswith("CLONE")]
+    verify_windows_firmware(nodes,ps,root,evidence,save)
     probe = body("Identity58.cs", "IdentityProbe58")
     verify = body("IdentityConfirmation58.cs", "IdentityServerScript58")
     wsus_api = "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');$s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530);"
