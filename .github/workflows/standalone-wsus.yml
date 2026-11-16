@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: ['lab/0.57-wsus']
-    paths: ['.github/tests/standalone-wsus.ps1','.github/workflows/standalone-wsus.yml']
+    paths: ['docs/testing/candidate-0.57.sha','.github/tests/standalone-wsus.ps1','.github/workflows/standalone-wsus.yml']
 permissions:
   contents: read
 jobs:
@@ -12,9 +12,16 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Read exact application revision
+        id: candidate
+        shell: pwsh
+        run: |
+          $source=(Get-Content docs/testing/candidate-0.57.sha -Raw).Trim()
+          if($source -notmatch '^[a-f0-9]{40}$'){throw 'Invalid revision'}
+          "sha=$source" >> $env:GITHUB_OUTPUT
       - uses: actions/checkout@v4
         with:
-          ref: 48c629ca91f5592d39ca14c57a14cfbe996cc032
+          ref: ${{ steps.candidate.outputs.sha }}
           path: _app
           persist-credentials: false
       - name: Install local WSUS, configure only this disposable Windows client

@@ -18,6 +18,7 @@ internal static class IdentityCases
             var item=Activator.CreateInstance(type)!;
             foreach(var (key,value) in new[] {("Host",name),("Name",name),("Machine",hardware),("SusClientId",clientId),("Server",server),("At",time.ToString("o"))})
                 type.GetProperty(key)!.SetValue(item,value);
+            type.GetProperty("UseWUServer")!.SetValue(item,1);
             return item;
         }
         string Field(object item,string name)=>(string)type.GetProperty(name)!.GetValue(item)!;
@@ -30,8 +31,14 @@ internal static class IdentityCases
             list.Add(Identity("other.lab.invalid",shared,Guid.NewGuid().ToString(),"http://other.lab.invalid:8530",now));
             list.Add(Identity("old.lab.invalid",shared,Guid.NewGuid().ToString(),source,now.AddMinutes(-10)));
             list.Add(Identity("empty.lab.invalid",shared,Guid.Empty.ToString(),source,now));
+            foreach(int? mode in new int?[]{0,null})
+            {
+                var unmanaged=Identity("unmanaged"+mode+".lab.invalid",shared,Guid.NewGuid().ToString(),source,now);
+                type.GetProperty("UseWUServer")!.SetValue(unmanaged,mode);
+                list.Add(unmanaged);
+            }
             var actual=(IList)members.Invoke(null,[list,first,now])!;
-            check((bool)confirmed.Invoke(null,[list,first,now])!&&actual.Count==n, $"WSUS: {n} separate devices; aliases, foreign server, empty hardware and expired reading excluded");
+            check((bool)confirmed.Invoke(null,[list,first,now])!&&actual.Count==n, $"WSUS: {n} separate devices; aliases, inactive or unknown WSUS policy, foreign server, empty hardware and expired reading excluded");
             list.Add(Identity("renamed.lab.invalid",shared,Field(first,"Machine"),source,now));
             check(((IList)members.Invoke(null,[list,first,now])!).Count==n-1,"Duplicate hardware under a different name is ambiguous");
         }

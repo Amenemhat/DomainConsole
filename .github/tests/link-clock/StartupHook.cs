@@ -77,6 +77,11 @@ internal class StartupHook
                 Check(Equals(Get(valid,"Required"),needed) && Get(old,"Required") is null && Equals(Get(old,"Stamp"),now.ToString("o")), "24h source expiry retains original stamp, required="+needed);
             }
             IdentityCases.Run(assembly,Check);
+            var buildReboot=window.GetMethod("HeaderRebootCode",BindingFlags.Public|BindingFlags.Static)!;
+            var payload=(string)buildReboot.Invoke(null,[45,"DCLab isolated reboot validation",false])!;
+            var payloadHash=Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(payload)));
+            Check(payloadHash=="8259c45c48d67eb105b90169bd914284e6608baac5942111fb2e84f4b2ba2539",
+                "Priority reboot script matches the bytes staged for the actual Windows reboot in run 43891890410");
             File.WriteAllText(marker,JsonSerializer.Serialize(results));
             Environment.Exit(0);
         }

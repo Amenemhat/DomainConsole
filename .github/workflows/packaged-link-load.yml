@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: ['lab/0.57-wsus']
-    paths: ['.github/tests/packaged-link-load/**','.github/workflows/packaged-link-load.yml']
+    paths: ['docs/testing/candidate-0.57.sha','.github/tests/packaged-link-load/**','.github/workflows/packaged-link-load.yml']
 permissions:
   contents: read
   actions: read
@@ -24,7 +24,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference='Stop'
-          $commit=(Get-Content .github/lab/app-source -Raw).Trim()
+          $commit=(Get-Content docs/testing/candidate-0.57.sha -Raw).Trim()
           $api="repos/$env:GITHUB_REPOSITORY/actions"
           $deadline=(Get-Date).AddMinutes(48)
           do {
