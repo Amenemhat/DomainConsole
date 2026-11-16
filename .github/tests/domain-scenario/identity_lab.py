@@ -44,7 +44,9 @@ $scan=$searcher.Search('IsInstalled=0 and IsHidden=0');if([int]$scan.ResultCode 
     def probe_client(node):
         result = json.loads(ps(node, probe + "\n$dcIdentity58|ConvertTo-Json -Compress"))
         if result.get("Error") or not result.get("Machine") or not result.get("SusClientId"):
-            raise RuntimeError(node + ": incomplete real registry/CIM observation: " + str(result.get("Error")))
+            evidence["checks"].setdefault("incomplete",{})[node]=result
+            save()
+            raise RuntimeError(node + ": incomplete real registry/CIM observation: " + json.dumps(result,ensure_ascii=False))
         uuid.UUID(result["SusClientId"])
         return result
     def configure(node,shared=None):
@@ -53,13 +55,23 @@ $scan=$searcher.Search('IsInstalled=0 and IsHidden=0');if([int]$scan.ResultCode 
         if node==clients[-2]:
             policy_only=policy_only.replace("http://dcwsus.dc057.test:8530","http://dcwsus:8530")
         if shared is None:
-            job=policy_only+marker+scan
+            # Reproduce an imaged machine on a pristine OS that may have no SusClientId yet.
+            seed=f"$r='{reg}';if(!(Test-Path $r)){{New-Item $r -Force|Out-Null}};if(!(Get-ItemProperty $r -Name SusClientId -ErrorAction SilentlyContinue)){{New-ItemProperty $r -Name SusClientId -Value ([guid]::NewGuid().ToString()) -PropertyType String -Force|Out-Null}};"
+            job=policy_only+"Stop-Service wuauserv -Force;"+seed+"Start-Service wuauserv;"+scan
         else:
             # These four clones have never reported separately to this WSUS.
-            job=policy_only+"Stop-Service wuauserv -Force;"+f"New-ItemProperty -Path '{reg}' -Name SusClientId -Value {quote(shared)} -PropertyType String -Force|Out-Null;Start-Service wuauserv"
+            job=policy_only+"Stop-Service wuauserv -Force;"+f"if(!(Test-Path '{reg}')){{New-Item '{reg}' -Force|Out-Null}};New-ItemProperty -Path '{reg}' -Name SusClientId -Value {quote(shared)} -PropertyType String -Force|Out-Null;Start-Service wuauserv"
         system(node,"configure-wua",job,minutes=22)
     configure(clients[0])
-    shared=probe_client(clients[0])["SusClientId"]
+    limit=time.monotonic()+180
+    while True:
+        try:
+            shared=probe_client(clients[0])["SusClientId"]
+            break
+        except RuntimeError:
+            if time.monotonic()>=limit:
+                raise
+            time.sleep(8)
     def seed_clone(node):
         configure(node,shared)
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
@@ -83,7 +95,12 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
         raise RuntimeError("Did not reproduce a shared ID on distinct devices")
     evidence["checks"]["before"] = before
     query="$t=@($s.GetComputerTargets()|Where-Object FullDomainName -like 'clone*'|Select-Object Id,FullDomainName);ConvertTo-Json -InputObject $t -Compress"
-    initial=json.loads(ps("DCWSUS",wsus_api+query))
+    limit=time.monotonic()+300
+    while True:
+        initial=json.loads(ps("DCWSUS",wsus_api+query))
+        if initial or time.monotonic()>=limit:
+            break
+        time.sleep(10)
     if len(initial)!=1 or initial[0]["Id"].lower()!=shared.lower():
         raise RuntimeError("Expected exactly one server record hiding five distinct clients: "+str(initial))
     evidence["checks"]["initial_server_records"]=initial

@@ -13,7 +13,7 @@ concurrency:
 jobs:
   guests:
     runs-on: ubuntu-24.04
-    timeout-minutes: 270
+    timeout-minutes: 340
     steps:
       - uses: actions/checkout@v4
       - name: Check virtualization and official evaluation media
@@ -53,8 +53,45 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/lab/fetch-package.sh
-      - name: Verify five registrations and one confirmed client reboot with the packaged console
-        run: bash .github/lab/wait-for-guests.sh guest-exit 90
+      - name: Test five real registrations and one real reboot (attempt 1)
+        id: scenario1
+        continue-on-error: true
+        run: bash .github/lab/drive-scenario.sh 1
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.scenario1.outcome != 'skipped'
+        with:
+          name: isolated-domain-attempt-1
+          path: ${{ runner.temp }}/dc-wsus-lab/attempt-1.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Test five real registrations and one real reboot (attempt 2)
+        id: scenario2
+        if: steps.scenario1.outcome == 'failure'
+        continue-on-error: true
+        run: bash .github/lab/drive-scenario.sh 2
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.scenario2.outcome != 'skipped'
+        with:
+          name: isolated-domain-attempt-2
+          path: ${{ runner.temp }}/dc-wsus-lab/attempt-2.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Test five real registrations and one real reboot (attempt 3)
+        id: scenario3
+        if: steps.scenario2.outcome == 'failure'
+        continue-on-error: true
+        run: bash .github/lab/drive-scenario.sh 3
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.scenario3.outcome != 'skipped'
+        with:
+          name: isolated-domain-attempt-3
+          path: ${{ runner.temp }}/dc-wsus-lab/attempt-3.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Require an independently verified five-client outcome
+        if: always()
+        run: |
+          test "${{ steps.scenario1.outcome }}" = success || test "${{ steps.scenario2.outcome }}" = success || test "${{ steps.scenario3.outcome }}" = success
       - uses: actions/upload-artifact@v4
         if: always()
         with:

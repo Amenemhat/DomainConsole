@@ -110,7 +110,7 @@ def boot(node, gpt, specialize=False):
     memory = 3584 if specialize or node == "DCWSUS" else 2048 if node=="DCAD" else 1536
     tap = "dclab" + str(nodes[node])
     args = [qemu, "-accel", "kvm", "-cpu", "host", "-smp", "2", "-m", str(memory),
-            "-machine", "q35" if gpt else "pc", "-uuid", hardware_ids[node], "-name", node,
+            "-machine", "q35" if gpt else "pc", "-uuid", hardware_ids[node], "-smbios", f"type=1,manufacturer=DCLab,product=WindowsDomainGuest,serial={node},uuid={hardware_ids[node]}", "-name", node,
             "-drive", f"file={root / (node + '.qcow2')},format=qcow2,if=ide",
             "-cdrom", str(root / "drivers.iso"), "-boot", "c", "-display", "none",
             "-monitor", f"unix:{root / (node + '.sock')},server=on,wait=off", "-serial", "none",
@@ -263,9 +263,8 @@ def main():
         checkpoint("winrm")
         return
     # Specialization and OOBE require substantially more RAM than an idle member.
-    # Finish each pristine disk on its own, then start the already-configured machines.
-    for node in nodes:
-        log("Specialize "+node+" with the runner to itself")
+    # Two fresh guests use 7 GiB combined. Preserve per-guest readiness and S5.
+    def specialize(node):
         boot(node,gpt,True)
         wait(node,minutes=16,specialized=True)
         if node=="DCWSUS":
@@ -277,6 +276,8 @@ def main():
         processes.pop(node)
         evidence.setdefault("specialized",{})[node]=evidence["booted"].pop(node)
         save()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        list(pool.map(specialize,nodes))
     checkpoint("specialized")
     for node in nodes:
         boot(node,gpt)
@@ -295,15 +296,8 @@ def main():
         time.sleep(3)
     evidence["package"]=json.loads((root/"package.json").read_text())
     save()
-    from identity_lab import exercise
-    from packaged_gui import PackagedConsole
-    gui=PackagedConsole(root,ps,password)
-    try:
-        exercise(nodes, ps, system, evidence, save, root, gui)
-    finally:
-        if gui.server:
-            gui.server.shutdown()
-    save()
+    import campaign
+    campaign.run(root,nodes,gpt,processes,boot,wait,ps,system,evidence,save,checkpoint,password)
 
 
 try:
