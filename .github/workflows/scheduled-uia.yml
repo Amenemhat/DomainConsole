@@ -1,0 +1,20 @@
+name: Check native UI Automation from a password-logon Windows task
+on:
+  workflow_dispatch:
+  push:
+    branches: ['lab/0.57-wsus']
+    paths: ['.github/workflows/scheduled-uia.yml','.github/tests/scheduled-uia.ps1']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  window:
+    runs-on: windows-2022
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Open the real WSUS window and reboot confirmation in the private scheduled desktop
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./.github/tests/scheduled-uia.ps1
