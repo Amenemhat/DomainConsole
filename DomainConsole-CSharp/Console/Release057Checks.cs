@@ -33,7 +33,7 @@ public partial class MainWindow {
   if(staleScan.Kind!="Needed")throw new Exception("Old scan overrode fresh server-only count");
   VerifyRecentOrder057();
   AwaitUi39(VerifySurvey057());
-  var group=Enumerable.Range(0,5).Select(i=>new ClientIdentity58{Machine=Guid.NewGuid().ToString(),SusClientId="11111111-2222-3333-4444-555555555555",Server="http://example.invalid",Name="test-"+i,At=now.ToString("o")}).ToList();
+  var group=Enumerable.Range(0,5).Select(i=>new ClientIdentity58{Machine=Guid.NewGuid().ToString(),SusClientId="11111111-2222-3333-4444-555555555555",Server="http://example.invalid",UseWUServer=1,Name="test-"+i,At=now.ToString("o")}).ToList();
   group.Add(group[0]);if(!IdentityPolicy58.Confirmed(group,group[0],now)||IdentityPolicy58.Participants(group,group[0],now).Count!=5)throw new Exception("WSUS identity group or alias");
   var alias=Store.Clone(group[0]);alias.Server="http://alias.invalid";alias.VerifiedSource=group[0].Server;
   if(alias.Key==group[0].Key)throw new Exception("Unverified WSUS alias combined distinct sources");

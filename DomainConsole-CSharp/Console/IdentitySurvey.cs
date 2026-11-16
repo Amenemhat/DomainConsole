@@ -25,11 +25,14 @@ public partial class MainWindow {
  Window? surveyWindow;
  Action? refreshSurvey;
 
+ static string WsusPolicyFinding(ClientIdentity58 item)=>item.UseWUServer==0?"клиент не использует сервер WSUS по политике":"не получено подтверждение политики UseWUServer=1";
+
  string DescribeSurveyResult(ComputerRow selected,IReadOnlyList<ClientIdentity58> confirmed,int failed,bool running){
   if(confirmed.Count>=2)return "Одинаковый SusClientId у "+string.Join(", ",confirmed.Take(5).Select(x=>x.Name))+(confirmed.Count>5?$" и ещё {confirmed.Count-5}":"");
   if(running)return "Идёт чтение участников";
   if(!survey.Results.ContainsKey(selected.Host)||!identities58.TryGetValue(selected.Host,out var anchor)||!anchor.Fresh(DateTimeOffset.UtcNow))return "Проверка неполная · требуется свежий ответ выбранного клиента";
   if(!Guid.TryParse(anchor.SusClientId,out var id)||id==Guid.Empty)return "Выбранный клиент вернул пустой или некорректный SusClientId";
+  if(anchor.UseWUServer!=1)return "Источник WSUS не подтверждён · "+WsusPolicyFinding(anchor);
   if(!IdentityPolicy58.Usable(anchor))return "Проверка неполная · не подтверждены устройство или источник WSUS";
   bool ambiguous=survey.Hosts.Select(h=>identities58.GetValueOrDefault(h)).Any(peer=>peer!=null&&peer.Fresh(DateTimeOffset.UtcNow)&&peer.Key==anchor.Key&&peer.Machine.Equals(anchor.Machine,StringComparison.OrdinalIgnoreCase)&&!peer.Name.TrimEnd('.').Equals(anchor.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase));
   if(ambiguous)return "Один аппаратный идентификатор у разных имён · возможны переименование или клонирование. Исправление неоднозначных устройств недоступно";
@@ -88,7 +91,7 @@ public partial class MainWindow {
        survey.ServerName=server.Name;survey.ServerNames=server.Names;survey.ServerResult=server.Id.Length>0?"WSUS · "+server.Name+" · отчёт "+Display36.Date(server.ReportedUtc):"Запись по ID не подтверждена";if(server.LookupError.Length>0)survey.ServerResult+=" · "+ConnectionBrief31(server.LookupError);
       }catch(Exception ex) when(!stop.IsCancellationRequested){survey.ServerResult="Серверный ID не проверен · "+ConnectionBrief31(ex.Message);}
      }
-     survey.Results[host]=result.Error.Length>0?"Не удалось проверить · "+result.Error:!Guid.TryParse(result.SusClientId,out var valid)||valid==Guid.Empty?"Неполные сведения · отсутствует или некорректен SusClientId":!IdentityPolicy58.Usable(result)?"Неполные сведения · проверьте имя, аппаратный идентификатор и источник WSUS":result.Name+" · "+result.SusClientId+" · "+result.Server+" · "+Display36.Date(result.At);
+     survey.Results[host]=result.Error.Length>0?"Не удалось проверить · "+result.Error:!Guid.TryParse(result.SusClientId,out var valid)||valid==Guid.Empty?"Неполные сведения · отсутствует или некорректен SusClientId":result.UseWUServer!=1?"Неполные сведения · "+WsusPolicyFinding(result):!IdentityPolicy58.Usable(result)?"Неполные сведения · проверьте имя, аппаратный идентификатор и источник WSUS":result.Name+" · "+result.SusClientId+" · "+result.Server+" · "+Display36.Date(result.At);
     }catch(OperationCanceledException) when(stop.IsCancellationRequested){throw;}
     catch(Exception ex){survey.Results[host]="Не удалось проверить · "+ConnectionBrief31(ex.Message);ObserveIdentity58(host,new(){At=DateTimeOffset.UtcNow.ToString("o"),Error=ex.Message},false);}
     if(i==0&&!domain&&!survey.VerifyRegistration)foreach(var peer in IdentityCandidates(selected,false).ToList())if(!survey.Hosts.Contains(peer,StringComparer.OrdinalIgnoreCase))survey.Hosts.Add(peer);

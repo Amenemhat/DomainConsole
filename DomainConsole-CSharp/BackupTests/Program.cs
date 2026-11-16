@@ -46,9 +46,15 @@ try{
  Assert(!retained58.Contains("expired")&&!retained58.Contains("three"),"Ordinary retention failed");
  Assert(retained58.Contains("installed")&&retained58.Contains("active")&&retained58.Contains("conflict")&&retained58.Contains("malformed"),"Retention lost protected evidence");
  var once58=File.ReadAllBytes(eventFile58);HistoryRetention58.Compact(events58,new(){OrdinaryCount=2},now58,new HashSet<string>{"active"},true);Assert(once58.SequenceEqual(File.ReadAllBytes(eventFile58)),"Retention is not idempotent");
- var shared58=Guid.NewGuid().ToString();var a58=new ClientIdentity58{Host="a",Name="a.example.invalid",Machine=Guid.NewGuid().ToString(),Server="http://wsus.invalid:8530",SusClientId=shared58,At=now58.ToString("o")};
- var b58=new ClientIdentity58{Host="b",Name="b.example.invalid",Machine=Guid.NewGuid().ToString(),Server=a58.Server,SusClientId=shared58,At=now58.ToString("o")};
+ var shared58=Guid.NewGuid().ToString();var a58=new ClientIdentity58{Host="a",Name="a.example.invalid",Machine=Guid.NewGuid().ToString(),Server="http://wsus.invalid:8530",UseWUServer=1,SusClientId=shared58,At=now58.ToString("o")};
+ var b58=new ClientIdentity58{Host="b",Name="b.example.invalid",Machine=Guid.NewGuid().ToString(),Server=a58.Server,UseWUServer=1,SusClientId=shared58,At=now58.ToString("o")};
  Assert(IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Fresh shared ID not detected");
+ foreach(int? policy in new int?[]{0,null}){
+  b58.UseWUServer=policy;
+  Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Cached WUServer without an active policy confirmed a conflict");
+  Assert(!IdentityPolicy58.RegistrationConfirmed(b58,Guid.NewGuid().ToString(),now58.AddMinutes(-1).ToString("o"),b58.SusClientId,b58.Name,now58.ToString("o"),now58),"Inactive source confirmed a current registration");
+ }
+ b58.UseWUServer=1;
  b58.Machine=a58.Machine;Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Alias/rename treated as two machines");
  b58.Machine=Guid.NewGuid().ToString();b58.At=now58.AddDays(-1).ToString("o");Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Stale identity triggered repair");
  b58.At=now58.ToString("o");b58.Server="http://other.invalid:8530";Assert(!IdentityPolicy58.Confirmed(new[]{a58,b58},a58,now58),"Different WSUS servers mixed");
