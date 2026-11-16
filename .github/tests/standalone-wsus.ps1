@@ -16,7 +16,10 @@ foreach($setting in @('WUServer','WUStatusServer')){New-ItemProperty -Path $p -N
 New-ItemProperty -Path $p -Name TargetGroupEnabled -Value 1 -PropertyType DWord -Force|Out-Null
 New-ItemProperty -Path $p -Name TargetGroup -Value 'DomainConsoleAcceptance' -PropertyType String -Force|Out-Null
 New-ItemProperty -Path ($p+'\AU') -Name UseWUServer -Value 1 -PropertyType DWord -Force|Out-Null
-Restart-Service wuauserv -Force
+$initialService=Get-CimInstance Win32_Service -Filter "Name='wuauserv'"
+Write-Output ("Disposable runner WUA startup: "+$initialService.StartMode)
+if($initialService.StartMode -eq 'Disabled'){Set-Service -Name wuauserv -StartupType Manual}
+try{Restart-Service wuauserv -Force}catch{& sc.exe qc wuauserv;& sc.exe queryex wuauserv;throw}
 $session=New-Object -ComObject Microsoft.Update.Session
 $search=$session.CreateUpdateSearcher();$search.ServerSelection=1;$search.Online=$true
 $result=$search.Search('IsInstalled=0 and IsHidden=0')
