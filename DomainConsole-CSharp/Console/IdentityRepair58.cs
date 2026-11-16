@@ -115,7 +115,7 @@ try {
   (Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Stopped,[TimeSpan]::FromSeconds(30))
   Remove-ItemProperty $path58 -Name SusClientId -ErrorAction Stop
   if((Get-ItemProperty $path58).PSObject.Properties.Name -contains 'SusClientIdValidation'){Remove-ItemProperty $path58 -Name SusClientIdValidation -ErrorAction Stop}
- }catch{$resetError58=$_.Exception.Message}finally{try{Start-Service wuauserv -ErrorAction Stop}catch{$restoreError58=$_.Exception.Message}}
+ }catch{$resetError58=$_.Exception.Message}finally{try{Start-Service wuauserv -ErrorAction Stop;(Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Running,[TimeSpan]::FromSeconds(30))}catch{$restoreError58=$_.Exception.Message}}
  if($resetError58 -or $restoreError58){throw ('Перерегистрация: '+$resetError58+'; восстановление wuauserv: '+$restoreError58)}
  & "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow
  $session58=New-Object -ComObject Microsoft.Update.Session

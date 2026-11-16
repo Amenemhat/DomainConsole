@@ -16,7 +16,7 @@ public partial class MainWindow {
    compromisedIds58.Add(identity.Key);Store.Write("compromised-ids58.json",compromisedIds58.ToList());
    foreach(var member in IdentityPolicy58.Participants(identities58.Values,identity,DateTimeOffset.UtcNow))Event31(member.Host,"identity58",identity.Key,"Подтверждён общий SusClientId","Warning","ID: "+identity.SusClientId+". Участники: "+string.Join(", ",IdentityPolicy58.Participants(identities58.Values,identity,DateTimeOffset.UtcNow).Select(r=>r.Name))+". Требуется перерегистрация всех участников.");
   }
-  _=VerifyIdentityRegistration58(host);
+  if(allowRepair)_=VerifyIdentityRegistration58(host);
   if(allowRepair&&surveyWindow==null&&surveyRun==null&&AutoServiceEnabled&&compromisedIds58.Contains(identity.Key))_=RepairIdentityGroup58(host,false);
  }
  bool IdentityMismatch58(string host)=>SnapshotMatches58&&identities58.TryGetValue(host,out var identity)&&identity.SusClientId.Length>0&&serverSnapshot58.Records.Any(r=>r.Id.Equals(identity.SusClientId,StringComparison.OrdinalIgnoreCase)&&!r.Name.TrimEnd('.').Equals(identity.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase));
@@ -47,7 +47,8 @@ public partial class MainWindow {
   var buttons=new WrapPanel();DockPanel.SetDock(buttons,Dock.Bottom);panel.Children.Add(buttons);
   var peers=new Button{Content="Проверить клиента и кандидатов"};var all=new Button{Content="Проверить весь список AD"};
   var stop=new Button{Content="Остановить"};var resume=new Button{Content="Продолжить"};
-  foreach(var button in new[]{peers,all,stop,resume})buttons.Children.Add(button);
+  var verify=new Button{Content="Повторить проверку результата"};
+  foreach(var button in new[]{peers,all,stop,resume,verify})buttons.Children.Add(button);
   var pages=new TabControl();panel.Children.Add(pages);
   var resultPanel=new DockPanel();
   var headline=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new(4,4,4,8)};DockPanel.SetDock(headline,Dock.Top);resultPanel.Children.Add(headline);
@@ -67,9 +68,11 @@ public partial class MainWindow {
    bool approved=current!=null&&manualIdentityScopes.TryGetValue(current.Key,out var allowed)&&members.Any(m=>allowed.Contains(MemberIdentity(m)));
    repair.IsEnabled=!busy&&(confirmed||approved);
    repair.Content=confirmed?"Исправить общий ID · подтверждённых участников: "+members.Count:approved?"Продолжить ранее согласованное исправление":"Исправить подтверждённый конфликт";
+   var attempts=RepairGroupFor(row.Host);verify.IsEnabled=!busy&&attempts.Count>0;
    var coverage=owner?$"{(survey.Domain?"Область AD":"Клиент и известные кандидаты")} · проверено {survey.Results.Count} из {survey.Hosts.Count} · ожидают {survey.Hosts.Count-survey.Results.Count} · общий ID подтверждён у {(confirmed?members.Count:0)}": "Выберите область проверки.";
    int failed=owner?survey.Results.Count(p=>p.Value.StartsWith("Не удалось")||p.Value.StartsWith("Неполные")||p.Value.StartsWith("Пропущен")):0;
-   headline.Text=coverage+(owner?" · без подтверждения "+failed+"\n"+survey.ScopeMessage+(survey.Started==default?"":" · "+Age((busy?DateTimeOffset.UtcNow:survey.Updated)-survey.Started))+"\n"+survey.ServerResult:"");
+   string fixedCount=attempts.Count>0?$" · регистрация подтверждена у {attempts.Count(a=>a.Phase=="Подтверждено")} из {attempts.Count}":"";
+   headline.Text=coverage+fixedCount+(owner?" · без подтверждения "+failed+"\n"+survey.ScopeMessage+(survey.Started==default?"":" · "+Age((busy?DateTimeOffset.UtcNow:survey.Updated)-survey.Started))+"\n"+survey.ServerResult:"");
    if(owner)table.ItemsSource=survey.Hosts.Select(h=>{
     var known=identities58.GetValueOrDefault(h);
     bool done=survey.Results.TryGetValue(h,out var result);
@@ -79,6 +82,7 @@ public partial class MainWindow {
    string detail=Detail();if(output.Text!=detail)output.Text=detail;
   }
   peers.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,false));all.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,true));
+  verify.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,false,verifyRegistration:true));
   stop.Click+=(s,a)=>surveyRun?.Cancel();resume.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,survey.Domain,true));
   repair.Click+=async(s,a)=>{await RepairIdentityGroup58(row.Host,true);Refresh();};
   window.Loaded+=(s,a)=>{refreshSurvey=Refresh;Refresh();};Refresh();return window;

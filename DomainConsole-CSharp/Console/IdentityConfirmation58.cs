@@ -28,13 +28,20 @@ public partial class MainWindow {
   Event31(attempt.Host,"identity-confirmed58",attempt.NewId,"Новая регистрация и отчёт WSUS подтверждены","Success","Прежний ID: "+attempt.OldId+"; новый ID: "+attempt.NewId+"; имя: "+identity.Name+"; отчёт: "+Display36.Date(reply.ReportedUtc)+". Группы: "+(reply.Groups.Count>0?string.Join(", ",reply.Groups):"не прочитаны")+(reply.GroupError.Length>0?". "+reply.GroupError:""),scope:attempt.JobId);
   return true;
  }
- async Task VerifyIdentityRegistration58(string host){
+ List<IdentityRepairAttempt58> RepairGroupFor(string host){
+  var latest=identityRepairs58.Values.Where(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)).OrderByDescending(a=>a.At).FirstOrDefault();
+  if(latest==null)return new();
+  int split=latest.Key.LastIndexOf('|');if(split<0)return new(){latest};
+  string prefix=latest.Key[..(split+1)];
+  return identityRepairs58.Values.Where(a=>a.Key.StartsWith(prefix,StringComparison.OrdinalIgnoreCase)).ToList();
+ }
+ async Task VerifyIdentityRegistration58(string host,bool requested=false,CancellationToken cancellation=default){
   if(closing||App.RecoveryPending57||PollingControl43.BackgroundPaused56||!identities58.TryGetValue(host,out var current)||!current.Fresh(DateTimeOffset.UtcNow)||!Guid.TryParse(current.SusClientId,out var guid)||guid==Guid.Empty||!identityChecks58.Add(host))return;
   try{
    ExpireIdentityRepairs58();var now=DateTimeOffset.UtcNow;
-   var attempts=identityRepairs58.Values.Where(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&a.JobId.Length>0&&a.Phase!="Подтверждено"&&!a.OldId.Equals(current.SusClientId,StringComparison.OrdinalIgnoreCase)&&DateTimeOffset.TryParse(a.DeadlineUtc,out var until)&&until>now&&(!DateTimeOffset.TryParse(a.LastCheckUtc,out var last)||now-last>=TimeSpan.FromMinutes(1))).ToList();
+   var attempts=identityRepairs58.Values.Where(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&a.JobId.Length>0&&a.Phase!="Подтверждено"&&!a.OldId.Equals(current.SusClientId,StringComparison.OrdinalIgnoreCase)&&(requested||DateTimeOffset.TryParse(a.DeadlineUtc,out var until)&&until>now&&(!DateTimeOffset.TryParse(a.LastCheckUtc,out var last)||now-last>=TimeSpan.FromMinutes(1)))).ToList();
    if(attempts.Count==0)return;
-   var identity=Store.Clone(current);var settings=ReadWsus();var source=OverviewServer;var ssl=WsusSsl.IsChecked;var generation=PollingControl43.Token;var endpoint=ConnectionStore.Capture(new TargetRecord{Host=settings.Host});
+   var identity=Store.Clone(current);var settings=ReadWsus();var source=OverviewServer;var ssl=WsusSsl.IsChecked;using var linked=CancellationTokenSource.CreateLinkedTokenSource(cancellation,PollingControl43.Token);var generation=linked.Token;var endpoint=ConnectionStore.Capture(new TargetRecord{Host=settings.Host});
    bool Current()=>!closing&&!generation.IsCancellationRequested&&!PollingControl43.BackgroundPaused56&&source==OverviewServer&&ssl==WsusSsl.IsChecked&&CurrentEndpoint(endpoint)&&identities58.TryGetValue(host,out var observed)&&observed.Fresh(DateTimeOffset.UtcNow)&&observed.SusClientId==identity.SusClientId&&observed.Machine==identity.Machine&&observed.Name==identity.Name;
    foreach(var attempt in attempts){attempt.NewId=identity.SusClientId;attempt.LastCheckUtc=now.ToString("o");attempt.Phase="Новый ID прочитан; проверяется запись и отчёт WSUS (до 10 минут)";}
    Store.Write("identity-repairs58.json",identityRepairs58);

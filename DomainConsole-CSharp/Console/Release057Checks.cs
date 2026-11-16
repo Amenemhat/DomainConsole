@@ -29,11 +29,40 @@ public partial class MainWindow {
   var staleScan=ClientReadiness41.Evaluate(freshReport,false,true,old with {Required=null},null,false,true,0,now.AddDays(-7).ToString("o"),"",now,24);
   if(staleScan.Kind!="Needed")throw new Exception("Old scan overrode fresh server-only count");
   VerifyRecentOrder057();
+  AwaitUi39(VerifySurvey057());
   var group=Enumerable.Range(0,5).Select(i=>new ClientIdentity58{Machine=Guid.NewGuid().ToString(),SusClientId="11111111-2222-3333-4444-555555555555",Server="http://example.invalid",Name="test-"+i,At=now.ToString("o")}).ToList();
   group.Add(group[0]);if(!IdentityPolicy58.Confirmed(group,group[0],now)||IdentityPolicy58.Participants(group,group[0],now).Count!=5)throw new Exception("WSUS identity group or alias");
   var ambiguous=Store.Clone(group[0]);ambiguous.Name="different-fqdn";group.Add(ambiguous);
   if(IdentityPolicy58.Participants(group,group[0],now).Count!=4)throw new Exception("Ambiguous hardware ID admitted to repair");
   if(IdentityPolicy58.Confirmed(group,group[0],now.AddMinutes(10)))throw new Exception("Stale WSUS identity");
+ }
+ async Task VerifySurvey057(){
+  var before=survey;bool enabled=AutoServiceEnabled;var oldWindow=refreshSurvey;var jobCount=History.Count;
+  var rows=Enumerable.Range(0,5).Select(i=>new ComputerRow(new(){Name="clone-"+i,Host="clone-"+i+".survey.invalid",OU="OU=Lab"+i})).ToList();
+  var id=Guid.NewGuid().ToString();string key="http://wsus.survey.invalid:8530|"+id;
+  var reports=rows.Select((r,i)=>new ClientIdentity58{Host=r.Host,Name=r.Host,Machine=Guid.NewGuid().ToString(),SusClientId=id,Server="http://wsus.survey.invalid:8530",UseWUServer=1,At=DateTimeOffset.UtcNow.ToString("o")}).ToList();
+  var reads=new List<string>();
+  var delayed=new TaskCompletionSource<ClientIdentity58>(TaskCreationOptions.RunContinuationsAsynchronously);
+  Task<ClientIdentity58> Client(TargetRecord t,CancellationToken token){reads.Add(t.Host);return t.Host==rows[0].Host?delayed.Task:Task.FromResult(reports.Single(r=>r.Host==t.Host));}
+  Task<IdentityServerReply58> Server(WsusSettings _,string expected,CancellationToken token)=>Task.FromResult(new IdentityServerReply58{Id=expected,Name=rows[1].Host});
+  try{
+   AutoServiceEnabled=true;refreshSurvey=null;
+   foreach(var row in rows)Computers.Add(row);
+   foreach(var previous in reports.Skip(2))identities58[previous.Host]=Store.Clone(previous);
+   var run=RunIdentitySurvey(rows[0],false,false,Client,Server);
+   await RunIdentitySurvey(rows[0],false,false,Client,Server);
+   if(reads.Count!=1)throw new Exception("Repeated identity click did not join");
+   delayed.SetResult(reports[0]);await run;
+   if(survey.Results.Count!=5||survey.Hosts.Count!=5||reads.Distinct().Count()!=5||reads.Count!=5||History.Count!=jobCount||!manualIdentityScopes.TryGetValue(key,out var allowed)||allowed.Count!=0)throw new Exception("Scoped WSUS identity survey lost candidates or authorized a write");
+   if(!IdentityPolicy58.Confirmed(identities58.Values,reports[0],DateTimeOffset.UtcNow))throw new Exception("Five fresh identities not confirmed");
+   var checkpoint=Store.Read("identity-survey.json",new IdentitySurvey());
+   if(checkpoint.Owner!=rows[0].Host||checkpoint.Results.Count!=5||checkpoint.ServerName!=rows[1].Host)throw new Exception("Survey checkpoint not restored");
+  }finally{
+   AutoServiceEnabled=enabled;refreshSurvey=oldWindow;survey=before;
+   foreach(var row in rows){Computers.Remove(row);identities58.Remove(row.Host);clientConnections.Remove(row.Host);liveConnections.Remove(row.Host);}
+   manualIdentityScopes.Remove(key);compromisedIds58.Remove(key);
+   Store.Write("client-identities58.json",identities58);Store.Write("identity-survey.json",survey);Store.Write("identity-scope-approvals.json",manualIdentityScopes);Store.Write("compromised-ids58.json",compromisedIds58.ToList());Store.Write("client-connections.json",clientConnections);
+  }
  }
  void VerifyRecentOrder057(){
   var saved=recentHosts.ToList();var pins=workHosts.ToList();int limit=recentLimit;int color=Theme.Current;bool expanded=RecentGroup.IsExpanded;

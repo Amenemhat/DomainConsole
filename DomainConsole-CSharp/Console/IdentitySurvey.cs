@@ -12,6 +12,7 @@ public sealed class IdentitySurvey {
  public DateTimeOffset Started {get;set;}
  public DateTimeOffset Updated {get;set;}
  public string ScopeMessage {get;set;}="";
+ public bool VerifyRegistration {get;set;}
  public bool Domain {get;set;}
  public List<string> Hosts {get;set;}=new();
  public Dictionary<string,string> Results {get;set;}=new(StringComparer.OrdinalIgnoreCase);
@@ -33,13 +34,16 @@ public partial class MainWindow {
   var lookup=names.Select(n=>n.TrimEnd('.')).ToHashSet(StringComparer.OrdinalIgnoreCase);
   return Computers.Where(r=>!r.Target.AdDisabled&&(domain||lookup.Contains(r.Host.TrimEnd('.'))||lookup.Contains(r.Name.TrimEnd('.'))||lookup.Contains(ConnectionStore.WsusName(r.Host).TrimEnd('.')))).OrderByDescending(r=>r.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)).Select(r=>r.Host).Distinct(StringComparer.OrdinalIgnoreCase);
  }
- async Task RunIdentitySurvey(ComputerRow selected,bool domain,bool resume=false){
+ async Task RunIdentitySurvey(ComputerRow selected,bool domain,bool resume=false,Func<TargetRecord,CancellationToken,Task<ClientIdentity58>>? readClient=null,Func<WsusSettings,string,CancellationToken,Task<IdentityServerReply58>>? readServer=null,bool verifyRegistration=false){
   if(surveyRun!=null)return;
   using var stop=new CancellationTokenSource();surveyRun=stop;
   using var lane=PollingControl43.Manual56("identity");
   try{
    if(!resume||!survey.Owner.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)||survey.Domain!=domain)
     survey=new(){Owner=selected.Host,Started=DateTimeOffset.UtcNow,Domain=domain,Hosts=IdentityCandidates(selected,domain).ToList()};
+   if(verifyRegistration){
+    survey.VerifyRegistration=true;survey.Hosts=RepairGroupFor(selected.Host).Select(a=>a.Host).Prepend(selected.Host).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+   }
    Store.Write("identity-survey.json",survey);refreshSurvey?.Invoke();
    for(int i=0;i<survey.Hosts.Count;i++){
     stop.Token.ThrowIfCancellationRequested();string host=survey.Hosts[i];if(survey.Results.ContainsKey(host))continue;
@@ -48,21 +52,22 @@ public partial class MainWindow {
     var target=ConnectionStore.Capture(row.Target);var began=DateTimeOffset.UtcNow;survey.ScopeMessage="Читаем "+host;refreshSurvey?.Invoke();
     try{
      if(!ConnectionStore.CanConnect(target))throw new InvalidOperationException("Проверьте адрес и учётные данные");
-     var result=await remote.ReadIdentity(target,stop.Token);
+     var result=await (readClient??remote.ReadIdentity)(target,stop.Token);
      stop.Token.ThrowIfCancellationRequested();
      if(!CurrentEndpoint(target)||!CurrentIdentity(target))throw new InvalidOperationException("Цель изменилась во время чтения");
      ConnectionSucceeded(host,began,true);
      ObserveIdentity58(host,result,false);
-     if(host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)&&IdentityPolicy58.Usable(result)){
+     if(survey.VerifyRegistration&&result.Error.Length==0)await VerifyIdentityRegistration58(host,true,stop.Token);
+     if(!survey.VerifyRegistration&&host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)&&IdentityPolicy58.Usable(result)){
       try{
-       var settings=ReadWsus();var server=await remote.ReadIdentityRegistration58(settings,result.SusClientId,stop.Token);stop.Token.ThrowIfCancellationRequested();
+       var settings=ReadWsus();var server=await (readServer??remote.ReadIdentityRegistration58)(settings,result.SusClientId,stop.Token);stop.Token.ThrowIfCancellationRequested();
        survey.ServerName=server.Name;survey.ServerResult="WSUS · "+server.Name+" · отчёт "+Display36.Date(server.ReportedUtc);
       }catch(Exception ex) when(!stop.IsCancellationRequested){survey.ServerResult="Серверный ID не проверен · "+ConnectionBrief31(ex.Message);}
      }
      survey.Results[host]=result.Error.Length>0?"Не удалось проверить · "+result.Error:!IdentityPolicy58.Usable(result)?"Неполные сведения":result.Name+" · "+result.SusClientId+" · "+result.Server+" · "+Display36.Date(result.At);
     }catch(OperationCanceledException) when(stop.IsCancellationRequested){throw;}
     catch(Exception ex){survey.Results[host]="Не удалось проверить · "+ConnectionBrief31(ex.Message);ObserveIdentity58(host,new(){At=DateTimeOffset.UtcNow.ToString("o"),Error=ex.Message},false);}
-    if(i==0&&!domain)foreach(var peer in IdentityCandidates(selected,false).ToList())if(!survey.Hosts.Contains(peer,StringComparer.OrdinalIgnoreCase))survey.Hosts.Add(peer);
+    if(i==0&&!domain&&!survey.VerifyRegistration)foreach(var peer in IdentityCandidates(selected,false).ToList())if(!survey.Hosts.Contains(peer,StringComparer.OrdinalIgnoreCase))survey.Hosts.Add(peer);
     Store.Write("identity-survey.json",survey);refreshSurvey?.Invoke();
    }
   }catch(OperationCanceledException) when(stop.IsCancellationRequested){}
