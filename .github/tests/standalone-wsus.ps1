@@ -12,10 +12,10 @@ $group=$wsus.CreateComputerTargetGroup('DomainConsoleAcceptance')
 $url="http://${env:COMPUTERNAME}:8530"
 $p='HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate'
 New-Item $p -Force|Out-Null;New-Item ($p+'\AU') -Force|Out-Null
-foreach($setting in @('WUServer','WUStatusServer')){New-ItemProperty $p $setting $url -PropertyType String -Force|Out-Null}
-New-ItemProperty $p TargetGroupEnabled 1 -PropertyType DWord -Force|Out-Null
-New-ItemProperty $p TargetGroup 'DomainConsoleAcceptance' -PropertyType String -Force|Out-Null
-New-ItemProperty ($p+'\AU') UseWUServer 1 -PropertyType DWord -Force|Out-Null
+foreach($setting in @('WUServer','WUStatusServer')){New-ItemProperty -Path $p -Name $setting -Value $url -PropertyType String -Force|Out-Null}
+New-ItemProperty -Path $p -Name TargetGroupEnabled -Value 1 -PropertyType DWord -Force|Out-Null
+New-ItemProperty -Path $p -Name TargetGroup -Value 'DomainConsoleAcceptance' -PropertyType String -Force|Out-Null
+New-ItemProperty -Path ($p+'\AU') -Name UseWUServer -Value 1 -PropertyType DWord -Force|Out-Null
 Restart-Service wuauserv -Force
 $session=New-Object -ComObject Microsoft.Update.Session
 $search=$session.CreateUpdateSearcher();$search.ServerSelection=1;$search.Online=$true
