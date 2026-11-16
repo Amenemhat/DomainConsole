@@ -55,7 +55,14 @@ try{
  $chosen='clone1.dc057.test'
  $observed=Get-Content "$lab\observations.json" -Raw|ConvertFrom-Json
  $previous=@{}
- foreach($x in $observed.PSObject.Properties.Value){$hostName=$x.Name.ToLowerInvariant();$x|Add-Member -Force -NotePropertyName Host -NotePropertyValue $hostName;$previous[$hostName]=$x}
+ foreach($x in $observed.PSObject.Properties.Value){
+  $hostName=$x.Name.ToLowerInvariant()
+  if($hostName -ne $chosen){continue}
+  $x|Add-Member -Force -NotePropertyName Host -NotePropertyValue $hostName
+  $x.At=[DateTime]::UtcNow.AddHours(-2).ToString('o')
+  $previous[$hostName]=$x
+ }
+ if($previous.Count -ne 1){throw 'A single historical client is required before discovery'}
  $source=$previous[$chosen].Server.TrimEnd('/').ToLowerInvariant()+'|'+$previous[$chosen].SusClientId.ToLowerInvariant()
  Save-Json 'computers.json' $computers
  Save-Json 'client-identities58.json' $previous
@@ -71,7 +78,11 @@ try{
  $window=Wait-For {Element $root ([Windows.Automation.AutomationElement]::NameProperty) 'Идентичность WSUS · CLONE1'} 'WSUS identity window'
  # A client with a different spelling of the WSUS URL first joins in the full AD pass.
  Complete-Survey 1
+ $limited=Read-Data 'identity-survey.json'
+ if($limited.Domain -or @($limited.Results.PSObject.Properties).Count -ne 1){throw 'The limited pass must start with the one historical client only'}
  Browse-Domain $window
+ $discovered=Read-Data 'identity-survey.json'
+ if(@($discovered.Results.PSObject.Properties).Count -ne $computers.Count){throw 'The confirmed domain pass did not cover every AD computer'}
  Set-Content "$lab\read-only.done" 'checked'
  Wait-For {Test-Path "$lab\allow-consent.done"} 'read-only resource measurements' 120|Out-Null
  Run-Repair $window 'Исправить общий ID'
@@ -83,7 +94,7 @@ try{
  Wait-For {Test-Path "$lab\server-reports.done"} 'five external WSUS records' 2200|Out-Null
  Click (Wait-For {Button $window 'Повторить проверку результата'} 'read-only verification')
  Wait-For {$attempts=Read-Data 'identity-repairs58.json';$attempts -and @($attempts.PSObject.Properties.Value|Where-Object Phase -eq 'Подтверждено').Count -eq 5} 'five confirmed registrations in the product' 400|Out-Null
- $evidence=@{Version=$process.MainModule.FileVersionInfo.ProductVersion;Attempts=(Read-Data 'identity-repairs58.json');Survey=(Read-Data 'identity-survey.json')}
+ $evidence=@{InitialCachedClients=1;InitialSurvey=$limited;FirstDomainSurvey=$discovered;Version=$process.MainModule.FileVersionInfo.ProductVersion;Attempts=(Read-Data 'identity-repairs58.json');Survey=(Read-Data 'identity-survey.json')}
  # One confirmed request must change the boot time on this disposable guest.
  if($chosen -ne 'clone1.dc057.test'){throw 'Unexpected reboot target'}
  $boot={ (Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString('o') }

@@ -44,8 +44,20 @@ $scan=$searcher.Search('IsInstalled=0 and IsHidden=0');if([int]$scan.ResultCode 
     def probe_client(node):
         result = json.loads(ps(node, probe + "\n$dcIdentity58|ConvertTo-Json -Compress"))
         if result.get("Error") or not result.get("Machine") or not result.get("SusClientId"):
-            evidence["checks"].setdefault("incomplete",{})[node]=result
-            save()
+            incomplete=evidence["checks"].setdefault("incomplete",{})
+            if node not in incomplete:
+                # Diagnostic reads only. Compare the exact product observation with both registry views.
+                audit=r"""
+$sys=Get-CimInstance Win32_ComputerSystemProduct
+$values=@{}
+foreach($v in 'Registry64','Registry32'){
+ $h=[Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine,[Microsoft.Win32.RegistryView]$v)
+ try{$k=$h.OpenSubKey('SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate');if($k){try{$values[$v]=[string]$k.GetValue('SusClientId')}finally{$k.Dispose()}}}finally{$h.Dispose()}
+}
+@{Uuid=[string]$sys.UUID;Product=[string]$sys.Name;Serial=[string]$sys.IdentifyingNumber;Views=$values;Name=$env:COMPUTERNAME;Service=(Get-Service wuauserv).Status.ToString();Is64Bit=[Environment]::Is64BitProcess}|ConvertTo-Json -Depth 3 -Compress
+"""
+                incomplete[node]={"product":result,"windows":json.loads(ps(node,audit))}
+                save()
             raise RuntimeError(node + ": incomplete real registry/CIM observation: " + json.dumps(result,ensure_ascii=False))
         uuid.UUID(result["SusClientId"])
         return result
