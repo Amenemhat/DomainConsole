@@ -31,7 +31,9 @@ internal static class RenderFaultProbe {
    File.AppendAllText(trace,"activated "+title+"\n");
    if(title.ToString()=="Domain Console"){
     // Let MessageBox finish initializing before sending the user's OK.
-    notice=hwnd;SetTimer(IntPtr.Zero,UIntPtr.Zero,250,dismiss);
+    notice=hwnd;
+    App.HandleRenderFailure(new COMException("second fault during the modal notification",unchecked((int)0x88980406)));
+    if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_TEST_UNANSWERED_DIALOG")!="1")SetTimer(IntPtr.Zero,UIntPtr.Zero,250,dismiss);
    }
   }
   return CallNextHookEx(IntPtr.Zero,code,hwnd,details);
