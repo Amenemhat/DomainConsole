@@ -22,7 +22,15 @@ public partial class MainWindow {
   string warning="Не удалось обновить данные WSUS: "+cached.LookupError53+" · "+Display36.Date(cached.LookupUtc53)+". Показаны сохранённые данные.\n";
   return text.StartsWith(heading,StringComparison.Ordinal)?heading+warning+text[heading.Length..]:warning+text;
  }
- void RememberComputer(string host){recentHosts.RemoveAll(h=>h.Equals(host,StringComparison.OrdinalIgnoreCase));recentHosts.Insert(0,host);if(recentHosts.Count>200)recentHosts.RemoveRange(200,recentHosts.Count-200);Store.Write("recent-computers.json",recentHosts);RefreshRecent();}
+ void RememberComputer(string host)=>PromoteRecent(new[]{host},false);
+ void PromoteRecent(IEnumerable<string> requested,bool reveal){
+  var order=requested.Distinct(StringComparer.OrdinalIgnoreCase).ToList();if(order.Count==0)return;
+  var moved=order.ToHashSet(StringComparer.OrdinalIgnoreCase);
+  recentHosts.RemoveAll(moved.Contains);recentHosts.InsertRange(0,order);
+  if(recentHosts.Count>200)recentHosts.RemoveRange(200,recentHosts.Count-200);
+  Store.Write("recent-computers.json",recentHosts);RefreshRecent();
+  if(reveal&&RecentComputers.FirstOrDefault(r=>moved.Contains(r.Host)) is { } first){RecentGroup.IsExpanded=true;RecentList.ScrollIntoView(first);}
+ }
  void RefreshRecent(){if(RecentList==null||updatingRecent)return;var active=ActiveRecent61();int activeCount=active.Count;foreach(var branch in branches.Values)branch.Refresh(active);RecentGroup.Header="Последние в работе"+(activeCount>0?" · активно: "+activeCount:"");TreeLabel32.Text="Дерево AD"+(activeCount>0?" · активно: "+activeCount:"");updatingRecent=true;try{var extra=new HashSet<string>(workHosts,StringComparer.OrdinalIgnoreCase);extra.UnionWith(active);
  var ordinary=recentHosts.Where(h=>!extra.Contains(h)).Take(recentLimit).ToHashSet(StringComparer.OrdinalIgnoreCase);
  var hosts=recentHosts.Where(h=>extra.Contains(h)||ordinary.Contains(h)).Concat(workHosts).Concat(active.OrderBy(h=>h,StringComparer.OrdinalIgnoreCase)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();var wanted=new List<ComputerRow>();foreach(var host in hosts){var row=Computers.FirstOrDefault(r=>r.Host.Equals(host,StringComparison.OrdinalIgnoreCase));if(row==null){var identity=History.SelectMany(j=>j.Targets).FirstOrDefault(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase));if(identity!=null){row=WithHistory(identity);Computers.Add(row);}}if(row!=null){row.SetRecentReason61((workHosts.Contains(host,StringComparer.OrdinalIgnoreCase)?"Закреплён вручную":"")+(active.Contains(host)?(workHosts.Contains(host,StringComparer.OrdinalIgnoreCase)?" · ":"")+"Активная операция":""));if(MatchesNavigation(row))wanted.Add(row);}}bool Ready(ComputerRow row)=>!active.Contains(row.Host)&&!row.Target.AdDisabled&&row.Outcome=="Success"&&!row.IdentityConflict58;

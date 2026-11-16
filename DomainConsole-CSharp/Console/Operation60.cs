@@ -67,14 +67,8 @@ public partial class MainWindow {
   // Each target owns its decision and submission. A modeless decision cannot hold ready peers.
   var admitted=new List<(ComputerRow Selected,ComputerRow Frozen)>();
   foreach(var frozenRow in frozen){if(preparing60.ContainsKey(PreparationKey60(frozenRow.Host,template.OutputChannel))||History.Any(j=>j.OutputChannel==template.OutputChannel&&j.Steps.Count==template.Steps.Count&&j.Steps.Zip(template.Steps).All(p=>p.First.Kind==p.Second.Kind&&p.First.Code==p.Second.Code)&&j.Targets.Any(t=>t.Host.Equals(frozenRow.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)&&(StateFresh(t.State)||queue.Any(q=>q.Job.Id==j.Id&&q.Target.Host.Equals(t.Host,StringComparison.OrdinalIgnoreCase)))))){Notify(frozenRow.Name+": это действие уже выполняется или подготавливается; повтор не создан.");continue;}preparing60[PreparationKey60(frozenRow.Host,template.OutputChannel)]=(template.OutputChannel,"Подготовка · проверяем возможность запуска",DateTimeOffset.UtcNow);admitted.Add((selected.Single(r=>r.Host==frozenRow.Host),frozenRow));}
-  if(admitted.Count>0){
-   var hosts=admitted.Select(p=>p.Frozen.Host).ToHashSet(StringComparer.OrdinalIgnoreCase);
-   recentHosts.RemoveAll(hosts.Contains);recentHosts.InsertRange(0,admitted.Select(p=>p.Frozen.Host));
-   if(recentHosts.Count>200)recentHosts.RemoveRange(200,recentHosts.Count-200);
-   Store.Write("recent-computers.json",recentHosts);
-  }
+  PromoteRecent(admitted.Select(p=>p.Frozen.Host),true);
   RefreshActivity();UpdateWsusStage();
-  if(admitted.Count==1){var top=RecentComputers.FirstOrDefault(r=>r.Host.Equals(admitted[0].Frozen.Host,StringComparison.OrdinalIgnoreCase));if(top!=null)RecentList.ScrollIntoView(top);}
   using var slots=new SemaphoreSlim(3);
   await Task.WhenAll(admitted.Select(async pair=>{
    var job=Store.Clone(template);job.Id=Guid.NewGuid().ToString();job.Targets.Clear();
