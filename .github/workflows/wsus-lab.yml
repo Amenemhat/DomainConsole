@@ -6,32 +6,31 @@ on:
     paths: ['.github/lab/**', '.github/workflows/wsus-lab.yml']
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: wsus-lab-057
   cancel-in-progress: false
 jobs:
-  wsus:
-    runs-on: windows-2022
-    timeout-minutes: 65
-    steps:
-      - uses: actions/checkout@v4
-      - name: Provision real WSUS with WID on the disposable server
-        shell: powershell
-        run: ./.github/lab/wsus.ps1
-      - name: Verify the real client web service and administration API
-        shell: powershell
-        run: |
-          $ErrorActionPreference='Stop'
-          [void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration')
-          $server=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530)
-          $http=Invoke-WebRequest -UseBasicParsing 'http://localhost:8530/ClientWebService/client.asmx?WSDL'
-          if($http.StatusCode -ne 200 -or !$server.Version){throw 'WSUS not ready'}
-          Write-Output "WSUS $($server.Version), client web service $($http.StatusCode), $($server.GetComputerTargets().Count) registered clients"
   guests:
     runs-on: ubuntu-24.04
     timeout-minutes: 175
     steps:
       - uses: actions/checkout@v4
+      - name: Read candidate revision
+        id: package
+        run: |
+          sha=$(cat .github/lab/app-source)
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.package.outputs.sha }}
+          path: _app
+          persist-credentials: false
+      - name: Verify packaged Windows build and artifact digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/lab/fetch-package.sh
       - name: Check virtualization and official evaluation media
         run: |
           set -eu

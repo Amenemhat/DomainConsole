@@ -192,12 +192,22 @@ def main():
     evidence["checks"]["WSUS"] = ps("DCWSUS", "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');([Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530)).Version.ToString()")
     log("WSUS API available: " + evidence["checks"]["WSUS"])
     from identity_lab import exercise
-    exercise(nodes, ps, system, evidence, save, root)
+    from packaged_gui import PackagedConsole
+    gui=PackagedConsole(root,ps,password)
+    try:
+        exercise(nodes, ps, system, evidence, save, root, gui)
+    finally:
+        if gui.server:
+            gui.server.shutdown()
     save()
 
 
 try:
+    evidence["package"]=json.loads((root / "package.json").read_text())
     main()
+except Exception as exc:
+    evidence["failure"]=str(exc).replace(password,"***")[:1800]
+    raise
 finally:
     save()
     for proc in processes.values():

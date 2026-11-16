@@ -9,7 +9,7 @@ fi
 sudo test -c /dev/kvm
 sudo apt-get update -qq
 sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils seabios ovmf libguestfs-tools python3-winrm ntfs-3g
-# Reclaim space from unused SDKs on this disposable runner before writing six overlays.
+# Reclaim space from unused SDKs on this disposable runner before writing seven overlays.
 sudo rm -rf /usr/local/lib/android/sdk /usr/share/dotnet /opt/ghc
 df -h "$lab"
 curl --fail --location --retry 3 --max-time 1200 'https://go.microsoft.com/fwlink/p/?clcid=0x409&country=us&culture=en-us&linkid=2195166' -o "$lab/windows.vhd"

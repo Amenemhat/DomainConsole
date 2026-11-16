@@ -1,6 +1,7 @@
 $ErrorActionPreference='Stop'
 # Only present in the offline-personalized disposable guest image.
 if (!(Test-Path C:\DomainConsoleLab\node.json)){throw 'Missing lab guest identity'}
+if(Test-Path C:\DomainConsoleLab\network-ready.txt){return}
 $node=Get-Content C:\DomainConsoleLab\node.json -Raw|ConvertFrom-Json
 Start-Transcript -Path C:\DomainConsoleLab\setup.log -Append
 $drivers=Get-Volume | Where-Object {$_.DriveLetter -and (Test-Path ($_.DriveLetter+':\NetKVM\2k22\amd64\netkvm.inf'))} | Select-Object -First 1

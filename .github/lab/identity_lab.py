@@ -7,7 +7,7 @@ import subprocess
 import time
 import uuid
 
-console = Path("DomainConsole-CSharp/Console")
+console = Path("_app/DomainConsole-CSharp/Console")
 reg = "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate"
 policy = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate"
 
@@ -23,10 +23,9 @@ def quote(value):
     return "'" + value.replace("'", "''") + "'"
 
 
-def exercise(nodes, ps, system, evidence, save, root):
+def exercise(nodes, ps, system, evidence, save, root, gui):
     clients = [n for n in nodes if n.startswith("CLONE")]
     probe = body("Identity58.cs", "IdentityProbe58")
-    repair = body("IdentityRepair58.cs", "IdentityRepairBody58")
     verify = body("IdentityConfirmation58.cs", "IdentityServerScript58")
     wsus_api = "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');$s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530);"
     ps("DCWSUS", wsus_api + "$null=$s.CreateComputerTargetGroup('DCLabClients')")
@@ -52,6 +51,20 @@ $scan=$searcher.Search('IsInstalled=0 and IsHidden=0');if([int]$scan.ResultCode 
         system(node, "configure-wua", settings, minutes=22)
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         list(pool.map(configure, clients))
+    def resources(label, active):
+        sample = r"""
+$p=@(Get-CimInstance Win32_Process|Where-Object Name -in 'DomainConsole.Agent.exe','wsmprovhost.exe','powershell.exe')
+$jobs=@(Get-ScheduledTask|Where-Object TaskName -like 'DomainConsole*')
+$store=Join-Path $env:ProgramData 'DomainConsoleCSharp'
+$size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -Property Length -Sum).Sum}else{0}
+@{Agent=@($p|Where-Object Name -eq 'DomainConsole.Agent.exe').Count;WinRM=@($p|Where-Object Name -eq 'wsmprovhost.exe').Count;PowerShell=@($p|Where-Object Name -eq 'powershell.exe').Count;OwnedTasks=$jobs.Count;WorkingSetBytes=($p|Measure-Object -Property WorkingSetSize -Sum).Sum;CPU100ns=[double]($p|Measure-Object -Property KernelModeTime -Sum).Sum+[double]($p|Measure-Object -Property UserModeTime -Sum).Sum;DataBytes=$size;Utc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json -Compress
+"""
+        def read(node):
+            return node,json.loads(ps(node,sample))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            evidence["checks"].setdefault("resource_samples",{})[label]=dict(pool.map(read,active))
+        save()
+    resources("before",clients)
     originals = {node: probe_client(node) for node in clients}
     shared = originals[clients[0]]["SusClientId"]
     # Deliberately reproduce the reported cloning defect only inside these ephemeral VMs.
@@ -76,17 +89,34 @@ $scan=$searcher.Search('IsInstalled=0 and IsHidden=0');if([int]$scan.ResultCode 
                 raise RuntimeError("Disconnected guest remained reachable")
         except OSError:
             evidence["checks"]["offline"] = held
-        def fix(node):
-            old = before[node]
-            prefix = "$dcExpectedId58="+quote(shared)+";$dcExpectedMachine58="+quote(old["Machine"])+";$dcExpectedName58="+quote(old["Name"])+";$dcExpectedServer58="+quote(old["Server"])+";"
-            system(node, "identity-repair", prefix+repair, minutes=25)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-            list(pool.map(fix, clients[:-1]))
+        gui.start(before)
+        gui.wait("first-consent.done", 800)
+        resources("during",clients[:-1])
+        def changed(active):
+            deadline=time.monotonic()+900
+            while time.monotonic()<deadline:
+                readings={}
+                for node in active:
+                    try:
+                        current=probe_client(node)
+                    except RuntimeError:
+                        # Windows can briefly have no ID between the guarded removal and registration.
+                        continue
+                    if current["SusClientId"].lower()!=shared.lower():
+                        readings[node]=current
+                if len(readings)==len(active):
+                    return readings
+                time.sleep(15)
+            raise TimeoutError("Packaged console did not change registrations on "+", ".join(active))
+        evidence["checks"]["four-replacements"]=changed(clients[:-1])
+        save()
     finally:
         subprocess.run(["ip","link","set",tap,"up"],check=True)
     if probe_client(held)["SusClientId"].lower()!=shared.lower():
         raise RuntimeError("Offline target was unexpectedly reset")
-    fix(held)
+    gui.mark("fifth-online.done")
+    gui.wait("expanded.done", 600)
+    changed([held])
     after = {node: probe_client(node) for node in clients}
     ids={r["SusClientId"].lower() for r in after.values()}
     if shared.lower() in ids or len(ids)!=len(clients):
@@ -115,4 +145,10 @@ $scan=$searcher.Search('IsInstalled=0 and IsHidden=0');if([int]$scan.ResultCode 
             time.sleep(20)
     if pending:
         raise RuntimeError("WSUS has not confirmed fresh registration in 10 minutes: "+", ".join(sorted(pending)))
+    evidence["checks"]["packaged-console"]=gui.finish()
+    resources("after",clients)
+    for node,m in evidence["checks"]["resource_samples"]["after"].items():
+        if m["Agent"]>1:
+            raise RuntimeError("Multiple agents remained on "+node)
+    save()
     print("Real WSUS confirmed five independent reports and AD devices.",flush=True)
