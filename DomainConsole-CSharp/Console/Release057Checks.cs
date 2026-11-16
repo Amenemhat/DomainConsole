@@ -14,6 +14,12 @@ public partial class MainWindow {
   if(!connection.InLinkGrace(loss)||connection.RecoveryDue(loss.AddSeconds(29))||!connection.RecoveryDue(loss.AddSeconds(30)))throw new Exception("Link recovery schedule");
   if(InterruptedTransfer(connection,stage,loss.AddMinutes(15).AddTicks(-1),now.ToString("o")) is not {Busy:true,Percent:24}||InterruptedTransfer(connection,stage,loss.AddMinutes(15)) is not {Busy:false,Percent:null})throw new Exception("Grace boundary or stage changed");
   if(InterruptedTransfer(connection,stage,loss.AddMinutes(2)) is not {Busy:false})throw new Exception("Historical transfer was treated as recently confirmed");
+  var lastTransfer=InterruptedTransfer(connection,stage,loss.AddMinutes(15))!;
+  var offlineRow=new ComputerRow(new(){Host="offline.invalid"});
+  offlineRow.SetConnection("Unreachable","Последний ответ: 12:00");
+  offlineRow.SetActivity(lastTransfer.Busy,lastTransfer.Percent,lastTransfer.Text,false,lastTransfer.Interrupted);
+  if(offlineRow.Working||offlineRow.ActivityVisibility!=Visibility.Collapsed||!offlineRow.RecentHint.Contains("24%")||!offlineRow.RecentHint.Contains("последн",StringComparison.OrdinalIgnoreCase)||offlineRow.NavigationOutcomeHint!=lastTransfer.Text)
+   throw new Exception("Historical transfer is missing from offline navigation");
   connection.Observe38(true,"",loss.AddMinutes(16),loss.AddMinutes(16));
   if(InterruptedTransfer(connection,stage,loss.AddMinutes(17))!=null)throw new Exception("Reachable stationary installer treated as disconnected");
   var steady=new TargetRecord{Host="stationary-transfer.invalid",State=stage,OutputReceivedUtc58=DateTimeOffset.UtcNow.ToString("o")};

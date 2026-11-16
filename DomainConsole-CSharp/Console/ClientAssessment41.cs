@@ -67,12 +67,13 @@ public partial class MainWindow {
   if(HeaderRebootJob(row)!=null&&assessment.Kind is not ("Error" or "SyncError"))assessment=new("Reboot","Перезагрузка назначена",assessment.Title+"\n"+assessment.Details);
   assessment=PreserveReady43(row,assessment,active,state,cache,proof,scan.Step?.Ended??"");if(assessment.Kind=="Success"&&rebootWatches.TryGetValue(row.Host,out var watch43)&&!watch43.Done&&rebootSnapshots.TryGetValue(row.Host,out var snap43)&&RebootReturned(watch43,snap43)&&ObservedAfter(snap43,watch43.RequestedUtc)&&snap43.Required==false){watch43.Done=true;watch43.Phase="Перезагрузка и готовность подтверждены";Store.Write("reboot-watches.json",rebootWatches);}
   if(operation.Target!=null&&operation.Job!=null&&HeaderRebootJob(row)==null&&!ActivityConfirmed61(operation.Job,operation.Target))assessment=new("Unknown",ConnectionFresh(row.Host)?"Клиент доступен; состояние задания уточняется":"Нет свежего статуса задания","Последний известный этап: "+(state?.Stage??"не получен")+" · "+Display36.Date(state?.Updated??""));
-  assessment=ExplainAssessment45(row,assessment,cache,proof,state,active,scan.Step?.Ended??"",scan.State?.UpdatesRemaining,operation.Target);
+  var observed51=operation.Target!=null?new ComputerRow(operation.Target,operation.Job?.Id??""):new ComputerRow(target??row.Target,wsus.Job?.Id??"");
+  var transfer=operation.Target==null?null:ObservedTransfer(observed51,DateTimeOffset.UtcNow);
+  assessment=ExplainAssessment45(row,assessment,cache,proof,state,active,scan.Step?.Ended??"",scan.State?.UpdatesRemaining,operation.Target,transfer);
   assessment=ApplySourceResult54(row,assessment,active);
   if(!active&&rebootWatches.TryGetValue(row.Host,out var observing51)&&!observing51.Done)assessment=new(HeaderRebootJob(row)!=null||observing51.ReadyAfter==default?"Reboot":"Working",RebootHeadline51(observing51,DateTimeOffset.UtcNow),assessment.Title+"\n"+assessment.Details);
-  var observed51=operation.Target!=null?new ComputerRow(operation.Target,operation.Job?.Id??""):new ComputerRow(target??row.Target,wsus.Job?.Id??"");
   if(active&&(LostObservation51(row.Host)||(stoppedObservations51.Count>0&&ObservationStopped51(observed51)))){assessment=new("Unknown",IsCurrentExecution(observed51.Target.Status)?ObservationExpired51(observed51)||ObservationStopped51(observed51)?"Ожидание завершено · результат операции неизвестен":"Связь потеряна · результат операции неизвестен":"Связь потеряна · текущее состояние неизвестно",assessment.Title+"\nПоследнее состояние: "+Display36.Date(observed51.Target.State?.Updated??""));}
-  if(active&&!ObservationStopped51(observed51)&&!ObservationExpired51(observed51)&&!TransportBudget41.Paused&&InterruptedTransfer(clientConnections.GetValueOrDefault(row.Host),observed51.Target.State,DateTimeOffset.UtcNow,observed51.Target.OutputReceivedUtc58) is { } transfer)
+  if(transfer!=null)
    assessment=new(transfer.Busy?"Working":"Unknown",transfer.Text,assessment.Details);
   if(!active&&assessment.Kind is not ("Error" or "SyncError" or "Reboot" or "Working")&&CurrentReportWait61(row.Host) is { } pending61){
    bool expired=ReportWaitExpired61(pending61);
