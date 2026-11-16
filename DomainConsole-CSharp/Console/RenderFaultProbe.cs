@@ -13,7 +13,16 @@ internal static class RenderFaultProbe {
  [DllImport("user32.dll",ExactSpelling=true)] static extern IntPtr SetWindowsHookExW(int kind,Hook hook,IntPtr module,uint thread);
  [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr hook,int code,IntPtr hwnd,IntPtr details);
  [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr hwnd,StringBuilder text,int max);
- [DllImport("user32.dll")] static extern bool PostMessage(IntPtr hwnd,uint message,IntPtr wp,IntPtr lp);
+ delegate void TimerProc(IntPtr hwnd,uint message,UIntPtr timer,uint time);
+ static readonly TimerProc dismiss=Dismiss;
+ static IntPtr notice;
+ [DllImport("user32.dll")] static extern UIntPtr SetTimer(IntPtr hwnd,UIntPtr id,uint ms,TimerProc callback);
+ [DllImport("user32.dll")] static extern bool KillTimer(IntPtr hwnd,UIntPtr id);
+ [DllImport("user32.dll")] static extern bool EndDialog(IntPtr hwnd,IntPtr result);
+ static void Dismiss(IntPtr hwnd,uint message,UIntPtr timer,uint time){
+  KillTimer(IntPtr.Zero,timer);
+  File.AppendAllText(trace,"dismiss "+EndDialog(notice,new IntPtr(1))+"\n");
+ }
  [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
  static readonly string trace=Path.Combine(AppContext.BaseDirectory,"render-test.txt");
  static IntPtr Activated(int code,IntPtr hwnd,IntPtr details){
@@ -22,7 +31,7 @@ internal static class RenderFaultProbe {
    File.AppendAllText(trace,"activated "+title+"\n");
    if(title.ToString()=="Domain Console"){
     // Let MessageBox finish initializing before sending the user's OK.
-    _=Task.Run(async()=>{await Task.Delay(150);PostMessage(hwnd,0x111,new IntPtr(1),IntPtr.Zero);});
+    notice=hwnd;SetTimer(IntPtr.Zero,UIntPtr.Zero,250,dismiss);
    }
   }
   return CallNextHookEx(IntPtr.Zero,code,hwnd,details);
