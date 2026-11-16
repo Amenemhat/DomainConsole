@@ -14,6 +14,57 @@ function Wait-For($condition,$label,$seconds=180){
 $process=$null
 try{
  Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes
+Add-Type -TypeDefinition @'
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
+public static class DCLabNativeWindows {
+    delegate bool Visitor(IntPtr window, IntPtr data);
+    [DllImport("user32.dll")] static extern bool EnumThreadWindows(int thread, Visitor callback, IntPtr data);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr window, StringBuilder title, int size);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr window, StringBuilder name, int size);
+    [DllImport("user32.dll")] static extern IntPtr GetDlgItem(IntPtr dialog,int id);
+    [DllImport("user32.dll")] static extern bool PostMessage(IntPtr h,uint msg,IntPtr w,IntPtr l);
+    public static bool ConfirmExpectedDialog(int process,string title) {
+        var dialog=Locate(process,title,false);
+        var yes=dialog==IntPtr.Zero?IntPtr.Zero:GetDlgItem(dialog,6);
+        return yes!=IntPtr.Zero && PostMessage(dialog,0x111,new IntPtr(6),yes);
+    }
+    public static IntPtr Locate(int process, string title, bool prefix) {
+        var match=IntPtr.Zero;
+        foreach(ProcessThread thread in Process.GetProcessById(process).Threads) {
+            EnumThreadWindows(thread.Id,delegate(IntPtr h,IntPtr unused) {
+                var text=new StringBuilder(600); GetWindowText(h,text,text.Capacity);
+                bool same=prefix?text.ToString().StartsWith(title,StringComparison.OrdinalIgnoreCase):text.ToString().Equals(title,StringComparison.OrdinalIgnoreCase);
+                if(same){match=h;return false;}
+                return true;
+            },IntPtr.Zero);
+            if(match!=IntPtr.Zero)break;
+        }
+        return match;
+    }
+    public static string Inventory(int process) {
+        var names=new List<string>();
+        foreach(ProcessThread thread in Process.GetProcessById(process).Threads) {
+            EnumThreadWindows(thread.Id,delegate(IntPtr h,IntPtr unused){
+                var text=new StringBuilder(600);var name=new StringBuilder(120);
+                GetWindowText(h,text,text.Capacity);GetClassName(h,name,name.Capacity);
+                names.Add(name.ToString()+"["+text.ToString()+"]");return true;
+            },IntPtr.Zero);
+        }
+        return string.Join(", ",names);
+    }
+}
+'@
+function Application-Window($title,[bool]$prefix=$false){
+ $process.Refresh()
+ if($process.HasExited){throw "Application process exited with code $($process.ExitCode)"}
+ $handle=[DCLabNativeWindows]::Locate($process.Id,$title,$prefix)
+ if($handle -ne [IntPtr]::Zero){return [Windows.Automation.AutomationElement]::FromHandle($handle)}
+}
+
  $root=[Windows.Automation.AutomationElement]::RootElement
  $desc=[Windows.Automation.TreeScope]::Descendants
  function Element($parent,$property,$value){
@@ -26,18 +77,22 @@ try{
   foreach($button in $parent.FindAll($desc,$c)){if($button.Current.IsEnabled -and $button.Current.Name.StartsWith($text)){return $button}}
  }
  function Click($e){$e.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()}
- function Run-Repair($window,$prefix){
+ function Run-Repair($window,$prefix,$expected){
   $button=Wait-For { Button $window $prefix } $prefix
+  $caption=$button.Current.Name
+  if($caption -notmatch $expected){throw "Unexpected repair membership shown in button: $caption"}
   $async=[PowerShell]::Create()
   [void]$async.AddScript('param($b) $b.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()').AddArgument($button)
   $op=$async.BeginInvoke()
   try{
-   $confirm=Wait-For {Element $root ([Windows.Automation.AutomationElement]::NameProperty) 'Перерегистрация клиентов'} 'membership consent'
-   $yes=Wait-For {Element $confirm ([Windows.Automation.AutomationElement]::AutomationIdProperty) '6'} 'Yes'
-   Click $yes
+   $confirm=Wait-For {Application-Window 'Перерегистрация клиентов'} 'membership consent'
+   $yes=Element $confirm ([Windows.Automation.AutomationElement]::AutomationIdProperty) '6'
+   if($yes){Click $yes}
+   elseif(![DCLabNativeWindows]::ConfirmExpectedDialog($process.Id,'Перерегистрация клиентов')){throw 'Expected Yes control not found'}
    if(!$op.AsyncWaitHandle.WaitOne(15000)){throw 'UI command did not return after consent'}
    [void]$async.EndInvoke($op)
   }finally{$async.Dispose()}
+  return $caption
  }
  function Complete-Survey($minimum){
   Wait-For {$s=Read-Data 'identity-survey.json';$s -and $s.Results.PSObject.Properties.Count -and @($s.Results.PSObject.Properties).Count -ge $minimum -and $s.ScopeMessage -eq 'Проход завершён'} 'completed client observations' 400|Out-Null
@@ -72,10 +127,10 @@ try{
  Save-Json 'poll-paused41.json' $true
  Save-Json 'auto-service31.json' $true
  $process=Start-Process (Join-Path $dir 'DomainConsole.exe') -WorkingDirectory $dir -ArgumentList '--software-rendering' -PassThru
- $main=Wait-For {Element $root ([Windows.Automation.AutomationElement]::ProcessIdProperty) $process.Id} 'packaged main window'
+ $main=Wait-For {Application-Window "DomainConsole" $true} 'packaged main window'
  $entry=Wait-For {Element $main ([Windows.Automation.AutomationElement]::AutomationIdProperty) 'HeaderIdentity58'} 'identity action'
  Click $entry
- $window=Wait-For {Element $root ([Windows.Automation.AutomationElement]::NameProperty) 'Идентичность WSUS · CLONE1'} 'WSUS identity window'
+ $window=Wait-For {Application-Window 'Идентичность WSUS · CLONE1'} 'WSUS identity window'
  # A client with a different spelling of the WSUS URL first joins in the full AD pass.
  Complete-Survey 1
  $limited=Read-Data 'identity-survey.json'
@@ -85,16 +140,16 @@ try{
  if(@($discovered.Results.PSObject.Properties).Count -ne $computers.Count){throw 'The confirmed domain pass did not cover every AD computer'}
  Set-Content "$lab\read-only.done" 'checked'
  Wait-For {Test-Path "$lab\allow-consent.done"} 'read-only resource measurements' 120|Out-Null
- Run-Repair $window 'Исправить общий ID'
+ $firstCaption=Run-Repair $window 'Исправить общий ID' '4\s*$'
  Set-Content "$lab\first-consent.done" '4'
  Wait-For {Test-Path "$lab\fifth-online.done"} 'new network observation' 1100|Out-Null
  Browse-Domain $window
- Run-Repair $window 'Подтвердить расширение группы'
+ $extendedCaption=Run-Repair $window 'Подтвердить расширение группы' 'clone5'
  Set-Content "$lab\expanded.done" '5'
  Wait-For {Test-Path "$lab\server-reports.done"} 'five external WSUS records' 2200|Out-Null
  Click (Wait-For {Button $window 'Повторить проверку результата'} 'read-only verification')
  Wait-For {$attempts=Read-Data 'identity-repairs58.json';$attempts -and @($attempts.PSObject.Properties.Value|Where-Object Phase -eq 'Подтверждено').Count -eq 5} 'five confirmed registrations in the product' 400|Out-Null
- $evidence=@{InitialCachedClients=1;InitialSurvey=$limited;FirstDomainSurvey=$discovered;Version=$process.MainModule.FileVersionInfo.ProductVersion;Attempts=(Read-Data 'identity-repairs58.json');Survey=(Read-Data 'identity-survey.json')}
+ $evidence=@{FirstConsentButton=$firstCaption;ExtensionButton=$extendedCaption;InitialCachedClients=1;InitialSurvey=$limited;FirstDomainSurvey=$discovered;Version=$process.MainModule.FileVersionInfo.ProductVersion;Attempts=(Read-Data 'identity-repairs58.json');Survey=(Read-Data 'identity-survey.json')}
  # One confirmed request must change the boot time on this disposable guest.
  if($chosen -ne 'clone1.dc057.test'){throw 'Unexpected reboot target'}
  $boot={ (Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString('o') }
@@ -105,7 +160,7 @@ try{
  [void]$async.AddScript('param($b) $b.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()').AddArgument($restart)
  $opening=$async.BeginInvoke()
  try{
-  $dialog=Wait-For {Element $root ([Windows.Automation.AutomationElement]::NameProperty) ("Перезагрузка · "+$chosen)} 'reboot configuration'
+  $dialog=Wait-For {Application-Window ("Перезагрузка · "+$chosen)} 'reboot configuration'
   $delay=Element $dialog ([Windows.Automation.AutomationElement]::ControlTypeProperty) ([Windows.Automation.ControlType]::Edit)
   $delay.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).SetValue('0')
   $scan=Element $dialog ([Windows.Automation.AutomationElement]::NameProperty) 'Проверить обновления после перезагрузки'
@@ -120,5 +175,11 @@ try{
  } 'actual new Windows boot' 450
  $evidence.Reboot=@{Target=$chosen;Before=$beforeBoot;After=$afterBoot;Confirmations=1}
  [IO.File]::WriteAllText("$lab\gui-evidence.json",($evidence|ConvertTo-Json -Depth 10),$utf8)
-}catch{[IO.File]::WriteAllText("$lab\gui-error.txt",($_|Out-String),$utf8);exit 1}
+ }catch{
+ $message=($_|Out-String)
+ if($process -and !$process.HasExited){
+  $message+=" App windows: "+[DCLabNativeWindows]::Inventory($process.Id)
+ }
+ [IO.File]::WriteAllText("$lab\gui-error.txt",$message,$utf8);exit 1
+}
 finally{if($process -and !$process.HasExited){[void]$process.CloseMainWindow()}}

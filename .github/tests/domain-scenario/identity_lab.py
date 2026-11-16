@@ -107,8 +107,12 @@ foreach($v in 'Registry64','Registry32'){
             seed=f"$r='{reg}';if(!(Test-Path $r)){{New-Item $r -Force|Out-Null}};if(!(Get-ItemProperty $r -Name SusClientId -ErrorAction SilentlyContinue)){{New-ItemProperty $r -Name SusClientId -Value ([guid]::NewGuid().ToString()) -PropertyType String -Force|Out-Null}};"
             job=policy_only+"Stop-Service wuauserv -Force;"+seed+"Start-Service wuauserv;"+scan
         else:
-            # These four clones have never reported separately to this WSUS.
-            job=policy_only+"Stop-Service wuauserv -Force;"+f"if(!(Test-Path '{reg}')){{New-Item '{reg}' -Force|Out-Null}};New-ItemProperty -Path '{reg}' -Name SusClientId -Value {quote(shared)} -PropertyType String -Force|Out-Null;Start-Service wuauserv"
+            # Initialize each native WUA/validation record before reproducing an old ID.
+            # Suppress unsolicited reports while preparing the fixture; the test operator later removes this isolated rule.
+            block="New-NetFirewallRule -Name DCLabPrepareClone -DisplayName 'Isolated clone preparation' -Direction Outbound -RemoteAddress 10.77.57.10 -Protocol TCP -RemotePort 8530 -Action Block|Out-Null;"
+            offline="try{$w=New-Object -ComObject Microsoft.Update.Session;$r=$w.CreateUpdateSearcher();$r.Online=$false;$null=$r.Search('IsInstalled=0')}catch{$_.Exception.Message|Set-Content C:\\DomainConsoleLab\\seed-offline-search.txt};"
+            job=block+policy_only+"Restart-Service wuauserv -Force;"+offline
+
         system(node,"configure-wua",job,minutes=22)
     configure(clients[0])
     limit=time.monotonic()+180
@@ -137,21 +141,42 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             evidence["checks"].setdefault("resource_samples",{})[label]=dict(pool.map(read,active))
         save()
+    shared=probe_client(clients[0])["SusClientId"]
+    def write_cloned_id(node):
+        # Only fixture preparation, before the console and before consent. Preserve each device's own validation bytes.
+        ps(node,f"$p='{reg}';if(!(Test-Path $p)){{New-Item $p -Force|Out-Null}};New-ItemProperty $p -Name SusClientId -PropertyType String -Value {quote(shared)} -Force|Out-Null")
+    def read_all():
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            return dict(zip(clients,pool.map(probe_client,clients)))
+    for attempt in range(2):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            list(pool.map(write_cloned_id,clients[1:]))
+        before=read_all()
+        time.sleep(15)
+        stable=read_all()
+        evidence["checks"]["before"]=stable
+        save()
+        if len({r["Machine"].lower() for r in stable.values()})==len(clients) and all(uuid.UUID(r["SusClientId"])==uuid.UUID(shared) for r in (*before.values(),*stable.values())):
+            before=stable
+            break
+        if attempt:
+            raise RuntimeError("Shared fixture IDs were not stable: "+str({n:r["SusClientId"] for n,r in stable.items()}))
     resources("before",clients)
-    before = {node: probe_client(node) for node in clients}
-    if len({r["Machine"].lower() for r in before.values()}) != len(clients) or any(r["SusClientId"].lower()!=shared.lower() for r in before.values()):
-        raise RuntimeError("Did not reproduce a shared ID on distinct devices")
-    evidence["checks"]["before"] = before
-    query="$t=@($s.GetComputerTargets()|Where-Object FullDomainName -like 'clone*'|Select-Object Id,FullDomainName);ConvertTo-Json -InputObject $t -Compress"
+    query="$t=@($s.GetComputerTargets()|Where-Object FullDomainName -like 'clone*'|ForEach-Object {[pscustomobject]@{Id=[string]$_.Id;FullDomainName=[string]$_.FullDomainName}});ConvertTo-Json -InputObject $t -Compress"
     limit=time.monotonic()+300
     while True:
         initial=json.loads(ps("DCWSUS",wsus_api+query))
         if initial or time.monotonic()>=limit:
             break
         time.sleep(10)
-    if len(initial)!=1 or initial[0]["Id"].lower()!=shared.lower():
-        raise RuntimeError("Expected exactly one server record hiding five distinct clients: "+str(initial))
     evidence["checks"]["initial_server_records"]=initial
+    save()
+    if len(initial)!=1 or uuid.UUID(initial[0]["Id"])!=uuid.UUID(shared):
+        raise RuntimeError("Expected exactly one server record hiding five distinct clients: "+str(initial))
+    for node in clients[1:]:
+        ps(node,"Remove-NetFirewallRule -Name DCLabPrepareClone;if(Get-NetFirewallRule -Name DCLabPrepareClone -ErrorAction SilentlyContinue){throw 'Establishment firewall rule still present'}")
+    evidence["checks"]["fixture_network_restrictions_removed"]=True
+    save()
     ous = json.loads(ps("DCAD", "Get-ADComputer -Filter \"Name -like 'CLONE*'\"|Select-Object Name,DistinguishedName|ConvertTo-Json -Compress", True))
     if len(ous)!=len(clients) or len({r["DistinguishedName"].split(",")[1] for r in ous})<2:
         raise RuntimeError("Incorrect AD scope")
@@ -192,7 +217,7 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
                 if len(readings)==len(active):
                     return readings
                 time.sleep(15)
-            raise TimeoutError("Packaged console did not change registrations on "+", ".join(active))
+            raise TimeoutError("Packaged console did not change registrations on "+", ".join(active)+" · "+gui.diagnostics()[:3300])
         evidence["checks"]["four-replacements"]=changed(clients[:-1])
         save()
     finally:

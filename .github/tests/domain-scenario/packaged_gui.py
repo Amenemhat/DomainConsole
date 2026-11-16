@@ -56,16 +56,26 @@ Register-ScheduledTask -TaskName DCLab-Console -Action $action -User 'DCLAB\Admi
 Start-ScheduledTask DCLab-Console
 """.replace("HASH",hashlib.file_digest(files["/DomainConsole.zip"].open("rb"),"sha256").hexdigest()).replace("PASSWORD",self.password))
 
+    def diagnostics(self):
+        # The private fixture contains only synthetic computer accounts and operational state.
+        return self.remote(r"""
+$p='C:\DomainConsoleLab'
+$d="$p\package\Data"
+$e=if(Test-Path "$p\gui-error.txt"){Get-Content -Raw -Encoding UTF8 "$p\gui-error.txt"}else{''}
+$survey=if(Test-Path "$d\identity-survey.json"){Get-Content -Raw -Encoding UTF8 "$d\identity-survey.json"|ConvertFrom-Json}
+$repairs=if(Test-Path "$d\identity-repairs58.json"){(Get-Content -Raw -Encoding UTF8 "$d\identity-repairs58.json"|ConvertFrom-Json).PSObject.Properties.Value|Select-Object Host,Phase,JobId,OldId,NewId}
+@{Stage=$survey.ScopeMessage;Rows=$survey.Results;Repair=@($repairs);Error=$e;Task=(Get-ScheduledTask DCLab-Console -ErrorAction SilentlyContinue).State.ToString()}|ConvertTo-Json -Depth 4 -Compress
+""")
     def wait(self, file, timeout):
         end = time.monotonic() + timeout
         while time.monotonic() < end:
             state = self.remote(r"$p='C:\DomainConsoleLab';if(Test-Path ($p+'\gui-error.txt')){'ERROR '+(Get-Content -Encoding UTF8 -Raw ($p+'\gui-error.txt'))}elseif(Test-Path ($p+'\FILE')){'OK'}".replace("FILE",file))
             if state.startswith("ERROR"):
-                raise RuntimeError(state[:1500])
+                raise RuntimeError(state[:1200]+" · "+self.diagnostics()[:2300])
             if state == "OK":
                 return
             time.sleep(5)
-        raise TimeoutError("Packaged console: "+file)
+        raise TimeoutError("Packaged console: "+file+" · "+self.diagnostics()[:3300])
 
     def mark(self, file):
         self.remote("Set-Content 'C:\\DomainConsoleLab\\"+file+"' 'True'")
