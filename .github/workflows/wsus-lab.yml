@@ -56,6 +56,8 @@ jobs:
       - name: Test five real registrations and one real reboot (attempt 1)
         id: scenario1
         continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: bash .github/lab/drive-scenario.sh 1
       - uses: actions/upload-artifact@v4
         if: always() && steps.scenario1.outcome != 'skipped'
@@ -68,6 +70,8 @@ jobs:
         id: scenario2
         if: steps.scenario1.outcome == 'failure'
         continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: bash .github/lab/drive-scenario.sh 2
       - uses: actions/upload-artifact@v4
         if: always() && steps.scenario2.outcome != 'skipped'
@@ -80,6 +84,8 @@ jobs:
         id: scenario3
         if: steps.scenario2.outcome == 'failure'
         continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: bash .github/lab/drive-scenario.sh 3
       - uses: actions/upload-artifact@v4
         if: always() && steps.scenario3.outcome != 'skipped'

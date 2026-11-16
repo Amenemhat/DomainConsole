@@ -39,6 +39,7 @@ def run(root,nodes,domain_disks_use_uefi,processes,boot,wait,ps,system,evidence,
             wait(node,node=="DCAD",minutes=12)
         evidence["checks"]=dict(initial_checks)
         evidence["scenario_tree"]=marker.read_text().strip()
+        evidence["package"]=json.loads((root/"package.json").read_text())
         def module(name):
             spec=importlib.util.spec_from_file_location(name,driver/(name+".py"))
             item=importlib.util.module_from_spec(spec)

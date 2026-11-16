@@ -110,7 +110,7 @@ def boot(node, gpt, specialize=False):
     memory = 3584 if specialize or node == "DCWSUS" else 2048 if node=="DCAD" else 1536
     tap = "dclab" + str(nodes[node])
     args = [qemu, "-accel", "kvm", "-cpu", "host", "-smp", "2", "-m", str(memory),
-            "-machine", "q35" if gpt else "pc", "-uuid", hardware_ids[node], "-smbios", f"type=1,manufacturer=DCLab,product=WindowsDomainGuest,serial={node},uuid={hardware_ids[node]}", "-name", node,
+            "-machine", ("q35" if gpt else "pc")+",smbios-entry-point-type=32", "-uuid", hardware_ids[node], "-smbios", f"type=1,manufacturer=DCLab,product=WindowsDomainGuest,serial={node},uuid={hardware_ids[node]}", "-name", node,
             "-drive", f"file={root / (node + '.qcow2')},format=qcow2,if=ide",
             "-cdrom", str(root / "drivers.iso"), "-boot", "c", "-display", "none",
             "-monitor", f"unix:{root / (node + '.sock')},server=on,wait=off", "-serial", "none",
@@ -147,6 +147,7 @@ def ps(node, script, domain=False):
                 raise
             time.sleep(5)
     try:
+        command="[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);"+command
         stream=base64.b64encode(command.encode("utf-8"))
         send_input=len(command.encode("utf-16-le"))*4//3>=7000
         wrapper="$data=[Console]::In.ReadToEnd();&([ScriptBlock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($data))))" if send_input else command
