@@ -4,6 +4,10 @@ public sealed class ClientIdentity58 {
  public string Name {get;set;}="";
  public string Machine {get;set;}="";
  public string Server {get;set;}="";
+ public string SourceCheckedAt {get;set;}="";
+ public string VerifiedSource {get;set;}="";
+ public string ServerId {get;set;}="";
+ public string Source=>VerifiedSource.Length>0&&Guid.TryParse(ServerId,out var id)&&id!=Guid.Empty?VerifiedSource:Server;
  public string SusClientId {get;set;}="";
  public string StatusServer {get;set;}="";
  public int? UseWUServer {get;set;}
@@ -14,7 +18,7 @@ public sealed class ClientIdentity58 {
  public string At {get;set;}="";
  public string Error {get;set;}="";
  public string ErrorAt {get;set;}="";
- public string Key=>(Uri.TryCreate(Server,UriKind.Absolute,out var uri)?uri.AbsoluteUri:Server).TrimEnd('/').ToLowerInvariant()+"|"+(Guid.TryParse(SusClientId,out var id)?id.ToString("D"):SusClientId.ToLowerInvariant());
+ public string Key=>(Uri.TryCreate(Source,UriKind.Absolute,out var uri)?uri.AbsoluteUri:Source).TrimEnd('/').ToLowerInvariant()+"|"+(Guid.TryParse(SusClientId,out var id)?id.ToString("D"):SusClientId.ToLowerInvariant());
  public bool Fresh(DateTimeOffset now)=>Error.Length==0&&DateTimeOffset.TryParse(At,out var at)&&at<=now&&now-at<TimeSpan.FromMinutes(10);
 }
 public static class IdentityPolicy58 {

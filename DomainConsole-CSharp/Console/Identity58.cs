@@ -10,6 +10,10 @@ public partial class MainWindow {
   if(identity==null||identity.At.Length==0)return;identity.Host=host;
   if(identities58.TryGetValue(host,out var previous)&&string.CompareOrdinal(previous.At,identity.At)>0)return;
   if(previous!=null&&identity.Error.Length>0){previous.Error=identity.Error;previous.ErrorAt=identity.At;Store.Write("client-identities58.json",identities58);return;}
+  // A collector reading the same endpoint and hardware may reuse only the still-fresh proof from a manual pass.
+  if(identity.VerifiedSource.Length==0&&previous?.VerifiedSource.Length>0&&DateTimeOffset.TryParse(previous.SourceCheckedAt,out var verifiedAt)&&DateTimeOffset.UtcNow-verifiedAt<TimeSpan.FromMinutes(10)&&previous.Server.Equals(identity.Server,StringComparison.OrdinalIgnoreCase)&&previous.Machine.Equals(identity.Machine,StringComparison.OrdinalIgnoreCase)&&previous.Name.Equals(identity.Name,StringComparison.OrdinalIgnoreCase)){
+   identity.VerifiedSource=previous.VerifiedSource;identity.ServerId=previous.ServerId;identity.SourceCheckedAt=previous.SourceCheckedAt;
+  }
   identities58[host]=identity;Store.Write("client-identities58.json",identities58);
   if(!allowRepair)RememberDiagnosticScope(identity);
   if(IdentityPolicy58.Confirmed(identities58.Values,identity,DateTimeOffset.UtcNow)){

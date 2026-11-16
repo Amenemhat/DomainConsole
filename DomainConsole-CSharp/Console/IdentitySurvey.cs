@@ -37,6 +37,7 @@ public partial class MainWindow {
  }
  async Task RunIdentitySurvey(ComputerRow selected,bool domain,bool resume=false,Func<TargetRecord,CancellationToken,Task<ClientIdentity58>>? readClient=null,Func<WsusSettings,string,CancellationToken,Task<IdentityServerReply58>>? readServer=null,bool verifyRegistration=false){
   if(surveyRun!=null)return;
+  var checkedSources=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
   using var stop=new CancellationTokenSource();surveyRun=stop;
   using var lane=PollingControl43.Manual56("identity");
   try{
@@ -56,6 +57,9 @@ public partial class MainWindow {
      var result=await (readClient??remote.ReadIdentity)(target,stop.Token);
      stop.Token.ThrowIfCancellationRequested();
      if(!CurrentEndpoint(target)||!CurrentIdentity(target))throw new InvalidOperationException("Цель изменилась во время чтения");
+     if(readClient==null)await ResolveIdentitySource(result,ReadWsus(),checkedSources,stop.Token);
+     stop.Token.ThrowIfCancellationRequested();
+     if(!CurrentEndpoint(target)||!CurrentIdentity(target))throw new InvalidOperationException("Цель изменилась во время проверки источника WSUS");
      ConnectionSucceeded(host,began,true);
      ObserveIdentity58(host,result,false);
      if(survey.VerifyRegistration&&result.Error.Length==0)await VerifyIdentityRegistration58(host,true,stop.Token);

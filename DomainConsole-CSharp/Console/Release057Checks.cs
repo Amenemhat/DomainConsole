@@ -32,6 +32,10 @@ public partial class MainWindow {
   AwaitUi39(VerifySurvey057());
   var group=Enumerable.Range(0,5).Select(i=>new ClientIdentity58{Machine=Guid.NewGuid().ToString(),SusClientId="11111111-2222-3333-4444-555555555555",Server="http://example.invalid",Name="test-"+i,At=now.ToString("o")}).ToList();
   group.Add(group[0]);if(!IdentityPolicy58.Confirmed(group,group[0],now)||IdentityPolicy58.Participants(group,group[0],now).Count!=5)throw new Exception("WSUS identity group or alias");
+  var alias=Store.Clone(group[0]);alias.Server="http://alias.invalid";alias.VerifiedSource=group[0].Server;
+  if(alias.Key==group[0].Key)throw new Exception("Unverified WSUS alias combined distinct sources");
+  alias.ServerId=Guid.NewGuid().ToString();
+  if(alias.Key!=group[0].Key)throw new Exception("Verified alias of the same WSUS server was split");
   var ambiguous=Store.Clone(group[0]);ambiguous.Name="different-fqdn";group.Add(ambiguous);
   if(IdentityPolicy58.Participants(group,group[0],now).Count!=4)throw new Exception("Ambiguous hardware ID admitted to repair");
   if(IdentityPolicy58.Confirmed(group,group[0],now.AddMinutes(10)))throw new Exception("Stale WSUS identity");
