@@ -11,7 +11,14 @@ concurrency:
   group: wsus-lab-057
   cancel-in-progress: true
 jobs:
+  stop:
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[stop-domain-lab]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: echo "Full domain run stopped on request."
   guests:
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[stop-domain-lab]')
     runs-on: ubuntu-24.04
     timeout-minutes: 340
     steps:
