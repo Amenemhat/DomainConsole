@@ -6,7 +6,7 @@ namespace DomainConsole;
 public partial class MainWindow {
  readonly Dictionary<string,ClientIdentity58> identities58=new(Store.Read("client-identities58.json",new Dictionary<string,ClientIdentity58>()),StringComparer.OrdinalIgnoreCase);
  readonly HashSet<string> compromisedIds58=new(Store.Read("compromised-ids58.json",new List<string>()),StringComparer.OrdinalIgnoreCase);
- void ObserveIdentity58(string host,ClientIdentity58? identity){
+ void ObserveIdentity58(string host,ClientIdentity58? identity,bool allowRepair=true){
   if(identity==null||identity.At.Length==0)return;identity.Host=host;
   if(identities58.TryGetValue(host,out var previous)&&string.CompareOrdinal(previous.At,identity.At)>0)return;
   if(previous!=null&&identity.Error.Length>0){previous.Error=identity.Error;previous.ErrorAt=identity.At;Store.Write("client-identities58.json",identities58);return;}
@@ -16,7 +16,7 @@ public partial class MainWindow {
    foreach(var member in IdentityPolicy58.Participants(identities58.Values,identity,DateTimeOffset.UtcNow))Event31(member.Host,"identity58",identity.Key,"Подтверждён общий SusClientId","Warning","ID: "+identity.SusClientId+". Участники: "+string.Join(", ",IdentityPolicy58.Participants(identities58.Values,identity,DateTimeOffset.UtcNow).Select(r=>r.Name))+". Требуется перерегистрация всех участников.");
   }
   _=VerifyIdentityRegistration58(host);
-  if(AutoServiceEnabled&&compromisedIds58.Contains(identity.Key))_=RepairIdentityGroup58(host,false);
+  if(allowRepair&&surveyWindow==null&&surveyRun==null&&AutoServiceEnabled&&compromisedIds58.Contains(identity.Key))_=RepairIdentityGroup58(host,false);
  }
  bool IdentityMismatch58(string host)=>SnapshotMatches58&&identities58.TryGetValue(host,out var identity)&&identity.SusClientId.Length>0&&serverSnapshot58.Records.Any(r=>r.Id.Equals(identity.SusClientId,StringComparison.OrdinalIgnoreCase)&&!r.Name.TrimEnd('.').Equals(identity.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase));
  bool IdentityConflict58(string host)=>IdentityMismatch58(host)||identityRepairs58.Values.Any(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&a.Phase!="Подтверждено")||DuplicateRecords58(host)||identities58.TryGetValue(host,out var i)&&compromisedIds58.Contains(i.Key);
@@ -25,9 +25,9 @@ public partial class MainWindow {
   HeaderIdentity58.Visibility=IdentityConflict58(host)?Visibility.Visible:Visibility.Collapsed;
   HeaderIdentity58.Content=identities58.TryGetValue(host,out var i)&&compromisedIds58.Contains(i.Key)?"Конфликт ID":identityRepairs58.Values.Any(a=>a.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&a.Phase!="Подтверждено")?"Регистрация WSUS":IdentityMismatch58(host)?"Проверить идентичность":"Несколько записей WSUS";
  }
- void Identity58_Click(object sender,RoutedEventArgs e)=>IdentityWindow58().Show();
+ void Identity58_Click(object sender,RoutedEventArgs e)=>OpenIdentitySurvey(Current());
  Window IdentityWindow58(){
-  var row=Current();var lines=new List<string>();
+  var row=Current();string Detail(){var lines=new List<string>();
   if(identities58.TryGetValue(row.Host,out var identity)){
    lines.Add("Клиент: "+identity.Name+"\nSusClientId: "+identity.SusClientId+"\nИсточник: "+identity.Server+"\nПроверено: "+Display36.Date(identity.At));
    lines.Add("Сервер отчётов: "+identity.StatusServer+"\nUseWUServer: "+(identity.UseWUServer?.ToString()??"неизвестно")+"\nTargetGroupEnabled: "+(identity.TargetGroupEnabled?.ToString()??"неизвестно")+"; группа: "+identity.TargetGroup+"\nSusClientIdValidation: "+(identity.ValidationBytes.HasValue?identity.ValidationBytes+" байт":"неизвестно"));
@@ -37,14 +37,29 @@ public partial class MainWindow {
   if(SnapshotMatches58)foreach(var record in serverSnapshot58.Find(ConnectionStore.WsusName(row.Host)).Concat(serverSnapshot58.Records.Where(r=>identity!=null&&r.Id.Equals(identity.SusClientId,StringComparison.OrdinalIgnoreCase))).DistinctBy(r=>r.Id))lines.Add("WSUS: "+record.Name+" · ID "+record.Id+" · отчёт "+Display36.Date(record.Summary?.LastReportedUtc??""));
   foreach(var attempt in identityRepairs58.Values.Where(a=>a.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)))lines.Add("Перерегистрация: "+attempt.Phase+" · "+Display36.Date(attempt.At)+"\nПрежний ID: "+attempt.OldId+"\nНовый ID: "+(attempt.NewId.Length>0?attempt.NewId:"ещё не прочитан")+"\nПроверка до: "+Display36.Date(attempt.DeadlineUtc)+"\nГруппы новой записи: "+(attempt.Groups.Count>0?string.Join(", ",attempt.Groups):"ещё не прочитаны"));
   lines.Add("Сначала подтвердите связь участников. Одинаковое имя или IP сами по себе не доказывают общий ID. Старые записи сервера не удаляются. При серверном назначении групп новая запись может потребовать повторного назначения групп администратором WSUS.");
-  var window=new Window{Owner=this,Title="Идентичность WSUS · "+row.Name,Width=650,Height=450,WindowStartupLocation=WindowStartupLocation.CenterOwner};
+  return string.Join("\n\n",lines);}
+  var window=new Window{Owner=this,Title="Идентичность WSUS · "+row.Name,Width=750,Height=560,MinWidth=470,MinHeight=360,WindowStartupLocation=WindowStartupLocation.CenterOwner};
   var panel=new DockPanel{Margin=new(16)};window.Content=panel;
-  var repair=new Button{Content="Перерегистрировать всех участников конфликта…",IsEnabled=identity!=null&&compromisedIds58.Contains(identity.Key)};
+  var repair=new Button{Content="Перерегистрировать всех участников конфликта…",IsEnabled=false};
   DockPanel.SetDock(repair,Dock.Bottom);panel.Children.Add(repair);
-  var refresh=new Button{Content="Обновить серверный обзор и проверить регистрацию"};DockPanel.SetDock(refresh,Dock.Bottom);panel.Children.Add(refresh);
-  refresh.Click+=async(s,a)=>{window.Close();await RunOverview(true);};
-  repair.Click+=async(s,a)=>{window.Close();await RepairIdentityGroup58(row.Host,true);};
-  panel.Children.Add(new TextBox{Text=string.Join("\n\n",lines),IsReadOnly=true,TextWrapping=TextWrapping.Wrap,VerticalScrollBarVisibility=ScrollBarVisibility.Auto});return window;
+  var buttons=new WrapPanel();DockPanel.SetDock(buttons,Dock.Bottom);panel.Children.Add(buttons);
+  var peers=new Button{Content="Проверить клиента и кандидатов"};var all=new Button{Content="Проверить весь список AD"};
+  var stop=new Button{Content="Остановить"};var resume=new Button{Content="Продолжить"};
+  foreach(var button in new[]{peers,all,stop,resume})buttons.Children.Add(button);
+  var output=new TextBox{IsReadOnly=true,TextWrapping=TextWrapping.Wrap,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};panel.Children.Add(output);
+  void Refresh(){
+   bool owner=survey.Owner.Equals(row.Host,StringComparison.OrdinalIgnoreCase);
+   bool busy=surveyRun!=null;peers.IsEnabled=all.IsEnabled=!busy;stop.IsEnabled=busy;resume.IsEnabled=!busy&&owner&&survey.Results.Count<survey.Hosts.Count;
+   identities58.TryGetValue(row.Host,out var current);
+   var members=current==null?new List<ClientIdentity58>():IdentityPolicy58.Participants(identities58.Values,current,DateTimeOffset.UtcNow);
+   repair.IsEnabled=!busy&&current!=null&&IdentityPolicy58.Confirmed(members,current,DateTimeOffset.UtcNow);
+   var coverage=owner?$"{(survey.Domain?"Область AD":"Клиент и известные кандидаты")} · проверено {survey.Results.Count} из {survey.Hosts.Count} · ожидают {survey.Hosts.Count-survey.Results.Count} · общий ID подтверждён у {(members.Count>=2?members.Count:0)}": "Выберите область проверки.";
+   output.Text=coverage+"\n"+(owner?string.Join("\n",survey.Results.Select(p=>p.Key+" · "+p.Value)):"")+"\n\n"+Detail();
+  }
+  peers.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,false));all.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,true));
+  stop.Click+=(s,a)=>surveyRun?.Cancel();resume.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,survey.Domain,true));
+  repair.Click+=async(s,a)=>{await RepairIdentityGroup58(row.Host,true);Refresh();};
+  window.Loaded+=(s,a)=>{refreshSurvey=Refresh;Refresh();};Refresh();return window;
  }
 }
 public sealed partial class RemoteService {

@@ -3,6 +3,14 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  sealed record Work60(string Text,bool Busy,int? Percent=null);
+ static bool TransferStage(RemoteState? state)=>state!=null&&(state.Stage.StartsWith("Установка",StringComparison.OrdinalIgnoreCase)||state.Stage.StartsWith("Скачивание",StringComparison.OrdinalIgnoreCase));
+ static Work60? InterruptedTransfer(ClientConnectionState? link,RemoteState? state,DateTimeOffset now){
+  if(link==null||!link.Lost38||link.Error.Length==0||AccessError38(link.Error)||!TransferStage(state))return null;
+  string last=state!.Stage+(state.Progress is int progress?" · "+progress+"%":"");
+  string contact=link.LastSuccess==default?"время последней связи неизвестно":"последняя связь "+Display36.Date(link.LastSuccess.ToString("o"));
+  if(link.InLinkGrace(now))return new(last+" · временно нет связи · последние полученные данные",true,state.Progress);
+  return new("Текущее состояние неизвестно · "+contact+" · последний этап: "+last+" · "+Display36.Date(state.Updated),false);
+ }
  static string PreparationKey60(string host,string channel)=>host+"|"+channel;
  readonly Dictionary<string,(string Channel,string Stage,DateTimeOffset At)> preparing60=new(StringComparer.OrdinalIgnoreCase);
  Work60? WorkState60(ComputerRow selected,bool wsus,IEnumerable<(RemoteJob Job,TargetRecord Target)>? indexed=null){
@@ -12,6 +20,7 @@ public partial class MainWindow {
   if(live.Target!=null){
    var row=new ComputerRow(live.Target,live.Job.Id);var state=live.Target.State;
    if(ObservationStopped51(row))return new("Наблюдение остановлено · результат задания не подтверждён",false);
+   if(!TransportBudget41.Paused&&InterruptedTransfer(clientConnections.GetValueOrDefault(row.Host),state,now) is { } transfer)return transfer;
    if(LostObservation51(row.Host))return new("Связь потеряна · ожидаем восстановления, результат не подтверждён",false);
    if(TransportBudget41.Paused&&!ManualJob56(row.JobId))return new("Опрос приостановлен · результат задания не подтверждён",false);
    if(!ActivityConfirmed61(live.Job,live.Target))return new("Выполнение сейчас не подтверждено · последнее состояние: "+Display36.Date(state?.Updated??""),false);
@@ -39,7 +48,7 @@ public partial class MainWindow {
    var row=ExecutionRow(selected,true);bool error=row.Target.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired";
    if(error){OperationDetail38.Text=work.Text;OperationDetail38.Visibility=Visibility.Visible;}
    else {CurrentStage.Text=work.Text;CurrentStage.Foreground=Theme.Tone(work.Busy?"Info":"Warning");OperationGlyph38.Kind=work.Busy?StatusGlyph.ForOperation50(work.Text):"Warning";OperationGlyph38.Tint=CurrentStage.Foreground;}
-   CurrentProgress.Visibility=work.Busy?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=work.Busy&&!work.Percent.HasValue;CurrentProgress.Value=work.Percent??0;CurrentProgress.ToolTip="Процесс операции; ожидание результата не является процентом установки";
+   CurrentProgress.Visibility=work.Busy?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=work.Busy&&!work.Percent.HasValue&&!LostObservation51(selected.Host);CurrentProgress.Value=work.Percent??0;CurrentProgress.ToolTip="Процесс операции; ожидание результата не является процентом установки";
   }
   var command=WorkState60(selected,false);
   CommandActivity60.Visibility=command==null?Visibility.Collapsed:Visibility.Visible;
@@ -57,7 +66,14 @@ public partial class MainWindow {
   // Each target owns its decision and submission. A modeless decision cannot hold ready peers.
   var admitted=new List<(ComputerRow Selected,ComputerRow Frozen)>();
   foreach(var frozenRow in frozen){if(preparing60.ContainsKey(PreparationKey60(frozenRow.Host,template.OutputChannel))||History.Any(j=>j.OutputChannel==template.OutputChannel&&j.Steps.Count==template.Steps.Count&&j.Steps.Zip(template.Steps).All(p=>p.First.Kind==p.Second.Kind&&p.First.Code==p.Second.Code)&&j.Targets.Any(t=>t.Host.Equals(frozenRow.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)&&(StateFresh(t.State)||queue.Any(q=>q.Job.Id==j.Id&&q.Target.Host.Equals(t.Host,StringComparison.OrdinalIgnoreCase)))))){Notify(frozenRow.Name+": это действие уже выполняется или подготавливается; повтор не создан.");continue;}preparing60[PreparationKey60(frozenRow.Host,template.OutputChannel)]=(template.OutputChannel,"Подготовка · проверяем возможность запуска",DateTimeOffset.UtcNow);admitted.Add((selected.Single(r=>r.Host==frozenRow.Host),frozenRow));}
+  if(admitted.Count>0){
+   var hosts=admitted.Select(p=>p.Frozen.Host).ToHashSet(StringComparer.OrdinalIgnoreCase);
+   recentHosts.RemoveAll(hosts.Contains);recentHosts.InsertRange(0,admitted.Select(p=>p.Frozen.Host));
+   if(recentHosts.Count>200)recentHosts.RemoveRange(200,recentHosts.Count-200);
+   Store.Write("recent-computers.json",recentHosts);
+  }
   RefreshActivity();UpdateWsusStage();
+  if(admitted.Count==1){var top=RecentComputers.FirstOrDefault(r=>r.Host.Equals(admitted[0].Frozen.Host,StringComparison.OrdinalIgnoreCase));if(top!=null)RecentList.ScrollIntoView(top);}
   using var slots=new SemaphoreSlim(3);
   await Task.WhenAll(admitted.Select(async pair=>{
    var job=Store.Clone(template);job.Id=Guid.NewGuid().ToString();job.Targets.Clear();

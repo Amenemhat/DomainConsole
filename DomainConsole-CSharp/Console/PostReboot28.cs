@@ -76,7 +76,7 @@ public partial class MainWindow {
   if(target==null||target.Status=="Cancelled"){watch.Done=true;watch.Phase="Наблюдение отменено";continue;}
   if(DateTimeOffset.UtcNow>watch.Until){watch.Done=true;watch.Phase="Ожидание возврата/продолжения завершено по сроку";continue;}
   if(!watch.Confirmed&&target.State!=null&&target.State.SchemaVersion<28&&DateTimeOffset.TryParse(target.State.Started,out var legacyStart)){watch.Confirmed=true;watch.RequestedUtc=legacyStart.ToString("o");watch.Scan=false;watch.Phase="Прежнее наблюдение: только проверка возврата";}
-  if(!watch.Confirmed&&target.Status=="Failed"){watch.Done=true;watch.Phase="Назначение перезагрузки не подтверждено";watch.LastError=target.State?.Error??target.Status;continue;}
+  if(!watch.Confirmed&&target.Status is ("Failed" or "LaunchRejected" or "AccessDenied")){watch.Done=true;watch.Phase="Назначение перезагрузки не подтверждено";watch.LastError=target.State?.Error??target.Status;continue;}
   try{if(!CurrentIdentity(target)){watch.Done=true;watch.Phase="Наблюдение остановлено: идентичность клиента изменена";continue;}
    if(LostObservation51(host))continue;
    // A terminal collector wait is not due, so the old early return made its
@@ -88,6 +88,7 @@ public partial class MainWindow {
    if(snapshot.RebootPlan!=null)RegisterRebootPlan(job,new ComputerRow(target,job.Id),new(){RebootPlan=snapshot.RebootPlan,ClientUtc=snapshot.ClientUtc,State=target.State});
    if(watch.Done)continue;ReadSucceeded34(host,"флаги и аптайм");ApplyClientSnapshot(host,snapshot);if(!watch.Confirmed){watch.Phase="Клиент отвечает; план перезагрузки ещё не получен";watch.LastResponseUtc=DateTimeOffset.UtcNow.ToString("o");watch.LastBootUtc=snapshot.BootUtc;continue;}ObserveWatchBoot(watch,snapshot,DateTimeOffset.UtcNow);
    if(!RebootReturned(watch,snapshot))continue;
+   if(job!.Name=="Перезагрузка текущего компьютера"&&watch.ReadyAfter==default)RetireQueuedAfterBoot(host,watch);
    if(watch.ReadyAfter==default){watch.ReadyAfter=DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));watch.Phase="Перезагрузка подтверждена; ожидание готовности служб";watch.Next=watch.ReadyAfter;watch.LastError="";continue;}
    if(DateTimeOffset.UtcNow<watch.ReadyAfter)continue;
    try{var settings=ReadWsus();var reply=(await remote.WsusOverview(settings,new(){host},CancellationToken.None)).SingleOrDefault();if(!Current49())continue;if(reply?.Found==true&&reply.Report!=null&&reply.Error.Length==0){var started=reportCache.GetValueOrDefault(host)?.Started??"";SaveReportCache(host,reply.Report,settings.Host+":"+settings.Port,started,false);serverReports[host]=reply.Report.Format(settings.Host+":"+settings.Port,started);}}catch(Exception ex){if(!Current49())continue;overviewErrors[host]=ex.Message;}

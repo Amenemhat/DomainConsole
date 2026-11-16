@@ -21,7 +21,8 @@ public partial class MainWindow {
   if(closing||App.RecoveryPending57||!identities58.TryGetValue(host,out var observed)||!compromisedIds58.Contains(observed.Key))return;
   if(!Guid.TryParse(observed.SusClientId,out var oldGuid)||oldGuid==Guid.Empty||!identityRepairBusy58.Add(observed.Key))return;
   try{
-   var participants=identities58.Values.Where(x=>x.Key==observed.Key).DistinctBy(x=>x.Machine,StringComparer.OrdinalIgnoreCase).ToList();
+   var participants=IdentityPolicy58.Participants(identities58.Values,observed,DateTimeOffset.UtcNow);
+   if(!IdentityPolicy58.Confirmed(participants,observed,DateTimeOffset.UtcNow))return;
    if(manual&&MessageBox.Show(this,"Перерегистрировать всех обнаруженных участников общего ID?\n"+string.Join("\n",participants.Select(x=>x.Name))+"\n\nНедоступные и занятые клиенты остаются в ожидании. Записи сервера не удаляются.","Перерегистрация клиентов",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
    foreach(var identity in participants){
     var row=Computers.FirstOrDefault(r=>r.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase));if(row==null||row.Target.AdDisabled)continue;

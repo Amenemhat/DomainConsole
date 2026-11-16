@@ -48,6 +48,10 @@ public partial class MainWindow {
   string limit=!validTime50?"Время проверки не подтверждено; нужна повторная проверка":proof.Error.Length>0?"Проверка неполная; подробности в журнале":!afterBoot?"Перезагрузка выполнена · требуется повторная проверка флагов":"";
   return new(required,fresh,stamp50,required==true?sources:Array.Empty<string>(),preserved44&&validTime50?"Последняя проверка неполная; прежнее требование сохраняется до уточнения":limit);
  }
+ static RebootView40 ExpireUnavailableProof(RebootView40 view,DateTimeOffset now){
+  if(!view.Required.HasValue||DateTimeOffset.TryParse(view.Stamp,out var source)&&now-source<TimeSpan.FromHours(24))return view;
+  return view with {Required=null,Fresh=false,Limitation="Текущее состояние неизвестно. Последняя проверка: "+Display36.Date(view.Stamp)+(view.Required==true?" · требовалась перезагрузка":" · перезагрузка не требовалась")};
+ }
  RebootView40 RebootViewFor40(ComputerRow row){
   rebootSnapshots.TryGetValue(row.Host,out var current);RebootSnapshot? latest=current;
   foreach(var t in HostJobs39(row.Host).Select(x=>x.Target).Where(CurrentIdentity)){
@@ -60,6 +64,8 @@ public partial class MainWindow {
    var prior45=HostJobs39(row.Host).Where(x=>CurrentIdentity(x.Target)).Select(x=>x.Target.State?.RebootEvidence).Where(x=>x?.Required==true&&DateTimeOffset.TryParse(x.CollectedUtc,out var positiveTime50)&&positiveTime50<=DateTimeOffset.UtcNow.AddMinutes(1)).OrderByDescending(x=>x!.CollectedUtc).FirstOrDefault();
    if(prior45!=null&&DateTimeOffset.TryParse(prior45.CollectedUtc,out var positive45)&&(!DateTimeOffset.TryParse(current?.BootUtc,out var boot45)||boot45<=positive45)&&!(latest?.Required==false&&latest.Error.Length==0&&DateTimeOffset.TryParse(latest.CollectedUtc,out var negative45)&&negative45>positive45))view=new(true,false,prior45.CollectedUtc,prior45.Sources.Select(ShortRebootSource).ToArray(),"Последняя проверка неполная; прежнее требование сохраняется до уточнения");
   }
+  if(!ConnectionFresh(row.Host)||rebootProbeFailures40.Contains(row.Host))
+   view=ExpireUnavailableProof(view,DateTimeOffset.UtcNow);
   if(view.Required!=true&&reportCache.TryGetValue(row.Host,out var cache)&&CacheMatches(cache)&&cache.Found&&cache.Report.InstalledPendingRebootCount>0&&DateTimeOffset.TryParse(cache.Report.LastReportedUtc,out var report)&&(!DateTimeOffset.TryParse(latest?.CollectedUtc,out var checkedAt)||report>checkedAt)&&(!DateTimeOffset.TryParse(current?.BootUtc,out var boot)||report>=boot))return new(null,false,cache.Report.LastReportedUtc,Array.Empty<string>(),"Требование сохранено в отчёте WSUS. Нужна проверка флагов на клиенте.");
   var changed53=HostJobs39(row.Host).Where(x=>CurrentIdentity(x.Target)).SelectMany(x=>x.Target.State?.Results??new List<StepResult>()).Where(x=>x.Kind is "Updates" or "CacheCleanup" or "ReportRecovery").Any(x=>DateTimeOffset.TryParse(x.Ended,out var ended53)&&ended53<=DateTimeOffset.UtcNow.AddMinutes(1)&&(!DateTimeOffset.TryParse(view.Stamp,out var checked53)||ended53>checked53));
   if(InstallerChanged53(row,view.Stamp))return view with {Fresh=false,Required=view.Required==true?true:null,Limitation="После проверки подтверждена работа установщика Windows Update; ожидается проверка флагов"};

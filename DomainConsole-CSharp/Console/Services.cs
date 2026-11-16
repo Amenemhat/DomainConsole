@@ -57,7 +57,7 @@ public sealed partial class RemoteService {
   else {var command=SessionCode(ConnectionStore.Capture(target))+"try{$exe=Invoke-Command $s { "+setup+" };$exists=Invoke-Command $s {param($p);Test-Path $p} -ArgumentList $exe;if(!$exists){$stage=$exe+'.'+[Guid]::NewGuid().ToString()+'.tmp';Copy-Item "+PowerShellBridge.Literal(agent)+" -Destination $stage -ToSession $s -Force;Invoke-Command $s {param($stage,$exe);try{if(!(Test-Path $exe)){Move-Item $stage $exe -ErrorAction Stop}}finally{Remove-Item $stage -ErrorAction SilentlyContinue}} -ArgumentList $stage,$exe};Invoke-Command $s { "+finish+" }}finally{Remove-PSSession $s}";return await PowerShellBridge.Execute(command,deployTimeout.Token);}
  }
  public async Task Deploy(TargetRecord target,RemoteJob job){
-  using var manual56=job.Manual56?PollingControl43.Manual56():null;
+  using var manual56=job.Manual56?PollingControl43.Manual56(job.IndependentControl?"control":"manual"):null;
   ConnectionStore.EnsureCurrent54(target);
   using var deployTimeout=new CancellationTokenSource(TimeSpan.FromSeconds(90));target=ConnectionStore.Capture(target);StampConsole37(job);job=ClientJob(target,job);
   if(!Guid.TryParse(job.Id,out _))throw new ArgumentException("Некорректный ID задания.");if(Local(target))RequireLocalAdmin();

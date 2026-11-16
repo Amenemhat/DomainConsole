@@ -1,0 +1,72 @@
+using System.Text.Json;
+using System.Windows;
+using System.Windows.Controls;
+using DomainConsole.Shared;
+
+namespace DomainConsole;
+
+public sealed class IdentitySurvey {
+ public string Owner {get;set;}="";
+ public bool Domain {get;set;}
+ public List<string> Hosts {get;set;}=new();
+ public Dictionary<string,string> Results {get;set;}=new(StringComparer.OrdinalIgnoreCase);
+}
+
+public partial class MainWindow {
+ IdentitySurvey survey=Store.Read("identity-survey.json",new IdentitySurvey());
+ CancellationTokenSource? surveyRun;
+ Window? surveyWindow;
+ Action? refreshSurvey;
+
+ IEnumerable<string> IdentityCandidates(ComputerRow selected,bool domain){
+  var names=new HashSet<string>(StringComparer.OrdinalIgnoreCase){selected.Host,selected.Name};
+  if(identities58.TryGetValue(selected.Host,out var identity)&&Guid.TryParse(identity.SusClientId,out _)){
+   foreach(var peer in identities58.Values.Where(p=>p.Key==identity.Key)){names.Add(peer.Host);names.Add(peer.Name);}
+   if(SnapshotMatches58)foreach(var record in serverSnapshot58.Records.Where(r=>r.Id.Equals(identity.SusClientId,StringComparison.OrdinalIgnoreCase)))names.Add(record.Name);
+  }
+  var lookup=names.Select(n=>n.TrimEnd('.')).ToHashSet(StringComparer.OrdinalIgnoreCase);
+  return Computers.Where(r=>!r.Target.AdDisabled&&(domain||lookup.Contains(r.Host.TrimEnd('.'))||lookup.Contains(r.Name.TrimEnd('.'))||lookup.Contains(ConnectionStore.WsusName(r.Host).TrimEnd('.')))).OrderByDescending(r=>r.Host.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)).Select(r=>r.Host).Distinct(StringComparer.OrdinalIgnoreCase);
+ }
+ async Task RunIdentitySurvey(ComputerRow selected,bool domain,bool resume=false){
+  if(surveyRun!=null)return;
+  using var stop=new CancellationTokenSource();surveyRun=stop;
+  using var lane=PollingControl43.Manual56("identity");
+  try{
+   if(!resume||!survey.Owner.Equals(selected.Host,StringComparison.OrdinalIgnoreCase)||survey.Domain!=domain)
+    survey=new(){Owner=selected.Host,Domain=domain,Hosts=IdentityCandidates(selected,domain).ToList()};
+   Store.Write("identity-survey.json",survey);refreshSurvey?.Invoke();
+   for(int i=0;i<survey.Hosts.Count;i++){
+    stop.Token.ThrowIfCancellationRequested();string host=survey.Hosts[i];if(survey.Results.ContainsKey(host))continue;
+    var row=Computers.FirstOrDefault(r=>r.Host.Equals(host,StringComparison.OrdinalIgnoreCase));
+    if(row==null||row.Target.AdDisabled){survey.Results[host]="Пропущен · отсутствует или отключён в AD";continue;}
+    var target=ConnectionStore.Capture(row.Target);
+    try{
+     if(!ConnectionStore.CanConnect(target))throw new InvalidOperationException("Проверьте адрес и учётные данные");
+     var result=await remote.ReadIdentity(target,stop.Token);
+     stop.Token.ThrowIfCancellationRequested();
+     if(!CurrentEndpoint(target)||!CurrentIdentity(target))throw new InvalidOperationException("Цель изменилась во время чтения");
+     ObserveIdentity58(host,result,false);
+     survey.Results[host]=result.Error.Length>0?"Не удалось проверить · "+result.Error:!IdentityPolicy58.Usable(result)?"Неполные сведения":result.Name+" · "+result.SusClientId+" · "+result.Server;
+    }catch(OperationCanceledException) when(stop.IsCancellationRequested){throw;}
+    catch(Exception ex){survey.Results[host]="Не удалось проверить · "+ConnectionBrief31(ex.Message);ObserveIdentity58(host,new(){At=DateTimeOffset.UtcNow.ToString("o"),Error=ex.Message},false);}
+    if(i==0&&!domain)foreach(var peer in IdentityCandidates(selected,false).ToList())if(!survey.Hosts.Contains(peer,StringComparer.OrdinalIgnoreCase))survey.Hosts.Add(peer);
+    Store.Write("identity-survey.json",survey);refreshSurvey?.Invoke();
+   }
+  }catch(OperationCanceledException) when(stop.IsCancellationRequested){}
+  finally{surveyRun=null;Store.Write("identity-survey.json",survey);refreshSurvey?.Invoke();}
+ }
+ void OpenIdentitySurvey(ComputerRow selected){
+  if(surveyWindow!=null){surveyWindow.Activate();return;}
+  var window=IdentityWindow58();surveyWindow=window;
+  window.Closed+=(s,e)=>{surveyRun?.Cancel();surveyWindow=null;refreshSurvey=null;};window.Show();
+ }
+}
+
+public sealed partial class RemoteService {
+ public async Task<ClientIdentity58> ReadIdentity(TargetRecord target,CancellationToken token){
+  using var read=PollingControl43.Read();
+  using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(TimeSpan.FromSeconds(30));
+  string json=await PowerShellBridge.Execute(Invoke(target,IdentityProbe58+"\n$dcIdentity58 | ConvertTo-Json -Compress"),timeout.Token);
+  return JsonSerializer.Deserialize<ClientIdentity58>(json,Store.Options)??throw new InvalidOperationException("Клиент вернул пустой ответ");
+ }
+}

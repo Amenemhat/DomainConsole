@@ -4,12 +4,19 @@ public sealed class ClientConnectionState {
  public DateTimeOffset FailureObservedSince {get;set;}public DateTimeOffset LastSuccess {get;set;}public DateTimeOffset LastAttempt {get;set;}public string Error {get;set;}="";
  public DateTimeOffset EvidenceStarted38 {get;set;}public DateTimeOffset LastFailureCounted38 {get;set;}public DateTimeOffset LastRecoveryCounted38 {get;set;}
  public int Failures38 {get;set;}public int Recovery38 {get;set;}public bool Lost38 {get;set;}
+ public DateTimeOffset LossConfirmedUtc {get;set;}
+ public int RecoveryChecks {get;set;}
+ public bool InLinkGrace(DateTimeOffset now)=>LossConfirmedUtc!=default&&Lost38&&Error.Length>0&&!MainWindow.AccessError38(Error)&&now>=LossConfirmedUtc&&now-LossConfirmedUtc<TimeSpan.FromMinutes(15);
+ public bool RecoveryDue(DateTimeOffset now){
+  if(!InLinkGrace(now)||RecoveryChecks>=3)return false;
+  return now-LossConfirmedUtc>=TimeSpan.FromSeconds(RecoveryChecks switch{0=>30,1=>90,_=>210})&&(RecoveryChecks==0||now-LastAttempt>=TimeSpan.FromSeconds(RecoveryChecks==1?60:120));
+ }
  public bool Observe38(bool success,string error,DateTimeOffset started,DateTimeOffset now){
   if(started<EvidenceStarted38)return false;EvidenceStarted38=started;LastAttempt=now;
-  if(success){LastSuccess=now;Error="";Failures38=0;FailureObservedSince=default;if(Lost38){if(LastRecoveryCounted38==default||now-LastRecoveryCounted38>=TimeSpan.FromSeconds(10)){Recovery38++;LastRecoveryCounted38=now;}if(Recovery38>=2){Lost38=false;Recovery38=0;LastRecoveryCounted38=default;}}return true;}
+  if(success){LossConfirmedUtc=default;RecoveryChecks=0;LastSuccess=now;Error="";Failures38=0;FailureObservedSince=default;if(Lost38){if(LastRecoveryCounted38==default||now-LastRecoveryCounted38>=TimeSpan.FromSeconds(10)){Recovery38++;LastRecoveryCounted38=now;}if(Recovery38>=2){Lost38=false;Recovery38=0;LastRecoveryCounted38=default;}}return true;}
   Error=error;Recovery38=0;LastRecoveryCounted38=default;if(FailureObservedSince==default)FailureObservedSince=now;
   if(LastFailureCounted38==default||now-LastFailureCounted38>=TimeSpan.FromSeconds(10)){Failures38++;LastFailureCounted38=now;}
-  if(Failures38>=3&&now-FailureObservedSince>=TimeSpan.FromSeconds(60))Lost38=true;
+  if(Failures38>=3&&now-FailureObservedSince>=TimeSpan.FromSeconds(60)){if(!Lost38||LossConfirmedUtc==default&&LastSuccess>=FailureObservedSince){LossConfirmedUtc=now;RecoveryChecks=0;}Lost38=true;}
   return true;
  }
  public string Kind38(DateTimeOffset now){if(Error.Contains("введите учётные",StringComparison.OrdinalIgnoreCase))return "Unknown";if(MainWindow.AccessError38(Error))return "Access";if(Lost38)return LastSuccess!=default&&Error.Length==0?"Delayed":"Unreachable";if(Error.Length>0){if(LastSuccess!=default&&now-LastSuccess<TimeSpan.FromSeconds(60)&&now-FailureObservedSince<TimeSpan.FromSeconds(30))return "Connected";return "Delayed";}return LastSuccess==default?"Unknown":now-LastSuccess<TimeSpan.FromMinutes(5)?"Connected":"SavedConnected";}
