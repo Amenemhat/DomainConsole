@@ -25,7 +25,7 @@ Save 'view-state.json' @{Host=$h;Tab=1}
 $live=Get-Content '.github/tests/domain-scenario/gui.ps1' -Raw -Encoding UTF8
 $functions=$live.Substring($live.IndexOf(' Add-Type -AssemblyName UIAutomationClient'),$live.IndexOf(' New-Item $data')-$live.IndexOf(' Add-Type -AssemblyName UIAutomationClient'))
 $wait=$live.Substring($live.IndexOf('function Wait-For('),$live.IndexOf('$process=$null')-$live.IndexOf('function Wait-For('))
-$discovery=Get-Content '.github/tests/window-discovery.ps1' -Raw -Encoding UTF8
+$discovery=if($functions -notmatch 'class DCLabNativeWindows'){Get-Content '.github/tests/window-discovery.ps1' -Raw -Encoding UTF8}else{''}
 $start='$ErrorActionPreference="Stop";$lab="C:\DCLabAutomation";$process=$null;try{'+[Environment]::NewLine+$wait+$functions+[Environment]::NewLine+$discovery+[Environment]::NewLine
 $body=@'
  $process=Start-Process "$lab\package\DomainConsole.exe" -ArgumentList '--software-rendering' -WorkingDirectory "$lab\package" -PassThru
