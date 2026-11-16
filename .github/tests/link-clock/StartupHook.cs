@@ -76,6 +76,7 @@ internal class StartupHook
                 var old = expire.Invoke(null,[proof,now.AddHours(24)])!;
                 Check(Equals(Get(valid,"Required"),needed) && Get(old,"Required") is null && Equals(Get(old,"Stamp"),now.ToString("o")), "24h source expiry retains original stamp, required="+needed);
             }
+            IdentityCases.Run(assembly,Check);
             File.WriteAllText(marker,JsonSerializer.Serialize(results));
             Environment.Exit(0);
         }
