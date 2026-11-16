@@ -32,9 +32,9 @@ public partial class MainWindow {
    if(TransportBudget41.Paused&&!ManualJob56(row.JobId))return new("Опрос приостановлен · результат задания не подтверждён",false);
    if(!ActivityConfirmed61(live.Job,live.Target)&&ConnectionFresh(row.Host))return new("Связь есть · уточняем состояние задания · последний этап: "+(state?.Stage??"не получен"),false);
    if(!ActivityConfirmed61(live.Job,live.Target))return new("Выполнение сейчас не подтверждено · последнее состояние: "+Display36.Date(state?.Updated??""),false);
-   string stage=row.Target.Status=="Queued"?"Ожидает отправки":row.Target.Status=="Sending"?"Передаём задание":row.Target.Status=="SubmissionUnknown"?"Проверяем передачу задания":StateFresh(state)?state?.Stage??"Ожидаем результат":"Получаем результат задания · последнее состояние устарело";
+   string stage=row.Target.Status=="Queued"?"Ожидает отправки":row.Target.Status=="Sending"?"Передаём задание":row.Target.Status=="SubmissionUnknown"?"Проверяем передачу задания":StatusReceiptFresh(live.Target)?state?.Stage??"Ожидаем результат":"Получаем результат задания · последнее состояние устарело";
    string since=state?.Started??live.Job.Created;
-   return new(stage+(DateTimeOffset.TryParse(since,out var at)?" · "+Age(now-at):""),true,StateFresh(state)?state?.Progress:null);
+   return new(stage+(DateTimeOffset.TryParse(since,out var at)?" · "+Age(now-at):""),true,StatusReceiptFresh(live.Target)?state?.Progress:null);
   }
   if(!wsus)return null;
   if(CurrentReportWait61(selected.Host) is { } wait){

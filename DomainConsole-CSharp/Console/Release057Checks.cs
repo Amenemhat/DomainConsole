@@ -16,6 +16,8 @@ public partial class MainWindow {
   if(InterruptedTransfer(connection,stage,loss.AddMinutes(2)) is not {Busy:false})throw new Exception("Historical transfer was treated as recently confirmed");
   connection.Observe38(true,"",loss.AddMinutes(16),loss.AddMinutes(16));
   if(InterruptedTransfer(connection,stage,loss.AddMinutes(17))!=null)throw new Exception("Reachable stationary installer treated as disconnected");
+  var steady=new TargetRecord{Host="stationary-transfer.invalid",State=stage,OutputReceivedUtc58=DateTimeOffset.UtcNow.ToString("o")};
+  if(!StatusReceiptFresh(steady))throw new Exception("A fresh reading of one hour at 24% lost the current stage");
   var old=new RebootView40(true,true,now.ToString("o"),new[]{"CBS"},"");
   if(ExpireUnavailableProof(old,now.AddHours(24).AddTicks(-1)).Required!=true||ExpireUnavailableProof(old,now.AddHours(24)) is not {Required:null,Fresh:false} expired||expired.Sources.Length!=1)throw new Exception("Reboot evidence expiry");
   var row=new ComputerRow(new(){AdDisabled=true,OS="Windows Server"});row.SetConnection("Connected","fixture");row.SetNeeded37(6,true,"fixture");row.SetIdentityConflict58(true);

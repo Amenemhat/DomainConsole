@@ -50,11 +50,13 @@ public partial class MainWindow {
   if(deploying.Contains(job.Id+target.Host))return true;
   if(queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host.Equals(target.Host,StringComparison.OrdinalIgnoreCase)))return true;
   if(ObservationStopped51(new ComputerRow(target,job.Id))||LostObservation51(target.Host))return false;
+  return confirmedJobs.Contains(job.Id+target.Host)&&ConnectionFresh(target.Host)&&StatusReceiptFresh(target);
+ }
+ bool StatusReceiptFresh(TargetRecord target){
   var link=clientConnections.GetValueOrDefault(target.Host);
   bool received=DateTimeOffset.TryParse(target.OutputReceivedUtc58,out var receipt);
   if(link?.LastRestoredUtc>receipt)return false;
-  bool fresh=received?receipt<=DateTimeOffset.UtcNow&&DateTimeOffset.UtcNow-receipt<TimeSpan.FromSeconds(90):StateFresh(target.State);
-  return confirmedJobs.Contains(job.Id+target.Host)&&ConnectionFresh(target.Host)&&fresh;
+  return received?receipt<=DateTimeOffset.UtcNow&&DateTimeOffset.UtcNow-receipt<TimeSpan.FromSeconds(90):StateFresh(target.State);
  }
  HashSet<string> ActiveRecent61(){
   var active=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
