@@ -1,0 +1,25 @@
+name: Verify one real WSUS registration
+on:
+  workflow_dispatch:
+  push:
+    branches: ['lab/0.57-wsus']
+    paths: ['.github/tests/standalone-wsus.ps1','.github/workflows/standalone-wsus.yml']
+permissions:
+  contents: read
+jobs:
+  registration:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 49dbd15ada9de5338977e614c32130f534f11236
+          path: _app
+          persist-credentials: false
+      - name: Install local WSUS, configure only this disposable Windows client
+        shell: powershell
+        run: ./.github/lab/wsus.ps1
+      - name: Verify the exact product repair against Windows Update and WSUS
+        shell: powershell
+        run: ./.github/tests/standalone-wsus.ps1
