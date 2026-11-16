@@ -36,15 +36,11 @@ jobs:
           curl --fail --location --retry 2 --max-time 80 --range 0-511 --max-filesize 1048576 "$url" -o "$RUNNER_TEMP/vhd-header" -w 'HTTP %{http_code} %{url_effective}\n'
           file "$RUNNER_TEMP/vhd-header"
       - name: Prepare host-only switch, base Windows disk and signed NIC drivers
-        env:
-          DC_MEDIA_ONLY: '1'
         run: bash .github/lab/prepare-guests.sh
       - name: Verify packaged Windows build and artifact digest
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/lab/fetch-package.sh
-      - name: Boot the isolated lab for the verified main artifact
-        run: bash .github/lab/boot-guests.sh
       - name: Personalize seven independent Windows system disks
         run: bash .github/lab/wait-for-guests.sh disks 30
       - name: Boot seven Windows guests and validate their independent WinRM sessions

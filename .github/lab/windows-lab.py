@@ -233,7 +233,7 @@ def main():
     checkpoint("disks")
     # First drive one guest through specialization with the runner CPU to itself.
     boot("DCWSUS",part=="gpt")
-    wait("DCWSUS")
+    wait("DCWSUS",minutes=12)
     if bootstrap_only:
         checkpoint("winrm")
         return
@@ -253,6 +253,11 @@ def main():
     evidence["checks"]["WSUS"] = ps("DCWSUS", "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');([Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530)).Version.ToString()")
     log("WSUS API available: " + evidence["checks"]["WSUS"])
     checkpoint("wsus")
+    until=time.monotonic()+45*60
+    while not (root/"package.json").is_file() and time.monotonic()<until:
+        time.sleep(3)
+    evidence["package"]=json.loads((root/"package.json").read_text())
+    save()
     from identity_lab import exercise
     from packaged_gui import PackagedConsole
     gui=PackagedConsole(root,ps,password)
@@ -265,8 +270,6 @@ def main():
 
 
 try:
-    if not bootstrap_only:
-        evidence["package"]=json.loads((root / "package.json").read_text())
     main()
 except Exception as exc:
     evidence["failure"]=str(exc).replace(password,"***")[:1800]

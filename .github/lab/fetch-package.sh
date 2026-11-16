@@ -19,4 +19,6 @@ expected=$(jq -er '.digest|select(startswith("sha256:"))|sub("sha256:";"")' <<< 
 gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact/zip" > "$lab/package.zip"
 echo "$expected  $lab/package.zip" | sha256sum --check --status
 unzip -tqq "$lab/package.zip"
-jq -n --arg commit "$sha" --arg run "$run" --arg artifact "$artifact" --arg digest "$expected" '{commit:$commit,run:$run,artifact:$artifact,sha256:$digest}' | tee "$lab/package.json"
+jq -n --arg commit "$sha" --arg run "$run" --arg artifact "$artifact" --arg digest "$expected" '{commit:$commit,run:$run,artifact:$artifact,sha256:$digest}' > "$lab/package.part.json"
+mv "$lab/package.part.json" "$lab/package.json"
+cat "$lab/package.json"

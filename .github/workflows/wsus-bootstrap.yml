@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: ['lab/0.57-wsus']
-    paths: ['.github/lab/windows-lab.py','.github/lab/guest-init.ps1','.github/workflows/wsus-bootstrap.yml']
+    paths: ['.github/lab/guest-init.ps1']
 permissions:
   contents: read
 jobs:

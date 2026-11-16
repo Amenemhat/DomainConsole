@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
-          ref: d03e80174d577157b37dd560e337ab18acb07386
+          ref: 8e27f7402c97a0039d8f8b838305df47d0ba5343
           path: _app
           persist-credentials: false
       - name: Install local WSUS, configure only this disposable Windows client
