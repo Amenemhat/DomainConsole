@@ -23,9 +23,8 @@ sudo ip link set dclab0 up
 # Allow guest-to-guest traffic on the private switch; exclude every external interface.
 sudo iptables -I FORWARD -i dclab0 ! -o dclab0 -j DROP
 sudo iptables -I FORWARD -o dclab0 ! -i dclab0 -j DROP
+sudo iptables -I FORWARD -i dclab0 -o dclab0 -j ACCEPT
+sudo iptables -I INPUT -i dclab0 -s 10.77.57.11/32 -p tcp --dport 8765 -j ACCEPT
 sudo chown root:kvm /dev/kvm
 sudo chmod 660 /dev/kvm
-nohup sudo -E bash -c '
-  /usr/bin/python3 -u .github/lab/windows-lab.py "$1"
-  echo "$?" > "$1/guest-exit"
-' bash "$lab" > "$lab/guest.log" 2>&1 < /dev/null &
+if [[ "${DC_MEDIA_ONLY:-}" != "1" ]]; then bash .github/lab/boot-guests.sh; fi

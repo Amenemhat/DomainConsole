@@ -69,7 +69,8 @@ try{
  $entry=Wait-For {Element $main ([Windows.Automation.AutomationElement]::AutomationIdProperty) 'HeaderIdentity58'} 'identity action'
  Click $entry
  $window=Wait-For {Element $root ([Windows.Automation.AutomationElement]::NameProperty) 'Идентичность WSUS · CLONE1'} 'WSUS identity window'
- Complete-Survey 5
+ # A client with a different spelling of the WSUS URL first joins in the full AD pass.
+ Complete-Survey 1
  Browse-Domain $window
  Set-Content "$lab\read-only.done" 'checked'
  Wait-For {Test-Path "$lab\allow-consent.done"} 'read-only resource measurements' 120|Out-Null

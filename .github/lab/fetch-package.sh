@@ -4,7 +4,7 @@ lab="${RUNNER_TEMP:?}/dc-wsus-lab"
 mkdir -p "$lab"
 sha=$(git -C _app rev-parse HEAD)
 for attempt in $(seq 1 90); do
-  run=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build-windows.yml/runs?head_sha=$sha&per_page=20" --jq ".workflow_runs | map(select(.head_sha == \"$sha\")) | first | .id // empty")
+  run=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build-windows.yml/runs?branch=main&head_sha=$sha&per_page=20" --jq ".workflow_runs | map(select(.head_sha == \"$sha\" and .head_branch == \"main\")) | first | .id // empty")
   if [[ -n "$run" ]]; then
     state=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq '.conclusion // .status')
     if [[ "$state" == success ]]; then break; fi
