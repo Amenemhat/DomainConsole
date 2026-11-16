@@ -54,14 +54,32 @@ public partial class MainWindow {
   var target=ConnectionStore.Capture(row.Target);var generation=PollingControl43.Token;var started=DateTimeOffset.UtcNow;
   bool Current47()=>!closing&&!PollingControl43.BackgroundPaused56&&!generation.IsCancellationRequested&&CurrentEndpoint(target);
   if(!Current47())return false;
-  try{await (check??remote.CheckConnection)(target);if(!Current47())return false;ConnectionSucceeded(row.Host,started,true);return true;}
+  var link=clientConnections.GetValueOrDefault(row.Host);
+  var prior=link?.Lost38==true?RelevantActive61(HostJobs39(row.Host)):default;
+  try{
+   await (check??remote.CheckConnection)(target);if(!Current47())return false;
+   ConnectionSucceeded(row.Host,started,true);
+   if(prior.Target!=null&&ActiveTarget(prior.Target)&&TransferStage(prior.Target.State)&&CurrentIdentity(prior.Target)&&CurrentEndpoint(prior.Target)){
+    var original=new ComputerRow(prior.Target,prior.Job.Id);
+    if(!ObservationStopped51(original)&&!ObservationExpired51(original))await Poll(original,afterLink:true);
+   }
+   return true;
+  }
   catch(Exception ex){if(Current47())ConnectionFailed(row.Host,ex.Message,started);return false;}
  }
  async void HeaderLink_Click(object sender,RoutedEventArgs e){using var manual56=PollingControl43.Manual56("control");if(PollingControl43.BackgroundPaused56){Notify("Опрос выключен. Включите его рядом с настройками.");return;}if(ComputerGrid.SelectedItem is not ComputerRow row||!manualLinkReads31.Add(row.Host))return;var generation=PollingControl43.Token;LinkBusy60.Visibility=Visibility.Visible;HeaderLinkText.Text="Проверка…";try{if(!await EnsureEndpointCredentials(new(){row})||generation.IsCancellationRequested||PollingControl43.BackgroundPaused56)return;if(await CheckConnectionObserved47(row))await ReadClientStatus(row,force:true);}catch(OperationCanceledException) when(generation.IsCancellationRequested||PollingControl43.BackgroundPaused56){return;}catch(Exception ex){if(!generation.IsCancellationRequested&&CurrentHost(row.Host))Notify(ShortConnectionError(ex.Message));}finally{manualLinkReads31.Remove(row.Host);LinkBusy60.Visibility=Visibility.Hidden;HeaderLink.IsEnabled=true;RefreshOutcomes();if(IsCurrent(row))UpdateWsusStage();}}
  async void HeaderAddress_Click(object sender,RoutedEventArgs e){if(ComputerGrid.SelectedItem is ComputerRow row)await EditConnection(row,"");}
  async Task PollBackgroundLinks31(){if(TransportBudget41.Paused||checkingLinks31||closing||overviewRunning||!Store.Read("link-automatic31.json",true))return;checkingLinks31=true;var generation=PollingControl43.Token;try{
   var now=DateTimeOffset.UtcNow;
-  var fast=Computers.Where(r=>!r.Target.AdDisabled&&!ConnectionStore.Disconnected54(r.Host)&&clientConnections.GetValueOrDefault(r.Host)?.RecoveryDue(now)==true&&TransferStage(RelevantActive61(HostJobs39(r.Host)).Target?.State)).OrderBy(r=>clientConnections[r.Host].LastAttempt).Take(2).ToList();
+  bool Eligible(ComputerRow row){
+   var link=clientConnections.GetValueOrDefault(row.Host);
+   if(link?.RecoveryDue(now)!=true)return false;
+   var active=RelevantActive61(HostJobs39(row.Host));
+   if(active.Target==null||!CurrentIdentity(active.Target)||!CurrentEndpoint(active.Target))return false;
+   var observed=new ComputerRow(active.Target,active.Job.Id);
+   return !ObservationStopped51(observed)&&!ObservationExpired51(observed)&&TransferObservedAtLoss(link,active.Target.State,active.Target.OutputReceivedUtc58);
+  }
+  var fast=Computers.Where(r=>!r.Target.AdDisabled&&!ConnectionStore.Disconnected54(r.Host)&&Eligible(r)).OrderBy(r=>clientConnections[r.Host].LastAttempt).Take(2).ToList();
   foreach(var row in fast){
    if(closing||TransportBudget41.Paused||generation.IsCancellationRequested)return;
    if(!clientConnections[row.Host].RecoveryDue(DateTimeOffset.UtcNow)||connectionReads.ContainsKey(TransportBudget41.Key(ConnectionStore.Capture(row.Target))))continue;

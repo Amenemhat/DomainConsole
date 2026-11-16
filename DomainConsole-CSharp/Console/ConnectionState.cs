@@ -4,6 +4,7 @@ public sealed class ClientConnectionState {
  public DateTimeOffset FailureObservedSince {get;set;}public DateTimeOffset LastSuccess {get;set;}public DateTimeOffset LastAttempt {get;set;}public string Error {get;set;}="";
  public DateTimeOffset EvidenceStarted38 {get;set;}public DateTimeOffset LastFailureCounted38 {get;set;}public DateTimeOffset LastRecoveryCounted38 {get;set;}
  public int Failures38 {get;set;}public int Recovery38 {get;set;}public bool Lost38 {get;set;}
+ public DateTimeOffset LastRestoredUtc {get;set;}
  public DateTimeOffset LossConfirmedUtc {get;set;}
  public int RecoveryChecks {get;set;}
  public bool InLinkGrace(DateTimeOffset now)=>LossConfirmedUtc!=default&&Lost38&&Error.Length>0&&!MainWindow.AccessError38(Error)&&now>=LossConfirmedUtc&&now-LossConfirmedUtc<TimeSpan.FromMinutes(15);
@@ -13,7 +14,7 @@ public sealed class ClientConnectionState {
  }
  public bool Observe38(bool success,string error,DateTimeOffset started,DateTimeOffset now){
   if(started<EvidenceStarted38)return false;EvidenceStarted38=started;LastAttempt=now;
-  if(success){LossConfirmedUtc=default;RecoveryChecks=0;LastSuccess=now;Error="";Failures38=0;FailureObservedSince=default;if(Lost38){if(LastRecoveryCounted38==default||now-LastRecoveryCounted38>=TimeSpan.FromSeconds(10)){Recovery38++;LastRecoveryCounted38=now;}if(Recovery38>=2){Lost38=false;Recovery38=0;LastRecoveryCounted38=default;}}return true;}
+  if(success){if(LossConfirmedUtc!=default)LastRestoredUtc=now;LossConfirmedUtc=default;RecoveryChecks=0;LastSuccess=now;Error="";Failures38=0;FailureObservedSince=default;if(Lost38){if(LastRecoveryCounted38==default||now-LastRecoveryCounted38>=TimeSpan.FromSeconds(10)){Recovery38++;LastRecoveryCounted38=now;}if(Recovery38>=2){Lost38=false;Recovery38=0;LastRecoveryCounted38=default;}}return true;}
   Error=error;Recovery38=0;LastRecoveryCounted38=default;if(FailureObservedSince==default)FailureObservedSince=now;
   if(LastFailureCounted38==default||now-LastFailureCounted38>=TimeSpan.FromSeconds(10)){Failures38++;LastFailureCounted38=now;}
   if(Failures38>=3&&now-FailureObservedSince>=TimeSpan.FromSeconds(60)){if(!Lost38||LossConfirmedUtc==default&&LastSuccess!=default&&LastSuccess<=FailureObservedSince&&now-LastSuccess<TimeSpan.FromMinutes(15)){LossConfirmedUtc=now;RecoveryChecks=0;}Lost38=true;}

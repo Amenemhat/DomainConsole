@@ -72,7 +72,7 @@ public partial class MainWindow {
   if(!active&&rebootWatches.TryGetValue(row.Host,out var observing51)&&!observing51.Done)assessment=new(HeaderRebootJob(row)!=null||observing51.ReadyAfter==default?"Reboot":"Working",RebootHeadline51(observing51,DateTimeOffset.UtcNow),assessment.Title+"\n"+assessment.Details);
   var observed51=operation.Target!=null?new ComputerRow(operation.Target,operation.Job?.Id??""):new ComputerRow(target??row.Target,wsus.Job?.Id??"");
   if(active&&(LostObservation51(row.Host)||(stoppedObservations51.Count>0&&ObservationStopped51(observed51)))){assessment=new("Unknown",IsCurrentExecution(observed51.Target.Status)?ObservationExpired51(observed51)||ObservationStopped51(observed51)?"Ожидание завершено · результат операции неизвестен":"Связь потеряна · результат операции неизвестен":"Связь потеряна · текущее состояние неизвестно",assessment.Title+"\nПоследнее состояние: "+Display36.Date(observed51.Target.State?.Updated??""));}
-  if(active&&!ObservationStopped51(observed51)&&!ObservationExpired51(observed51)&&!TransportBudget41.Paused&&InterruptedTransfer(clientConnections.GetValueOrDefault(row.Host),observed51.Target.State,DateTimeOffset.UtcNow) is { } transfer)
+  if(active&&!ObservationStopped51(observed51)&&!ObservationExpired51(observed51)&&!TransportBudget41.Paused&&InterruptedTransfer(clientConnections.GetValueOrDefault(row.Host),observed51.Target.State,DateTimeOffset.UtcNow,observed51.Target.OutputReceivedUtc58) is { } transfer)
    assessment=new(transfer.Busy?"Working":"Unknown",transfer.Text,assessment.Details);
   if(!active&&assessment.Kind is not ("Error" or "SyncError" or "Reboot" or "Working")&&CurrentReportWait61(row.Host) is { } pending61){
    bool expired=ReportWaitExpired61(pending61);

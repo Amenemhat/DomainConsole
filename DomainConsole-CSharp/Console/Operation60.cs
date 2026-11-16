@@ -4,11 +4,18 @@ namespace DomainConsole;
 public partial class MainWindow {
  sealed record Work60(string Text,bool Busy,int? Percent=null);
  static bool TransferStage(RemoteState? state)=>state!=null&&(state.Stage.StartsWith("Установка",StringComparison.OrdinalIgnoreCase)||state.Stage.StartsWith("Скачивание",StringComparison.OrdinalIgnoreCase));
- static Work60? InterruptedTransfer(ClientConnectionState? link,RemoteState? state,DateTimeOffset now){
+ static bool TransferObservedAtLoss(ClientConnectionState link,RemoteState? stage,string received){
+  if(!TransferStage(stage))return false;
+  if(!DateTimeOffset.TryParse(received,out var at)&&!DateTimeOffset.TryParse(stage!.Updated,out at))return false;
+  var first=link.FailureObservedSince==default?link.LossConfirmedUtc:link.FailureObservedSince;
+  // The local receipt belongs to this job even when its installer hasn't changed the percentage for an hour.
+  return first!=default&&at<=link.LossConfirmedUtc&&at>=first.AddMinutes(-5);
+ }
+ static Work60? InterruptedTransfer(ClientConnectionState? link,RemoteState? state,DateTimeOffset now,string received=""){
   if(link==null||!link.Lost38||link.Error.Length==0||AccessError38(link.Error)||!TransferStage(state))return null;
   string last=state!.Stage+(state.Progress is int progress?" · "+progress+"%":"");
   string contact=link.LastSuccess==default?"время последней связи неизвестно":"последняя связь "+Display36.Date(link.LastSuccess.ToString("o"));
-  if(link.InLinkGrace(now))return new(last+" · связь временно отсутствует · получено "+Display36.Date(state.Updated),true,state.Progress);
+  if(link.InLinkGrace(now)&&TransferObservedAtLoss(link,state,received))return new(last+" · связь временно отсутствует · получено "+Display36.Date(received.Length==0?state.Updated:received),true,state.Progress);
   return new("Текущее состояние неизвестно · "+contact+" · последний этап: "+last+" · "+Display36.Date(state.Updated),false);
  }
  static string PreparationKey60(string host,string channel)=>host+"|"+channel;
@@ -20,7 +27,7 @@ public partial class MainWindow {
   if(live.Target!=null){
    var row=new ComputerRow(live.Target,live.Job.Id);var state=live.Target.State;
    if(ObservationStopped51(row))return new("Наблюдение остановлено · результат задания не подтверждён",false);
-   if(!TransportBudget41.Paused&&!ObservationExpired51(row)&&CurrentIdentity(row.Target)&&CurrentEndpoint(row.Target)&&InterruptedTransfer(clientConnections.GetValueOrDefault(row.Host),state,now) is { } transfer)return transfer;
+   if(!TransportBudget41.Paused&&!ObservationExpired51(row)&&CurrentIdentity(row.Target)&&CurrentEndpoint(row.Target)&&InterruptedTransfer(clientConnections.GetValueOrDefault(row.Host),state,now,live.Target.OutputReceivedUtc58) is { } transfer)return transfer;
    if(LostObservation51(row.Host))return new("Связь потеряна · ожидаем восстановления, результат не подтверждён",false);
    if(TransportBudget41.Paused&&!ManualJob56(row.JobId))return new("Опрос приостановлен · результат задания не подтверждён",false);
    if(!ActivityConfirmed61(live.Job,live.Target)&&ConnectionFresh(row.Host))return new("Связь есть · уточняем состояние задания · последний этап: "+(state?.Stage??"не получен"),false);
