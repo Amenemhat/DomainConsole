@@ -194,6 +194,8 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
             evidence["checks"]["offline"] = held
         gui.start(before)
         gui.wait("read-only.done",900)
+        evidence["checks"]["read-only-survey"]=json.loads(gui.diagnostics())
+        save()
         resources("diagnosis",clients[:-1])
         for node,m in evidence["checks"]["resource_samples"]["diagnosis"].items():
             baseline=evidence["checks"]["resource_samples"]["before"][node]
@@ -201,9 +203,12 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
                 raise RuntimeError("Read-only diagnosis changed the client on "+node)
         gui.mark("allow-consent.done")
         gui.wait("first-consent.done",800)
+        evidence["checks"]["consent-four"]=gui.remote("Get-Content C:\\DomainConsoleLab\\first-consent.done")
+        save()
         resources("during",clients[:-1])
         def changed(active):
             deadline=time.monotonic()+900
+            last_diag=0
             while time.monotonic()<deadline:
                 readings={}
                 for node in active:
@@ -216,6 +221,10 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
                         readings[node]=current
                 if len(readings)==len(active):
                     return readings
+                if time.monotonic()-last_diag>60:
+                    evidence["checks"]["repair-progress"]=json.loads(gui.diagnostics())
+                    save()
+                    last_diag=time.monotonic()
                 time.sleep(15)
             raise TimeoutError("Packaged console did not change registrations on "+", ".join(active)+" · "+gui.diagnostics()[:3300])
         evidence["checks"]["four-replacements"]=changed(clients[:-1])
@@ -226,6 +235,8 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
         raise RuntimeError("Offline target was unexpectedly reset")
     gui.mark("fifth-online.done")
     gui.wait("expanded.done", 600)
+    evidence["checks"]["consent-five"]=gui.remote("Get-Content C:\\DomainConsoleLab\\expanded.done")
+    save()
     changed([held])
     after = {node: probe_client(node) for node in clients}
     ids={r["SusClientId"].lower() for r in after.values()}
