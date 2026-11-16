@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: ['lab/0.57-wsus']
-    paths: ['.github/lab/guest-init.ps1']
+    paths: ['.github/lab/guest-init.ps1','.github/lab/ntlm-openssl.cnf']
 permissions:
   contents: read
 jobs:

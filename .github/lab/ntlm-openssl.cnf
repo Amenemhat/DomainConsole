@@ -1,0 +1,11 @@
+# Used only by the disposable Linux-to-Windows NTLM test driver.
+openssl_conf = lab_init
+[lab_init]
+providers = lab_providers
+[lab_providers]
+default = default_provider
+legacy = ntlm_provider
+[default_provider]
+activate = 1
+[ntlm_provider]
+activate = 1

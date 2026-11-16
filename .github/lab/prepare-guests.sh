@@ -7,6 +7,9 @@ if [[ "${GITHUB_ACTIONS:-}" != true || "${RUNNER_OS:-}" != Linux ]]; then
   exit 1
 fi
 sudo test -c /dev/kvm
+# Stock python3-winrm uses ntlm-auth, which needs an NT hash before it can start a session.
+OPENSSL_CONF="$PWD/.github/lab/ntlm-openssl.cnf" /usr/bin/python3 -c 'import hashlib; assert hashlib.new("md4", "password".encode("utf-16-le")).hexdigest()=="8846f7eaee8fb117ad06bdd830b7586c"'
+
 sudo apt-get update -qq
 sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils seabios ovmf libguestfs-tools python3-winrm python3-pil libguestfs-perl ntfs-3g
 # Reclaim space from unused SDKs on this disposable runner before writing seven overlays.
