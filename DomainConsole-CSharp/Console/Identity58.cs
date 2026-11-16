@@ -46,7 +46,16 @@ public partial class MainWindow {
   var peers=new Button{Content="Проверить клиента и кандидатов"};var all=new Button{Content="Проверить весь список AD"};
   var stop=new Button{Content="Остановить"};var resume=new Button{Content="Продолжить"};
   foreach(var button in new[]{peers,all,stop,resume})buttons.Children.Add(button);
-  var output=new TextBox{IsReadOnly=true,TextWrapping=TextWrapping.Wrap,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};panel.Children.Add(output);
+  var pages=new TabControl();panel.Children.Add(pages);
+  var resultPanel=new DockPanel();
+  var headline=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new(4,4,4,8)};DockPanel.SetDock(headline,Dock.Top);resultPanel.Children.Add(headline);
+  var table=new DataGrid{IsReadOnly=true,CanUserAddRows=false,AutoGenerateColumns=false,EnableRowVirtualization=true,HeadersVisibility=DataGridHeadersVisibility.Column,SelectionUnit=DataGridSelectionUnit.FullRow};
+  foreach(var col in new[]{("Компьютер","Host"),("Проверка","Status"),("Время","At"),("SusClientId","Id"),("Источник WSUS","Server"),("Результат исправления","Repair")}){
+   table.Columns.Add(new DataGridTextColumn{Header=col.Item1,Binding=new System.Windows.Data.Binding(col.Item2),MaxWidth=280});
+  }
+  resultPanel.Children.Add(table);pages.Items.Add(new TabItem{Header="Проверка участников",Content=resultPanel});
+  var output=new TextBox{IsReadOnly=true,TextWrapping=TextWrapping.Wrap,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};
+  pages.Items.Add(new TabItem{Header="Подробности",Content=output});
   void Refresh(){
    bool owner=survey.Owner.Equals(row.Host,StringComparison.OrdinalIgnoreCase);
    bool busy=surveyRun!=null;peers.IsEnabled=all.IsEnabled=!busy;stop.IsEnabled=busy;resume.IsEnabled=!busy&&owner&&survey.Results.Count<survey.Hosts.Count;
@@ -55,7 +64,14 @@ public partial class MainWindow {
    repair.IsEnabled=!busy&&current!=null&&IdentityPolicy58.Confirmed(members,current,DateTimeOffset.UtcNow);
    var coverage=owner?$"{(survey.Domain?"Область AD":"Клиент и известные кандидаты")} · проверено {survey.Results.Count} из {survey.Hosts.Count} · ожидают {survey.Hosts.Count-survey.Results.Count} · общий ID подтверждён у {(members.Count>=2?members.Count:0)}": "Выберите область проверки.";
    int failed=owner?survey.Results.Count(p=>p.Value.StartsWith("Не удалось")||p.Value.StartsWith("Неполные")||p.Value.StartsWith("Пропущен")):0;
-   output.Text=coverage+(owner?" · без подтверждения "+failed+"\n"+survey.ScopeMessage+" · "+Age((busy?DateTimeOffset.UtcNow:survey.Updated)-survey.Started)+"\n"+survey.ServerResult:"")+"\n"+(owner?string.Join("\n",survey.Results.Select(p=>p.Key+" · "+p.Value)):"")+"\n\n"+Detail();
+   headline.Text=coverage+(owner?" · без подтверждения "+failed+"\n"+survey.ScopeMessage+(survey.Started==default?"":" · "+Age((busy?DateTimeOffset.UtcNow:survey.Updated)-survey.Started))+"\n"+survey.ServerResult:"");
+   if(owner)table.ItemsSource=survey.Hosts.Select(h=>{
+    var known=identities58.GetValueOrDefault(h);
+    bool done=survey.Results.TryGetValue(h,out var result);
+    bool ok=done&&known!=null&&IdentityPolicy58.Usable(known)&&result!.Contains(known.SusClientId,StringComparison.OrdinalIgnoreCase);
+    return new{Host=h,Status=ok?"Прочитано":done?result:"Ожидает проверки",At=Display36.Date(known?.Error.Length>0?known.ErrorAt:known?.At??""),Id=known?.SusClientId,Server=known?.Server,Repair=identityRepairs58.Values.Where(a=>a.Host.Equals(h,StringComparison.OrdinalIgnoreCase)).OrderByDescending(a=>a.At).FirstOrDefault()?.Phase};
+   }).ToList();
+   string detail=Detail();if(output.Text!=detail)output.Text=detail;
   }
   peers.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,false));all.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,true));
   stop.Click+=(s,a)=>surveyRun?.Cancel();resume.Click+=async(s,a)=>await Guard(()=>RunIdentitySurvey(row,survey.Domain,true));

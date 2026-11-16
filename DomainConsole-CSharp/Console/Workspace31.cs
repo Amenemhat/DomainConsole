@@ -40,7 +40,17 @@ public partial class MainWindow {
  static List<ClientEvent31> ReadEvents31(string host,int limit){var result=new List<ClientEvent31>();var folder=EventFolder31(host);if(!Directory.Exists(folder))return result;foreach(var file in Directory.GetFiles(folder,"*.jsonl").OrderByDescending(f=>Path.GetFileName(f))){foreach(var line in File.ReadLines(file).TakeLast(limit).Reverse()){try{var e=JsonSerializer.Deserialize<ClientEvent31>(line);if(e!=null){if(e.Details==e.Text)e.Details="";result.Add(e);}}catch(JsonException){}if(result.Count>=limit)return result;}}return result;}
 
  public static string ConnectionBrief31(string error){if(error.Contains("WinRM",StringComparison.OrdinalIgnoreCase)||error.Contains("WSMan",StringComparison.OrdinalIgnoreCase))return "Ошибка WinRM/аутентификации";if(string.IsNullOrWhiteSpace(error))return "Причина не получена";if(AccessError(error))return "Отказано в доступе WinRM; проверьте права и учётную запись";if(error.Contains("отмен",StringComparison.OrdinalIgnoreCase)||error.Contains("canceled",StringComparison.OrdinalIgnoreCase)||error.Contains("вовремя",StringComparison.OrdinalIgnoreCase))return "Нет ответа за время проверки; выполнение задания этим не отменено";var text=error.Split(new[]{'\r','\n'},StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()??"Нет ответа";return text.Length>140?text[..140]+"…":text;}
+ readonly Dictionary<string,Task<bool>> connectionReads=new(StringComparer.OrdinalIgnoreCase);
  async Task<bool> CheckConnectionObserved47(ComputerRow row,Func<TargetRecord,Task<string>>? check=null){
+  string key=TransportBudget41.Key(ConnectionStore.Capture(row.Target));
+  if(connectionReads.TryGetValue(key,out var pending))return await pending;
+  var completion=new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+  connectionReads.Add(key,completion.Task);
+  try{bool ok=await ReadConnectionObserved(row,check);completion.TrySetResult(ok);return ok;}
+  catch(Exception ex){completion.TrySetException(ex);throw;}
+  finally{connectionReads.Remove(key);}
+ }
+ async Task<bool> ReadConnectionObserved(ComputerRow row,Func<TargetRecord,Task<string>>? check){
   var target=ConnectionStore.Capture(row.Target);var generation=PollingControl43.Token;var started=DateTimeOffset.UtcNow;
   bool Current47()=>!closing&&!PollingControl43.BackgroundPaused56&&!generation.IsCancellationRequested&&CurrentEndpoint(target);
   if(!Current47())return false;
@@ -54,6 +64,7 @@ public partial class MainWindow {
   var fast=Computers.Where(r=>!r.Target.AdDisabled&&!ConnectionStore.Disconnected54(r.Host)&&clientConnections.GetValueOrDefault(r.Host)?.RecoveryDue(now)==true&&TransferStage(RelevantActive61(HostJobs39(r.Host)).Target?.State)).OrderBy(r=>clientConnections[r.Host].LastAttempt).Take(2).ToList();
   foreach(var row in fast){
    if(closing||TransportBudget41.Paused||generation.IsCancellationRequested)return;
+   if(!clientConnections[row.Host].RecoveryDue(DateTimeOffset.UtcNow)||connectionReads.ContainsKey(TransportBudget41.Key(ConnectionStore.Capture(row.Target))))continue;
    clientConnections[row.Host].RecoveryChecks++;Store.Write("client-connections.json",clientConnections);
    await CheckConnectionObserved47(row);
   }

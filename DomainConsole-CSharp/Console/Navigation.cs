@@ -48,6 +48,9 @@ public partial class MainWindow {
   var active=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
   foreach(var job in History)foreach(var target in job.Targets)
    if((ActiveTarget(target)||target.State?.DiagnosticStatus is "Pending" or "Running" or "LegacyRunning")&&ActivityConfirmed61(job,target))active.Add(target.Host);
+  foreach(var link in clientConnections.Where(p=>p.Value.InLinkGrace(DateTimeOffset.UtcNow))){
+   var live=RelevantActive61(HostJobs39(link.Key));if(live.Target!=null&&TransferStage(live.Target.State)&&CurrentIdentity(live.Target)&&CurrentEndpoint(live.Target)&&!ObservationExpired51(new(live.Target,live.Job.Id))&&!ObservationStopped51(new(live.Target,live.Job.Id)))active.Add(link.Key);
+  }
   foreach(var row in Computers)if(preparing60.Keys.Any(k=>k==PreparationKey60(row.Host,"Commands")||k==PreparationKey60(row.Host,"WSUS")))active.Add(row.Host);
   foreach(var row in Computers)if(!TransportBudget41.Paused&&!LostObservation51(row.Host)&&CurrentReportWait61(row.Host) is { } wait&&!ReportWaitExpired61(wait))active.Add(row.Host);
   return active;

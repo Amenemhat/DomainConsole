@@ -4,10 +4,15 @@ namespace DomainConsole;
 public partial class App : Application {
  protected override async void OnStartup(StartupEventArgs e){if(e.Args.Contains("--software-rendering",StringComparer.OrdinalIgnoreCase))System.Windows.Media.RenderOptions.ProcessRenderMode=System.Windows.Interop.RenderMode.SoftwareOnly;base.OnStartup(e);if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_UI_SMOKE")=="1"&&e.Args.Length==3&&e.Args[0]=="credential-test-read"&&e.Args[1].StartsWith("DomainConsole/Tests/",StringComparison.Ordinal)){try{var login=WindowsLoginVault.Load(e.Args[1]);File.WriteAllText(e.Args[2],login?.User??"MISSING");Shutdown(login?.User=="fixture-user"?0:1);}catch{Shutdown(1);}return;}if(e.Args.Contains("local-smoke"))Environment.SetEnvironmentVariable("DOMAINCONSOLE_LOCAL_SMOKE","1");DispatcherUnhandledException+=(s,a)=>{if(IsRenderFailure(a.Exception)){a.Handled=true;HandleRenderFailure(a.Exception);return;}if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_UI_SMOKE")=="1"){System.IO.File.WriteAllText(System.IO.Path.Combine(AppContext.BaseDirectory,"smoke-error.txt"),a.Exception.ToString());Shutdown(1);a.Handled=true;return;}MessageBox.Show(a.Exception.Message,"Domain Console");a.Handled=true;};
  ShutdownMode=ShutdownMode.OnExplicitShutdown;
+ if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_RENDER_TEST")=="1"&&e.Args.Contains("--test-render-failure")){
+  for(int i=0;i<2;i++)Dispatcher.BeginInvoke(new Action(()=>throw new System.Runtime.InteropServices.COMException("UCEERR_RENDERTHREADFAILURE fault injection",unchecked((int)0x88980406))));
+  return;
+ }
  try {
   if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_UI_SMOKE")!="1"&&Environment.GetEnvironmentVariable("DOMAINCONSOLE_LOCAL_SMOKE")!="1"&&!await PrepareData57()){Shutdown(1);return;}
   var window=new MainWindow();MainWindow=window;ShutdownMode=ShutdownMode.OnMainWindowClose;window.Show();
  }catch(Exception ex){
+  if(HandleRenderFailure(ex))return;
   string log;try{log=LogStartup57(ex);}catch{log="Не удалось записать журнал запуска.";}
   if(Environment.GetEnvironmentVariable("DOMAINCONSOLE_UI_SMOKE")=="1")File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"smoke-error.txt"),ex.ToString());
   else MessageBox.Show("Не удалось загрузить консоль. Данные не заменены пустыми.\n"+ex.GetBaseException().Message+"\n\nПодробности: "+log,"Ошибка запуска",MessageBoxButton.OK,MessageBoxImage.Error);

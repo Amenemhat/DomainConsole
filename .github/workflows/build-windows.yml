@@ -41,6 +41,9 @@ jobs:
           New-Item Publish/Agent -ItemType Directory -Force | Out-Null
           Copy-Item DomainConsole-CSharp/Agent/bin/Release/net462/DomainConsole.Agent.exe Publish/Agent/
           Copy-Item DomainConsole-CSharp/README.txt Publish/README-source.txt
+      - name: Verify repeated WPF render failure and software startup
+        shell: pwsh
+        run: ./.github/tests/render-failure.ps1
       - name: Reload persisted status through the actual window startup twice
         shell: pwsh
         run: |
@@ -785,6 +788,15 @@ jobs:
             if($LASTEXITCODE -ne $exit){throw 'Dispatch exit code lost'}
             $receipt=Get-Content (Join-Path $folder 'reboot-plan.json') -Raw -Encoding UTF8|ConvertFrom-Json
             if($receipt.DispatchExitCode -ne $exit -or !$receipt.DispatchUtc){throw 'Missing dispatch receipt'}
+            if($exit -eq 0){
+              $second='00000000-0000-0000-0000-000000000027'
+              New-Item (Join-Path $base ('DomainConsoleCSharp/'+$second)) -ItemType Directory -Force|Out-Null
+              $duplicate=Join-Path $base 'second-console.ps1'
+              $secondBody=$body.Replace('00000000-0000-0000-0000-000000000026',$second)
+              [IO.File]::WriteAllText($duplicate,$stub+$secondBody,(New-Object Text.UTF8Encoding($true)))
+              $again=Start-Process powershell.exe -ArgumentList ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$duplicate+'"') -RedirectStandardError (Join-Path $base 'refusal.txt') -NoNewWindow -PassThru -Wait
+              if($again.ExitCode -eq 0 -or (Test-Path (Join-Path $base ('DomainConsoleCSharp/'+$second+'/reboot-plan.json')))){throw 'Two consoles dispatched for the same boot'}
+            }
           }
           $global:LASTEXITCODE=0
           Write-Output 'Dispatch acceptance and rejection persisted; shutdown was stubbed.'

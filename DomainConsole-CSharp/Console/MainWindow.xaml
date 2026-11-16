@@ -64,7 +64,7 @@
               <ListBox.ItemTemplate>
                 <DataTemplate>
                   <StackPanel>
-                    <DockPanel Margin="3,4,3,1" Visibility="{Binding ReadyDividerVisibility}">
+                    <DockPanel Tag="ReadyDivider" Background="Transparent" Margin="3,4,3,1" Visibility="{Binding ReadyDividerVisibility}">
                       <TextBlock DockPanel.Dock="Left" Text="Готовы" Foreground="{DynamicResource TextMuted}" Margin="0,0,6,0"/>
                       <Separator VerticalAlignment="Center"/>
                     </DockPanel>
