@@ -39,8 +39,18 @@ jobs:
           url='https://go.microsoft.com/fwlink/p/?clcid=0x409&country=us&culture=en-us&linkid=2195166'
           curl --fail --location --retry 2 --max-time 80 --range 0-511 --max-filesize 1048576 "$url" -o "$RUNNER_TEMP/vhd-header" -w 'HTTP %{http_code} %{url_effective}\n'
           file "$RUNNER_TEMP/vhd-header"
-      - name: Provision seven isolated Windows guests, domain and WSUS
+      - name: Prepare host-only switch, base Windows disk and signed NIC drivers
         run: bash .github/lab/prepare-guests.sh
+      - name: Personalize seven independent Windows system disks
+        run: bash .github/lab/wait-for-guests.sh disks 30
+      - name: Boot seven Windows guests and validate their independent WinRM sessions
+        run: bash .github/lab/wait-for-guests.sh winrm 24
+      - name: Promote the domain controller and join two OUs
+        run: bash .github/lab/wait-for-guests.sh domain 40
+      - name: Install WSUS and verify its administrative endpoint
+        run: bash .github/lab/wait-for-guests.sh wsus 40
+      - name: Verify five registrations and one confirmed client reboot with the packaged console
+        run: bash .github/lab/wait-for-guests.sh guest-exit 90
       - uses: actions/upload-artifact@v4
         if: always()
         with:

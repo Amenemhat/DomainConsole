@@ -25,4 +25,7 @@ sudo iptables -I FORWARD -i dclab0 ! -o dclab0 -j DROP
 sudo iptables -I FORWARD -o dclab0 ! -i dclab0 -j DROP
 sudo chown root:kvm /dev/kvm
 sudo chmod 660 /dev/kvm
-sudo -E /usr/bin/python3 .github/lab/windows-lab.py "$lab"
+nohup sudo -E bash -c '
+  /usr/bin/python3 -u .github/lab/windows-lab.py "$1"
+  echo "$?" > "$1/guest-exit"
+' bash "$lab" > "$lab/guest.log" 2>&1 < /dev/null &

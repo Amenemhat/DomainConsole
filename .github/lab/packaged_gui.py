@@ -72,5 +72,5 @@ Start-ScheduledTask DCLab-Console
 
     def finish(self):
         self.mark("server-reports.done")
-        self.wait("gui-evidence.json", 450)
+        self.wait("gui-evidence.json", 940)
         return json.loads(self.remote(r"Get-Content -Encoding UTF8 -Raw C:\DomainConsoleLab\gui-evidence.json"))

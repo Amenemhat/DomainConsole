@@ -36,8 +36,17 @@ def log(message):
     print(message, flush=True)
 
 
+evidence_lock = __import__("threading").Lock()
 def save():
-    evidence_file.write_text(json.dumps(evidence, indent=2))
+    with evidence_lock:
+        tmp = evidence_file.with_suffix(".tmp")
+        tmp.write_text(json.dumps(evidence, indent=2))
+        tmp.replace(evidence_file)
+
+
+def checkpoint(name):
+    (root / (name+".ready")).touch()
+    log(name+" ready")
 
 
 def call(*args, **kwargs):
@@ -181,16 +190,20 @@ def main():
     for node in nodes:
         log("Creating distinct Windows guest " + node)
         prepare(node)
+    checkpoint("disks")
     for node in nodes:
         boot(node, part == "gpt")
     with concurrent.futures.ThreadPoolExecutor(max_workers=7) as pool:
         list(pool.map(wait, nodes))
+    checkpoint("winrm")
     setup_domain()
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
         list(pool.map(join, [n for n in nodes if n != "DCAD"]))
+    checkpoint("domain")
     system("DCWSUS", "install-wsus", (here / "wsus.ps1").read_text(), minutes=35)
     evidence["checks"]["WSUS"] = ps("DCWSUS", "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');([Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530)).Version.ToString()")
     log("WSUS API available: " + evidence["checks"]["WSUS"])
+    checkpoint("wsus")
     from identity_lab import exercise
     from packaged_gui import PackagedConsole
     gui=PackagedConsole(root,ps,password)

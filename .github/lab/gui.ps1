@@ -81,6 +81,30 @@ try{
  Click (Wait-For {Button $window 'Повторить проверку результата'} 'read-only verification')
  Wait-For {$attempts=Read-Data 'identity-repairs58.json';$attempts -and @($attempts.PSObject.Properties.Value|Where-Object Phase -eq 'Подтверждено').Count -eq 5} 'five confirmed registrations in the product' 400|Out-Null
  $evidence=@{Version=$process.MainModule.FileVersionInfo.ProductVersion;Attempts=(Read-Data 'identity-repairs58.json');Survey=(Read-Data 'identity-survey.json')}
+ # One confirmed request must change the boot time on this disposable guest.
+ if($chosen -ne 'clone1.dc057.test'){throw 'Unexpected reboot target'}
+ $boot={ (Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString('o') }
+ $beforeBoot=Invoke-Command -ComputerName $chosen -ScriptBlock $boot
+ $window.GetCurrentPattern([Windows.Automation.WindowPattern]::Pattern).Close()
+ $restart=Wait-For {Element $main ([Windows.Automation.AutomationElement]::AutomationIdProperty) 'HeaderReboot'} 'header reboot action'
+ $async=[PowerShell]::Create()
+ [void]$async.AddScript('param($b) $b.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()').AddArgument($restart)
+ $opening=$async.BeginInvoke()
+ try{
+  $dialog=Wait-For {Element $root ([Windows.Automation.AutomationElement]::NameProperty) ("Перезагрузка · "+$chosen)} 'reboot configuration'
+  $delay=Element $dialog ([Windows.Automation.AutomationElement]::ControlTypeProperty) ([Windows.Automation.ControlType]::Edit)
+  $delay.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).SetValue('0')
+  $scan=Element $dialog ([Windows.Automation.AutomationElement]::NameProperty) 'Проверить обновления после перезагрузки'
+  $toggle=$scan.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern)
+  if($toggle.Current.ToggleState -eq [Windows.Automation.ToggleState]::On){$toggle.Toggle()}
+  Click (Button $dialog 'Перезагрузить')
+  if(!$opening.AsyncWaitHandle.WaitOne(30000)){throw 'Reboot action did not return'}
+  [void]$async.EndInvoke($opening)
+ }finally{$async.Dispose()}
+ $afterBoot=Wait-For {
+  try{$time=Invoke-Command -ComputerName $chosen -ScriptBlock $boot -ErrorAction Stop;if([datetime]$time -gt [datetime]$beforeBoot){$time}}catch{}
+ } 'actual new Windows boot' 450
+ $evidence.Reboot=@{Target=$chosen;Before=$beforeBoot;After=$afterBoot;Confirmations=1}
  [IO.File]::WriteAllText("$lab\gui-evidence.json",($evidence|ConvertTo-Json -Depth 10),$utf8)
 }catch{[IO.File]::WriteAllText("$lab\gui-error.txt",($_|Out-String),$utf8);exit 1}
 finally{if($process -and !$process.HasExited){[void]$process.CloseMainWindow()}}
