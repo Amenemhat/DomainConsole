@@ -76,8 +76,10 @@ public partial class MainWindow {
  }
  void VerifyRecentOrder057(){
   var saved=recentHosts.ToList();var pins=workHosts.ToList();int limit=recentLimit;int color=Theme.Current;bool expanded=RecentGroup.IsExpanded;
-  var rows=Enumerable.Range(0,8).Select(i=>new ComputerRow(new(){Name="Lab-"+i,Host="recent057-"+i+".invalid",AdDisabled=i==4})).ToList();
+  var rows=Enumerable.Range(0,8).Select(i=>new ComputerRow(new(){Name="Lab-"+i,Host="recent057-"+i+".invalid",OS=i==4?"Windows Server":"Windows",AdDisabled=i==4})).ToList();
   foreach(var item in rows)Computers.Add(item);
+  var ready=rows[1];var now=DateTimeOffset.UtcNow;
+  var job=new RemoteJob{OutputChannel="WSUS",Steps=new(){new(){Kind="UpdateScan"}},Targets=new(){new(){Name=ready.Name,Host=ready.Host,Status="Completed",State=new(){Status="Completed",Started=now.AddMinutes(-3).ToString("o"),Ended=now.ToString("o"),UpdatesRemaining=0,ReportRequested=true,Results=new(){new(){Kind="UpdateScan",ExitCode=0,Ended=now.AddMinutes(-2).ToString("o")}}}}}};
   try{
    recentLimit=5;recentHosts.Clear();workHosts.Clear();
    rows[0].SetOutcome("Error","fixture");rows[0].SetConnection("Unreachable","fixture");rows[1].SetOutcome("Success","fixture");
@@ -87,10 +89,21 @@ public partial class MainWindow {
    workHosts.Add(rows[0].Host);
    foreach(var r in rows.Skip(6)){preparing60[PreparationKey60(r.Host,"WSUS")]=("WSUS","Подготовка",DateTimeOffset.UtcNow);PromoteRecent(new[]{r.Host},true);}
    if(RecentComputers[0]!=rows[7]||RecentComputers[1]!=rows[6]||!RecentComputers.Contains(rows[0])||RecentComputers.Distinct().Count()!=RecentComputers.Count)throw new Exception("Preparation order or pin lost");
-   foreach(int theme in new[]{0,1,2}){Theme.Apply(theme,false);RefreshRecent();UpdateLayout();foreach(var size in new[]{(1000d,640d),(1920d,1080d)})CaptureContent38("priority57-navigation-"+theme+"-"+size.Item1,size.Item1,size.Item2);}
+   History.Insert(0,job);liveReports.Add(ready.Host);
+   reportCache[ready.Host]=new(){Found=true,Server=OverviewServer,ReceivedUtc=now.ToString("o"),Report=new(){NeededCount=0,RequiredComplete=true,LastReportedUtc=now.ToString("o"),LastSyncUtc=now.ToString("o"),LastSyncResult="Succeeded"}};
+   rebootSnapshots[ready.Host]=new(){Required=false,CollectedUtc=now.ToString("o")};
+   workHosts.Clear();recentHosts.Clear();recentHosts.AddRange(new[]{rows[7].Host,rows[6].Host,rows[4].Host,ready.Host});
+   Tree();RefreshOutcomes();RefreshRecent();RecentList.ScrollIntoView(rows[7]);
+   foreach(int theme in new[]{0,1,2}){
+    Theme.Apply(theme,false);RefreshOutcomes();RefreshRecent();UpdateLayout();
+    if(!ready.StartsReady||RecentComputers.Last()!=ready||RecentComputers.Count(x=>x.StartsReady)!=1)throw new Exception("Ready divider missing from rendered list");
+    foreach(var size in new[]{(1000d,740d),(1920d,1080d)})
+     foreach(double dpi in new[]{96d,120d,144d})CaptureContent38($"priority57-navigation-{theme}-{size.Item1}-{dpi}",size.Item1,size.Item2,dpi:dpi);
+   }
   }finally{
+   History.Remove(job);liveReports.Remove(ready.Host);reportCache.Remove(ready.Host);rebootSnapshots.Remove(ready.Host);readyProofs43.Remove(ready.Host);
    foreach(var r in rows){preparing60.Remove(PreparationKey60(r.Host,"WSUS"));Computers.Remove(r);}
-   recentHosts.Clear();recentHosts.AddRange(saved);workHosts.Clear();workHosts.AddRange(pins);recentLimit=limit;Store.Write("recent-computers.json",recentHosts);RecentGroup.IsExpanded=expanded;Theme.Apply(color,false);RefreshRecent();
+   recentHosts.Clear();recentHosts.AddRange(saved);workHosts.Clear();workHosts.AddRange(pins);recentLimit=limit;Store.Write("recent-computers.json",recentHosts);RecentGroup.IsExpanded=expanded;Theme.Apply(color,false);Tree();RefreshRecent();
   }
  }
 }
