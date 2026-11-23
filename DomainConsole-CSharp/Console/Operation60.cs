@@ -74,10 +74,13 @@ public partial class MainWindow {
   }
   Save();RefreshActivity();if(CurrentHost(host))ShowCurrent();
  }
+ static bool SubmissionCanStillRun(TargetRecord target,bool queued)=>target.Status is "Sending" or "Submitted" or "SubmissionUnknown"||
+  ActiveTarget(target)&&(queued||StateFresh(target.State));
+
  async Task SubmitTargets60(RemoteJob template,List<ComputerRow> selected,List<ComputerRow> frozen,bool beginPlan){
   // Each target owns its decision and submission. A modeless decision cannot hold ready peers.
   var admitted=new List<(ComputerRow Selected,ComputerRow Frozen)>();
-  foreach(var frozenRow in frozen){if(preparing60.ContainsKey(PreparationKey60(frozenRow.Host,template.OutputChannel))||History.Any(j=>j.OutputChannel==template.OutputChannel&&j.Steps.Count==template.Steps.Count&&j.Steps.Zip(template.Steps).All(p=>p.First.Kind==p.Second.Kind&&p.First.Code==p.Second.Code)&&j.Targets.Any(t=>t.Host.Equals(frozenRow.Host,StringComparison.OrdinalIgnoreCase)&&ActiveTarget(t)&&(StateFresh(t.State)||queue.Any(q=>q.Job.Id==j.Id&&q.Target.Host.Equals(t.Host,StringComparison.OrdinalIgnoreCase)))))){Notify(frozenRow.Name+": это действие уже выполняется или подготавливается; повтор не создан.");continue;}preparing60[PreparationKey60(frozenRow.Host,template.OutputChannel)]=(template.OutputChannel,"Подготовка · проверяем возможность запуска",DateTimeOffset.UtcNow);admitted.Add((selected.Single(r=>r.Host==frozenRow.Host),frozenRow));}
+  foreach(var frozenRow in frozen){if(preparing60.ContainsKey(PreparationKey60(frozenRow.Host,template.OutputChannel))||History.Any(j=>j.OutputChannel==template.OutputChannel&&j.Steps.Count==template.Steps.Count&&j.Steps.Zip(template.Steps).All(p=>p.First.Kind==p.Second.Kind&&p.First.Code==p.Second.Code)&&j.Targets.Any(t=>t.Host.Equals(frozenRow.Host,StringComparison.OrdinalIgnoreCase)&&SubmissionCanStillRun(t,queue.Any(q=>q.Job.Id==j.Id&&q.Target.Host.Equals(t.Host,StringComparison.OrdinalIgnoreCase)))))){Notify(frozenRow.Name+": это действие уже принято или его исход уточняется. Проверьте результат в истории.");continue;}preparing60[PreparationKey60(frozenRow.Host,template.OutputChannel)]=(template.OutputChannel,"Подготовка · проверяем возможность запуска",DateTimeOffset.UtcNow);admitted.Add((selected.Single(r=>r.Host==frozenRow.Host),frozenRow));}
   PromoteRecent(admitted.Select(p=>p.Frozen.Host),true);
   RefreshActivity();UpdateWsusStage();
   using var slots=new SemaphoreSlim(3);

@@ -18,6 +18,13 @@ public partial class MainWindow {
    throw new Exception("A manual preflight stalled work on an unrelated peer or admitted automatic work on the same client.");
   if(SelectReadySubmission(candidates.Take(1),"",_=>false).Target!=a)
    throw new Exception("Automatic dispatch did not resume after manual preparation.");
+  foreach(var unresolved in new[]{"Sending","Submitted","SubmissionUnknown"}){
+   var target=new TargetRecord{Status=unresolved};
+   if(!SubmissionCanStillRun(target,false))
+    throw new Exception("A repeat click could resubmit an unconfirmed command without a cached remote status.");
+  }
+  if(SubmissionCanStillRun(new TargetRecord{Status="Cancelled"},false))
+   throw new Exception("A known cancelled submission prevents an explicit new attempt.");
   var selected=ComputerGrid.SelectedItem;var tab=MainTabs.SelectedItem;int theme=Theme.Current;
   var row=new ComputerRow(new(){Host="operation60.invalid",Name="OPERATION-60"});
   var now=DateTimeOffset.UtcNow;var state=new RemoteState{Status="Completed",Stage="Поиск завершён",Started=now.AddMinutes(-2).ToString("o"),Updated=now.ToString("o"),Ended=now.ToString("o")};
