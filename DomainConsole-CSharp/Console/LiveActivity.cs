@@ -28,6 +28,13 @@ $policySource=[string](Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windo
 """;
  public async Task<LiveUpdateActivity> LiveUpdates(TargetRecord target){using var read43=PollingControl43.Read();if(Local(target))RequireLocalAdmin();using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(95));
   return ParseData34<LiveUpdateActivity>(await SnapshotPart42(target,"Activity",timeout.Token),"фоновая активность");}
+ public async Task<LiveUpdateActivity> ReadManualUpdateActivity(TargetRecord target){
+  using var manual=PollingControl43.Manual56("manual");
+  using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(20));
+  if(Local(target))RequireLocalAdmin();
+  var json=await PowerShellBridge.Execute(Invoke(ConnectionStore.Capture(target),LiveUpdateScript),timeout.Token);
+  return ParseData34<LiveUpdateActivity>(json,"проверка активности Windows Update перед ручной командой");
+ }
  public static string LiveProbeWrapper(string? collector=null)=>SnapshotWrapper41(collector!=null);
 
 
@@ -43,8 +50,8 @@ public partial class MainWindow {
  public static async Task<(ComputerRow Row,LiveUpdateActivity? Live,string Error)[]> ProbeBatch(IEnumerable<ComputerRow> rows,Func<TargetRecord,Task<LiveUpdateActivity>> probe){using var gate=new SemaphoreSlim(8);return await Task.WhenAll(rows.Select(async row=>{await gate.WaitAsync();try{return (Row:row,Live:(LiveUpdateActivity?)await probe(row.Target),Error:"");}catch(Exception ex){return (Row:row,Live:(LiveUpdateActivity?)null,Error:ex.Message);}finally{gate.Release();}}));}
  async Task<bool> HasLiveWsus(List<ComputerRow> selected){bool active=false;foreach(var target60 in selected)preflightErrors.Remove(target60.Host);
   var endpoints53=selected.ToDictionary(r=>r.Host,r=>ConnectionStore.Capture(r.Target),StringComparer.OrdinalIgnoreCase);var generation53=PollingControl43.Token;
-  var probes=await ProbeBatch(selected,remote.LiveUpdates);
-  foreach(var probe in probes){var row=probe.Row;if(generation53.IsCancellationRequested||TransportBudget41.Paused||!CurrentEndpoint(endpoints53[row.Host])){preflightErrors[row.Host]="Контекст проверки изменён; нужен актуальный снимок";continue;}if(probe.Live==null){preflightErrors[row.Host]=probe.Error;continue;}var live=probe.Live;backgroundUpdates[row.Host]=live;ObserveInstaller53(row,live);active|=live.Busy||live.Jobs.Count>0||queue.Any(q=>q.Target.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)&&IsWsusJob(q.Job));
+  var probes=await ProbeBatch(selected,PollingControl43.IsManual56?remote.ReadManualUpdateActivity:remote.LiveUpdates);
+  foreach(var probe in probes){var row=probe.Row;if(generation53.IsCancellationRequested||PollingControl43.BackgroundPaused56||!CurrentEndpoint(endpoints53[row.Host])||!CurrentIdentity(endpoints53[row.Host])){preflightErrors[row.Host]="Контекст проверки изменён; нужен актуальный снимок";continue;}if(probe.Live==null){preflightErrors[row.Host]=probe.Error;continue;}var live=probe.Live;backgroundUpdates[row.Host]=live;ObserveInstaller53(row,live);active|=live.Busy||live.Jobs.Count>0||queue.Any(q=>q.Target.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)&&IsWsusJob(q.Job));
    foreach(var job in History.Where(IsWsusJob)){var target=job.Targets.FirstOrDefault(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase));if(target==null||target.Status is not ("Queued" or "Submitted" or "Running")||live.Jobs.Contains(job.Id)||queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)))continue;
     try{var data=await remote.Poll(target,job.Id);if(data.AgentAlive||data.TaskState=="Running"){active=true;continue;}if(data.State!=null&&!string.IsNullOrEmpty(data.State.Ended)){target.State=data.State;target.Status=data.State.Status;}else{target.Status="InterventionRequired";target.State??=new();target.State.Status="InterventionRequired";target.State.Error="Исполнитель отсутствует; исход задания неизвестен. Требуется диагностика.";}Sync(job);}catch(Exception ex){preflightErrors[row.Host]=ex.Message;}
    }

@@ -1,6 +1,10 @@
 $root=Join-Path $env:ProgramData 'DomainConsoleCSharp'
 $file=Join-Path $root 'control37.json'
 $repair=@@REPAIR@@
+function Sharing-Denied($record){
+ $cause=$record.Exception.GetBaseException()
+ return ($cause -is [IO.IOException] -and ($cause.HResult -band 65535) -in @(32,33))
+}
 function Read-JobStatus([string]$path){
  for($attempt=0;$attempt -lt 3;$attempt++){
   try{
@@ -12,7 +16,7 @@ function Read-JobStatus([string]$path){
   }catch{
    $cause=$_.Exception.GetBaseException()
    if($cause -is [IO.FileNotFoundException]){return $null}
-   if($attempt -ge 2 -or $cause -isnot [IO.IOException] -or ($cause.HResult -band 65535) -notin @(32,33)){throw}
+   if($attempt -ge 2 -or !(Sharing-Denied $_)){throw}
    Start-Sleep -Milliseconds (60 * ($attempt+1))
   }
  }
@@ -34,9 +38,11 @@ try {
   $guid=[guid]::Empty
   if(![guid]::TryParse($id,[ref]$guid)){throw 'Некорректный ID резервации.'}
   $p=Join-Path $root $id
-  $state=$null
+  $state=$null;$statusLocked=$false
   $stateFile=Join-Path $p 'status.json'
-  if(Test-Path -LiteralPath $stateFile){$state=Read-JobStatus $stateFile}
+  if(Test-Path -LiteralPath $stateFile){
+   try{$state=Read-JobStatus $stateFile}catch{if(!(Sharing-Denied $_)){throw};$statusLocked=$true}
+  }
   $related=@($tasks|Where-Object{$_.TaskName -like "*$id*" -or (($_.Actions|ForEach-Object{$_.Arguments}) -join ' ') -like "*$id*"})
   $agents=@($processes|Where-Object{[string]::IsNullOrWhiteSpace($_.CommandLine) -or $_.CommandLine -like "*$id*"})
   $missing=!(Test-Path (Join-Path $p 'job.json')) -and !(Test-Path $stateFile) -and !(Test-Path (Join-Path $p 'submitted.flag'))
@@ -57,10 +63,16 @@ try {
    $state|Add-Member NoteProperty Updated $now -Force
    $state|Add-Member NoteProperty Error 'DC_INTERRUPTED46: Исполнитель отсутствует после новой загрузки Windows. Исход установки неизвестен; необходим свежий поиск.' -Force
    $tempState=$stateFile+'.'+[guid]::NewGuid()+'.tmp'
-   try{[IO.File]::WriteAllText($tempState,($state|ConvertTo-Json -Depth 80),[Text.UTF8Encoding]::new($false));[IO.File]::Replace($tempState,$stateFile,$backupState)}finally{if(Test-Path $tempState){Remove-Item -LiteralPath $tempState -Force}}
+   try{
+    [IO.File]::WriteAllText($tempState,($state|ConvertTo-Json -Depth 80),[Text.UTF8Encoding]::new($false))
+    [IO.File]::Replace($tempState,$stateFile,$backupState)
+   }catch{
+    if(!(Sharing-Denied $_)){throw}
+    $statusLocked=$true;$oldBoot=$false;$state=$null
+   }finally{if(Test-Path $tempState){Remove-Item -LiteralPath $tempState -Force}}
   }
-  $eligible=$eligible -or $oldBoot
-  $rows+=@{Id=$id;Status=$(if($state){$state.Status}else{'Результат отсутствует'});Stage=$state.Stage;Updated=$state.Updated;Ended=$state.Ended;Restore=$state.RestoreStatus;Diagnostics=$state.DiagnosticStatus;Tasks=@($related|Select-Object TaskName,State);Processes=@($agents|Select-Object ProcessId,CreationDate);CanRelease=$eligible}
+  $eligible=(!$statusLocked -and ($eligible -or $oldBoot))
+  $rows+=@{Id=$id;Status=$(if($statusLocked){'Файл статуса занят; резервация сохранена'}elseif($state){$state.Status}else{'Результат отсутствует'});Stage=$state.Stage;Updated=$state.Updated;Ended=$state.Ended;Restore=$state.RestoreStatus;Diagnostics=$state.DiagnosticStatus;Tasks=@($related|Select-Object TaskName,State);Processes=@($agents|Select-Object ProcessId,CreationDate);CanRelease=$eligible;StatusLocked=$statusLocked}
   if($repair -and $eligible){$removed+=@($id)}
  }
  $backup=''

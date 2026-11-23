@@ -33,7 +33,17 @@ try {
  }
  $after.JobIds=@($oldId,$sameBootId,$pendingId);$after|ConvertTo-Json -Depth 8|Set-Content $file -Encoding UTF8
  function Get-ScheduledTask { [pscustomobject]@{TaskName="DomainConsoleCSharp-$oldId";State='Ready';Actions=@()} }
- $recovered=(& $body)|ConvertFrom-Json
+ $lockedPath=Join-Path (Join-Path $root $sameBootId) 'status.json'
+ $before=Get-FileHash $lockedPath
+ $lock=[IO.File]::Open($lockedPath,[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+ try{
+  $recovered=(& $body)|ConvertFrom-Json
+  $lockedRow=@($recovered.Rows|Where-Object Id -eq $sameBootId)
+  if($lockedRow.Count -ne 1 -or $lockedRow[0].CanRelease -or !$lockedRow[0].StatusLocked){
+   throw 'Exclusive status lock did not produce a retained reservation'
+  }
+ }finally{$lock.Dispose()}
+ if((Get-FileHash $lockedPath).Hash -ne $before.Hash){throw 'Locked status was changed'}
  if(@($recovered.Removed).Count -ne 1 -or $recovered.Removed[0] -ne $oldId){throw 'Prior-boot reconciliation removed wrong jobs'}
  $old=Get-Content (Join-Path (Join-Path $root $oldId) 'status.json') -Raw|ConvertFrom-Json
  if($old.Status -ne 'InterventionRequired' -or !$old.Ended -or !$old.Error.StartsWith('DC_INTERRUPTED46:')){throw 'Interrupted outcome not preserved'}
