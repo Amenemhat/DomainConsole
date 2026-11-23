@@ -11,6 +11,21 @@ function Expire-Cache {$f=Join-Path $path 'result.json';if(Test-Path $f){$v=Get-
 function Admit-Next {Expire-Cache;$f=Join-Path $path 'run.json';if(Test-Path $f){$v=Get-Content $f -Raw|ConvertFrom-Json;$v.NextUtc=[DateTime]::UtcNow.AddSeconds(-1).ToString('o');$v|ConvertTo-Json -Depth 8|Set-Content $f -Encoding UTF8}}
 # Parse every generated script before any execution.
 foreach($f in Get-ChildItem $Fixture -Filter 'probe42-*.ps1'){$tokens=$null;$errors=$null;$null=[Management.Automation.Language.Parser]::ParseFile($f.FullName,[ref]$tokens,[ref]$errors);if($errors){throw ($f.Name+': '+($errors|Out-String))}}
+& {
+ $code=(Code 'Get')
+ $ast=[Management.Automation.Language.Parser]::ParseInput($code,[ref]$null,[ref]$null)
+ $read=$ast.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Read-Json'},$true)
+ if(!$read){throw 'Collector JSON reader fixture is missing'}
+ function Get-Item {param($LiteralPath,[switch]$Force,$ErrorAction) [pscustomobject]@{Attributes=$attributesFixture;Length=12}}
+ function Get-Content {param($LiteralPath,[switch]$Raw,$Encoding,$ErrorAction) '{"Opened":true}'}
+ . ([scriptblock]::Create($read.Extent.Text))
+ $attributesFixture=-1
+ if($null -ne (Read-Json 'state.json')){throw 'An atomic replacement was treated as data'}
+ $attributesFixture=[IO.FileAttributes]::ReparsePoint
+ $blocked=$false
+ try{$null=Read-Json 'state.json'}catch{if($_.Exception.Message -notlike 'Ссылка вместо данных сборщика*'){throw};$blocked=$true}
+ if(!$blocked){throw 'A real reparse attribute was not rejected'}
+}
 if((Query 'Recover').Status -ne 'Recovered'){throw 'Initial collector has not settled'}
 if(Get-ScheduledTask $task -ErrorAction SilentlyContinue){Set-ScheduledTask -TaskName $task -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::FromSeconds(40)) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries)|Out-Null}
 $first=Query 'Get';if($first.Status -ne 'Busy'){throw ('Start failed: '+($first|ConvertTo-Json -Depth 5))}
