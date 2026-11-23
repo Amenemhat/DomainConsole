@@ -35,9 +35,14 @@ public partial class MainWindow {
   if(anchor.UseWUServer!=1)return "Источник WSUS не подтверждён · "+WsusPolicyFinding(anchor);
   if(!IdentityPolicy58.Usable(anchor))return "Проверка неполная · не подтверждены устройство или источник WSUS";
   bool ambiguous=survey.Hosts.Select(h=>identities58.GetValueOrDefault(h)).Any(peer=>peer!=null&&peer.Fresh(DateTimeOffset.UtcNow)&&peer.Key==anchor.Key&&peer.Machine.Equals(anchor.Machine,StringComparison.OrdinalIgnoreCase)&&!peer.Name.TrimEnd('.').Equals(anchor.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase));
-  if(ambiguous)return "Один аппаратный идентификатор у разных имён · возможны переименование или клонирование. Исправление неоднозначных устройств недоступно";
+  if(ambiguous)return "SusClientId совпадает · для устройств с одним аппаратным UUID не подтверждены разные установки Windows";
   if(survey.ServerName.Length>0&&!survey.ServerName.TrimEnd('.').Equals(anchor.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase))return "Имя записи WSUS отличается от имени клиента · возможны переименование или устаревшая запись";
   if(failed>0)return "Проверка неполная · общий ID у доступных участников не подтверждён";
+  var sameId=survey.Hosts.Select(h=>identities58.GetValueOrDefault(h)).OfType<ClientIdentity58>()
+   .Where(peer=>!peer.Host.Equals(anchor.Host,StringComparison.OrdinalIgnoreCase)&&Guid.TryParse(peer.SusClientId,out var peerId)&&peerId==id).ToList();
+  if(sameId.Any(peer=>!peer.Fresh(DateTimeOffset.UtcNow)))return "SusClientId совпадает · срок подтверждения части участников истёк. Повторите проверку";
+  if(sameId.Any(peer=>peer.Key!=anchor.Key))return "SusClientId совпадает · не подтверждён единый источник WSUS";
+  if(sameId.Count>0)return "SusClientId совпадает · разные устройства пока не подтверждены";
   if(survey.Hosts.Any(h=>identities58.TryGetValue(h,out var peer)&&peer.Fresh(DateTimeOffset.UtcNow)&&IdentityPolicy58.Usable(peer)&&peer.Source.Equals(anchor.Source,StringComparison.OrdinalIgnoreCase)&&!peer.SusClientId.Equals(anchor.SusClientId,StringComparison.OrdinalIgnoreCase)))return "Идентификаторы проверенных устройств различаются · общий ID не подтверждён";
   return "На проверенных устройствах общий ID не подтверждён";
  }
@@ -114,7 +119,9 @@ public sealed partial class RemoteService {
   using var read=PollingControl43.Read();
   using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(TimeSpan.FromSeconds(30));
   string json=await PowerShellBridge.Execute(Invoke(target,IdentityProbe58+"\n"+ManualIdentityActivity+"\n$dcIdentity58 | ConvertTo-Json -Compress"),timeout.Token);
-  return JsonSerializer.Deserialize<ClientIdentity58>(json,Store.Options)??throw new InvalidOperationException("Клиент вернул пустой ответ");
+  var result=JsonSerializer.Deserialize<ClientIdentity58>(json,Store.Options)??throw new InvalidOperationException("Клиент вернул пустой ответ");
+  result.At=DateTimeOffset.UtcNow.ToString("o");
+  return result;
  }
  // Read local process metadata inside the existing manual WinRM call. No scheduled task or agent is started.
  const string ManualIdentityActivity="""

@@ -20,7 +20,11 @@ public sealed class IdentityRepairAttempt58 {
 public partial class MainWindow {
  readonly Dictionary<string,IdentityRepairAttempt58> identityRepairs58=Store.Read("identity-repairs58.json",new Dictionary<string,IdentityRepairAttempt58>());
  readonly Dictionary<string,List<string>> manualIdentityScopes=Store.Read("identity-scope-approvals.json",new Dictionary<string,List<string>>());
- static string MemberIdentity(ClientIdentity58 i)=>i.Machine.ToLowerInvariant()+"|"+i.Name.TrimEnd('.').ToLowerInvariant();
+ static string MemberIdentity(ClientIdentity58 i){
+  var installation=IdentityPolicy58.Installation(i);
+  return i.Machine.ToLowerInvariant()+"|"+i.Name.TrimEnd('.').ToLowerInvariant()+
+   (installation==Guid.Empty?"":"|"+installation.ToString("D"));
+ }
  void RememberDiagnosticScope(ClientIdentity58 identity){
   if(!IdentityPolicy58.Usable(identity)||manualIdentityScopes.ContainsKey(identity.Key))return;
   var retained=identities58.Values.Select(x=>x.Key).Concat(identityRepairs58.Values.Where(a=>a.Key.LastIndexOf('|')>0).Select(a=>a.Key[..a.Key.LastIndexOf('|')])).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -75,9 +79,14 @@ public partial class MainWindow {
    foreach(var identity in participants){
     if(stop.IsCancellationRequested)break;
     var row=Computers.FirstOrDefault(r=>r.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase));if(row==null||row.Target.AdDisabled)continue;
-    string key=identity.Key+"|"+identity.Machine.ToLowerInvariant();
+    string legacyKey=identity.Key+"|"+identity.Machine.ToLowerInvariant();
+    var installation=IdentityPolicy58.Installation(identity);
+    string key=installation==Guid.Empty?legacyKey:legacyKey+":"+installation.ToString("D");
     // A persisted attempt survives a crash, even if delivery acknowledgement was lost.
-    if(identityRepairs58.TryGetValue(key,out var prior)&&prior.JobId.Length>0&&(!manual||!History.Any(j=>j.Id==prior.JobId&&j.Targets.All(t=>t.Status is "LaunchRejected" or "AccessDenied")))){if(manual)Notify(identity.Name+": попытка ещё активна; проверьте задание "+prior.JobId);continue;}
+    var legacy=identityRepairs58.GetValueOrDefault(legacyKey);
+    if(legacy?.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase)==true)key=legacyKey;
+    var prior=identityRepairs58.GetValueOrDefault(key)??legacy;
+    if(prior!=null&&prior.JobId.Length>0&&(!manual||!History.Any(j=>j.Id==prior.JobId&&j.Targets.All(t=>t.Status is "LaunchRejected" or "AccessDenied")))){if(manual)Notify(identity.Name+": попытка ещё активна; проверьте задание "+prior.JobId);continue;}
     void Defer(string reason){
      identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase=reason,At=DateTimeOffset.UtcNow.ToString("o")};
      Store.Write("identity-repairs58.json",identityRepairs58);refreshSurvey?.Invoke();
@@ -86,7 +95,7 @@ public partial class MainWindow {
     bool Available()=>!closing&&!stop.IsCancellationRequested&&!row.Target.AdDisabled&&CurrentEndpoint(frozen.Target)&&CurrentIdentity(frozen.Target);
     if(!Available()||!ConnectionStore.CanConnect(frozen.Target)){Defer("Подключение к согласованной цели недоступно");continue;}
     if(HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target))){Defer("Ожидается завершение активного задания");continue;}
-    if(!identity.Fresh(DateTimeOffset.UtcNow)||!ConnectionFresh(row.Host)){
+    if(manual||!identity.Fresh(DateTimeOffset.UtcNow)||!ConnectionFresh(row.Host)){
      if(!manual){Defer("Ожидается свежая проверка клиента");continue;}
      var began=DateTimeOffset.UtcNow;
      try{
@@ -137,7 +146,7 @@ public partial class MainWindow {
 }
 public sealed partial class RemoteService {
  public static string IdentityRepairScript58(ClientIdentity58 identity)=>
-  "$dcExpectedId58="+PowerShellBridge.Literal(identity.SusClientId)+";$dcExpectedMachine58="+PowerShellBridge.Literal(identity.Machine)+";$dcExpectedName58="+PowerShellBridge.Literal(identity.Name)+";$dcExpectedServer58="+PowerShellBridge.Literal(identity.Server)+";"+IdentityRepairBody58;
+  "$dcExpectedId58="+PowerShellBridge.Literal(identity.SusClientId)+";$dcExpectedMachine58="+PowerShellBridge.Literal(identity.Machine)+";$dcExpectedInstallation58="+PowerShellBridge.Literal(IdentityPolicy58.Installation(identity)==Guid.Empty?"":identity.InstallationId)+";$dcExpectedName58="+PowerShellBridge.Literal(identity.Name)+";$dcExpectedServer58="+PowerShellBridge.Literal(identity.Server)+";"+IdentityRepairBody58;
  public const string IdentityRepairBody58="""
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.ServiceProcess
@@ -151,6 +160,10 @@ try {
  $machine58=[string](Get-CimInstance Win32_ComputerSystemProduct -ErrorAction Stop).UUID
  $server58=[string](Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate' -ErrorAction Stop).WUServer
  if($name58 -ne $dcExpectedName58 -or $machine58 -ne $dcExpectedMachine58 -or $server58.TrimEnd('/') -ne $dcExpectedServer58.TrimEnd('/')){throw 'Идентичность или сервер клиента изменились; сброс не выполнен'}
+ if($dcExpectedInstallation58){
+  $installation58=[string](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography' -Name MachineGuid -ErrorAction Stop).MachineGuid
+  if($installation58 -ne $dcExpectedInstallation58){throw 'Установка Windows изменилась; сброс не выполнен'}
+ }
  if((Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -ErrorAction Stop).UseWUServer -ne 1){throw 'UseWUServer=1 не подтверждён; сброс не выполнен'}
  $path58='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
  $id58=[string](Get-ItemProperty $path58 -ErrorAction Stop).SusClientId

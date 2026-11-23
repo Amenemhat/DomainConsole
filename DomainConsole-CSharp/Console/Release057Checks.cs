@@ -47,6 +47,12 @@ public partial class MainWindow {
   if(alias.Key!=group[0].Key)throw new Exception("Verified alias of the same WSUS server was split");
   var ambiguous=Store.Clone(group[0]);ambiguous.Name="different-fqdn";group.Add(ambiguous);
   if(IdentityPolicy58.Participants(group,group[0],now).Count!=4)throw new Exception("Ambiguous hardware ID admitted to repair");
+  group[0].InstallationId=Guid.NewGuid().ToString();
+  ambiguous.InstallationId=Guid.NewGuid().ToString();
+  if(IdentityPolicy58.Participants(group,group[0],now).Count!=6)throw new Exception("Shared hardware UUID hid independently verified Windows installations");
+  var original=Store.Clone(ambiguous);
+  ambiguous.InstallationId=group[0].InstallationId;
+  if(IdentityPolicy58.SameApprovedDevice(original,ambiguous,now)||IdentityPolicy58.Participants(group,group[0],now).Count!=4)throw new Exception("Duplicated or changed Windows installation ID was accepted");
   if(IdentityPolicy58.Confirmed(group,group[0],now.AddMinutes(10)))throw new Exception("Stale WSUS identity");
  }
  async Task VerifySurvey057(){
@@ -70,6 +76,11 @@ public partial class MainWindow {
    if(!IdentityPolicy58.Confirmed(identities58.Values,reports[0],DateTimeOffset.UtcNow))throw new Exception("Five fresh identities not confirmed");
    var summary=DescribeSurveyResult(rows[0],reports,0,false);
    if(!reports.All(r=>summary.Contains(r.Name,StringComparison.OrdinalIgnoreCase))||!DescribeSurveyResult(rows[0],Array.Empty<ClientIdentity58>(),0,false).Contains("переименование"))throw new Exception("Identity summary lost confirmed members or competing server name");
+   var dialog=IdentityWindow58(rows[0]);
+   var repairButton=((System.Windows.Controls.DockPanel)dialog.Content).Children.OfType<System.Windows.Controls.Button>()
+    .FirstOrDefault(b=>Equals(b.Content,"Сбросить SusClientId · 5 ПК"));
+   dialog.Close();
+   if(repairButton?.IsEnabled!=true)throw new Exception("Verified WSUS group did not expose the bulk reset action");
    var repairKey=key+"|"+reports[0].Machine;
    var established=new IdentityRepairAttempt58{Key=repairKey,Host=reports[0].Host,OldId=id,JobId="lab-proof"};
    try{

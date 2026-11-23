@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using System.Windows;
+using System.Windows.Input;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
@@ -39,6 +40,12 @@ public partial class MainWindow {
    MarkRange(visible[0],visible,true,false,false);MarkRange(visible[2],visible,true,true,false);if(!visible.Take(3).All(r=>r.Selected)||visible[3].Selected)throw new Exception("Shift checkbox range invalid");
    MarkRange(visible[1],visible,false,false,false);if(!visible[0].Selected||visible[1].Selected||!visible[2].Selected)throw new Exception("Ctrl toggle cleared other targets");
    MarkRange(visible[3],new(){visible[0],visible[3]},false,true,false);if(!visible[0].Selected||!visible[2].Selected)throw new Exception("Hidden anchor changed hidden range");
+   foreach(bool recent in new[]{false,true}){
+    foreach(var item in visible)item.Selected=false;
+    if(MarkRowFromClick(visible[0],()=>visible,ModifierKeys.None,recent)||visible[0].Selected)throw new Exception("Ordinary row click marked a computer");
+    if(!MarkRowFromClick(visible[2],()=>visible,ModifierKeys.Shift,recent)||!visible.Take(3).All(r=>r.Selected)||visible[3].Selected)throw new Exception("Shift row click did not mark the visible range");
+    if(!MarkRowFromClick(visible[1],()=>visible,ModifierKeys.Control,recent)||visible[1].Selected||!visible[0].Selected||!visible[2].Selected)throw new Exception("Ctrl row click did not toggle a single target");
+   }
    statusFilter.Add("NoWsus");statusFilter.Add("Stale");RefreshStatusCounts();var union=ScopedStatusRows();if(!union.Contains(row)||union.DistinctBy(r=>r.Host,StringComparer.OrdinalIgnoreCase).Count()!=union.Count)throw new Exception("Status union loses clients or duplicates them");
    if(!StatusFilterButton.Content.ToString()!.Contains("ПК:"))throw new Exception("Filter count missing");statusFilter.Clear();RefreshStatusCounts();
    File.WriteAllText(Path.Combine(Path.GetTempPath(),"wsus-overview.ps1"),RemoteService.OverviewScript(new(){Host="wsus.invalid",Port=8530},new(){"alpha.invalid","missing.invalid","alpha.other.invalid","broken.invalid","duplicate.invalid"}),new UTF8Encoding(true));
