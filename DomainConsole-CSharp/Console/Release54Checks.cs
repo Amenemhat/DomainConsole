@@ -2,15 +2,29 @@ using System.IO;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
- async Task VerifyConnectionCancel54(){
-  var target=ConnectionStore.Capture(new(){Host="cancel54.fixture.invalid"});var started=new TaskCompletionSource();using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(5));
-  var pending=TransportBudget41.Run("# DC-MANUAL41\n# DC-ENDPOINT41:"+TransportBudget41.Key(target),timeout.Token,async token=>{started.TrySetResult();await Task.Delay(Timeout.Infinite,token);return "unexpected";});
-  await started.Task.WaitAsync(timeout.Token);TransportBudget41.CancelEndpoint54(target);
-  try{await pending;throw new Exception("Disconnect did not cancel local transport wait");}catch(OperationCanceledException){}
+ static async Task VerifyConnectionCancel54(TargetRecord target){
+  var started=new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+  using var cleanup=new CancellationTokenSource(TimeSpan.FromSeconds(15));
+  var limit=TimeSpan.FromSeconds(5);
+  var pending=Task.Run(()=>TransportBudget41.Run("# DC-MANUAL41\n# DC-ENDPOINT41:"+TransportBudget41.Key(target),cleanup.Token,async token=>{
+   var response=Task.Delay(Timeout.Infinite,token);
+   started.SetResult();
+   await response.ConfigureAwait(false);
+   return "unexpected";
+  }));
+  await started.Task.WaitAsync(limit).ConfigureAwait(false);
+  await Task.Run(()=>TransportBudget41.CancelEndpoint54(target)).WaitAsync(limit).ConfigureAwait(false);
+  try{
+   await pending.WaitAsync(limit).ConfigureAwait(false);
+   throw new Exception("Disconnect did not cancel local transport wait");
+  }catch(OperationCanceledException) when(!cleanup.IsCancellationRequested){}
  }
  void VerifyRelease54(){
   VerifySavedStatus55();
-  AwaitUi39(VerifyConnectionCancel54());
+  var trace=Path.Combine(Path.GetTempPath(),"ui-release54-progress.txt");
+  File.WriteAllText(trace,"Verifying endpoint cancellation.\n");
+  AwaitUi39(VerifyConnectionCancel54(ConnectionStore.Capture(new(){Host="cancel54.fixture.invalid"})));
+  File.AppendAllText(trace,"Endpoint cancellation verified.\n");
   var now=DateTimeOffset.UtcNow;var host="release54.fixture.invalid";var original=ConnectionStore.Profiles.GetValueOrDefault(host);
   try{
    ConnectionStore.Profiles[host]=new(){Address="192.0.2.10",Identity="identity54",Generation54=1};
@@ -54,6 +68,7 @@ public partial class MainWindow {
   var delayed=NewReportWait54("fixture54",now.AddMinutes(-8).ToString("o"));if(delayed.Until!=now.AddMinutes(2))throw new Exception("Report deadline restarted on delayed polling");
   var queue=new ClientReportProbe{QueueError="access denied",CollectedUtc=now.ToString("o")};if(!QueueHint52(queue).Contains("Неизвестно"))throw new Exception("Unread queue rendered as zero");
   var oldCache=reportCache.GetValueOrDefault(host);var oldWait=reportWaiting.GetValueOrDefault(host);
+  File.AppendAllText(trace,"Verifying WSUS receipt boundary.\n");
   try{
    reportWaiting[host]=new(){Id="fixture54",Server54="fixture:8530",Requested54=now,Until=now.AddMinutes(10)};
    RecordReportReceipt54(host,new(){LastReportedUtc=now.AddMinutes(-1).ToString("o")},"fixture:8530");
