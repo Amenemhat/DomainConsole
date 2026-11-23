@@ -214,8 +214,19 @@ def setup_domain():
     ps("DCAD", "shutdown.exe /r /t 2")
     time.sleep(20)
     wait("DCAD", True, 18)
+    timeout = time.monotonic() + 120
+    while True:
+        try:
+            if ps("DCAD", "(Get-ADDomain -Server 'dcad.dc057.test').DNSRoot", True) == "dc057.test":
+                break
+        except RuntimeError:
+            if time.monotonic() >= timeout:
+                raise
+        if time.monotonic() >= timeout:
+            raise TimeoutError("Active Directory Web Services did not finish startup")
+        time.sleep(5)
     for name in ["LabA", "LabB"]:
-        ps("DCAD", f"New-ADOrganizationalUnit -Name {name} -Path 'DC=dc057,DC=test' -ProtectedFromAccidentalDeletion $false", True)
+        ps("DCAD", f"New-ADOrganizationalUnit -Server 'dcad.dc057.test' -Name {name} -Path 'DC=dc057,DC=test' -ProtectedFromAccidentalDeletion $false", True)
 
 
 def join(node):

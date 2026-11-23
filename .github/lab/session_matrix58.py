@@ -27,7 +27,7 @@ def exercise(root, ps, host, password, evidence, save):
     evidence["checks"]["pre_rdp_wts"] = list(read())
     save()
     ps("DCAD", f"$p=ConvertTo-SecureString '{password}' -AsPlainText -Force;"
-       "New-ADUser -Name 'RdpDomain58' -SamAccountName RdpDomain58 -GivenName Domain -Surname Fixture "
+       "New-ADUser -Server 'dcad.dc057.test' -Name 'RdpDomain58' -SamAccountName RdpDomain58 -GivenName Domain -Surname Fixture "
        "-AccountPassword $p -Enabled $true", True)
     ps("DCWSUS", f"$p=ConvertTo-SecureString '{password}' -AsPlainText -Force;"
        "New-LocalUser -Name RdpLocal58 -Password $p|Out-Null;"
