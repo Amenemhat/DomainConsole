@@ -24,8 +24,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/dc-wsus-lab"
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14815498402/zip" > "$RUNNER_TEMP/dc-wsus-lab/package.zip"
-          echo "d3a4e336f186a774b5fbe8c0fc1c17c8566f70da18ea2af5e5e14dcb51328073  $RUNNER_TEMP/dc-wsus-lab/package.zip" | sha256sum -c
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14820987239/zip" > "$RUNNER_TEMP/dc-wsus-lab/package.zip"
+          echo "9d2bd10b3c8b6359c519b799fb1484ff5f29981567be98203304e84c32bef045  $RUNNER_TEMP/dc-wsus-lab/package.zip" | sha256sum -c
       - name: Boot two disposable Windows guests and test an unconfirmed receipt
         run: |
           bash .github/lab/prepare-guests.sh
