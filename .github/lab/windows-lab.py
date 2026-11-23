@@ -28,7 +28,10 @@ password = "Dc!7" + secrets.token_hex(20)
 print("::add-mask::" + password, flush=True)
 nodes = {"DCWSUS": 10, "DCAD": 11, **{f"CLONE{i}": 20 + i for i in range(1, 6)}}
 bootstrap_only=os.environ.get("DC_BOOTSTRAP_ONLY")=="1"
-if bootstrap_only:
+manual_pair=os.environ.get("DC_TEST_MANUAL_PAIR")=="1"
+if manual_pair:
+    nodes={"DCWSUS":10,"DCAD":11}
+elif bootstrap_only:
     nodes={"DCWSUS":10}
 private_addresses=["10.77.57."+str(n) for n in nodes.values()]
 os.environ["NO_PROXY"]=os.environ["no_proxy"]=",".join(["localhost","127.0.0.1",*private_addresses,os.environ.get("NO_PROXY","")])
@@ -234,6 +237,13 @@ def main():
     # First drive one guest through specialization with the runner CPU to itself.
     boot("DCWSUS",part=="gpt")
     wait("DCWSUS",minutes=12)
+    if manual_pair:
+        boot("DCAD",part=="gpt")
+        wait("DCAD",minutes=12)
+        from manual_pair import exercise
+        exercise(root,ps,session,evidence,save)
+        checkpoint("winrm")
+        return
     if bootstrap_only:
         if os.getenv("DC_TEST_ACTUAL_REBOOT") == "1":
             from reboot_guest import exercise as reboot_exercise

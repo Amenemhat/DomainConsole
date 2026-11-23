@@ -1,0 +1,33 @@
+name: Two disposable Windows clients for 0.58 acceptance
+on:
+  push:
+    branches: ['lab/0.58-two-clients']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  independent-clients:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    env:
+      DC_TEST_MANUAL_PAIR: '1'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch and hash the published candidate bytes
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/dc-wsus-lab"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/14815498402/zip" > "$RUNNER_TEMP/dc-wsus-lab/package.zip"
+          echo "d3a4e336f186a774b5fbe8c0fc1c17c8566f70da18ea2af5e5e14dcb51328073  $RUNNER_TEMP/dc-wsus-lab/package.zip" | sha256sum -c
+      - name: Boot two disposable Windows guests and test an unconfirmed receipt
+        run: |
+          bash .github/lab/prepare-guests.sh
+          bash .github/lab/wait-for-guests.sh guest-exit 35
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: two-windows-clients-evidence
+          path: ${{ runner.temp }}/dc-wsus-lab/evidence.json
+          if-no-files-found: ignore
