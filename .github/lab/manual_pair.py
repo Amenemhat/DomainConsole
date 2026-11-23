@@ -32,8 +32,13 @@ def exercise(root, ps, session, evidence, save):
             raise RuntimeError("Agent copy mismatch for "+node)
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         list(pool.map(stage,nodes))
-    invocation=f"Start-Process -FilePath '{exe}' -ArgumentList @('run','{job_path}') -WindowStyle Hidden"
-    def launch(node, lose_reply=False):
+    scheduled="DCLab-Manual58-"+job
+    second=scheduled+"-repeat"
+    for node in nodes:
+        ps(node,f"$action=New-ScheduledTaskAction -Execute '{exe}' -Argument 'run {job_path}'; Register-ScheduledTask -TaskName '{scheduled}' -Action $action -User SYSTEM -RunLevel Highest -Force|Out-Null; Register-ScheduledTask -TaskName '{second}' -Action $action -User SYSTEM -RunLevel Highest -Force|Out-Null")
+    def launch(node, lose_reply=False, duplicate=False):
+        task=second if duplicate else scheduled
+        invocation=f"Start-ScheduledTask -TaskName '{task}'"
         if not lose_reply:
             ps(node,invocation)
             return
@@ -55,7 +60,7 @@ def exercise(root, ps, session, evidence, save):
         missing.result()
         peer.result()
     await_value(nodes[0],f"if(Test-Path '{marker}'){{'started'}}")
-    launch(nodes[0])
+    launch(nodes[0],duplicate=True)
     states={}
     for node in nodes:
         state=await_value(node,f"$p='{job_path}\\status.json';if(Test-Path $p){{try{{$s=Get-Content -Raw $p|ConvertFrom-Json;if($s.Ended){{$s|ConvertTo-Json -Compress}}}}catch{{}}}}")

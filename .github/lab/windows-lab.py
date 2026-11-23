@@ -109,7 +109,7 @@ def prepare(node):
 
 
 def boot(node, gpt):
-    memory = 3584 if node == "DCWSUS" else 1536
+    memory = 3584 if manual_pair or node == "DCWSUS" else 1536
     tap = "dclab" + str(nodes[node])
     args = [qemu, "-accel", "kvm", "-cpu", "host", "-smp", "2", "-m", str(memory),
             "-machine", "q35" if gpt else "pc", "-uuid", str(uuid.uuid4()), "-name", node,

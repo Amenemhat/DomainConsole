@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
+  actions: write
 jobs:
   independent-clients:
     runs-on: ubuntu-24.04
@@ -15,6 +15,11 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+      - name: Stop the superseded instance of this test
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/actions/runs/45171362545" --jq '.status' | grep -qxv completed; then
+            gh run cancel 45171362545 --repo "$GITHUB_REPOSITORY" || true
+          fi
       - name: Fetch and hash the published candidate bytes
         run: |
           set -euo pipefail
