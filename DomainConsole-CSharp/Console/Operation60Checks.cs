@@ -19,8 +19,8 @@ public partial class MainWindow {
    preparing60.Remove(PreparationKey60(row.Host,"Commands"));if(WorkState60(row,true)?.Text.StartsWith("WSUS decision")!=true)throw new Exception("Command completion cleared WSUS preparation");preparing60.Remove(PreparationKey60(row.Host,"WSUS"));
    reportWaiting[row.Host]=new(){Id=job.Id,Server54=OverviewServer,Until=now.AddMinutes(10),Requested54=now,Next=now.AddMinutes(1)};
    UpdateWsusStage();RefreshActivity();UpdateLayout();
-   if(!CurrentStage.Text.Contains("Ожидаем новый отчёт")||!CurrentProgress.IsIndeterminate||CurrentProgress.Visibility!=Visibility.Visible||!row.WorkBusy)throw new Exception("Completed scan lost end-to-end report waiting progress");
-   CurrentProgress.ApplyTemplate();var busy=(Border)CurrentProgress.Template.FindName("BusyTrack60",CurrentProgress);
+   if(!CurrentStage.Text.Contains("Ожидаем новый отчёт")||!CurrentProgressMotion.IsIndeterminate||!CurrentProgressMotion.IsVisible||!Equals(CurrentProgressMotion.Tag,"slow")||!row.WorkBusy||!WsusStopButton.IsEnabled)throw new Exception("Completed scan lost end-to-end report waiting progress");
+   CurrentProgressMotion.ApplyTemplate();var busy=(Border)CurrentProgressMotion.Template.FindName("SlowTrack",CurrentProgressMotion);
    await Task.Delay(150);double first=((TranslateTransform)busy.OpacityMask.RelativeTransform).X;await Task.Delay(350);double second=((TranslateTransform)busy.OpacityMask.RelativeTransform).X;
    if(Math.Abs(first-second)<0.01)throw new Exception("Progress template does not actually animate");
    row.SetService43("Чтение флагов и активности");manualLinkReads31.Add(row.Host);RefreshCollector44(row.Host);RenderWork60(row);UpdateLayout();
@@ -29,8 +29,8 @@ public partial class MainWindow {
    foreach(int color in new[]{0,1,2}){Theme.Apply(color,false);UpdateWsusStage();foreach(var size in new[]{(1280d,720d),(1920d,1080d)})CaptureContent38("operation60-wait-"+color+"-"+size.Item1,size.Item1,size.Item2);}
    manualLinkReads31.Remove(row.Host);RenderWork60(row);if(LinkBusy60.Visibility==Visibility.Visible||!CollectorBusy53.IsIndeterminate)throw new Exception("Connection completion stopped collector progress");
    row.SetService43("");RefreshCollector44(row.Host);if(CollectorBusy53.Visibility==Visibility.Visible)throw new Exception("Idle collector still animates");
-   reportWaiting[row.Host].Until=now.AddMinutes(-1);UpdateWsusStage();if(CurrentProgress.Visibility==Visibility.Visible||!CurrentStage.Text.Contains("задерживается"))throw new Exception("Expired report wait animates forever");
-   reportWaiting.Remove(row.Host);UpdateWsusStage();if(CurrentProgress.Visibility==Visibility.Visible)throw new Exception("Completed operation still animates");
+   reportWaiting[row.Host].Until=now.AddMinutes(-1);UpdateWsusStage();if(CurrentProgressMotion.Visibility==Visibility.Visible||!CurrentStage.Text.Contains("не получен за 10 минут"))throw new Exception("Expired report wait animates forever");
+   reportWaiting.Remove(row.Host);UpdateWsusStage();if(CurrentProgressMotion.Visibility==Visibility.Visible)throw new Exception("Completed operation still animates");
    confirmedJobs.Add(job.Id+row.Host);liveConnections.Add(row.Host);clientConnections[row.Host]=new(){LastSuccess=DateTimeOffset.UtcNow};
    job.OutputChannel="Commands";job.Steps[0].Kind="CMD";job.Targets[0].Status=state.Status="Running";state.Ended="";state.Stage="SFC: проверка";state.Progress=37;MainTabs.SelectedItem=CommandsTab;
    UpdateWsusStage();UpdateLayout();if(CommandActivity60.Visibility!=Visibility.Visible||CommandProgress60.Value!=37)throw new Exception("Commands have no process/progress banner");

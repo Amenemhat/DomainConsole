@@ -60,7 +60,7 @@ public partial class MainWindow {
    var row=ExecutionRow(selected,true);bool error=row.Target.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired";
    if(error){OperationDetail38.Text=work.Text;OperationDetail38.Visibility=Visibility.Visible;}
    else {CurrentStage.Text=work.Text;CurrentStage.Foreground=Theme.Tone(work.Busy?"Info":"Warning");OperationGlyph38.Kind=work.Busy?StatusGlyph.ForOperation50(work.Text):"Warning";OperationGlyph38.Tint=CurrentStage.Foreground;}
-   CurrentProgress.Visibility=work.Busy?Visibility.Visible:Visibility.Collapsed;CurrentProgress.Value=work.Percent??0;CurrentProgressMotion.Visibility=work.Busy&&!work.Interrupted&&!LostObservation51(selected.Host)?Visibility.Visible:Visibility.Collapsed;CurrentProgressMotion.Tag=work.Fast?"fast":"slow";CurrentProgress.ToolTip="Процесс операции; ожидание результата не является процентом установки";
+   CurrentProgress.Visibility=work.Busy?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=false;CurrentProgress.Value=work.Percent??0;CurrentProgressMotion.Visibility=work.Busy&&!work.Interrupted&&!LostObservation51(selected.Host)?Visibility.Visible:Visibility.Collapsed;CurrentProgressMotion.Tag=work.Fast?"fast":"slow";CurrentProgress.ToolTip="Процесс операции; ожидание результата не является процентом установки";
   }
   var command=WorkState60(selected,false);
   CommandActivity60.Visibility=command==null?Visibility.Collapsed:Visibility.Visible;
