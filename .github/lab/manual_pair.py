@@ -25,8 +25,10 @@ def exercise(root, ps, session, evidence, save):
     definition=base64.b64encode(json.dumps(payload).encode("utf-8")).decode()
     def stage(node):
         ps(node,f"New-Item -ItemType Directory -Force '{job_path}'|Out-Null; [IO.File]::WriteAllBytes('{exe}',[byte[]]@()); [IO.File]::WriteAllBytes('{job_path}\\job.json',[Convert]::FromBase64String('{definition}'))")
-        for offset in range(0,len(agent),3500):
-            part=base64.b64encode(agent[offset:offset+3500]).decode()
+        # pywinrm encodes the PowerShell command again in UTF-16 before cmd.exe.
+        chunk_size=1700
+        for offset in range(0,len(agent),chunk_size):
+            part=base64.b64encode(agent[offset:offset+chunk_size]).decode()
             ps(node,f"$f=[IO.File]::Open('{exe}',[IO.FileMode]::Append);try{{$b=[Convert]::FromBase64String('{part}');$f.Write($b,0,$b.Length)}}finally{{$f.Dispose()}}")
         if ps(node,f"(Get-FileHash -Algorithm SHA256 '{exe}').Hash").lower()!=agent_hash:
             raise RuntimeError("Agent copy mismatch for "+node)
