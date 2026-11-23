@@ -260,13 +260,28 @@ public partial class MainWindow:Window {
  if(App.RecoveryPending57&&explicitId43.Length==0)return;
   if(sending||closing)return;ExpireQueuedWsus();sending=true;
   try{while(queue.Count>0&&!closing){
-   var eligible=queue.Where(q=>q.Target.Status=="Queued"&&!HoldForHeaderReboot(q.Job,q.Target)&&(!App.RecoveryPending57||q.Job.Id==explicitId43)&&(!TransportBudget41.Paused||q.Job.Manual56||q.Job.Id==explicitId43)).ToList();if(eligible.Count==0)break;
-   var next=eligible.OrderByDescending(q=>q.Job.Id==explicitId43).ThenByDescending(q=>q.Job.IndependentControl).ThenByDescending(q=>q.Job.Manual56).First();
+   var eligible=queue.Where(q=>q.Target.Status=="Queued"&&!HoldForHeaderReboot(q.Job,q.Target)&&
+    (!App.RecoveryPending57||q.Job.Id==explicitId43)&&(!TransportBudget41.Paused||q.Job.Manual56||q.Job.Id==explicitId43));
+   var manualSending=History.Where(job=>job.Manual56).SelectMany(job=>job.Targets)
+    .Where(target=>target.Status=="Sending").Select(target=>target.Host).ToHashSet(StringComparer.OrdinalIgnoreCase);
+   var next=SelectReadySubmission(eligible,explicitId43,host=>manualSending.Contains(host)||ManualPreparationPending(host));
+   if(next.Job==null)break;
    int active=History.SelectMany(j=>j.Targets).Count(t=>t.Status is "Sending" or "Submitted" or "Running");
    if(limit>0&&active>=limit&&!next.Job.Manual56&&!next.Job.IndependentControl&&next.Job.Id!=explicitId43)break;
    var pending=queue.ToList();queue.Clear();bool removed=false;foreach(var q in pending){if(!removed&&q==next){removed=true;continue;}queue.Enqueue(q);}
    next.Target.Status="Sending";Sync(next.Job);Save();_=SendOne(next.Job,next.Target);await Task.Delay(80);
   }}finally{sending=false;}
+ }
+ bool ManualPreparationPending(string host)=>preparing60.ContainsKey(PreparationKey60(host,"WSUS"))||
+  preparing60.ContainsKey(PreparationKey60(host,"Commands"));
+
+ static (RemoteJob Job,TargetRecord Target) SelectReadySubmission(
+  IEnumerable<(RemoteJob Job,TargetRecord Target)> eligible,string explicitId,Func<string,bool> manualPending){
+  return eligible.Where(q=>q.Job.Manual56||q.Job.Id==explicitId||!manualPending(q.Target.Host))
+   .OrderByDescending(q=>q.Job.Manual56)
+   .ThenByDescending(q=>q.Job.IndependentControl)
+   .ThenByDescending(q=>q.Job.Id==explicitId)
+   .FirstOrDefault();
  }
  void ExpireQueuedWsus(){
   var now=DateTimeOffset.UtcNow;

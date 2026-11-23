@@ -6,6 +6,18 @@ using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
  async Task VerifyOperation60(){
+  var manual=new RemoteJob{Manual56=true};
+  var automatic=new RemoteJob();
+  var a=new TargetRecord{Host="manual-a.invalid"};
+  var b=new TargetRecord{Host="manual-b.invalid"};
+  var candidates=new (RemoteJob Job,TargetRecord Target)[]{(automatic,a),(automatic,b),(manual,a)};
+  bool Pending(string host)=>host==a.Host;
+  if(SelectReadySubmission(candidates,automatic.Id,Pending).Job!=manual)
+   throw new Exception("Automatic dispatch bypassed a ready manual command.");
+  if(SelectReadySubmission(candidates.Take(2),"",Pending).Target!=b)
+   throw new Exception("A manual preflight stalled work on an unrelated peer or admitted automatic work on the same client.");
+  if(SelectReadySubmission(candidates.Take(1),"",_=>false).Target!=a)
+   throw new Exception("Automatic dispatch did not resume after manual preparation.");
   var selected=ComputerGrid.SelectedItem;var tab=MainTabs.SelectedItem;int theme=Theme.Current;
   var row=new ComputerRow(new(){Host="operation60.invalid",Name="OPERATION-60"});
   var now=DateTimeOffset.UtcNow;var state=new RemoteState{Status="Completed",Stage="Поиск завершён",Started=now.AddMinutes(-2).ToString("o"),Updated=now.ToString("o"),Ended=now.ToString("o")};

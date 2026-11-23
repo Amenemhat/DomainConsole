@@ -28,7 +28,15 @@ if((Query 'Get').Status -ne 'Busy'){throw 'New collector package remained blocke
 if((Await-Result).Status -ne 'Ready'){throw 'Migrated collector failed to return a snapshot'}
 if((Query 'Recover').Status -ne 'Recovered'){throw 'Verified recovery failed'}
 # Non-cooperating read worker is bounded, its sibling result retained.
-Admit-Next;$script:advances53=0;$script:signals53=@{};$null=Invoke-Probe (Code 'slow');$r=Await-Result;if($script:advances53 -lt 1){throw 'Collector heartbeat did not advance while waiting for an unresponsive worker'};if($r.Status -ne 'Ready' -or $r.Snapshot.Complete -or !$r.Snapshot.Reboot.CollectedUtc){throw 'Hung optional source destroyed reboot result'}
+Admit-Next;$script:advances53=0;$script:signals53=@{};$null=Invoke-Probe (Code 'slow')
+$beforeManual=Query 'Read'
+if($beforeManual.Status -ne 'Busy' -or !$beforeManual.Run.Id){throw 'Manual-priority fixture did not hold the collector'}
+$manualResult=Invoke-Probe ([IO.File]::ReadAllText((Join-Path $Fixture 'live-updates.ps1')))|ConvertFrom-Json
+if(!$manualResult.CollectedUtc){throw 'Direct WinRM activity read did not complete with the collector busy'}
+$afterManual=Query 'Read'
+if($afterManual.Run.Id -ne $beforeManual.Run.Id){throw 'Manual activity read started a second collector'}
+Write-Output 'PASS direct WinRM activity read with a blocked collector and no duplicate run.'
+$r=Await-Result;if($script:advances53 -lt 1){throw 'Collector heartbeat did not advance while waiting for an unresponsive worker'};if($r.Status -ne 'Ready' -or $r.Snapshot.Complete -or !$r.Snapshot.Reboot.CollectedUtc){throw 'Hung optional source destroyed reboot result'}
 $left=@(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'"|Where-Object {$_.CommandLine -like ('*'+$path+'\Activity.ps1*')});if($left.Count){throw 'Read worker survived supervision'}
 $null=Query 'Recover';Admit-Next
 # Start without any waiting console. Task Scheduler must stop the supervisor.
