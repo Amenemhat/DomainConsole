@@ -122,10 +122,32 @@ public partial class MainWindow:Window {
   var dialog=new TargetConfirmation(this,Computers[1],new(){Computers[0],Computers[2]},"sfc /scannow\nИсточник: текущие политики клиента");dialog.Show();dialog.UpdateLayout();var dialogImage=new System.Windows.Media.Imaging.RenderTargetBitmap((int)dialog.ActualWidth,(int)dialog.ActualHeight,96,96,System.Windows.Media.PixelFormats.Pbgra32);dialogImage.Render(dialog);var dialogEncoder=new System.Windows.Media.Imaging.PngBitmapEncoder();dialogEncoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(dialogImage));using(var file=File.Create(Path.Combine(Path.GetTempPath(),"ui-confirmation.png")))dialogEncoder.Save(file);dialog.Close();
   MainTabs.SelectedItem=CommandsTab;UpdateLayout();OutputBox.Text="Компьютер: TEST-1\nСостояние: Завершено\nШаг: sfc /scannow\nКод завершения: 0\n\nНачало проверки системных файлов.\nПроверка 100% завершена.\nЗащита ресурсов Windows не обнаружила нарушений целостности.\n\nПолный исходный вывод доступен в скачанных журналах.";if(OutputBox.ActualHeight<180)throw new Exception("Command result workspace is too short.");Capture("commands");Width=1000;Height=640;Capture("compact");Width=1480;Height=940;
   foreach(var row in Computers.Take(5).ToList())RememberComputer(row.Host);RecentGroup.IsExpanded=true;UpdateLayout();Capture("recent");
-  var recentSamples=RecentComputers.Take(2).ToList();recentSamples[0].SetActivity(true,60,"Скачивание: 60%",false);recentSamples[1].SetActivity(true,null,"Ожидание ответа",false);UpdateLayout();Capture("recent-progress-fill");
-  System.Windows.Controls.ProgressBar? FindFill(DependencyObject parent){if(parent is System.Windows.Controls.ProgressBar bar&&bar.Name=="RecentActivityFill")return bar;for(int i=0;i<System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);i++){var found=FindFill(System.Windows.Media.VisualTreeHelper.GetChild(parent,i));if(found!=null)return found;}return null;}
-  var fill=FindFill(RecentList);if(fill==null||fill.ActualHeight<18||fill.IsHitTestVisible||fill.Opacity<0.35||fill.Opacity>0.55)throw new Exception("Recent progress is not a passive translucent row background");
-  foreach(var item in recentSamples)item.SetActivity(false,null,"Завершено",false);RecentGroup.IsExpanded=false;
+  var recentSamples=RecentComputers.Take(2).ToList();
+  recentSamples[0].SetActivity(true,0,"Скачивание: 0%",false,fast:true);
+  recentSamples[1].SetActivity(true,null,"Ожидание ответа",false);
+  UpdateLayout();
+  Capture("recent-progress-fill");
+  ProgressBar RecentBar(ComputerRow row,string name){
+   var container=(DependencyObject)RecentList.ItemContainerGenerator.ContainerFromItem(row);
+   return Visual33<ProgressBar>(container).Single(bar=>bar.Name==name);
+  }
+  foreach(var sample in recentSamples){
+   var fill=RecentBar(sample,"RecentActivityFill");
+   var motion=RecentBar(sample,"RecentActivityMotion");
+   if(!fill.IsVisible||fill.ActualHeight!=3||fill.VerticalAlignment!=VerticalAlignment.Bottom||fill.IsHitTestVisible)
+    throw new Exception("Recent progress must be a passive bottom strip.");
+   if(!motion.IsVisible||motion.ActualHeight!=3||!motion.IsIndeterminate||motion.IsHitTestVisible)
+    throw new Exception("Recent progress motion must be visible inside the strip.");
+  }
+  if(RecentBar(recentSamples[0],"RecentActivityFill").Value!=0||
+     !Equals(RecentBar(recentSamples[0],"RecentActivityMotion").Tag,"fast")||
+     !Equals(RecentBar(recentSamples[1],"RecentActivityMotion").Tag,"slow"))
+   throw new Exception("Motion at zero progress and waiting must use distinct speeds.");
+  foreach(var item in recentSamples)item.SetActivity(false,null,"Завершено",false);
+  UpdateLayout();
+  if(recentSamples.Any(item=>RecentBar(item,"RecentActivityMotion").IsVisible))
+   throw new Exception("Completed recent progress must stop animating.");
+  RecentGroup.IsExpanded=false;
   var watchHost=Current().Host;var savedWatch=rebootWatches.GetValueOrDefault(watchHost);try{var overdue=new RebootWatch{Confirmed=true,ExpectedUtc=DateTimeOffset.UtcNow.AddMinutes(-30),RequestedUtc=DateTimeOffset.UtcNow.AddMinutes(-31).ToString("o"),BeforeBootUtc=DateTimeOffset.UtcNow.AddDays(-2).ToString("o"),DispatchUtc=DateTimeOffset.UtcNow.AddMinutes(-30).ToString("o"),DispatchExitCode=0};ObserveWatchBoot(overdue,new(){BootUtc=overdue.BeforeBootUtc,Required=true},DateTimeOffset.UtcNow);rebootWatches[watchHost]=overdue;UpdateWsusStage();Capture("reboot-overdue");}finally{if(savedWatch==null)rebootWatches.Remove(watchHost);else rebootWatches[watchHost]=savedWatch;UpdateWsusStage();}
   MainTabs.SelectedItem=HistoryTab;UpdateLayout();if(HistoryGrid.Columns[0].ActualWidth<145)throw new Exception("History date/time column was squeezed");Capture("history");MainTabs.SelectedItem=CommandsTab;
   VerifyRelease32();VerifyRelease33();VerifyRelease34();VerifyButtons35();VerifyRelease35();VerifyRelease36();VerifyRelease37();VerifyRelease38();VerifyRelease39();VerifyRelease40();VerifyRelease41();History.Remove(command);History.Remove(update);if(!restart){History.Add(command);History.Add(update);}Save();File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"ui-smoke-ready.txt"),"ok");
