@@ -1,0 +1,16 @@
+name: Isolated real Windows Update service restart
+on:
+  push:
+    branches: ['lab/0.58-manual-priority']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  service-restart:
+    runs-on: windows-2022
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test an actual BITS restart while another WinRM read is waiting
+        shell: powershell
+        run: ./.github/lab/manual-priority058.ps1
