@@ -65,7 +65,11 @@ public partial class MainWindow {
    ObserveUsers37(userHost,new(){UsersComplete37=false,CollectedUtc=at});Check(users37[userHost].Current,"partial session read preserves current observation");
    ObserveUsers37(userHost,new(){UsersComplete37=true,CollectedUtc=at});Check(!users37[userHost].Current&&users37[userHost].SeenUtc==at&&users37[userHost].Name=="Первый Пользователь","logout preserves last name and observation time");
    ObserveUsers37(userHost,new(){UsersComplete37=true,CollectedUtc=at,Users37=new(){new(){Account=accountB,Active=true}}});Check(users37[userHost].Name=="Второй Пользователь","new session resolves its own cached name");
-  }finally{if(savedUser==null)users37.Remove(userHost);else users37[userHost]=savedUser;if(savedA==null)userNames37.Remove(accountA);else userNames37[accountA]=savedA;if(savedB==null)userNames37.Remove(accountB);else userNames37[accountB]=savedB;Store.Write("client-users37.json",users37);}
+   ObserveUsers37(userHost,new(){CollectedUtc=at,UserError37="Session disappeared",Users37=new(){new(){Account=accountA,Active=true}}});
+   Check(users37[userHost].Name=="Первый Пользователь"&&sessionReadErrors.GetValueOrDefault(userHost)=="Session disappeared","partial reply preserves valid sessions and the read error");
+   ObserveUsers37(userHost,new(){UsersComplete37=true,CollectedUtc=at,Users37=new(){new(){Account=accountB,Active=true,Local=true}}});
+   Check(users37[userHost].Name.Length==0&&users37[userHost].PreviousName37=="Первый Пользователь"&&!sessionReadErrors.ContainsKey(userHost),"local account never acquires a cached domain name");
+  }finally{sessionReadErrors.Remove(userHost);if(savedUser==null)users37.Remove(userHost);else users37[userHost]=savedUser;if(savedA==null)userNames37.Remove(accountA);else userNames37[accountA]=savedA;if(savedB==null)userNames37.Remove(accountB);else userNames37[accountB]=savedB;Store.Write("client-users37.json",users37);}
   Check(!ObservationExpired51(now.AddHours(-47).ToString("o"),now),"51 observation before absolute deadline");
   Check(ObservationExpired51(now.AddDays(-2).ToString("o"),now)&&ObservationExpired51(now.AddDays(-3).ToString("o"),now),"51 observation deadline is stable after restart");
   Check(ObservationExpired51("invalid",now),"51 malformed observation start does not grant indefinite waiting");
