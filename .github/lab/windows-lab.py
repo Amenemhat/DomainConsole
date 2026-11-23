@@ -29,7 +29,8 @@ print("::add-mask::" + password, flush=True)
 nodes = {"DCWSUS": 10, "DCAD": 11, **{f"CLONE{i}": 20 + i for i in range(1, 6)}}
 bootstrap_only=os.environ.get("DC_BOOTSTRAP_ONLY")=="1"
 manual_pair=os.environ.get("DC_TEST_MANUAL_PAIR")=="1"
-if manual_pair:
+session_matrix=os.getenv("DC_TEST_SESSION_MATRIX")=="1"
+if manual_pair or session_matrix:
     nodes={"DCWSUS":10,"DCAD":11}
 elif bootstrap_only:
     nodes={"DCWSUS":10}
@@ -109,7 +110,7 @@ def prepare(node):
 
 
 def boot(node, gpt):
-    memory = 3584 if manual_pair or node == "DCWSUS" else 1536
+    memory = 3584 if manual_pair or session_matrix or node == "DCWSUS" else 1536
     tap = "dclab" + str(nodes[node])
     args = [qemu, "-accel", "kvm", "-cpu", "host", "-smp", "2", "-m", str(memory),
             "-machine", "q35" if gpt else "pc", "-uuid", str(uuid.uuid4()), "-name", node,
@@ -237,11 +238,17 @@ def main():
     # First drive one guest through specialization with the runner CPU to itself.
     boot("DCWSUS",part=="gpt")
     wait("DCWSUS",minutes=12)
-    if manual_pair:
+    if manual_pair or session_matrix:
         boot("DCAD",part=="gpt")
         wait("DCAD",minutes=12)
-        from manual_pair import exercise
-        exercise(root,ps,session,evidence,save)
+        if session_matrix:
+            from session_matrix58 import exercise
+            setup_domain()
+            join("DCWSUS")
+            exercise(root,ps,ip("DCWSUS"),password,evidence,save)
+        else:
+            from manual_pair import exercise
+            exercise(root,ps,session,evidence,save)
         checkpoint("winrm")
         return
     if bootstrap_only:

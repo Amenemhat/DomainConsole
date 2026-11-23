@@ -1,0 +1,36 @@
+name: WTS console and RDP session observations for 0.58
+on:
+  push:
+    branches: ['lab/0.58-wts-sessions']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  wts-sessions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      DC_TEST_SESSION_MATRIX: '1'
+      DC_PROBE_COMMIT58: 'a9706b107e837df32967a69526d2d9c7c06aaeea'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the exact native session probe source
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/dc-wsus-lab"
+          gh api "repos/$GITHUB_REPOSITORY/contents/DomainConsole-CSharp/Console/UserObservation37.cs?ref=$DC_PROBE_COMMIT58" --jq .content | base64 -d > "$RUNNER_TEMP/dc-wsus-lab/UserObservation37.cs"
+      - name: Provision two disposable Windows guests and exercise actual RDP
+        run: |
+          set -eu
+          sudo apt-get update -qq
+          if apt-cache show freerdp3-x11 >/dev/null 2>&1; then package=freerdp3-x11; else package=freerdp2-x11; fi
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$package" xvfb xauth
+          bash .github/lab/prepare-guests.sh
+          bash .github/lab/wait-for-guests.sh guest-exit 48
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wts-rdp-evidence
+          path: ${{ runner.temp }}/dc-wsus-lab/evidence.json
+          if-no-files-found: ignore
