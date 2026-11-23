@@ -1,6 +1,8 @@
 param([Parameter(Mandatory=$true)][string]$ScriptFolder)
 $ErrorActionPreference='Stop'
 $template=[IO.File]::ReadAllText((Join-Path $ScriptFolder 'identity-repair58.ps1'))
+$installationFixture='55555555-5555-5555-5555-555555555555'
+$template=('$dcExpectedInstallation58='''+$installationFixture+''';')+$template.Replace('$dcExpectedInstallation58='''';','')
 $template=$template.Replace('$installer58=New-Object -ComObject Microsoft.Update.Installer','$installer58=$fixtureInstaller58')
 $template=$template.Replace('$session58=New-Object -ComObject Microsoft.Update.Session','$session58=$fixtureSession58')
 $template=$template.Replace("& reg.exe export 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate' $"+'backup58 /y | Out-Null','Export-Fixture58 $backup58')
@@ -24,7 +26,8 @@ function Get-CimInstance {param($ClassName,$ErrorAction)
  if($ClassName -eq 'Win32_ComputerSystemProduct'){return [pscustomobject]@{UUID=$(if($env:CASE58 -eq 'wrong-machine'){'44444444-4444-4444-4444-444444444444'}else{'11111111-1111-1111-1111-111111111111'})}}
  throw 'Unexpected CIM request'
 }
-function Get-ItemProperty {param($Path,$ErrorAction)
+function Get-ItemProperty {param($Path,$ErrorAction,$Name)
+ if($Name -eq 'MachineGuid'){return [pscustomobject]@{MachineGuid=$(if($env:CASE58 -eq 'wrong-installation'){'66666666-6666-6666-6666-666666666666'}else{'55555555-5555-5555-5555-555555555555'})}}
  if($Path -like '*Policies*'){return [pscustomobject]@{UseWUServer=$(if($env:CASE58 -eq 'wrong-policy'){0}else{1});WUServer=$(if($env:CASE58 -eq 'wrong-server'){'http://other.invalid:8530'}else{'http://wsus.invalid:8530'})}}
  return [pscustomobject]@{SusClientId=$global:id58;SusClientIdValidation='fixture'}
 }
@@ -41,7 +44,7 @@ $fixtureSession58|Add-Member ScriptMethod CreateUpdateSearcher {$fixtureSearch58
 '@
 $root=Join-Path $env:RUNNER_TEMP ('identity58-'+[guid]::NewGuid().ToString('N'))
 New-Item $root -ItemType Directory|Out-Null
-foreach($case in @('wrong-name','wrong-machine','wrong-server','wrong-policy','invalid-id','busy','already-changed','backup-fails','stop-fails','stop-and-start-fail','remove-fails','after-delete','search-fails','success')){
+foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-policy','invalid-id','busy','already-changed','backup-fails','stop-fails','stop-and-start-fail','remove-fails','after-delete','search-fails','success')){
  $folder=Join-Path $root $case;New-Item $folder -ItemType Directory|Out-Null
  $file=Join-Path $folder 'case.ps1';$state=Join-Path $folder 'state.json'
  $suffix=@'
@@ -63,7 +66,7 @@ foreach($case in @('wrong-name','wrong-machine','wrong-server','wrong-policy','i
  $data=Get-Content $state -Raw|ConvertFrom-Json
  $expectedSuccess=$case -in @('already-changed','success')
  if(($process.ExitCode -eq 0) -ne $expectedSuccess){throw "Unexpected result for ${case}: $output"}
- if($case -in @('wrong-name','wrong-machine','wrong-server','wrong-policy','invalid-id','busy','already-changed') -and $data.Trace.Count -ne 0){throw "Guard changed state: $case"}
+ if($case -in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-policy','invalid-id','busy','already-changed') -and $data.Trace.Count -ne 0){throw "Guard changed state: $case"}
  if($case -eq 'backup-fails' -and ($data.Trace -contains 'Stop')){throw 'Backup failure reached service stop'}
  if($case -in @('stop-fails','remove-fails','after-delete') -and ($data.Service -ne 'Running' -or $data.Trace -notcontains 'Start')){throw "Service not restored: $case"}
  if($case -eq 'stop-and-start-fail' -and ($output -notmatch 'STOP_FIXTURE_FAILURE' -or $output -notmatch 'START_FIXTURE_FAILURE')){throw 'Primary or restoration failure was lost'}

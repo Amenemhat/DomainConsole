@@ -18,7 +18,7 @@ public partial class MainWindow {
    if(!online)return "Сведения о пользователе не получены";
    return value.Current?"Имя пользователя не получено":"Интерактивных сеансов нет";
   }
-  return (value.Current&&online&&value.Name.Length>0?"":"Последний: ")+name+" · "+
+  return name+" · "+
    (DateTimeOffset.TryParse(seen,out _)?Display36.Date(seen):"время неизвестно");
  }
  void RefreshUser37(ComputerRow row){

@@ -5,6 +5,7 @@ public sealed class ClientIdentity58 {
  public string Host {get;set;}="";
  public string Name {get;set;}="";
  public string Machine {get;set;}="";
+ public string InstallationId {get;set;}="";
  public string Server {get;set;}="";
  public string SourceCheckedAt {get;set;}="";
  public string VerifiedSource {get;set;}="";
@@ -24,18 +25,24 @@ public sealed class ClientIdentity58 {
  public bool Fresh(DateTimeOffset now)=>Error.Length==0&&DateTimeOffset.TryParse(At,out var at)&&at<=now&&now-at<TimeSpan.FromMinutes(10);
 }
 public static class IdentityPolicy58 {
+ public static Guid Installation(ClientIdentity58 item)=>Guid.TryParse(item.InstallationId,out var id)?id:Guid.Empty;
  public static bool Usable(ClientIdentity58 r)=>r.UseWUServer==1&&r.Error.Length==0&&Guid.TryParse(r.SusClientId,out var id)&&id!=Guid.Empty&&Guid.TryParse(r.Machine,out var hardware)&&hardware!=Guid.Empty&&hardware!=Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff")&&Uri.TryCreate(r.Server,UriKind.Absolute,out var uri)&&(uri.Scheme=="http"||uri.Scheme=="https")&&!string.IsNullOrWhiteSpace(r.Name);
  public static bool SameApprovedDevice(ClientIdentity58 approved,ClientIdentity58 current,DateTimeOffset now)=>
   current.Fresh(now)&&Usable(current)&&current.Key==approved.Key&&
   current.Name.TrimEnd('.').Equals(approved.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase)&&
   Guid.TryParse(approved.Machine,out var hardware)&&hardware==Guid.Parse(current.Machine)&&
+  (Installation(approved)==Guid.Empty||Installation(current)==Installation(approved))&&
   current.Server.TrimEnd('/').Equals(approved.Server.TrimEnd('/'),StringComparison.OrdinalIgnoreCase);
  public static List<ClientIdentity58> Participants(IEnumerable<ClientIdentity58> records,ClientIdentity58 selected,DateTimeOffset now){
-  // Two aliases returning one hardware ID and one FQDN identify one device.
-  // A hardware ID reported by different FQDNs is ambiguous, including on cloned VMs.
-  return records.Where(r=>r.Key==selected.Key&&r.Fresh(now)&&Usable(r))
-   .GroupBy(r=>Guid.Parse(r.Machine)).Where(g=>g.Select(r=>r.Name.TrimEnd('.')).Distinct(StringComparer.OrdinalIgnoreCase).Count()==1)
-   .Select(g=>g.OrderByDescending(r=>r.At).First()).ToList();
+  var participants=new List<ClientIdentity58>();
+  foreach(var hardware in records.Where(r=>r.Key==selected.Key&&r.Fresh(now)&&Usable(r)).GroupBy(r=>Guid.Parse(r.Machine))){
+   var devices=hardware.GroupBy(r=>r.Name.TrimEnd('.'),StringComparer.OrdinalIgnoreCase)
+    .Select(g=>g.OrderByDescending(r=>r.At,StringComparer.Ordinal).First()).ToList();
+   // Shared hardware UUIDs need independent Windows installation IDs.
+   if(devices.Count>1&&(devices.Any(r=>Installation(r)==Guid.Empty)||devices.Select(Installation).Distinct().Count()!=devices.Count))continue;
+   participants.AddRange(devices);
+  }
+  return participants;
  }
  public static bool IndependentNewId(IEnumerable<ClientIdentity58> known,ClientIdentity58 item,DateTimeOffset now)=>
   !known.Any(other=>other.Key==item.Key&&other.Fresh(now)&&Usable(other)&&(!other.Machine.Equals(item.Machine,StringComparison.OrdinalIgnoreCase)||!other.Name.TrimEnd('.').Equals(item.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase)));
