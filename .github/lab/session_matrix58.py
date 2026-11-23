@@ -71,10 +71,9 @@ def exercise(root, ps, host, password, evidence, save):
             snapshot = await_accounts({local: True, domain: False}, [local_client, domain_client])
             evidence["checks"]["concurrent_local_and_domain_rdp"] = {key: snapshot[key] for key in (local, domain)}
             save()
-        ps("DCWSUS", "$line=quser.exe RdpDomain58|Select-String 'RdpDomain58';"
-           "$match=[regex]::Match($line,'RdpDomain58\\s+(?:[^\\s]+\\s+)?(\\d+)\\s+');"
-           "if(!$match.Success){throw 'Could not identify the disconnected RDP session'};"
-           "logoff.exe ([int]$match.Groups[1].Value);if($LASTEXITCODE){throw 'Could not close RDP session'}")
+        ps("DCWSUS", "$line=(quser.exe RdpDomain58|Select-String 'RdpDomain58'|Select-Object -First 1).Line;"
+           "if($line -notmatch '(?i)^\\s*>?\\s*RdpDomain58\\s+(?:\\S+\\s+)?(?<SessionId>\\d+)\\s+'){throw 'Could not identify the disconnected RDP session'};"
+           "logoff.exe ([int]$Matches.SessionId);if($LASTEXITCODE){throw 'Could not close RDP session'}")
         await_accounts({local: True}, [local_client], absent=(domain,))
     evidence["checks"]["rdp_logoff_observed_without_losing_other_session"] = True
     save()
