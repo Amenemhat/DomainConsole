@@ -44,7 +44,10 @@ public partial class MainWindow {
   bool returned=false;
   if(rebootWatches.TryGetValue(host,out var watch)&&!watch.Done&&watch.Confirmed&&RebootReturned(watch,snapshot)){
    returned=true;ObserveWatchBoot(watch,snapshot,now);
-   if(watch.ReadyAfter==default)watch.ReadyAfter=now.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));
+   if(watch.ReadyAfter==default){
+    if(History.Any(j=>j.Id==watch.JobId&&j.Name=="Перезагрузка текущего компьютера"))RetireQueuedAfterBoot(host,watch);
+    watch.ReadyAfter=now.AddSeconds(Math.Clamp(postReboot.SettleSeconds,0,1800));
+   }
    watch.Phase="Новая загрузка подтверждена · проверка состояния";watch.Next=watch.ReadyAfter>now?watch.ReadyAfter:now;
    Store.Write("reboot-watches.json",rebootWatches);
   }

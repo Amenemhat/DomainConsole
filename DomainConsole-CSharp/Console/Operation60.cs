@@ -2,7 +2,7 @@ using System.Windows;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
- sealed record Work60(string Text,bool Busy,int? Percent=null,bool Interrupted=false);
+ sealed record Work60(string Text,bool Busy,int? Percent=null,bool Interrupted=false,bool Fast=false);
  static bool TransferStage(RemoteState? state)=>state!=null&&(state.Stage.StartsWith("Установка",StringComparison.OrdinalIgnoreCase)||state.Stage.StartsWith("Скачивание",StringComparison.OrdinalIgnoreCase));
  static bool TransferObservedAtLoss(ClientConnectionState link,RemoteState? stage,string received){
   if(!TransferStage(stage))return false;
@@ -38,11 +38,11 @@ public partial class MainWindow {
    if(!ActivityConfirmed61(live.Job,live.Target))return new("Выполнение сейчас не подтверждено · последнее состояние: "+Display36.Date(state?.Updated??""),false);
    string stage=row.Target.Status=="Queued"?"Ожидает отправки":row.Target.Status=="Sending"?"Передаём задание":row.Target.Status=="SubmissionUnknown"?"Проверяем передачу задания":StatusReceiptFresh(live.Target)?state?.Stage??"Ожидаем результат":"Получаем результат задания · последнее состояние устарело";
    string since=state?.Started??live.Job.Created;
-   return new(stage+(DateTimeOffset.TryParse(since,out var at)?" · "+Age(now-at):""),true,StatusReceiptFresh(live.Target)?state?.Progress:null);
+   return new(stage+(DateTimeOffset.TryParse(since,out var at)?" · "+Age(now-at):""),true,StatusReceiptFresh(live.Target)?state?.Progress:null,Fast:row.Target.Status=="Running"&&StatusReceiptFresh(live.Target)&&TransferStage(state));
   }
   if(!wsus)return null;
   if(CurrentReportWait61(selected.Host) is { } wait){
-   if(ReportWaitExpired61(wait))return new("Отчёт WSUS задерживается · срок ожидания истёк",false);
+   if(ReportWaitExpired61(wait))return new("Свежий отчёт WSUS не получен за 10 минут",false);
    if(TransportBudget41.Paused)return new("Ожидание отчёта WSUS · опрос приостановлен",false);
    int sec=Math.Max(0,(int)Math.Ceiling((wait.Until-now).TotalSeconds));
    return new((reportReading.Contains(selected.Host)?"Получаем отчёт WSUS":"Ожидаем новый отчёт WSUS")+" · до срока ожидания "+sec/60+" мин "+sec%60+" с",true);
@@ -51,16 +51,16 @@ public partial class MainWindow {
    bool waiting=plan.Phase=="Ожидается перезагрузка"||plan.Phase=="Требуется действие";
    return new(TransportBudget41.Paused?"Наблюдение за обслуживанием приостановлено":waiting?plan.Phase:"Обслуживание · "+plan.Phase, !waiting&&!TransportBudget41.Paused&&!LostObservation51(selected.Host));
   }
-  if(reportReading.Contains(selected.Host)&&!TransportBudget41.Paused)return new("Получаем данные WSUS и сопоставляем результат",true);
   return null;
  }
  void RenderWork60(ComputerRow selected){
   var work=WorkState60(selected,true);
+  CurrentProgressMotion.Visibility=Visibility.Collapsed;
   if(work!=null){
    var row=ExecutionRow(selected,true);bool error=row.Target.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired";
    if(error){OperationDetail38.Text=work.Text;OperationDetail38.Visibility=Visibility.Visible;}
    else {CurrentStage.Text=work.Text;CurrentStage.Foreground=Theme.Tone(work.Busy?"Info":"Warning");OperationGlyph38.Kind=work.Busy?StatusGlyph.ForOperation50(work.Text):"Warning";OperationGlyph38.Tint=CurrentStage.Foreground;}
-   CurrentProgress.Visibility=work.Busy?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=work.Busy&&!work.Percent.HasValue&&!LostObservation51(selected.Host);CurrentProgress.Value=work.Percent??0;CurrentProgress.ToolTip="Процесс операции; ожидание результата не является процентом установки";
+   CurrentProgress.Visibility=work.Busy?Visibility.Visible:Visibility.Collapsed;CurrentProgress.Value=work.Percent??0;CurrentProgressMotion.Visibility=work.Busy&&!work.Interrupted&&!LostObservation51(selected.Host)?Visibility.Visible:Visibility.Collapsed;CurrentProgressMotion.Tag=work.Fast?"fast":"slow";CurrentProgress.ToolTip="Процесс операции; ожидание результата не является процентом установки";
   }
   var command=WorkState60(selected,false);
   CommandActivity60.Visibility=command==null?Visibility.Collapsed:Visibility.Visible;

@@ -4,6 +4,7 @@ namespace DomainConsole;
 public static class ReportPresentation35 {
  internal static int? RefreshHours40;
  public static int FreshHours=>RefreshHours40??Math.Clamp(Store.Read("report-age-hours.json",24),1,720);
+ public static bool HasReportTime(string value,DateTimeOffset now)=>DateTimeOffset.TryParse(value,out var at)&&at.Year>=2000&&at<=now.AddMinutes(5);
  public static string Date(string value)=>Display36.Date(value,true);
  public static string Tone(string value,DateTimeOffset now,int hours){if(!DateTimeOffset.TryParse(value,out var at)||at.Year<2000)return "Unknown";var age=now-at;if(age<TimeSpan.FromMinutes(-5))return "Warning";return age<=TimeSpan.FromHours(hours)?"Success":"Stale";}
  public static string Age(string value)=>AgeAt41(value,DateTimeOffset.UtcNow);

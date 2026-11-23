@@ -9,15 +9,47 @@ public partial class MainWindow {
  readonly Dictionary<string,UserObservation37> users37=new(Store.Read("client-users37.json",new Dictionary<string,UserObservation37>()),StringComparer.OrdinalIgnoreCase);
  readonly Dictionary<string,UserName37> userNames37=new(Store.Read("user-names37.json",new Dictionary<string,UserName37>()),StringComparer.OrdinalIgnoreCase);
  readonly HashSet<string> resolvingUsers37=new(StringComparer.OrdinalIgnoreCase);
- public static string UserLabel37(UserObservation37? value,bool online){if(value==null)return "—";string name=value.Name.Length>0?value.Name:value.PreviousName37;string seen=value.Name.Length>0?value.SeenUtc:value.PreviousSeen37;return name.Length==0?"—":name+" · "+(DateTimeOffset.TryParse(seen,out _)?Display36.Date(seen):"время неизвестно");}
-
- void RefreshUser37(ComputerRow row){var value=users37.GetValueOrDefault(row.Host);bool fresh=value!=null&&ConnectionFresh(row.Host)&&DateTimeOffset.TryParse(value.ReceivedUtc,out var at)&&DateTimeOffset.UtcNow-at<TimeSpan.FromSeconds(90);var label39=UserLabel37(value,fresh);if(row.UserText37!=label39){row.UserText37=label39;row.Refresh();}if(CurrentHost(row.Host)){SetUserHeader39(row.UserText37);HeaderUser37.ToolTip=value==null?"Интерактивный пользователь ещё не определён":(value.Current&&fresh?"Текущий пользователь":"Последний известный пользователь")+"\nПоследнее наблюдение: "+Display36.Date(value.SeenUtc)+"\nСправочные сведения об интерактивном сеансе";}}
+ readonly Dictionary<string,string> sessionReadErrors=new(StringComparer.OrdinalIgnoreCase);
+ public static string UserLabel37(UserObservation37? value,bool online){
+  if(value==null)return "Сведения о пользователе не получены";
+  string name=value.Name.Length>0?value.Name:value.PreviousName37;
+  string seen=value.Name.Length>0?value.SeenUtc:value.PreviousSeen37;
+  if(name.Length==0){
+   if(!online)return "Сведения о пользователе не получены";
+   return value.Current?"Имя пользователя не получено":"Интерактивных сеансов нет";
+  }
+  return (value.Current&&online&&value.Name.Length>0?"":"Последний: ")+name+" · "+
+   (DateTimeOffset.TryParse(seen,out _)?Display36.Date(seen):"время неизвестно");
+ }
+ void RefreshUser37(ComputerRow row){
+  var value=users37.GetValueOrDefault(row.Host);
+  string error=sessionReadErrors.GetValueOrDefault(row.Host,"");
+  bool fresh=value!=null&&error.Length==0&&ConnectionFresh(row.Host)&&
+   DateTimeOffset.TryParse(value.ReceivedUtc,out var at)&&DateTimeOffset.UtcNow-at<TimeSpan.FromSeconds(90);
+  var label=UserLabel37(value,fresh);
+  if(row.UserText37!=label){row.UserText37=label;row.Refresh();}
+  if(CurrentHost(row.Host)){
+   SetUserHeader39(row.UserText37);
+   HeaderUser37.ToolTip=label+(error.Length>0?"\nОпрос сеансов не завершён: "+error:"");
+  }
+ }
  void ObserveUsers37(string host,RebootSnapshot snapshot){
-  if(!snapshot.UsersComplete37)return;
+  if(!snapshot.UsersComplete37){
+   sessionReadErrors[host]=snapshot.UserError37.Length>0?snapshot.UserError37:"Список интерактивных сеансов не получен";
+   return;
+  }
+  sessionReadErrors.Remove(host);
   var now=snapshot.CollectedUtc;if(!DateTimeOffset.TryParse(now,out _))return;
   var old=users37.GetValueOrDefault(host);var candidates=snapshot.Users37.Where(u=>u.Account.Length>0).ToList();
   var selected=candidates.FirstOrDefault(u=>u.Account.Equals(old?.Account,StringComparison.OrdinalIgnoreCase))??candidates.OrderByDescending(u=>u.Active).ThenBy(u=>u.Account,StringComparer.OrdinalIgnoreCase).FirstOrDefault();
-  if(selected==null){if(old!=null){old.Current=false;old.ReceivedUtc=DateTime.UtcNow.ToString("o");Store.Write("client-users37.json",users37);}return;}
+  if(selected==null){
+   var observation=old??new UserObservation37();
+   observation.Current=false;
+   observation.ReceivedUtc=DateTime.UtcNow.ToString("o");
+   users37[host]=observation;
+   Store.Write("client-users37.json",users37);
+   return;
+  }
   bool same=old?.Account.Equals(selected.Account,StringComparison.OrdinalIgnoreCase)==true;
   var name=userNames37.GetValueOrDefault(selected.Account);string display=name?.Name.Length>0?name.Name:same?old!.Name:"";
   // An unresolved new account must not be attributed the previous person's name.
@@ -47,7 +79,7 @@ public static class DcSessions37 {
  [DllImport("wtsapi32.dll",EntryPoint="WTSQuerySessionInformationW",SetLastError=true)]static extern bool Query(IntPtr server,int session,int kind,out IntPtr data,out int bytes);
  [DllImport("wtsapi32.dll")]static extern void WTSFreeMemory(IntPtr data);
  static string Text(int id,int kind){IntPtr data;int count;if(!Query(IntPtr.Zero,id,kind,out data,out count))throw new System.ComponentModel.Win32Exception();try{return Marshal.PtrToStringUni(data)??"";}finally{WTSFreeMemory(data);}}
- public static string[] Read(){IntPtr data;int count;if(!Enumerate(IntPtr.Zero,0,1,out data,out count))throw new System.ComponentModel.Win32Exception();try{var users=new List<string>();for(int i=0;i<count;i++){var s=(Session)Marshal.PtrToStructure(IntPtr.Add(data,i*Marshal.SizeOf(typeof(Session))),typeof(Session));if(s.State!=0&&s.State!=4)continue;string user=Text(s.Id,5),domain=Text(s.Id,7);if(user.Length>0&&s.Id!=0)users.Add((s.State==0?"1":"0")+"|"+domain+"\\"+user);}return users.ToArray();}finally{WTSFreeMemory(data);}}
+ public static string[] Read(){IntPtr data;int count;if(!Enumerate(IntPtr.Zero,0,1,out data,out count))throw new System.ComponentModel.Win32Exception();try{var users=new List<string>();for(int i=0;i<count;i++){var s=(Session)Marshal.PtrToStructure(IntPtr.Add(data,i*Marshal.SizeOf(typeof(Session))),typeof(Session));if(s.Id==0||(s.State!=0&&s.State!=4))continue;string user=Text(s.Id,5);if(user.Length==0)continue;string domain=Text(s.Id,7);if(user.Length>0)users.Add((s.State==0?"1":"0")+"|"+domain+"\\"+user);}return users.ToArray();}finally{WTSFreeMemory(data);}}
 }
 '@}
  $dcUsers37=@([DcSessions37]::Read()|ForEach-Object {$parts=$_ -split '\|',2;@{Account=$parts[1];Active=($parts[0] -eq '1')}});$dcUsersComplete37=$true

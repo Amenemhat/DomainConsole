@@ -20,6 +20,16 @@ public partial class MainWindow {
   return new(){ReasonCode="unknown",Message="Новый запуск не выполнен: допуск не подтверждён. Текущее задание продолжает наблюдаться."};
  }
  void RejectAdmission38(RemoteJob job,TargetRecord target,Exception error){var reply=ParseAdmission38(error.Message);target.Status="LaunchRejected";target.State=new(){Id=job.Id,Status="LaunchRejected",Ended=DateTime.UtcNow.ToString("o")};target.Output="## Запуск не выполнен\n"+reply.Message+"\nВыполнявшееся задание не отменено. Его статус отображается отдельно.";Event31(target.Host,"admission",job.Id,reply.Message,"Warning",reply.ActiveJobId.Length>0?"Действующее задание: "+reply.ActiveJobId:"");Notify(reply.Message);}
- void StopCurrent38_Click(object sender,RoutedEventArgs e){if(ComputerGrid.SelectedItem is not ComputerRow row)return;var operation=OperationRow38(row);if(operation.JobId.Length==0)return;var job=History.FirstOrDefault(j=>j.Id==operation.JobId);if(job==null)return;historyViewId=job.Id;MainTabs.SelectedItem=IsWsusJob(job)?WsusTab:CommandsTab;Cancel_Click(sender,e);}
+ void StopCurrent38_Click(object sender,RoutedEventArgs e){if(ComputerGrid.SelectedItem is not ComputerRow row)return;if(CanStopReportWait(row.Host)&&RelevantActive61(HostJobs39(row.Host).Where(x=>IsWsusJob(x.Job))).Target==null){
+   if(MessageBox.Show(this,"Завершить ожидание отчёта WSUS для "+row.Name+"?","Отчёт WSUS",MessageBoxButton.YesNo)!=MessageBoxResult.Yes)return;
+   var pending=reportWaiting[row.Host];
+   pending.Stopped=true;
+   wsusChecked.Add(pending.Id+row.Host);
+   if(maintenancePlans.TryGetValue(row.Host,out var plan)&&!plan.Done&&plan.JobId==pending.Id)FinishPlan44(row.Host);
+   Store.Write("report-waits.json",reportWaiting);
+   Event31(row.Host,"report-stop",pending.Id,"Ожидание отчёта остановлено","Info","Результат клиентского задания сохранён.",scope:pending.Id);
+   RefreshOutcomes();ShowCurrent();return;
+  }
+  var operation=OperationRow38(row);if(operation.JobId.Length==0)return;var job=History.FirstOrDefault(j=>j.Id==operation.JobId);if(job==null)return;historyViewId=job.Id;MainTabs.SelectedItem=IsWsusJob(job)?WsusTab:CommandsTab;Cancel_Click(sender,e);}
 }
 

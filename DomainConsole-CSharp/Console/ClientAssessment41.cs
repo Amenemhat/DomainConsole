@@ -38,7 +38,7 @@ public static class ClientReadiness41 {
   if(report.NeededCount!=0||!report.RequiredComplete||report.RequiredError.Length>0||report.ApprovedUnknownCount>0)return Result("Warning","Проверка неполная · применимость не уточнена","Требуется полный подсчёт одобренных обновлений");
   if(!reboot.Fresh||reboot.Required!=false)return Result("Warning",reboot.Limitation.Length>0?reboot.Limitation:"Проверка неполная · флаги перезагрузки не подтверждены","К установке по отчёту: 0 · проверьте флаги на клиенте\n"+reboot.Details);
   if(DateTimeOffset.TryParse(boot,out var b)&&DateTimeOffset.TryParse(report.LastReportedUtc,out var r)&&r<b)return Result("Warning","Проверка неполная · отчёт получен до загрузки Windows","Нужен отчёт после последней загрузки");
-  if(searched&&remaining>0)return Result("Warning","Данные клиента и WSUS расходятся","Последний поиск клиента: осталось "+remaining+" · "+Display36.Date(searchAt)+". Выполните новый поиск и отчёт");
+  if(searched&&remaining>0)return Result("Warning","Текущая применимость не подтверждена","По последнему поиску клиента осталось "+remaining+" · "+Display36.Date(searchAt)+". По отчёту WSUS к установке: 0.");
   if(!searched)return Result("Warning","Поиск клиента не подтверждён","К установке по отчёту: 0 · нет сохранённого успешного поиска для этого источника");
   if(!DateTimeOffset.TryParse(searchAt,out var at)||at>now.AddMinutes(1))return Result("Warning","Время поиска клиента не подтверждено","К установке по отчёту: 0 · проверьте время и результат поиска");
   if(DateTimeOffset.TryParse(boot,out var started)&&at<started)return Result("Warning","Поиск клиента выполнен до перезагрузки","К установке по отчёту: 0 · нужна проверка после последней загрузки");

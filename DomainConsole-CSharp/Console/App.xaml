@@ -147,12 +147,27 @@
               <Border x:Name="BusyTrack60" Background="{TemplateBinding Foreground}" Visibility="Collapsed">
                 <Border.OpacityMask><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><LinearGradientBrush.RelativeTransform><TranslateTransform X="-1" /></LinearGradientBrush.RelativeTransform><GradientStop Color="Transparent" Offset="0"/><GradientStop Color="White" Offset="0.35"/><GradientStop Color="White" Offset="0.65"/><GradientStop Color="Transparent" Offset="1"/></LinearGradientBrush></Border.OpacityMask>
               </Border>
+              <Border x:Name="SlowTrack" Background="{TemplateBinding Foreground}" Visibility="Collapsed">
+                <Border.OpacityMask><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><LinearGradientBrush.RelativeTransform><TranslateTransform X="-1" /></LinearGradientBrush.RelativeTransform><GradientStop Color="Transparent" Offset="0"/><GradientStop Color="White" Offset="0.35"/><GradientStop Color="White" Offset="0.65"/><GradientStop Color="Transparent" Offset="1"/></LinearGradientBrush></Border.OpacityMask>
+              </Border>
             </Grid>
-            <ControlTemplate.Triggers><Trigger Property="IsIndeterminate" Value="True">
-              <Setter TargetName="PART_Indicator" Property="Visibility" Value="Collapsed"/><Setter TargetName="BusyTrack60" Property="Visibility" Value="Visible"/>
-              <Trigger.EnterActions><BeginStoryboard x:Name="BusyMotion60"><Storyboard RepeatBehavior="Forever"><DoubleAnimation Storyboard.TargetName="BusyTrack60" Storyboard.TargetProperty="(UIElement.OpacityMask).(Brush.RelativeTransform).(TranslateTransform.X)" From="-1" To="1" Duration="0:0:1.6"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
-              <Trigger.ExitActions><RemoveStoryboard BeginStoryboardName="BusyMotion60"/></Trigger.ExitActions>
-            </Trigger></ControlTemplate.Triggers>
+            <ControlTemplate.Triggers>
+            <Trigger Property="IsIndeterminate" Value="True">
+              <Setter TargetName="PART_Indicator" Property="Visibility" Value="Collapsed"/>
+            </Trigger>
+            <MultiTrigger>
+              <MultiTrigger.Conditions><Condition Property="IsIndeterminate" Value="True"/><Condition Property="IsVisible" Value="True"/></MultiTrigger.Conditions>
+              <Setter TargetName="BusyTrack60" Property="Visibility" Value="Visible"/>
+              <MultiTrigger.EnterActions><BeginStoryboard x:Name="BusyMotion60"><Storyboard RepeatBehavior="Forever"><DoubleAnimation Storyboard.TargetName="BusyTrack60" Storyboard.TargetProperty="(UIElement.OpacityMask).(Brush.RelativeTransform).(TranslateTransform.X)" From="-1" To="1" Duration="0:0:1.6"/></Storyboard></BeginStoryboard></MultiTrigger.EnterActions>
+              <MultiTrigger.ExitActions><RemoveStoryboard BeginStoryboardName="BusyMotion60"/></MultiTrigger.ExitActions>
+            </MultiTrigger>
+            <MultiTrigger>
+              <MultiTrigger.Conditions><Condition Property="IsIndeterminate" Value="True"/><Condition Property="IsVisible" Value="True"/><Condition Property="Tag" Value="slow"/></MultiTrigger.Conditions>
+              <Setter TargetName="BusyTrack60" Property="Visibility" Value="Collapsed"/>
+              <Setter TargetName="SlowTrack" Property="Visibility" Value="Visible"/>
+              <MultiTrigger.EnterActions><BeginStoryboard x:Name="SlowProgress"><Storyboard RepeatBehavior="Forever"><DoubleAnimation Storyboard.TargetName="SlowTrack" Storyboard.TargetProperty="(UIElement.OpacityMask).(Brush.RelativeTransform).(TranslateTransform.X)" From="-1" To="1" Duration="0:0:4"/></Storyboard></BeginStoryboard></MultiTrigger.EnterActions>
+              <MultiTrigger.ExitActions><RemoveStoryboard BeginStoryboardName="SlowProgress"/></MultiTrigger.ExitActions>
+            </MultiTrigger></ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
       </Setter>

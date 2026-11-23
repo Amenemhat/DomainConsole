@@ -1,6 +1,22 @@
 $root=Join-Path $env:ProgramData 'DomainConsoleCSharp'
 $file=Join-Path $root 'control37.json'
 $repair=@@REPAIR@@
+function Read-JobStatus([string]$path){
+ for($attempt=0;$attempt -lt 3;$attempt++){
+  try{
+   $stream=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+   try{
+    $reader=[IO.StreamReader]::new($stream,[Text.Encoding]::UTF8,$true)
+    try{return ($reader.ReadToEnd()|ConvertFrom-Json -ErrorAction Stop)}finally{$reader.Dispose()}
+   }finally{$stream.Dispose()}
+  }catch{
+   $cause=$_.Exception.GetBaseException()
+   if($cause -is [IO.FileNotFoundException]){return $null}
+   if($attempt -ge 2 -or $cause -isnot [IO.IOException] -or ($cause.HResult -band 65535) -notin @(32,33)){throw}
+   Start-Sleep -Milliseconds (60 * ($attempt+1))
+  }
+ }
+}
 $mutex=[Threading.Mutex]::new($false,'Global\DomainConsoleCSharp.Coordination37')
 $held=$false
 try {
@@ -20,7 +36,7 @@ try {
   $p=Join-Path $root $id
   $state=$null
   $stateFile=Join-Path $p 'status.json'
-  if(Test-Path -LiteralPath $stateFile){$state=Get-Content -LiteralPath $stateFile -Raw -Encoding UTF8|ConvertFrom-Json}
+  if(Test-Path -LiteralPath $stateFile){$state=Read-JobStatus $stateFile}
   $related=@($tasks|Where-Object{$_.TaskName -like "*$id*" -or (($_.Actions|ForEach-Object{$_.Arguments}) -join ' ') -like "*$id*"})
   $agents=@($processes|Where-Object{[string]::IsNullOrWhiteSpace($_.CommandLine) -or $_.CommandLine -like "*$id*"})
   $missing=!(Test-Path (Join-Path $p 'job.json')) -and !(Test-Path $stateFile) -and !(Test-Path (Join-Path $p 'submitted.flag'))
