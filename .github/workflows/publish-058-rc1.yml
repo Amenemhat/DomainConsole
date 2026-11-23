@@ -1,0 +1,50 @@
+name: Publish verified 0.58 release candidate
+on:
+  push:
+    branches: ['release/0.58.0-rc.1']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: domainconsole-058-rc1
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/release/0.58.0-rc.1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_SHA: '908176784523391ecb9d2a2c63b2415e71c61e28'
+      SOURCE_RUN: '45167015464'
+      ARTIFACT_ID: '14815498402'
+      ZIP_SHA256: 'd3a4e336f186a774b5fbe8c0fc1c17c8566f70da18ea2af5e5e14dcb51328073'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify source and package, then publish a non-latest prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="repos/$GITHUB_REPOSITORY"
+          tag=v0.58.0-rc.1
+          zip=DomainConsole-0.58.0-rc.1-Windows-x64.zip
+          notes=docs/releases/0.58.0-rc.1.md
+          gh api "$repo/actions/runs/$SOURCE_RUN" |
+            jq -e --arg sha "$SOURCE_SHA" --arg repo "$GITHUB_REPOSITORY" '.status=="completed" and .conclusion=="success" and .head_sha==$sha and .head_repository.full_name==$repo and (.path|split("@")[0])==".github/workflows/build-windows.yml"' >/dev/null
+          gh api "$repo/actions/artifacts/$ARTIFACT_ID" |
+            jq -e --arg digest "sha256:$ZIP_SHA256" --argjson run "$SOURCE_RUN" '.expired==false and .name=="DomainConsole-Windows-x64" and .digest==$digest and .workflow_run.id==$run' >/dev/null
+          gh api "$repo/actions/artifacts/$ARTIFACT_ID/zip" > "$zip"
+          PYTHONPATH=.github/scripts python3 -c 'import sys; from pathlib import Path; from publish_release import validate_package; validate_package(Path(sys.argv[1]).read_bytes(), sys.argv[2])' "$zip" "$ZIP_SHA256"
+          printf '%s  %s\n' "$ZIP_SHA256" "$zip" > SHA256SUMS.txt
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isPrerelease,assets |
+              jq -e --arg zip "$zip" '.isPrerelease and (.assets|map(.name)|sort)==([$zip,"SHA256SUMS.txt"]|sort)' >/dev/null
+          else
+            gh release create "$tag" "$zip" SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
+              --title "DomainConsole 0.58.0 RC 1" --notes-file "$notes" --draft --prerelease --latest=false
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease --latest=false
+          fi
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json url,isDraft,isPrerelease --jq 'select(.isDraft==false and .isPrerelease==true)|.url'
