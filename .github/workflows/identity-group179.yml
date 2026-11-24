@@ -1,0 +1,59 @@
+name: Verify PR 179 on five isolated WSUS clients
+on:
+  push:
+    branches: ['lab/0.58-identity-group179']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      GH_TOKEN: ${{ github.token }}
+      APP_COMMIT: b1f0b4a7655d1cdcfbbc0d03326d8a821b96a20c
+      APP_RUN: '45186449985'
+      APP_ARTIFACT: '14825261873'
+      APP_DIGEST: b3a4bee9aec9944c3b9cc6a817d8520bbdba6491f029641d95202e5d62ce6c44
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.APP_COMMIT }}
+          path: _app
+          persist-credentials: false
+      - name: Verify and download the exact Windows build of PR 179
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$APP_RUN" |
+            jq -e --arg sha "$APP_COMMIT" '.head_sha==$sha and .conclusion=="success"' >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$APP_ARTIFACT" |
+            jq -e --arg digest "sha256:$APP_DIGEST" --argjson run "$APP_RUN" '.digest==$digest and .workflow_run.id==$run and .expired==false' >/dev/null
+          lab="$RUNNER_TEMP/dc-wsus-lab"
+          mkdir -p "$lab"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$APP_ARTIFACT/zip" > "$lab/package.zip"
+          echo "$APP_DIGEST  $lab/package.zip" | sha256sum -c
+          unzip -tqq "$lab/package.zip"
+          jq -n --arg commit "$APP_COMMIT" --arg run "$APP_RUN" --arg artifact "$APP_ARTIFACT" --arg sha256 "$APP_DIGEST" '{commit:$commit,run:$run,artifact:$artifact,sha256:$sha256}' > "$lab/package.json"
+          cp -r .github/tests/domain-scenario "$lab/scenario-1"
+          git rev-parse HEAD:.github/tests/domain-scenario > "$lab/scenario-1.tree"
+      - name: Prepare private network and Windows VMs
+        run: bash .github/lab/prepare-guests.sh
+      - name: Personalize independent Windows disks
+        run: bash .github/lab/wait-for-guests.sh specialized 100
+      - name: Verify the Active Directory lab
+        run: bash .github/lab/wait-for-guests.sh domain 55
+      - name: Verify the WSUS server
+        run: bash .github/lab/wait-for-guests.sh wsus 45
+      - name: Check four initial repairs, the returning fifth client and all WSUS registrations
+        run: |
+          bash .github/lab/wait-for-guests.sh attempt-1 85
+          jq -e '.passed==true' "$RUNNER_TEMP/dc-wsus-lab/attempt-1.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: isolated-identity-group179
+          path: |
+            ${{ runner.temp }}/dc-wsus-lab/attempt-1.json
+            ${{ runner.temp }}/dc-wsus-lab/evidence.json
+          if-no-files-found: warn
