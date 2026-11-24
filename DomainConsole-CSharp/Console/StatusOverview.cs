@@ -23,7 +23,7 @@ public partial class MainWindow {
  readonly Dictionary<string,int> overviewAttempts45=Store.Read("overview-attempts45.json",new Dictionary<string,int>());
  string treeAnchor="",recentAnchor="";string statusScope=Store.Read("status-scope.json","");
  static readonly (string Key,string Label)[] StatusCategories={
-  ("IdentityConflict","Дубли / конфликты ID"),("Working","Выполняется операция"),("AdDisabled","Отключены в AD"),("Error","Ошибка установки / задания"),("SyncError","Последний поиск: ошибка"),("Warning","Требует внимания"),("Discrepancy","Расхождение клиента и WSUS"),("ReportPending","Ожидается подтверждение WSUS"),("Reboot","Нужна перезагрузка"),("Success","Последняя полная проверка успешна"),("Needed","Есть необходимые обновления"),("Stale","Отчёт устарел"),("NoWsus","Нет в WSUS"),("Unreachable","Нет связи WinRM"),("Access","Нет доступа"),("Connected","Связь подтверждена"),("Unknown","Нет данных")};
+  ("IdentityConflict","Дубли / конфликты ID"),("Working","Выполняется операция"),("AdDisabled","Отключены в AD"),("Error","Ошибка установки / задания"),("SyncError","Последний поиск: ошибка"),("Warning","Требует внимания"),("Discrepancy","Расхождение клиента и WSUS"),("ReportPending","Ожидается подтверждение WSUS"),("Reboot","Нужна перезагрузка"),("Success","Последняя полная проверка успешна"),("WsusHealthy","Норма по свежему отчёту WSUS"),("Needed","Есть необходимые обновления"),("Stale","Отчёт устарел"),("NoWsus","Нет в WSUS"),("Unreachable","Нет связи WinRM"),("Access","Нет доступа"),("Connected","Связь подтверждена"),("Unknown","Нет данных")};
  string OverviewServer=>WsusHost.Text.Trim()+":"+WsusPort.Text.Trim();
  bool CacheMatches(CachedWsusReport cached)=>cached.Server.Equals(OverviewServer,StringComparison.OrdinalIgnoreCase)&&(cached.Host41.Length==0||SavedEvidence55.Matches(cached.Endpoint41,new TargetRecord{Host=cached.Host41}));
  OverviewResult OverviewStatus(ComputerRow row){var status=AssessClient41(row);return new(status.Kind,status.Title+"\n"+status.Details);}
@@ -68,7 +68,7 @@ public partial class MainWindow {
   overviewRunning=true;using var cancellation=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);overviewCancel=cancellation;SetOverviewAction33(true);
   bool Current58()=>!closing&&!cancellation.IsCancellationRequested&&server==OverviewServer&&ssl==WsusSsl.IsChecked;
   int done=0,errors=0,succeeded61=0;bool cancelled=false;
-  overviewRun61=new(){Server=server,Started=DateTimeOffset.UtcNow.ToString("o"),Total=rows.Count,LastPartial=overviewRun61.Server==server?overviewRun61.LastPartial:"",LastFull=overviewRun61.Server==server?overviewRun61.LastFull:""};
+  overviewRun61=new(){Server=server,Started=DateTimeOffset.UtcNow.ToString("o"),Total=rows.Count,ReportsRead=0,LastPartial=overviewRun61.Server==server?overviewRun61.LastPartial:"",LastFull=overviewRun61.Server==server?overviewRun61.LastFull:""};
   try{
    overviewRun61.Phase="WSUS: чтение записей и сводок…";RenderOverview61();
    var snapshot=await remote.ReadWsusSnapshot58(settings,cancellation.Token);
@@ -101,7 +101,7 @@ public partial class MainWindow {
       }catch(Exception ex){errors++;overviewRun61.Error=ex.Message;ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);}
      }
     }catch(OperationCanceledException){throw;}catch(Exception ex){foreach(var row in chunk)ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);errors+=chunk.Length;overviewRun61.Error=ex.Message;}
-    done+=chunk.Length;overviewRun61.Processed+=chunk.Length;overviewRun61.Errors=errors;RenderOverview61();await PersistReportCacheAsync58();
+    done+=chunk.Length;overviewRun61.Processed+=chunk.Length;overviewRun61.ReportsRead=succeeded61;overviewRun61.Errors=errors;RenderOverview61();await PersistReportCacheAsync58();
     RefreshOutcomes();if(ComputerGrid.SelectedItem is ComputerRow focused&&chunk.Contains(focused))ShowCurrent();
    }
    overviewPending45.Clear();overviewAttempts45.Clear();overviewDue45.Clear();
