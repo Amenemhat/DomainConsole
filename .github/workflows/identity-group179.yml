@@ -1,7 +1,7 @@
-name: Verify PR 179 on five isolated WSUS clients
+name: Verify DomainConsole 0.59 on five isolated WSUS clients
 on:
   push:
-    branches: ['lab/0.58-identity-group179']
+    branches: ['lab/0.59-identity']
 permissions:
   contents: read
   actions: read
@@ -11,10 +11,8 @@ jobs:
     timeout-minutes: 240
     env:
       GH_TOKEN: ${{ github.token }}
-      APP_COMMIT: b1f0b4a7655d1cdcfbbc0d03326d8a821b96a20c
-      APP_RUN: '45186449985'
-      APP_ARTIFACT: '14825261873'
-      APP_DIGEST: b3a4bee9aec9944c3b9cc6a817d8520bbdba6491f029641d95202e5d62ce6c44
+      APP_COMMIT: 9e1ee05dc1c654f18e512591301c0148b01c094c
+      APP_RUN: '45398456677'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -22,11 +20,21 @@ jobs:
           ref: ${{ env.APP_COMMIT }}
           path: _app
           persist-credentials: false
-      - name: Verify and download the exact Windows build of PR 179
+      - name: Verify and download the exact Windows build of 0.59
         run: |
           set -euo pipefail
-          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$APP_RUN" |
-            jq -e --arg sha "$APP_COMMIT" '.head_sha==$sha and .conclusion=="success"' >/dev/null
+          for attempt in $(seq 1 60); do
+            build=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$APP_RUN")
+            jq -e --arg sha "$APP_COMMIT" '.head_sha==$sha' <<<"$build" >/dev/null
+            if jq -e '.status=="completed"' <<<"$build" >/dev/null; then break; fi
+            sleep 15
+          done
+          jq -e '.conclusion=="success"' <<<"$build" >/dev/null
+          artifact=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$APP_RUN/artifacts" |
+            jq -ec '[.artifacts[] | select(.name=="DomainConsole-Windows-x64" and .expired==false)] | if length==1 then .[0] else error("Expected exactly one Windows package") end')
+          APP_ARTIFACT=$(jq -er '.id' <<<"$artifact")
+          APP_DIGEST=$(jq -er '.digest | sub("^sha256:"; "")' <<<"$artifact")
+          [[ "$APP_DIGEST" =~ ^[a-f0-9]{64}$ ]]
           gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$APP_ARTIFACT" |
             jq -e --arg digest "sha256:$APP_DIGEST" --argjson run "$APP_RUN" '.digest==$digest and .workflow_run.id==$run and .expired==false' >/dev/null
           lab="$RUNNER_TEMP/dc-wsus-lab"
@@ -52,7 +60,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: isolated-identity-group179
+          name: isolated-identity-059
           path: |
             ${{ runner.temp }}/dc-wsus-lab/attempt-1.json
             ${{ runner.temp }}/dc-wsus-lab/evidence.json
