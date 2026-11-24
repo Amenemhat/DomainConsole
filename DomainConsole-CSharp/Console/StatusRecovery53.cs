@@ -78,6 +78,7 @@ bool NeedsRebootRead53(ComputerRow row){
   if(error.Length==0)error="Клиент не найден при последнем чтении WSUS; прежние результаты сохранены";
   overviewErrors[row.Host]=error;
   if(reportCache.TryGetValue(row.Host,out var existing)&&CacheMatches(existing)){
+   existing.LookupMissing53|=reply is {Found:false,Error:""};
    existing.LookupError53=error;existing.LookupUtc53=DateTimeOffset.UtcNow.ToString("o");serverReports[row.Host]=CachedReportText(existing)+(existing.Found?"":"\n\n## Последнее чтение WSUS\n"+Display36.Date(existing.LookupUtc53)+" · "+error);return false;
   }
   if(!serverReports.ContainsKey(row.Host))serverReports[row.Host]="Не удалось прочитать данные WSUS: "+error;

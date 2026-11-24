@@ -6,7 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using DomainConsole.Shared;
 namespace DomainConsole;
-public sealed class CachedWsusReport {public string LookupError53 {get;set;}="";public string LookupUtc53 {get;set;}="";public string Host41 {get;set;}="";public string Endpoint41 {get;set;}="";public WsusReport Report {get;set;}=new();public bool Found {get;set;}=true;public string Server {get;set;}="";public string ReceivedUtc {get;set;}="";public string Started {get;set;}="";}
+public sealed class CachedWsusReport {public string LookupError53 {get;set;}="";public string LookupUtc53 {get;set;}="";public bool LookupMissing53 {get;set;}public string Host41 {get;set;}="";public string Endpoint41 {get;set;}="";public WsusReport Report {get;set;}=new();public bool Found {get;set;}=true;public string Server {get;set;}="";public string ReceivedUtc {get;set;}="";public string Started {get;set;}="";}
 public partial class MainWindow {
  public ObservableCollection<ComputerRow> RecentComputers {get;}=new();
  readonly List<string> recentHosts=Store.Read("recent-computers.json",new List<string>());

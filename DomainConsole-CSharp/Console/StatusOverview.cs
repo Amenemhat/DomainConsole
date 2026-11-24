@@ -122,7 +122,7 @@ public partial class MainWindow {
    if(!cancelled&&errors==0)overviewRun61.LastFull=overviewRun61.Ended;
    else if(succeeded61>0)overviewRun61.LastPartial=overviewRun61.Ended;
    Store.Write("overview-run61.json",overviewRun61);
-   if(!closing){RenderOverview61();RefreshOutcomes();}
+   if(!closing){RenderOverview61();RefreshOutcomes();if(ComputerGrid.SelectedItem is ComputerRow)ShowCurrent();}
   }
  }
 
