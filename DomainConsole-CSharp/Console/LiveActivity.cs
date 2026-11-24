@@ -28,9 +28,11 @@ $policySource=[string](Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windo
 """;
  public async Task<LiveUpdateActivity> LiveUpdates(TargetRecord target){using var read43=PollingControl43.Read();if(Local(target))RequireLocalAdmin();using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(95));
   return ParseData34<LiveUpdateActivity>(await SnapshotPart42(target,"Activity",timeout.Token),"фоновая активность");}
- public async Task<LiveUpdateActivity> ReadManualUpdateActivity(TargetRecord target){
+ public Task<LiveUpdateActivity> ReadManualUpdateActivity(TargetRecord target)=>ReadManualUpdateActivity(target,CancellationToken.None);
+ public async Task<LiveUpdateActivity> ReadManualUpdateActivity(TargetRecord target,CancellationToken cancellation){
   using var manual=PollingControl43.Manual56("manual");
-  using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(20));
+  using var timeout=CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+  timeout.CancelAfter(TimeSpan.FromSeconds(20));
   if(Local(target))RequireLocalAdmin();
   var json=await PowerShellBridge.Execute(Invoke(ConnectionStore.Capture(target),LiveUpdateScript),timeout.Token);
   return ParseData34<LiveUpdateActivity>(json,"проверка активности Windows Update перед ручной командой");

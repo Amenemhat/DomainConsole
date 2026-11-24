@@ -113,12 +113,13 @@ public partial class MainWindow {
     }
     if(identity.UseWUServer!=1){Defer("Политика UseWUServer=1 не подтверждена");continue;}
     try{
-     var live=await remote.LiveUpdates(frozen.Target);
+     var live=manual?await remote.ReadManualUpdateActivity(frozen.Target,stop.Token):await remote.LiveUpdates(frozen.Target);
      if(live.Busy||live.Jobs.Count>0||live.Limitation.Length>0||live.InstallationEvidence.Length>0){
       var reason=live.Limitation.Length>0?live.Limitation:live.InstallationEvidence.Length>0?live.InstallationEvidence:live.Jobs.Count>0?"активное задание клиента":"Windows Update занят";
       Defer("Ожидается завершение обслуживания или уточнение состояния · "+reason);continue;
      }
-    }catch(Exception ex){Defer("Проверка активности не завершена: "+ConnectionBrief31(ex.Message));continue;}
+    }catch(OperationCanceledException) when(stop.IsCancellationRequested){break;}
+    catch(Exception ex){Defer("Проверка активности не завершена: "+ConnectionBrief31(ex.Message));continue;}
     if(stop.IsCancellationRequested)break;
     if(!Available()||HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target)))continue;
     var job=new RemoteJob{Manual56=manual,AutoInstall54=false,AutoReboot=false,MicrosoftSource=false,OutputChannel="WSUS",Name="Перерегистрация общего SusClientId",Steps=new(){new(){Name="Перерегистрация клиента WSUS",Kind="PowerShell",TouchesUpdates=true,Code=RemoteService.IdentityRepairScript58(identity)}}};
