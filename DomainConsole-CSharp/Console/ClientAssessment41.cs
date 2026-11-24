@@ -7,7 +7,7 @@ namespace DomainConsole;
 public sealed record ClientAssessment41(string Kind,string Title,string Details){
  public bool InstallationSucceeded51 {get;init;}
  public string HeadlineTone51=>InstallationSucceeded51?"Success":Tone;
- public string Tone=>Kind switch{"Success" or "WsusHealthy"=>"Success","Error" or "SyncError"=>"Error","Needed" or "Working" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown" or "WsusIncomplete"=>"Unknown",_=>"Warning"};
+ public string Tone=>Kind switch{"Success" or "WsusHealthy"=>"Success","Reboot"=>"Reboot","Error" or "SyncError"=>"Error","Needed" or "Working" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown" or "WsusIncomplete"=>"Unknown",_=>"Warning"};
  public string Glyph=>Kind switch{"Success" or "WsusHealthy"=>"Success","Error" or "SyncError"=>"Error","Reboot"=>"Reboot","Working"=>"Working","Needed" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown" or "WsusIncomplete"=>"Unknown",_=>"Warning"};
 }
 public static class ClientReadiness41 {

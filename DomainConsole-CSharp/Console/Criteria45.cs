@@ -44,7 +44,7 @@ public static class Criteria45 {
   }
   string bt=reboot.Required==true?(reboot.Fresh?"Подтверждена · ":"По последней проверке требовалась · ")+reboot.Sources.Length+" источн. · "+string.Join(", ",reboot.Sources):reboot.Required==false?(ready||reboot.Fresh?"Не требуется":"По последней проверке не требовалась"):"Результат не подтверждён";
   bt+=" · "+Display36.Date(reboot.Stamp);
-  string rebootTone=reboot.Required==true?"Warning":reboot.Required==false&&(ready||reboot.Fresh)?"Success":reboot.Required==null?"Unknown":"Stale";
+  string rebootTone=reboot.Required==true?"Reboot":reboot.Required==false&&(ready||reboot.Fresh)?"Success":reboot.Required==null?"Unknown":"Stale";
   var reboots=new List<Check45>{new(reboot.Required==true?"Положительные источники: "+string.Join(", ",reboot.Sources):reboot.Required==false?"Полная проверка WUA / Windows Update / CBS — флаги отсутствуют":"Полная отрицательная проверка не получена",rebootTone,reboot.Required==true?"Reboot":StatusGlyph.ForTone50(rebootTone)),new("Проверено: "+Display36.Date(reboot.Stamp),"Info","Info")};
   if(reboot.Expired&&reboot.Sources.Length>0)reboots.Add(new("Источники прежней проверки: "+string.Join(", ",reboot.Sources),"Info","Info"));
   if(reboot.Limitation.Length>0)reboots.Add(new(reboot.Limitation,"Warning","Warning"));
@@ -57,7 +57,7 @@ public static class Criteria45 {
   }
   if(status.Kind=="Reboot"&&reboot.Required!=true&&r?.InstalledPendingRebootCount>0){
    bt="По отчёту WSUS ожидается перезагрузка · "+Display36.Date(r.LastReportedUtc);
-   rebootTone="Warning";
+   rebootTone="Reboot";
   }
   bool action=!active&&!reboot.Fresh&&status.Kind!="Success"&&!observed;
   return new(){new("updates","Обновления · "+ut,updateTone,active?StatusGlyph.ForOperation50(state?.Stage??""):StatusGlyph.ForTone50(updateTone),updates),new("report","Отчёт WSUS · "+rt,reportTone,StatusGlyph.ForTone50(reportTone),reports),new("reboot","Перезагрузка · "+bt,rebootTone,reboot.Required==true?"Reboot":StatusGlyph.ForTone50(rebootTone),reboots,action)};
@@ -72,7 +72,7 @@ public partial class MainWindow {
   if(a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var ready45)){if(scan.Length==0){scan=ready45.Scan;remaining=0;}}
   var list=a.Kind=="Success"&&readyProofs43.TryGetValue(row.Host,out var complete45)?Criteria45.Confirmed(complete45):Criteria45.Build(a,cache?.Found==true?cache.Report:null,reboot,state,active,scan,remaining,cache!=null&&!liveReports.Contains(row.Host),overviewErrors.GetValueOrDefault(row.Host,""),rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"");if(active&&(a.Kind=="Unknown"||!(activeTarget==null?StateFresh(state):StatusReceiptFresh(activeTarget))))list[0]=list[0] with{Text="Обновления · состояние задания не подтверждено",Tone="Unknown",Glyph="Unknown",Checks=list[0].Checks.Select(c=>c.Text=="Операция ещё выполняется"?new Check45("Выполнение сейчас не подтверждено; последнее состояние: "+Display36.Date(state?.Updated??""),"Unknown","Unknown"):c).ToList()};if(LostObservation51(row.Host)&&active)list[0]=list[0] with{Text="Обновления · связь потеряна, результат неизвестен",Tone="Unknown",Glyph="Unknown"};if(transfer!=null)list[0]=list[0] with{Text="Обновления · "+transfer.Text,Tone=transfer.Busy?"Info":"Unknown",Glyph=transfer.Busy?StatusGlyph.ForOperation50(state!.Stage):"Unknown"};list[1]=QueueCriterion52(row,list[1],cache?.Report);if(a.Kind=="Discrepancy")list[0]=list[0] with{Diagnose54=true};criteria45[row.Host]=list;
   if(a.Kind=="Warning"&&reboot.Limitation.Length==0&&list.Count(g=>g.Tone is "Warning" or "Error")>1)a=a with{Title="Готовность не подтверждена · несколько условий не выполнены"};
-  return a with{Details=string.Join("\n",list.Select(g=>(g.Tone=="Success"?"✓ ":g.Tone=="Error"?"✕ ":g.Tone is "Warning" or "Stale" or "Unknown"?"⚠ ":"• ")+g.Text))+"\n"+(a.Kind is "Success" or "WsusHealthy"?a.Details:reboot.Limitation)};
+  return a with{Details=string.Join("\n",list.Select(g=>(g.Tone=="Success"?"✓ ":g.Tone=="Error"?"✕ ":g.Tone=="Reboot"?"⟳ ":g.Tone is "Warning" or "Stale" or "Unknown"?"⚠ ":"• ")+g.Text))+"\n"+(a.Kind is "Success" or "WsusHealthy"?a.Details:reboot.Limitation)};
  }
  void RenderCriteria45(ComputerRow row,ClientAssessment41 a,bool active){
   if(!criteria45.TryGetValue(row.Host,out var groups))return;
@@ -85,7 +85,7 @@ public partial class MainWindow {
    if(group.Repair52){var repair52=new Button{Content="Очистить очередь отчётности",ToolTip=group.Hint52,IsEnabled=!TransportBudget41.Paused,Margin=new(8,0,0,0),Padding=new(4,0,4,0)};repair52.SetResourceReference(StyleProperty,"GhostButton");repair52.Click+=RecoverReport52_Click;DockPanel.SetDock(repair52,Dock.Right);head.Children.Add(repair52);}
    if(group.Key=="updates"&&recommendation47.Length>0){var action47=new Button{Content="Рекомендуемое действие…",ToolTip=recommendation47,Margin=new(8,0,0,0),Padding=new(4,0,4,0)};action47.SetResourceReference(StyleProperty,"GhostButton");action47.Click+=Recommendation_Click;DockPanel.SetDock(action47,Dock.Right);head.Children.Add(action47);}
    var icon=new StatusGlyph{Kind=group.Glyph,Tint=group.Glyph=="Warning"?Theme.Brush("AttentionIcon39"):Theme.Tone(group.Tone),Width=16,Height=16,Margin=new(0,0,5,0),VerticalAlignment=VerticalAlignment.Center};DockPanel.SetDock(icon,Dock.Left);head.Children.Add(icon);var label=new TextBlock{Text=group.Text,FontSize=12,FontWeight=FontWeights.SemiBold,Foreground=Theme.Tone(group.Tone),TextTrimming=TextTrimming.CharacterEllipsis,ToolTip=group.Text+(group.Hint52.Length>0?"\n"+group.Hint52:"")};head.Children.Add(label);exp.Header=head;exp.HorizontalContentAlignment=HorizontalAlignment.Stretch;
-   var body=new StackPanel{Margin=new(18,1,0,2)};var problems=group.Checks.Where(c=>c.Tone is "Warning" or "Error").ToList();bool auto=!active&&!expandedProblem&&problems.Count>0&&!expansion45.ContainsKey(key)&&seenProblems45.Add(key+"|"+string.Join(";",problems.Select(x=>x.Text.Split('·')[0])));
+   var body=new StackPanel{Margin=new(18,1,0,2)};var problems=group.Checks.Where(c=>c.Tone is "Warning" or "Error" or "Reboot").ToList();bool auto=!active&&!expandedProblem&&problems.Count>0&&!expansion45.ContainsKey(key)&&seenProblems45.Add(key+"|"+string.Join(";",problems.Select(x=>x.Text.Split('·')[0])));
    if(auto)expandedProblem=true;bool open=expansion45.GetValueOrDefault(key,auto);exp.IsExpanded=open;
    void Fill(bool all){body.Children.Clear();foreach(var check in all?group.Checks:problems){body.Children.Add(new TextBlock{Text=(check.Tone=="Success"?"✓ ":check.Tone=="Error"?"✕ ":"• ")+check.Text,FontSize=11,Foreground=Theme.Tone(check.Tone),TextWrapping=TextWrapping.Wrap,Margin=new(0,1,0,1)});}}
    Fill(!auto);exp.Content=body;exp.Expanded+=(s,e)=>{if(rendering45)return;expansion45[key]=true;Fill(true);};exp.Collapsed+=(s,e)=>{if(!rendering45)expansion45[key]=false;};ReadinessTree45.Children.Add(exp);
