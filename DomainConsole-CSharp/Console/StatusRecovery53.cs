@@ -53,9 +53,9 @@ public partial class MainWindow {
 bool NeedsRebootRead53(ComputerRow row){
  if(rebootWatches.TryGetValue(row.Host,out var watch)&&!watch.Done)return true;
  if(maintenancePlans.TryGetValue(row.Host,out var plan)&&!plan.Done)return true;
- // Missing/invalidated evidence needs a retry. A healthy same-boot snapshot
- // is not polled every five minutes merely because the WSUS card is not green.
- return !RebootViewFor40(row).Fresh;
+ if(RebootViewFor40(row).Fresh)return false;
+ var outcome=AssessClient41(row).Kind;
+ return outcome=="Working"||ClientReadiness41.NeedsClientDiagnosis(outcome);
 }
 
  // A missing or incomplete lookup is not a replacement for a previously read report.
@@ -68,14 +68,17 @@ bool NeedsRebootRead53(ComputerRow row){
    SaveReportCache(row.Host,reply.Report!,server,started,false,persist58);
    overviewErrors.Remove(row.Host);serverReports[row.Host]=reply.Report!.Format(server,started);reportSeverity[row.Host]=reply.Report.Severity(started);return true;
   }
+  if(reply is {Found:false,Error:""}&&
+     (!reportCache.TryGetValue(row.Host,out var cached)||!CacheMatches(cached)||!cached.Found)){
+   overviewErrors.Remove(row.Host);
+   reportCache[row.Host]=new(){Found=false,Host41=row.Host,Endpoint41=Identity40.EndpointKey(new TargetRecord{Host=row.Host}),Server=server,ReceivedUtc=DateTimeOffset.UtcNow.ToString("o")};
+   liveReports.Add(row.Host);serverReports[row.Host]="Клиент не найден в WSUS. Доступность проверяется отдельно.";
+   return false;
+  }
   if(error.Length==0)error="Клиент не найден при последнем чтении WSUS; прежние результаты сохранены";
   overviewErrors[row.Host]=error;
   if(reportCache.TryGetValue(row.Host,out var existing)&&CacheMatches(existing)){
    existing.LookupError53=error;existing.LookupUtc53=DateTimeOffset.UtcNow.ToString("o");serverReports[row.Host]=CachedReportText(existing)+(existing.Found?"":"\n\n## Последнее чтение WSUS\n"+Display36.Date(existing.LookupUtc53)+" · "+error);return false;
-  }
-  if(reply is {Found:false,Error:""}){
-   reportCache[row.Host]=new(){Found=false,Host41=row.Host,Endpoint41=Identity40.EndpointKey(new TargetRecord{Host=row.Host}),Server=server,ReceivedUtc=DateTimeOffset.UtcNow.ToString("o")};
-   liveReports.Add(row.Host);serverReports[row.Host]="Клиент не найден в WSUS. Доступность проверяется отдельно.";
   }
   if(!serverReports.ContainsKey(row.Host))serverReports[row.Host]="Не удалось прочитать данные WSUS: "+error;
   return false;
