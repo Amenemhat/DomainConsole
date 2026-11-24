@@ -55,7 +55,7 @@ bool NeedsRebootRead53(ComputerRow row){
  if(maintenancePlans.TryGetValue(row.Host,out var plan)&&!plan.Done)return true;
  if(RebootViewFor40(row).Fresh)return false;
  var outcome=AssessClient41(row).Kind;
- return outcome=="Working"||ClientReadiness41.NeedsClientDiagnosis(outcome);
+ return outcome=="Working"||NeedsRoutineClientDiagnosis(row,outcome);
 }
 
  // A missing or incomplete lookup is not a replacement for a previously read report.

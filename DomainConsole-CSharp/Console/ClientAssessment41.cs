@@ -7,8 +7,8 @@ namespace DomainConsole;
 public sealed record ClientAssessment41(string Kind,string Title,string Details){
  public bool InstallationSucceeded51 {get;init;}
  public string HeadlineTone51=>InstallationSucceeded51?"Success":Tone;
- public string Tone=>Kind switch{"Success" or "WsusHealthy"=>"Success","Error" or "SyncError"=>"Error","Needed" or "Working" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Warning"};
- public string Glyph=>Kind switch{"Success" or "WsusHealthy"=>"Success","Error" or "SyncError"=>"Error","Reboot"=>"Reboot","Working"=>"Working","Needed" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Warning"};
+ public string Tone=>Kind switch{"Success" or "WsusHealthy"=>"Success","Error" or "SyncError"=>"Error","Needed" or "Working" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown" or "WsusIncomplete"=>"Unknown",_=>"Warning"};
+ public string Glyph=>Kind switch{"Success" or "WsusHealthy"=>"Success","Error" or "SyncError"=>"Error","Reboot"=>"Reboot","Working"=>"Working","Needed" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown" or "WsusIncomplete"=>"Unknown",_=>"Warning"};
 }
 public static class ClientReadiness41 {
  public static string IPv4(string value){if(!IPAddress.TryParse(value,out var ip))return "";if(ip.IsIPv4MappedToIPv6)ip=ip.MapToIPv4();return ip.AddressFamily==AddressFamily.InterNetwork?ip.ToString():"";}
@@ -23,7 +23,7 @@ public static class ClientReadiness41 {
   }
   if(report!=null&&Criteria45.Resolved45(report,state)&&state?.Status is "Completed" or "VerifiedAfterReboot")return Result("Warning","Ожидается отчёт WSUS после успешной установки","Прежняя ошибка сопоставлена с успешной установкой того же обновления; серверное подтверждение ещё не получено");
   if(state?.Status is "Failed" or "CompletedWithErrors" or "InterventionRequired" or "SubmissionUnknown")return Result("Error","Ошибка · "+ResultPresentation36.BriefFailure(state.Error.Length>0?state.Error:ComputerRow.StatusText(state.Status)),"Проверьте причину в журнале задания"+(reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
-  if(report!=null&&found&&ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"&&reboot.Expired)return Result("Stale","Отчёт WSUS устарел · текущее состояние не подтверждено",reboot.Details+"\nПо прежнему отчёту к установке: "+(report.NeededCount?.ToString()??"?"));
+  if(report!=null&&found&&ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"&&reboot.Expired)return Result("Unknown","Текущее состояние не подтверждено",reboot.Details+"\nПо прежнему отчёту к установке: "+(report.NeededCount?.ToString()??"?"));
   if(report?.FailedCount>0)return Result("Error","Ошибок по отчёту WSUS: "+report.FailedCount,"Откройте причины в отчёте WSUS"+(reboot.Required==true?"\nТребуется перезагрузка · "+reboot.Details:""));
   if(report?.LastSyncResult is "Failed" or "FailedWithErrors")return Result("SyncError","Последний поиск WSUS завершился с ошибкой","Поиск: "+Display36.Date(report.LastSyncUtc)+" · выполните диагностику связи с WSUS");
   if(reboot.Required==true)return Result("Reboot",reboot.Title,reboot.Details+(report==null?"\nОтчёт WSUS не получен":ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success"?"\nОтчёт WSUS устарел":""));
@@ -37,8 +37,8 @@ public static class ClientReadiness41 {
   bool comparable=searched&&report.RequiredComplete&&report.RequiredError.Length==0&&report.ApprovedUnknownCount==0&&DateTimeOffset.TryParse(searchAt,out var scanTime)&&scanTime<=now.AddMinutes(1)&&now-scanTime<=TimeSpan.FromHours(hours)&&(!DateTimeOffset.TryParse(boot,out var bootTime)||scanTime>=bootTime);
   if(comparable&&remaining.HasValue&&remaining!=report.NeededCount){if(Criteria45.Newer(searchAt,report.LastReportedUtc))return Result("ReportPending","Поиск клиента: "+remaining+" · ожидается подтверждение WSUS","Серверный счётчик "+report.NeededCount+" относится к более раннему отчёту; поиск клиента: "+Display36.Date(searchAt));return Result("Discrepancy","Данные клиента и WSUS расходятся","Поиск клиента: "+remaining+" · "+Display36.Date(searchAt)+"; WSUS: "+report.NeededCount+". Требуется сверка применимости конкретных обновлений");}
   if(report.NeededCount>0)return Result("Needed","К установке: "+(report.RequiredComplete?"":"≥ ")+report.NeededCount,"Одобрены и применимы · ожидается установка по настройкам Windows Update");
-  if(report.LastSyncResult!="Succeeded")return Result("Warning","Проверка неполная · результат поиска WSUS неизвестен","Последнее соединение: "+Display36.Date(report.LastSyncUtc));
-  if(report.NeededCount!=0||!report.RequiredComplete||report.RequiredError.Length>0||report.ApprovedUnknownCount>0)return Result("Warning","Проверка неполная · применимость не уточнена","Требуется полный подсчёт одобренных обновлений");
+  if(report.LastSyncResult!="Succeeded")return Result("WsusIncomplete","Результат поиска WSUS неизвестен","Последнее соединение: "+Display36.Date(report.LastSyncUtc));
+  if(report.NeededCount!=0||!report.RequiredComplete||report.RequiredError.Length>0||report.ApprovedUnknownCount>0)return Result("WsusIncomplete","WSUS не подтвердил применимость обновлений","В отчёте недостаточно данных об одобренных обновлениях");
   bool reportAfterBoot=!Criteria45.Newer(boot,report.LastReportedUtc);
   if(saved||error.Length>0||!comparable||remaining!=0||!reboot.Fresh||reboot.Required!=false||!reportAfterBoot)
    return Result("WsusHealthy","По отчёту WSUS необходимых обновлений нет","Поиск и флаги на ПК учитываются отдельно."+
@@ -48,6 +48,11 @@ public static class ClientReadiness41 {
 }
 public partial class MainWindow {
  Dictionary<string,ClientAssessment41>? refreshClientStatus41;
+ bool NeedsRoutineClientDiagnosis(ComputerRow row,string kind)=>
+  ClientReadiness41.NeedsClientDiagnosis(kind)||kind=="Unknown"&&
+  reportCache.TryGetValue(row.Host,out var cache)&&CacheMatches(cache)&&cache.Found&&
+  ReportPresentation35.Tone(cache.Report.LastReportedUtc,DateTimeOffset.UtcNow,ReportPresentation35.FreshHours)=="Stale";
+
  ClientAssessment41 AssessClient41(ComputerRow row){if(refreshClientStatus41!=null&&refreshClientStatus41.TryGetValue(row.Host,out var cached))return cached;var result=AssessClientCore41(row);if(refreshClientStatus41!=null)refreshClientStatus41[row.Host]=result;return result;}
  ClientAssessment41 AssessClientCore41(ComputerRow row){
   var jobs=HostJobs39(row.Host).Where(x=>CurrentIdentity(x.Target)).ToList();var operation=RelevantActive61(jobs);
