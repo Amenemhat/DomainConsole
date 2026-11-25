@@ -37,7 +37,7 @@ public partial class MainWindow {
   if(!DeliveryMayHaveStarted(new IOException("DC_SUBMISSION_UNKNOWN|WinRM connection lost"))||
    DeliveryMayHaveStarted(new IOException("WinRM connection failed before dispatch")))
    throw new Exception("Pre-dispatch and post-dispatch transport failures were conflated");
-  await VerifyManualPartialDispatch60(a,b);
+  await VerifyManualPartialDispatch60(a,b).WaitAsync(TimeSpan.FromSeconds(10));
   var selected=ComputerGrid.SelectedItem;var tab=MainTabs.SelectedItem;int theme=Theme.Current;
   var row=new ComputerRow(new(){Host="operation60.invalid",Name="OPERATION-60"});
   var now=DateTimeOffset.UtcNow;var state=new RemoteState{Status="Completed",Stage="Поиск завершён",Started=now.AddMinutes(-2).ToString("o"),Updated=now.ToString("o"),Ended=now.ToString("o")};
