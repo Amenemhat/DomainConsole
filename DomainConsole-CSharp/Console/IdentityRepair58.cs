@@ -40,6 +40,10 @@ public partial class MainWindow {
   Store.Write("identity-scope-approvals.json",manualIdentityScopes);
   Event31(host,"identity-stop58",anchor.Key,"Остановлена передача новым участникам","Info","Уже принятые клиентами задания завершают восстановление служб.");
  }
+ const string IdentityNotStarted="DC_IDENTITY_NOT_STARTED|";
+ static bool IdentityRepairNotStarted(TargetRecord target)=>target.Status is "LaunchRejected" or "AccessDenied"||
+  target.State is {Status:"Failed"} state&&state.Ended.Length>0&&
+   (state.Step==0||state.Error.StartsWith(IdentityNotStarted,StringComparison.Ordinal));
  readonly HashSet<string> identityRepairBusy58=new(StringComparer.OrdinalIgnoreCase);
  // A solitary returning clone can extend only a previously proven, explicitly approved repair.
  List<ClientIdentity58> RepairCandidates58(ClientIdentity58 seen,bool manual){
@@ -86,7 +90,7 @@ public partial class MainWindow {
     var legacy=identityRepairs58.GetValueOrDefault(legacyKey);
     if(legacy?.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase)==true)key=legacyKey;
     var prior=identityRepairs58.GetValueOrDefault(key)??legacy;
-    if(prior!=null&&prior.JobId.Length>0&&(!manual||!History.Any(j=>j.Id==prior.JobId&&j.Targets.All(t=>t.Status is "LaunchRejected" or "AccessDenied")))){if(manual)Notify(identity.Name+": попытка ещё активна; проверьте задание "+prior.JobId);continue;}
+    if(prior!=null&&prior.JobId.Length>0&&(!manual||!History.Any(j=>j.Id==prior.JobId&&j.Targets.All(IdentityRepairNotStarted)))){if(manual)Notify(identity.Name+": попытка ещё активна; проверьте задание "+prior.JobId);continue;}
     void Defer(string reason){
      identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase=reason,At=DateTimeOffset.UtcNow.ToString("o")};
      Store.Write("identity-repairs58.json",identityRepairs58);refreshSurvey?.Invoke();
@@ -95,6 +99,7 @@ public partial class MainWindow {
     bool Available()=>!closing&&!stop.IsCancellationRequested&&!row.Target.AdDisabled&&CurrentEndpoint(frozen.Target)&&CurrentIdentity(frozen.Target);
     if(!Available()||!ConnectionStore.CanConnect(frozen.Target)){Defer("Подключение к согласованной цели недоступно");continue;}
     if(HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target))){Defer("Ожидается завершение активного задания");continue;}
+    var verifiedIdentity=identity;
     if(manual||!identity.Fresh(DateTimeOffset.UtcNow)||!ConnectionFresh(row.Host)){
      if(!manual){Defer("Ожидается свежая проверка клиента");continue;}
      var began=DateTimeOffset.UtcNow;
@@ -107,22 +112,27 @@ public partial class MainWindow {
       if(!IdentityPolicy58.SameApprovedDevice(identity,current,DateTimeOffset.UtcNow)){
        Defer("Участник, прежний ID или источник WSUS больше не подтверждены. Повторите диагностику");continue;
       }
+      verifiedIdentity=current;
       ConnectionSucceeded(row.Host,began,true);
      }catch(OperationCanceledException) when(stop.IsCancellationRequested){break;}
      catch(Exception ex){Defer("Не удалось повторно прочитать согласованного клиента: "+ConnectionBrief31(ex.Message));continue;}
     }
-    if(identity.UseWUServer!=1){Defer("Политика UseWUServer=1 не подтверждена");continue;}
-    try{
-     var live=manual?await remote.ReadManualUpdateActivity(frozen.Target,stop.Token):await remote.LiveUpdates(frozen.Target);
-     if(live.Busy||live.Jobs.Count>0||live.Limitation.Length>0||live.InstallationEvidence.Length>0){
-      var reason=live.Limitation.Length>0?live.Limitation:live.InstallationEvidence.Length>0?live.InstallationEvidence:live.Jobs.Count>0?"активное задание клиента":"Windows Update занят";
-      Defer("Ожидается завершение обслуживания или уточнение состояния · "+reason);continue;
-     }
-    }catch(OperationCanceledException) when(stop.IsCancellationRequested){break;}
-    catch(Exception ex){Defer("Проверка активности не завершена: "+ConnectionBrief31(ex.Message));continue;}
+    if(verifiedIdentity.UseWUServer!=1){Defer("Политика UseWUServer=1 не подтверждена");continue;}
+    // WUA installer COM is not a reliable WinRM preflight. The manual job checks it
+    // on the client as SYSTEM before backing up or modifying the registry.
+    if(!manual){
+     try{
+      var live=await remote.LiveUpdates(frozen.Target);
+      if(live.Busy||live.Jobs.Count>0||live.Limitation.Length>0||live.InstallationEvidence.Length>0){
+       var reason=live.Limitation.Length>0?live.Limitation:live.InstallationEvidence.Length>0?live.InstallationEvidence:live.Jobs.Count>0?"активное задание клиента":"Windows Update занят";
+       Defer("Ожидается завершение обслуживания или уточнение состояния · "+reason);continue;
+      }
+     }catch(OperationCanceledException) when(stop.IsCancellationRequested){break;}
+     catch(Exception ex){Defer("Проверка активности не завершена: "+ConnectionBrief31(ex.Message));continue;}
+    }
     if(stop.IsCancellationRequested)break;
     if(!Available()||HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target)))continue;
-    var job=new RemoteJob{Manual56=manual,AutoInstall54=false,AutoReboot=false,MicrosoftSource=false,OutputChannel="WSUS",Name="Перерегистрация общего SusClientId",Steps=new(){new(){Name="Перерегистрация клиента WSUS",Kind="PowerShell",TouchesUpdates=true,Code=RemoteService.IdentityRepairScript58(identity)}}};
+    var job=new RemoteJob{Manual56=manual,AutoInstall54=false,AutoReboot=false,MicrosoftSource=false,OutputChannel="WSUS",Name="Перерегистрация общего SusClientId",Steps=new(){new(){Name="Перерегистрация клиента WSUS",Kind="PowerShell",TouchesUpdates=true,Code=RemoteService.IdentityRepairScript58(verifiedIdentity)}}};
     identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Manual=manual,JobId=job.Id,StartedUtc=DateTimeOffset.UtcNow.ToString("o"),DeadlineUtc=DateTimeOffset.UtcNow.AddMinutes(10).ToString("o"),Phase="Подготовлено; повторный сброс запрещён",At=DateTimeOffset.UtcNow.ToString("o")};
     Store.Write("identity-repairs58.json",identityRepairs58);
     Event31(row.Host,"identity-repair58",job.Id,"Перерегистрация клиента подготовлена","Info","Прежний ID: "+identity.SusClientId,scope:job.Id);
@@ -171,8 +181,16 @@ try {
  $parsedId58=[guid]::Empty
  if(![guid]::TryParse($id58,[ref]$parsedId58) -or $parsedId58 -eq [guid]::Empty){throw 'SusClientId пуст или невалиден; автоматический сброс не выполнен'}
  if($id58 -ne $dcExpectedId58){Write-Output ('ID уже изменён: '+$id58+'. Повторного сброса нет.');exit 0}
- $installer58=New-Object -ComObject Microsoft.Update.Installer
- if($installer58.IsBusy){throw 'Установщик Windows Update занят; перерегистрация отложена'}
+ try{
+  $installer58=New-Object -ComObject Microsoft.Update.Installer
+  $installerBusy58=[bool]$installer58.IsBusy
+  Import-Module BitsTransfer -ErrorAction Stop
+  $downloads58=@(Get-BitsTransfer -AllUsers -ErrorAction Stop|Where-Object {
+   $_.DisplayName -eq 'WU Client Download' -and $_.JobState -in @('Connecting','Transferring','Queued','TransientError')
+  })
+  $installers58=@(Get-CimInstance Win32_Process -Filter "Name='TiWorker.exe' OR Name='MRT.exe'" -ErrorAction Stop)
+ }catch{throw ('DC_IDENTITY_NOT_STARTED|Не удалось подтвердить готовность Windows Update на клиенте: '+$_.Exception.Message)}
+ if($installerBusy58 -or $downloads58.Count -or $installers58.Count){throw 'DC_IDENTITY_NOT_STARTED|Windows Update занят; перерегистрация отложена'}
  $backupFolder58=Join-Path $env:ProgramData 'DomainConsole-Backups'
  New-Item $backupFolder58 -ItemType Directory -Force|Out-Null
  $backup58=Join-Path $backupFolder58 ('WindowsUpdate-'+$env:COMPUTERNAME+'-'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N')+'.reg')

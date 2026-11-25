@@ -21,10 +21,18 @@ if($env:CASE58 -eq 'already-changed'){$global:id58='33333333-3333-3333-3333-3333
 if($env:CASE58 -eq 'invalid-id'){$global:id58='00000000-0000-0000-0000-000000000000'}
 $global:service58='Running'
 function Invoke-Fixture58 {param($Name) $global:trace58.Add($Name)}
-function Get-CimInstance {param($ClassName,$ErrorAction)
+function Get-CimInstance {param($ClassName,$ErrorAction,$Filter)
  if($ClassName -eq 'Win32_ComputerSystem'){return [pscustomobject]@{PartOfDomain=$true;Domain=$(if($env:CASE58 -eq 'wrong-name'){'other.invalid'}else{'invalid'})}}
  if($ClassName -eq 'Win32_ComputerSystemProduct'){return [pscustomobject]@{UUID=$(if($env:CASE58 -eq 'wrong-machine'){'44444444-4444-4444-4444-444444444444'}else{'11111111-1111-1111-1111-111111111111'})}}
+ if($ClassName -eq 'Win32_Process'){if($env:CASE58 -eq 'installer-process'){[pscustomobject]@{Name='TiWorker.exe'}};return}
  throw 'Unexpected CIM request'
+}
+function Import-Module {param($Name,$ErrorAction) if($Name -ne 'BitsTransfer'){throw 'Unexpected module'}}
+function Get-BitsTransfer {param([switch]$AllUsers,$ErrorAction)
+ if(!$AllUsers){throw 'Expected all-user BITS observation'}
+ if($env:CASE58 -eq 'bits-error'){throw 'BITS_FIXTURE_FAILURE'}
+ if($env:CASE58 -eq 'bits-active'){[pscustomobject]@{DisplayName='WU Client Download';JobState='Queued'}}
+ if($env:CASE58 -eq 'success'){[pscustomobject]@{DisplayName='Other app';JobState='Transferring'}}
 }
 function Get-ItemProperty {param($Path,$ErrorAction,$Name)
  if($Name -eq 'MachineGuid'){return [pscustomobject]@{MachineGuid=$(if($env:CASE58 -eq 'wrong-installation'){'66666666-6666-6666-6666-666666666666'}else{'55555555-5555-5555-5555-555555555555'})}}
@@ -44,7 +52,7 @@ $fixtureSession58|Add-Member ScriptMethod CreateUpdateSearcher {$fixtureSearch58
 '@
 $root=Join-Path $env:RUNNER_TEMP ('identity58-'+[guid]::NewGuid().ToString('N'))
 New-Item $root -ItemType Directory|Out-Null
-foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-policy','invalid-id','busy','already-changed','backup-fails','stop-fails','stop-and-start-fail','remove-fails','after-delete','search-fails','success')){
+foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed','backup-fails','stop-fails','stop-and-start-fail','remove-fails','after-delete','search-fails','success')){
  $folder=Join-Path $root $case;New-Item $folder -ItemType Directory|Out-Null
  $file=Join-Path $folder 'case.ps1';$state=Join-Path $folder 'state.json'
  $suffix=@'
@@ -66,12 +74,13 @@ foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-serv
  $data=Get-Content $state -Raw|ConvertFrom-Json
  $expectedSuccess=$case -in @('already-changed','success')
  if(($process.ExitCode -eq 0) -ne $expectedSuccess){throw "Unexpected result for ${case}: $output"}
- if($case -in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-policy','invalid-id','busy','already-changed') -and $data.Trace.Count -ne 0){throw "Guard changed state: $case"}
+ if($case -in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed') -and $data.Trace.Count -ne 0){throw "Guard changed state: $case"}
  if($case -eq 'backup-fails' -and ($data.Trace -contains 'Stop')){throw 'Backup failure reached service stop'}
  if($case -in @('stop-fails','remove-fails','after-delete') -and ($data.Service -ne 'Running' -or $data.Trace -notcontains 'Start')){throw "Service not restored: $case"}
  if($case -eq 'stop-and-start-fail' -and ($output -notmatch 'STOP_FIXTURE_FAILURE' -or $output -notmatch 'START_FIXTURE_FAILURE')){throw 'Primary or restoration failure was lost'}
  if($case -eq 'success' -and (($data.Trace -join ',') -ne 'Backup,Stop,Remove-SusClientId,Remove-SusClientIdValidation,Start,Authorize,Search,Report' -or $data.Id -ne '33333333-3333-3333-3333-333333333333')){throw 'Successful repair did not follow expected order'}
  if($case -in @('search-fails','after-delete') -and $data.Id -ne '33333333-3333-3333-3333-333333333333'){throw ('Partial repair lost new identity: '+($data|ConvertTo-Json -Compress)+'; '+$output)}
+ if($case -in @('busy','bits-active','bits-error','installer-process') -and $output -notmatch 'DC_IDENTITY_NOT_STARTED'){throw "Missing readiness outcome for $case"}
  $expectedErrors=@{'stop-fails'='STOP_FIXTURE_FAILURE';'remove-fails'='REMOVE_FIXTURE_FAILURE';'after-delete'='INTERRUPTED_AFTER_DELETE'}
  if($expectedErrors.ContainsKey($case) -and $output -notmatch $expectedErrors[$case]){throw ('Failure point was not reached: '+$case+'; '+$output)}
  Write-Output "PASS identity repair: $case"

@@ -21,7 +21,7 @@ public partial class MainWindow {
    while(!closing&&!App.RecoveryPending57){
     var checkedSources=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
     var now=DateTimeOffset.UtcNow;
-    var pending=identityRepairs58.Values.Where(a=>a.Manual&&a.JobId.Length>0&&a.Phase!="Подтверждено"&&DateTimeOffset.TryParse(a.DeadlineUtc,out var limit)&&limit>now).ToList();
+    var pending=identityRepairs58.Values.Where(a=>a.Manual&&a.JobId.Length>0&&a.Phase!="Подтверждено"&&DateTimeOffset.TryParse(a.DeadlineUtc,out var limit)&&limit>now&&!RecordIdentityReadinessFailure(a)).ToList();
     if(pending.Count==0)break;
     foreach(var attempt in pending){
      if(closing||App.RecoveryPending57)break;
@@ -43,9 +43,20 @@ public partial class MainWindow {
    }
   }finally{readingManualRepairs=false;if(!closing){ExpireIdentityRepairs58();refreshSurvey?.Invoke();}}
  }
+ bool RecordIdentityReadinessFailure(IdentityRepairAttempt58 attempt){
+  if(attempt.Phase.StartsWith("Перерегистрация не начата",StringComparison.Ordinal))return true;
+  var target=History.FirstOrDefault(j=>j.Id==attempt.JobId)?.Targets.FirstOrDefault(t=>t.Host.Equals(attempt.Host,StringComparison.OrdinalIgnoreCase));
+  if(target==null||!IdentityRepairNotStarted(target))return false;
+  var error=target.State?.Error??"";
+  if(error.StartsWith(IdentityNotStarted,StringComparison.Ordinal))error=error[IdentityNotStarted.Length..];
+  attempt.Phase="Перерегистрация не начата · "+(error.Length>0?error:ComputerRow.StatusText(target.Status));
+  attempt.At=DateTimeOffset.UtcNow.ToString("o");
+  Store.Write("identity-repairs58.json",identityRepairs58);return true;
+ }
  void ExpireIdentityRepairs58(){
   bool changed=false;var now=DateTimeOffset.UtcNow;
   foreach(var attempt in identityRepairs58.Values.Where(a=>a.JobId.Length>0&&a.Phase!="Подтверждено")){
+   if(RecordIdentityReadinessFailure(attempt))continue;
    if(attempt.StartedUtc.Length==0)attempt.StartedUtc=attempt.At;
    if(attempt.DeadlineUtc.Length==0&&DateTimeOffset.TryParse(attempt.StartedUtc,out var start)){attempt.DeadlineUtc=start.AddMinutes(10).ToString("o");changed=true;}
    if(DateTimeOffset.TryParse(attempt.DeadlineUtc,out var deadline)&&now>=deadline&&!attempt.Phase.StartsWith("Регистрация задерживается")){
