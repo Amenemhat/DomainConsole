@@ -30,7 +30,8 @@ public partial class MainWindow {
    probing51=p;NormalizePlan44(p);p.Next=DateTimeOffset.UtcNow.AddMinutes(1);if(!AutoServiceEnabled&&p.Install){p.Done=true;p.Phase="Автоматическое продолжение выключено";continue;}var row=Computers.FirstOrDefault(r=>r.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase));
    if(row==null||row.Target.AdDisabled){p.Done=true;p.Phase="Требуется действие";p.Detail=row==null?"Компьютер отсутствует в рабочем списке":"Учётная запись отключена в AD";continue;}
    if(ForeignControl37(p.Host)){p.Done=true;p.Phase="Требуется действие";p.Detail="Управление передано другой консоли; автоматическое продолжение прекращено";continue;}
-   var captured=ConnectionStore.Capture(row.Target);bool Current49()=>!closing&&!TransportBudget41.Paused&&!generation49.IsCancellationRequested&&!p.Done&&(!p.Install||AutoServiceEnabled)&&!row.Target.AdDisabled&&CurrentEndpoint(captured)&&CurrentIdentity(captured)&&maintenancePlans.TryGetValue(p.Host,out var current49)&&ReferenceEquals(current49,p);if(captured.ConnectionIdentity!=p.Identity){p.Done=true;p.Phase="Требуется действие";p.Detail="Идентичность подключения изменилась; проверьте цель перед продолжением";continue;}
+   var captured=ConnectionStore.Capture(row.Target);bool Current49()=>!closing&&!TransportBudget41.Paused&&!generation49.IsCancellationRequested&&!p.Done&&!(PostBootReadinessDeadline(p) is { } deadline&&deadline<=DateTimeOffset.UtcNow)&&(!p.Install||AutoServiceEnabled)&&!row.Target.AdDisabled&&CurrentEndpoint(captured)&&CurrentIdentity(captured)&&maintenancePlans.TryGetValue(p.Host,out var current49)&&ReferenceEquals(current49,p);if(captured.ConnectionIdentity!=p.Identity){p.Done=true;p.Phase="Требуется действие";p.Detail="Идентичность подключения изменилась; проверьте цель перед продолжением";continue;}
+   if(PostBootReadinessDeadline(p) is { } dueReady&&dueReady<=DateTimeOffset.UtcNow){ExpirePlans44();continue;}
    if(PlanExpired44(p,DateTimeOffset.UtcNow)){p.Done=true;p.Phase="Требуется действие";p.Detail="Срок автоматического продолжения истёк (2 суток)";continue;}
    if(LostObservation51(p.Host)){p.Detail="Связь потеряна; ожидается отдельная проверка доступности. Клиентское задание не остановлено.";continue;}
    var job=History.FirstOrDefault(j=>j.Id==p.JobId);var target=job?.Targets.FirstOrDefault(t=>t.Host.Equals(p.Host,StringComparison.OrdinalIgnoreCase));
@@ -98,7 +99,22 @@ public partial class MainWindow {
   var id=p.NextJobId.Length>0?p.NextJobId:p.JobId;var job=History.FirstOrDefault(j=>j.Id==id);if(job==null)continue;
   foreach(var t in job.Targets.Where(t=>t.Status=="Queued"&&t.State==null))if(!queue.Any(q=>q.Job.Id==job.Id&&q.Target.Host==t.Host))queue.Enqueue((job,t));
  }}
- void ExpirePlans44(){foreach(var p in maintenancePlans.Values)NormalizePlan44(p);var expired=maintenancePlans.Values.Where(p=>!p.Done&&PlanExpired44(p,DateTimeOffset.UtcNow)).ToList();foreach(var p in expired){FinishPlan44(p.Host,false);p.Phase="Требуется действие";p.Detail="Срок автоматического продолжения истёк (2 суток). Работающие клиентские задания не остановлены.";}if(expired.Count>0){SaveMaintenance();Save();}}
+ void ExpirePlans44(DateTimeOffset? time=null){
+  var now=time??DateTimeOffset.UtcNow;
+  foreach(var p in maintenancePlans.Values)NormalizePlan44(p);
+  bool changed=false;
+  foreach(var p in maintenancePlans.Values.Where(p=>!p.Done)){
+   if(PostBootReadinessDeadline(p) is { } deadline&&deadline<=now){
+    var reason=p.Detail.Length>0?" · "+p.Detail:"";
+    FinishPlan44(p.Host,false,PostBootReadinessTimeout+reason+". Можно запустить контрольный поиск вручную.");
+    changed=true;
+   }else if(PlanExpired44(p,now)){
+    FinishPlan44(p.Host,false,"Срок автоматического продолжения истёк (2 суток). Работающие клиентские задания не остановлены.");
+    changed=true;
+   }
+  }
+  if(changed){SaveMaintenance();Save();}
+ }
 
  string MaintenanceText(string host)=>maintenancePlans.TryGetValue(host,out var p)?"\n\n## Обслуживание клиента\n"+p.Phase+(p.Detail.Length>0?"\n"+p.Detail:"")+"\nПлан начат: "+Display36.Date(p.StartedUtc,true)+" · задание: "+p.JobId+"\nРежим: "+(p.Install?"полное обслуживание":"только поиск и отчёт")+"; циклов: "+p.Cycles+" / 3":"";
  void RefreshAttentionButton(){if(AttentionButton==null)return;var rows=AttentionEntries36().Where(x=>x.Required).ToList();AttentionButton.Content="Требуют внимания · "+rows.Count;AttentionButton.Foreground=rows.Any(x=>x.Tone=="Error")?Theme.Tone("Error"):rows.Count>0?Theme.Tone("Warning"):Theme.Brush("TextPrimary");}

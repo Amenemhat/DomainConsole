@@ -45,6 +45,24 @@ public partial class MainWindow {
     }
    }
    maintenancePlans.Clear();History.Clear();queue.Clear();
+   var cutoff49=DateTimeOffset.UtcNow;
+   var expired49=Store.Clone(new MaintenancePlan{
+    Host=row.Host,Phase=PostBootReadinessPhase,ReadyAfter=cutoff49.AddMinutes(-10),
+    Detail="Проверка готовности не удалась",Install=true,Next=cutoff49.AddHours(1)
+   });
+   var queued49=new RemoteJob{AutomaticChild31=true,Targets=new(){new(){Host=row.Host,Status="Queued"}}};
+   var active49=new RemoteJob{AutomaticChild31=true,Targets=new(){new(){Host=row.Host,Status="Running"}}};
+   expired49.JobId=active49.Id;expired49.NextJobId=queued49.Id;maintenancePlans[row.Host]=expired49;
+   History.Add(active49);History.Add(queued49);queue.Enqueue((queued49,queued49.Targets[0]));
+   ExpirePlans44(cutoff49.AddSeconds(-1));
+   if(expired49.Done||queue.Count!=1)throw new Exception("Post-boot readiness expired before its deadline");
+   ExpirePlans44(cutoff49);
+   if(!expired49.Done||expired49.Phase!="Требуется действие"||!expired49.Detail.Contains("Проверка готовности не удалась")||
+      active49.Targets[0].Status!="Running"||queued49.Targets[0].Status!="Cancelled"||queue.Count!=0)
+    throw new Exception("Expired readiness did not stop just the unsubmitted continuation");
+   maintenancePlans[row.Host]=Store.Clone(expired49);RestoreMaintenanceQueues();
+   if(queue.Count!=0)throw new Exception("Restart revived expired post-boot readiness");
+   maintenancePlans.Clear();History.Clear();queue.Clear();
    var incompatible49=new RemoteJob{Steps=new(){new(){Kind="Updates"}},Targets=new(){new(){Host=row.Host,Status="Queued"}}};History.Add(incompatible49);
    var checkpoint49=new MaintenancePlan{Host=row.Host,Install=true,SearchAfterBoot49=true,NextJobId=incompatible49.Id};maintenancePlans[row.Host]=checkpoint49;
    QueueMaintenanceJob(checkpoint49,ConnectionStore.Capture(row.Target));

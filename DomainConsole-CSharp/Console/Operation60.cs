@@ -47,7 +47,17 @@ public partial class MainWindow {
    int sec=Math.Max(0,(int)Math.Ceiling((wait.Until-now).TotalSeconds));
    return new((reportReading.Contains(selected.Host)?"Получаем отчёт WSUS":"Ожидаем новый отчёт WSUS")+" · до срока ожидания "+sec/60+" мин "+sec%60+" с",true);
   }
-  if(maintenancePlans.TryGetValue(selected.Host,out var plan)&&!plan.Done){
+  if(maintenancePlans.TryGetValue(selected.Host,out var plan)&&plan.Done&&plan.Detail.StartsWith(PostBootReadinessTimeout,StringComparison.Ordinal))
+   return new(plan.Detail,false);
+  if(plan!=null&&!plan.Done){
+   if(PostBootReadinessDeadline(plan) is { } deadline&&!TransportBudget41.Paused){
+    if(deadline<=now)return new(PostBootReadinessTimeout,false);
+    var remaining=deadline-now;
+    int minutes=(int)Math.Ceiling(remaining.TotalMinutes);
+    string cause=plan.Detail.Length>0?plan.Detail:now<plan.ReadyAfter?"Пауза перед контрольной проверкой":"Ожидаем контрольную проверку клиента";
+    return new("Обслуживание · "+plan.Phase+" · "+cause+" · до тайм-аута "+minutes+" мин",!LostObservation51(selected.Host));
+   }
+
    bool waiting=plan.Phase=="Ожидается перезагрузка"||plan.Phase=="Требуется действие";
    return new(TransportBudget41.Paused?"Наблюдение за обслуживанием приостановлено":waiting?plan.Phase:"Обслуживание · "+plan.Phase, !waiting&&!TransportBudget41.Paused&&!LostObservation51(selected.Host));
   }
