@@ -47,11 +47,10 @@ public partial class MainWindow {
    int sec=Math.Max(0,(int)Math.Ceiling((wait.Until-now).TotalSeconds));
    return new((reportReading.Contains(selected.Host)?"Получаем отчёт WSUS":"Ожидаем новый отчёт WSUS")+" · до срока ожидания "+sec/60+" мин "+sec%60+" с",true);
   }
-  if(maintenancePlans.TryGetValue(selected.Host,out var plan)&&plan.Done&&plan.Detail.StartsWith(PostBootReadinessTimeout,StringComparison.Ordinal))
-   return new(plan.Detail,false);
+  maintenancePlans.TryGetValue(selected.Host,out var plan);
   if(plan!=null&&!plan.Done){
    if(PostBootReadinessDeadline(plan) is { } deadline&&!TransportBudget41.Paused){
-    if(deadline<=now)return new(PostBootReadinessTimeout,false);
+    if(deadline<=now)return new("Контрольный поиск после перезагрузки · ожидает запуска",false);
     var remaining=deadline-now;
     int minutes=(int)Math.Ceiling(remaining.TotalMinutes);
     string cause=plan.Detail.Length>0?plan.Detail:now<plan.ReadyAfter?"Пауза перед контрольной проверкой":"Ожидаем контрольную проверку клиента";
