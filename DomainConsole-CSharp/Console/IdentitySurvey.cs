@@ -79,7 +79,7 @@ public partial class MainWindow {
     var target=ConnectionStore.Capture(row.Target);var began=DateTimeOffset.UtcNow;survey.ScopeMessage="Читаем "+host;refreshSurvey?.Invoke();
     try{
      if(!ConnectionStore.CanConnect(target))throw new InvalidOperationException("Проверьте адрес и учётные данные");
-     var result=await (readClient??remote.ReadIdentity)(target,stop.Token);
+     var result=await ReadIdentityWithRetry(target,readClient??remote.ReadIdentity,stop.Token);
      stop.Token.ThrowIfCancellationRequested();
      if(!CurrentEndpoint(target)||!CurrentIdentity(target))throw new InvalidOperationException("Цель изменилась во время чтения");
      if(maintenancePlans.TryGetValue(host,out var plan))result.Activity+=" · план консоли: "+plan.Phase;
@@ -105,6 +105,13 @@ public partial class MainWindow {
   }catch(OperationCanceledException) when(stop.IsCancellationRequested){}
   finally{survey.Updated=DateTimeOffset.UtcNow;survey.ScopeMessage=stop.IsCancellationRequested?"Поиск приостановлен":"Проход завершён";surveyRun=null;Store.Write("identity-survey.json",survey);refreshSurvey?.Invoke();}
  }
+ internal static async Task<ClientIdentity58> ReadIdentityWithRetry(TargetRecord target,Func<TargetRecord,CancellationToken,Task<ClientIdentity58>> read,CancellationToken token){
+  try{return await read(target,token);}
+  catch(TimeoutException) when(!token.IsCancellationRequested){
+   await Task.Delay(TimeSpan.FromMilliseconds(500),token);
+   return await read(target,token);
+  }
+ }
  async void OpenIdentitySurvey(ComputerRow selected){
   if(surveyWindow!=null){surveyWindow.Activate();return;}
   if(surveyRun!=null)selected=Computers.FirstOrDefault(r=>r.Host.Equals(survey.Owner,StringComparison.OrdinalIgnoreCase))??selected;
@@ -126,10 +133,10 @@ public sealed partial class RemoteService {
  // Read local process metadata inside the existing manual WinRM call. No scheduled task or agent is started.
  const string ManualIdentityActivity="""
 try {
- $dcWork=@(Get-CimInstance Win32_Process -Filter "Name='DomainConsole.Agent.exe' OR Name='TiWorker.exe' OR Name='TrustedInstaller.exe' OR Name='msiexec.exe'" -ErrorAction Stop)
- $dcExecutors=@($dcWork|Where-Object {$_.Name -eq 'DomainConsole.Agent.exe' -and $_.CommandLine -match '\brun\s+'})
- $dcServicing=@($dcWork|Where-Object {$_.Name -ne 'DomainConsole.Agent.exe'}|Select-Object -ExpandProperty Name -Unique)
- $dcIdentity58.Activity="Исполнителей заданий: "+$dcExecutors.Count
+ $dcWork=@(Get-Process -Name 'DomainConsole.Agent','TiWorker','TrustedInstaller','msiexec' -ErrorAction SilentlyContinue)
+ $dcExecutors=@($dcWork|Where-Object {$_.ProcessName -eq 'DomainConsole.Agent'})
+ $dcServicing=@($dcWork|Where-Object {$_.ProcessName -ne 'DomainConsole.Agent'}|Select-Object -ExpandProperty ProcessName -Unique)
+ $dcIdentity58.Activity="Процессов исполнителя: "+$dcExecutors.Count
  if($dcServicing.Count){$dcIdentity58.Activity+=" · процессы обслуживания: "+($dcServicing -join ', ')}
 } catch {$dcIdentity58.Activity="Активность не уточнена: "+$_.Exception.Message}
 """;

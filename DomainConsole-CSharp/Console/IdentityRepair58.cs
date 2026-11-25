@@ -99,7 +99,7 @@ public partial class MainWindow {
      if(!manual){Defer("Ожидается свежая проверка клиента");continue;}
      var began=DateTimeOffset.UtcNow;
      try{
-      var current=await remote.ReadIdentity(frozen.Target,stop.Token);
+      var current=await ReadIdentityWithRetry(frozen.Target,remote.ReadIdentity,stop.Token);
       await ResolveIdentitySource(current,ReadWsus(),verifiedSources,stop.Token);
       if(!Available())continue;
       current.Address=string.IsNullOrWhiteSpace(frozen.Target.ConnectionAddress)?frozen.Host:frozen.Target.ConnectionAddress;

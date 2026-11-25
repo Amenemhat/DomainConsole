@@ -25,6 +25,19 @@ public partial class MainWindow {
   }
   if(SubmissionCanStillRun(new TargetRecord{Status="Cancelled"},false))
    throw new Exception("A known cancelled submission prevents an explicit new attempt.");
+  int reads=0;
+  var recovered=await ReadIdentityWithRetry(a,(_,_)=>++reads==1
+   ?Task.FromException<ClientIdentity58>(new TimeoutException())
+   :Task.FromResult(new ClientIdentity58{Name="identity-recovered"}),CancellationToken.None);
+  if(reads!=2||recovered.Name!="identity-recovered")throw new Exception("Transient identity read was not retried exactly once");
+  reads=0;
+  try{await ReadIdentityWithRetry(a,(_,_)=>{reads++;return Task.FromException<ClientIdentity58>(new TimeoutException());},CancellationToken.None);
+   throw new InvalidOperationException("Identity read hid a persistent timeout");}
+  catch(TimeoutException) when(reads==2){}
+  if(!DeliveryMayHaveStarted(new IOException("DC_SUBMISSION_UNKNOWN|WinRM connection lost"))||
+   DeliveryMayHaveStarted(new IOException("WinRM connection failed before dispatch")))
+   throw new Exception("Pre-dispatch and post-dispatch transport failures were conflated");
+  await VerifyManualPartialDispatch60(a,b);
   var selected=ComputerGrid.SelectedItem;var tab=MainTabs.SelectedItem;int theme=Theme.Current;
   var row=new ComputerRow(new(){Host="operation60.invalid",Name="OPERATION-60"});
   var now=DateTimeOffset.UtcNow;var state=new RemoteState{Status="Completed",Stage="Поиск завершён",Started=now.AddMinutes(-2).ToString("o"),Updated=now.ToString("o"),Ended=now.ToString("o")};
@@ -59,5 +72,26 @@ public partial class MainWindow {
    var choice=new UpdateConflictChoice(this,"Modeless decision fixture",false);var deciding=choice.Decide60();await Task.Delay(30);if(deciding.IsCompleted||!IsEnabled)throw new Exception("Conflict decision blocked parent workspace");choice.Close();if(await deciding)throw new Exception("Closing conflict decision accepted launch");
    File.WriteAllText(Path.Combine(Path.GetTempPath(),"ui-operation60.txt"),"PASS actual moving animation; terminal scan awaiting report; timeout; command with and without percent; completion; modeless conflict decision; three themes and two sizes");
   }finally{confirmedJobs.Remove(job.Id+row.Host);liveConnections.Remove(row.Host);clientConnections.Remove(row.Host);preparing60.Remove(PreparationKey60(row.Host,"Commands"));preparing60.Remove(PreparationKey60(row.Host,"WSUS"));manualLinkReads31.Remove(row.Host);reportWaiting.Remove(row.Host);History.Remove(job);Computers.Remove(row);ComputerGrid.SelectedItem=selected;MainTabs.SelectedItem=tab;Theme.Apply(theme,false);ShowCurrent();}
+ }
+ async Task VerifyManualPartialDispatch60(TargetRecord a,TargetRecord b){
+  var first=new RemoteJob{Manual56=true,OutputChannel="Commands",Targets=new(){a}};
+  var second=new RemoteJob{Manual56=true,OutputChannel="Commands",Targets=new(){b}};
+  a.Status=b.Status="Sending";
+  var receipt=new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+  int firstCalls=0,secondCalls=0;
+  History.Insert(0,first);History.Insert(0,second);
+  try{
+   var uncertain=SendOne(first,a,deploy:(_,_)=>{firstCalls++;return receipt.Task;});
+   await SendOne(second,b,deploy:(_,_)=>{secondCalls++;return Task.CompletedTask;});
+   if(uncertain.IsCompleted||b.Status!="Submitted")throw new Exception("Ready peer was blocked by another host's receipt");
+   receipt.SetException(new IOException("DC_SUBMISSION_UNKNOWN|WinRM disconnected after dispatch"));
+   await uncertain;
+   if(a.Status!="SubmissionUnknown"||!SubmissionCanStillRun(a,false)||firstCalls!=1||secondCalls!=1||b.Status!="Submitted")
+    throw new Exception("Partial manual dispatch lost or replayed an indeterminate result");
+  }finally{
+   History.Remove(first);History.Remove(second);
+   confirmedJobs.Remove(first.Id+a.Host);confirmedJobs.Remove(second.Id+b.Host);
+   Save();
+  }
  }
 }
