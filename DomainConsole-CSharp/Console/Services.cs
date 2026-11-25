@@ -72,7 +72,7 @@ public sealed partial class RemoteService {
  static readonly SemaphoreSlim manualPollSlots56=new(3);
  public async Task<PollResult> Poll(TargetRecord target,string id,bool includeOutput=true){using var read43=PollingControl43.Read();var slots56=PollingControl43.IsManual56?manualPollSlots56:pollSlots34;await slots56.WaitAsync(PollingControl43.Token);try{using var pollTimeout=new CancellationTokenSource(TimeSpan.FromSeconds(20));if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректный ID задания.");string prefix="$dcJobId34="+PowerShellBridge.Literal(id)+";$includeOutput34="+(includeOutput?"$true":"$false")+";$p=Join-Path (Join-Path $env:ProgramData 'DomainConsoleCSharp') $dcJobId34;";try{var json=await PowerShellBridge.Execute(Invoke(target,prefix+PollScript34),pollTimeout.Token);return ParseData34<PollResult>(json,"результат задания");}catch(Exception ex) when(ex.Message.Contains("DC_DATA_ERROR",StringComparison.OrdinalIgnoreCase)||ex.Message.Contains("недопустимый примитив",StringComparison.OrdinalIgnoreCase)){throw new RemoteDataException("Чтение результата: "+ex.Message,ex);}}finally{slots56.Release();}}
  public async Task<CancellationReply> Cancel(TargetRecord target,string id,string mode="after"){using var manual56=PollingControl43.Manual56("control");using var stopTimeout=new CancellationTokenSource(TimeSpan.FromSeconds(30));
-  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(mode is not ("after" or "now" or "force" or "executor"))throw new ArgumentException("Некорректный режим остановки.");
+  if(!Guid.TryParse(id,out _))throw new ArgumentException("Некорректное задание.");if(mode is not ("after" or "now" or "force" or "executor" or "download"))throw new ArgumentException("Некорректный режим остановки.");
   target=ConnectionStore.Capture(target);string json;try{json=await PowerShellBridge.Execute(Invoke(target,GuardJobControl56(id,CancellationScript(id,mode))),stopTimeout.Token);}catch(Exception ex){throw new InvalidOperationException("Остановка не подтверждена. Адрес управления: "+(ConnectionStore.Address(target).Length>0?ConnectionStore.Address(target):target.Host)+". "+ex.Message,ex);}return JsonSerializer.Deserialize<CancellationReply>(json,Store.Options)??throw new Exception("Ответ отмены не получен");
  }
  public static string CancellationScript(string id,string mode)=>"$id="+PowerShellBridge.Literal(id)+";$mode="+PowerShellBridge.Literal(mode)+";"+CancelScript;
@@ -104,13 +104,29 @@ if(!$state){
  New-Item (Join-Path $p 'stop-now.flag') -ItemType File -Force|Out-Null
  Dc-Reply 'Файл состояния отсутствует, но исполнитель или задача ещё работает. Запрос отмены записан; завершение пока не подтверждено.';return
 }
-if($mode -eq 'executor'){
+if($mode -eq 'download'){
+ if(!$state.SupportsImmediateStop -or !$state.SupportsWuaCancel -or !$state.HasUpdateSteps -or !$state.Stage -or !$state.Stage.StartsWith('Скачивание ·',[StringComparison]::Ordinal) -or $state.RestoreStatus -eq 'Pending'){
+  throw 'Скачивание не подтверждено по текущему состоянию. Обновите результат задания.'
+ }
+ $stopFlag=Join-Path $p 'stop-now.flag'
+ if(!(Test-Path -LiteralPath $stopFlag)){New-Item -Path $stopFlag -ItemType File -Force -ErrorAction Stop|Out-Null}
+ $deadline=[DateTime]::UtcNow.AddSeconds(10)
+ while($true){
+  try{$state=Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 -ErrorAction Stop|ConvertFrom-Json -ErrorAction Stop}
+  catch{if([DateTime]::UtcNow -ge $deadline){throw 'Запрос отмены записан; результат нельзя прочитать. Завершение агента не подтверждено.'};Start-Sleep -Milliseconds 500;continue}
+  if($state.Ended){Dc-Reply 'Получен итог задания после запроса остановки.' ([string]$state.Status);return}
+  if(!$state.Stage -or !$state.Stage.StartsWith('Скачивание ·',[StringComparison]::Ordinal) -or $state.RestoreStatus -eq 'Pending'){Dc-Reply 'Запрос отмены передан. Этап скачивания уже сменился; ожидается итог текущего этапа.';return}
+  if([DateTime]::UtcNow -ge $deadline){break}
+  Start-Sleep -Milliseconds 500
+ }
+}
+if($mode -in @('executor','download')){
  $job=Get-Content -LiteralPath (Join-Path $p 'job.json') -Raw -Encoding UTF8 -ErrorAction Stop|ConvertFrom-Json
  if(!$state.HasUpdateSteps -or $state.Step -lt 1 -or $state.Step -gt @($job.Steps).Count -or $job.Steps[$state.Step-1].Kind -notin @('Updates','UpdateScan') -or $state.RestoreStatus -eq 'Pending'){throw 'Принудительное завершение здесь разрешено только собственному исполнителю поиска/обновлений вне восстановления политик. Для команды используйте её отдельную остановку.'}
 
  $stopFile=Join-Path $p 'stop-now.flag'
  if(!(Test-Path $stopFile)){$stopFile=Join-Path $p 'cancel.flag'}
- if(!(Test-Path $stopFile) -or ([DateTime]::UtcNow-(Get-Item $stopFile).CreationTimeUtc).TotalSeconds -lt 120){throw 'Сначала запросите штатную отмену; принудительное завершение собственного агента доступно через 2 минуты без завершения.'}
+ if($mode -eq 'executor' -and (!(Test-Path $stopFile) -or ([DateTime]::UtcNow-(Get-Item $stopFile).CreationTimeUtc).TotalSeconds -lt 120)){throw 'Сначала запросите штатную отмену; принудительное завершение собственного агента доступно через 2 минуты без завершения.'}
  if(!$task -or @($task.Actions).Count -ne 1 -or !$state.ExecutorPid37 -or !$state.ExecutorStarted37){throw 'Не получены точные сведения о задаче, PID и времени запуска; принудительное завершение запрещено.'}
  if($task.Actions[0].Arguments -ne ('run "'+$p+'"')){throw 'Назначение задачи не совпало; завершение запрещено.'}
  $candidate=@($owned|Where-Object {$_.ProcessId -eq $state.ExecutorPid37 -and $_.ExecutablePath -eq $task.Actions[0].Execute})
@@ -118,10 +134,23 @@ if($mode -eq 'executor'){
  $process=Get-Process -Id $state.ExecutorPid37 -ErrorAction Stop
  $null=$process.Handle
  if([Math]::Abs(($process.StartTime.ToUniversalTime()-[DateTime]::Parse($state.ExecutorStarted37).ToUniversalTime()).TotalSeconds) -gt 1){throw 'PID уже принадлежит другому запуску; завершение запрещено.'}
+ if($mode -eq 'download'){
+  $latest=Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 -ErrorAction Stop|ConvertFrom-Json -ErrorAction Stop
+  if($latest.Ended){Dc-Reply 'Получен итог задания после запроса остановки.' ([string]$latest.Status);return}
+  if($latest.Step -ne $state.Step -or $latest.ExecutorPid37 -ne $state.ExecutorPid37 -or $latest.ExecutorStarted37 -ne $state.ExecutorStarted37 -or !$latest.Stage -or !$latest.Stage.StartsWith('Скачивание ·',[StringComparison]::Ordinal) -or $latest.RestoreStatus -eq 'Pending'){Dc-Reply 'Запрос отмены передан. Состояние изменилось, завершение агента пропущено.';return}
+  $state=$latest
+ }
  Disable-ScheduledTask -InputObject $task -ErrorAction Stop|Out-Null
- $process.Kill()
+ try{$process.Kill()}catch{
+  if(!$process.HasExited){throw}
+  $finished=Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 -ErrorAction Stop|ConvertFrom-Json -ErrorAction Stop
+  if($finished.Ended){Dc-Reply 'Исполнитель завершился после запроса остановки.' ([string]$finished.Status);return}
+  throw 'Исполнитель завершился; итог операции не записан.'
+ }
  if(!$process.WaitForExit(5000)){throw 'Завершение агента не подтверждено.'}
  $state.Status='InterventionRequired';$state.Ended=[DateTime]::UtcNow.ToString('o');$state.Updated=$state.Ended
+ $state|Add-Member NoteProperty StopStatus 'Forced' -Force
+ $state|Add-Member NoteProperty StopMessage 'Агент консоли остановлен; исход операции Windows Update не подтверждён.' -Force
  $state.Error='Собственный агент завершён принудительно. Исход переданной Windows Update операции не подтверждён; проверьте установщик и результаты перед повтором.'
  [IO.File]::WriteAllText($statePath,($state|ConvertTo-Json -Depth 25),(New-Object Text.UTF8Encoding($false)))
  Dc-Reply $state.Error 'InterventionRequired';return

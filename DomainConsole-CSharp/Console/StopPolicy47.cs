@@ -4,6 +4,7 @@ namespace DomainConsole;
 
 // The selected tab and the plan's future steps do not identify the running operation.
 internal readonly record struct StopPolicy47(bool Wua, bool Command, bool Immediate, bool Force) {
+ public bool CanEscalateDownload(RemoteState? state)=>Wua&&Immediate&&state?.Stage.StartsWith("Скачивание ·",StringComparison.Ordinal)==true&&state.RestoreStatus!="Pending";
  public static StopPolicy47 For(RemoteJob? job,RemoteState? state){
   string kind=job!=null&&state!=null&&state.Step>0&&state.Step<=job.Steps.Count?job.Steps[state.Step-1].Kind:"";
   bool wua=kind is "Updates" or "UpdateScan",command=kind is "CMD" or "PowerShell";

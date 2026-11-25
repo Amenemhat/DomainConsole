@@ -352,7 +352,40 @@ public partial class MainWindow:Window {
  }
  async void Refresh_Click(object s,RoutedEventArgs e)=>await Guard(async()=>{var r=ActiveRow();ShowCurrent();if(r.JobId==""){Notify("У выбранного компьютера нет задания в этом разделе. Выберите запись в истории или выполните команду.");return;}await Poll(r,true);});
  void Computer_Changed(object s,SelectionChangedEventArgs e){CollectorPopup54.IsOpen=false;if(!loadingRows){if(ComputerGrid.SelectedItem is ComputerRow selected)viewState.Host=selected.Host;ShowCurrent();RevealCurrent();RefreshOutcomes();_=RefreshBackground();}}
- async void Cancel_Click(object s,RoutedEventArgs e)=>await Guard(async()=>{var r=ActiveRow();if(r.JobId=="")throw new Exception("Нет задания для остановки.");var stop=StopPolicy47.For(History.FirstOrDefault(j=>j.Id==r.JobId),r.Target.State);var dialog=new StopChoice(this,r.Name,stop.Force,stop.Wua,stop.Immediate,stop.Command,stop.Wua);if(dialog.ShowDialog()!=true)return;if(dialog.Mode=="force"&&stop.Wua){await ForceWsus(r);return;}var items=queue.ToList();var match=items.FirstOrDefault(q=>q.Job.Id==r.JobId&&q.Target.Host==r.Host);if(match.Job==null&&r.Target.Status=="Queued"&&r.Target.State==null){var saved=History.FirstOrDefault(j=>j.Id==r.JobId);var target=saved?.Targets.FirstOrDefault(t=>t.Host.Equals(r.Host,StringComparison.OrdinalIgnoreCase));if(saved!=null&&target!=null){target.Status="Cancelled";target.State=new(){Status="Cancelled",Ended=DateTime.UtcNow.ToString("o")};Sync(saved);Save();Notify("Неотправленное задание отменено.");return;}}if(match.Job!=null){queue.Clear();foreach(var q in items.Where(q=>q!=match))queue.Enqueue(q);match.Target.Status="Cancelled";match.Target.State=new(){Status="Cancelled",Ended=DateTime.UtcNow.ToString("o")};Sync(match.Job);Save();Notify("Задание удалено из очереди; команда не отправлялась.");}else{var reply=await remote.Cancel(r.Target,r.JobId,dialog.Mode);if(reply.Status=="Cancelled")CompleteLocalCancellation(r.Host,r.JobId,reply.Message);else await Poll(r,true);Notify(reply.Message);await SendQueue();}});
+ readonly HashSet<string> stoppingJobs=new(StringComparer.OrdinalIgnoreCase);
+ async void Cancel_Click(object s,RoutedEventArgs e)=>await Guard(async()=>{
+  var row=ActiveRow();
+  if(row.JobId=="")throw new Exception("Нет задания для остановки.");
+  string key=row.JobId+"|"+row.Host;
+  if(!stoppingJobs.Add(key)){Notify("Запрос остановки уже выполняется.");return;}
+  try{
+   var job=History.FirstOrDefault(j=>j.Id==row.JobId);
+   var stop=StopPolicy47.For(job,row.Target.State);
+   var dialog=new StopChoice(this,row.Name,stop.Force,stop.Wua,stop.Immediate,stop.Command,stop.Wua,stop.CanEscalateDownload(row.Target.State));
+   if(dialog.ShowDialog()!=true)return;
+   if(dialog.Mode=="force"&&stop.Wua){await ForceWsus(row);return;}
+
+   var target=job?.Targets.FirstOrDefault(t=>t.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase));
+   if(target is {Status:"Queued",State:null}){
+    CompleteLocalCancellation(row.Host,row.JobId,"Задание удалено из очереди; команда не отправлялась.");
+    var pending=queue.Where(q=>q.Job.Id!=row.JobId||!q.Target.Host.Equals(row.Host,StringComparison.OrdinalIgnoreCase)).ToList();
+    queue.Clear();
+    foreach(var item in pending)queue.Enqueue(item);
+    return;
+   }
+
+   using var manual=PollingControl43.Manual56("control");
+   if(job!=null&&IsWsusJob(job)&&maintenancePlans.TryGetValue(row.Host,out var plan)&&!plan.Done&&plan.JobId==row.JobId)
+    FinishPlan44(row.Host);
+   Notify("Отправляется запрос остановки · "+row.Name);
+   var reply=await remote.Cancel(row.Target,row.JobId,dialog.Mode);
+   Notify(reply.Message);
+   if(reply.Status=="Cancelled")CompleteLocalCancellation(row.Host,row.JobId,reply.Message);
+   else await Poll(row,true);
+   await SendQueue();
+  }finally{stoppingJobs.Remove(key);}
+ });
+
 
  async void AbortReboot_Click(object s,RoutedEventArgs e)=>await Guard(async()=>Notify(await remote.AbortReboot(Current().Target)));
  async void SystemLogs_Click(object s,RoutedEventArgs e)=>await Guard(async()=>{var row=Current();Notify(row.Name+": скачивание полных системных журналов…");var folder=await remote.SystemLogs(row.Target);System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(folder){UseShellExecute=true});Notify("Полные CBS / DISM сохранены: "+folder);});
