@@ -39,5 +39,6 @@ if($stopError -or $restoreErrors.Count){throw (($stopError+$(if($restoreErrors.C
 Get-Service $names|Select-Object Name,Status|Format-Table
 """;
 
- async void RestartServices_Click(object s,RoutedEventArgs e)=>await Guard(async()=>{var d=new ServiceRestartChoice(this);if(d.ShowDialog()!=true)return;MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;await Submit(new(){new(){Name="Перезапуск служб Windows Update",Kind="PowerShell",TouchesUpdates=true,Code=RestartServicesScript(d.Services,d.Force)}},"WSUS");});
+ async void RestartServices_Click(object s,RoutedEventArgs e)=>await Guard(async()=>{var d=new ServiceRestartChoice(this);if(d.ShowDialog()!=true)return;MicrosoftBox.IsChecked=false;RebootBox.IsChecked=false;// An explicitly confirmed service action must not wait for the collector it is intended to recover.
+  await Submit(new(){new(){Name="Перезапуск служб Windows Update",Kind="PowerShell",TouchesUpdates=true,Code=RestartServicesScript(d.Services,d.Force)}},"Commands");});
 }

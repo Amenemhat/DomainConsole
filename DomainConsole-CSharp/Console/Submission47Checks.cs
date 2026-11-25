@@ -39,6 +39,14 @@ public partial class MainWindow {
    for(int i=0;i<2;i++)if(jobs[i].MicrosoftSource||jobs[i].AutoReboot||jobs[i].Targets.Single().Host!=rows[i].Host||jobs[i].Targets.Single().ConnectionAddress!="192.0.2."+(i+1)||queue.Count(q=>q.Job.Id==jobs[i].Id)!=1)throw new Exception("Confirmed options/target changed or duplicate queued");
    var rejected=new RemoteJob{Steps=new(){new(){Kind="CMD",Code="echo rejected"}}};jobs.Add(rejected);
    if(await CompletePreparedSubmission47(rejected,new(){rows[0]},new(){new ComputerRow(ConnectionStore.Capture(rows[0].Target))},()=>Task.FromResult((false,false,false)),false)||History.Contains(rejected)||queue.Any(q=>q.Job.Id==rejected.Id))throw new Exception("Cancelled preparation still queued work");
+   var restart=new RemoteJob{Manual56=true,OutputChannel="Commands",Steps=new(){new(){
+    Kind="PowerShell",TouchesUpdates=true,Code=RestartServicesScript(new[]{"BITS"},false)}}};
+   jobs.Add(restart);
+   var restartTarget=new ComputerRow(ConnectionStore.Capture(rows[0].Target));
+   if(!await CompletePreparedSubmission47(restart,new(){rows[0]},new(){restartTarget},
+    ()=>throw new InvalidOperationException("Manual service restart entered WSUS preparation"),false)||
+    restart.ExclusiveMaintenance||queue.Count(q=>q.Job.Id==restart.Id)!=1)
+    throw new Exception("Confirmed manual service restart did not dispatch independently");
   }finally{
    var ids=jobs.Select(j=>j.Id).ToHashSet();var pending=queue.Where(q=>!ids.Contains(q.Job.Id)).ToList();queue.Clear();foreach(var q in pending)queue.Enqueue(q);
    foreach(var j in jobs){History.Remove(j);foreach(var t in j.Targets)confirmedJobs.Remove(j.Id+t.Host);}
