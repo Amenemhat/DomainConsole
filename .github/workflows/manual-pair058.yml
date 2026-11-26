@@ -9,20 +9,53 @@ permissions:
 jobs:
   independent-clients:
     runs-on: ubuntu-24.04
-    timeout-minutes: 85
+    timeout-minutes: 115
     env:
       DC_TEST_MANUAL_PAIR: '1'
+      APP_COMMIT: 2cc125f91cd0c60951982ad1cc16cb027197970f
+      APP_RUN: '45801071479'
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - name: Fetch and hash the published candidate bytes
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/dc-wsus-lab"
-          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45785309712" --jq '.head_sha + " " + .conclusion' |
-            grep -Fx '94a48820c6f1afef6052931adf96682ff4575881 success'
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15101316844/zip" > "$RUNNER_TEMP/dc-wsus-lab/package.zip"
-          echo "745cad018811944c5f0727555b62132a34484a69ae8c27f706c55e639e795d97  $RUNNER_TEMP/dc-wsus-lab/package.zip" | sha256sum -c
+          for attempt in $(seq 1 120); do
+            if build=$(timeout 20 gh api "repos/$GITHUB_REPOSITORY/actions/runs/$APP_RUN") &&
+               jq -e '.status=="completed"' <<<"$build" >/dev/null; then
+              break
+            fi
+            sleep 15
+          done
+          jq -e --arg sha "$APP_COMMIT" --arg repo "$GITHUB_REPOSITORY" '
+            .head_sha==$sha and .head_repository.full_name==$repo and .status=="completed" and .conclusion=="success"
+            and (.path|split("@")[0])==".github/workflows/build-windows.yml"' <<<"$build" >/dev/null ||
+            { echo "Source Windows run $APP_RUN did not match the successful candidate." >&2; exit 1; }
+          artifact=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$APP_RUN/artifacts" |
+            jq -ec '[.artifacts[] | select(.name=="DomainConsole-Windows-x64" and .expired==false)] |
+              if length==1 then .[0] else error("Expected one current Windows package") end')
+          APP_ARTIFACT=$(jq -er '.id' <<<"$artifact")
+          APP_DIGEST=$(jq -er '.digest | sub("^sha256:"; "")' <<<"$artifact")
+          [[ "$APP_DIGEST" =~ ^[a-f0-9]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$APP_ARTIFACT" |
+            jq -e --arg digest "sha256:$APP_DIGEST" --argjson run "$APP_RUN" '
+              .name=="DomainConsole-Windows-x64" and .digest==$digest and .workflow_run.id==$run and .expired==false' >/dev/null ||
+            { echo "Source Windows artifact $APP_ARTIFACT did not match its run and SHA-256." >&2; exit 1; }
+          lab="$RUNNER_TEMP/dc-wsus-lab"
+          mkdir -p "$lab"
+          for attempt in 1 2 3; do
+            if timeout 120 gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$APP_ARTIFACT/zip" > "$lab/package.zip.tmp"; then
+              mv "$lab/package.zip.tmp" "$lab/package.zip"
+              break
+            fi
+            echo "Artifact download attempt $attempt failed." >&2
+            sleep 5
+          done
+          test -s "$lab/package.zip"
+          echo "$APP_DIGEST  $lab/package.zip" | sha256sum -c
+          unzip -tqq "$lab/package.zip"
+          jq -n --arg commit "$APP_COMMIT" --arg run "$APP_RUN" --arg artifact "$APP_ARTIFACT" --arg sha256 "$APP_DIGEST" '{commit:$commit,run:$run,artifact:$artifact,sha256:$sha256}' > "$lab/package.json.tmp"
+          mv "$lab/package.json.tmp" "$lab/package.json"
       - name: Prepare the private network and launch Windows guests
         run: bash .github/lab/prepare-guests.sh
       - name: Boot two disposable Windows guests and test an unconfirmed receipt
@@ -31,5 +64,7 @@ jobs:
         if: always()
         with:
           name: two-windows-clients-evidence
-          path: ${{ runner.temp }}/dc-wsus-lab/evidence.json
+          path: |
+            ${{ runner.temp }}/dc-wsus-lab/package.json
+            ${{ runner.temp }}/dc-wsus-lab/evidence.json
           if-no-files-found: ignore
