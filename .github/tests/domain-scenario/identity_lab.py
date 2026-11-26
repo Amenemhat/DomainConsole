@@ -214,6 +214,66 @@ $reg='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
             except Exception as exc:
                 diagnostics[node]={"error":str(exc)[:1600]}
             save()
+        try:
+            iis=r"""
+$root=Join-Path $env:SystemDrive 'inetpub\logs\LogFiles'
+@(
+ Get-ChildItem $root -Filter *.log -Recurse -ErrorAction SilentlyContinue|Sort-Object LastWriteTimeUtc -Descending|Select-Object -First 5|ForEach-Object {
+  Get-Content -LiteralPath $_.FullName -Tail 1500|Where-Object {$_ -like '#Fields:*' -or $_ -match '/(?:ClientWebService|SimpleAuthWebService|ReportingWebService)/'}|Select-Object -Last 50
+ }
+)|ConvertTo-Json -Compress
+"""
+            evidence["checks"]["wsus-registration-http"]=json.loads(ps("DCWSUS",iis) or "[]")
+        except Exception as exc:
+            evidence["checks"]["wsus-registration-http"]={"error":str(exc)[:1600]}
+        save()
+
+    def check_after_lab_restart(active):
+        """Test one cold WUA restart after a real failure on a disposable guest."""
+        diagnostics=evidence["checks"].get("client-repair-diagnostics",{})
+        node=None
+        for candidate in active:
+            status=diagnostics.get(candidate,{}).get("Files",{}).get("status.json","")
+            try:
+                if "WUA не подтвердил новый SusClientId" in json.loads(status).get("Error",""):
+                    node=candidate
+                    break
+            except ValueError:
+                continue
+        if node is None:
+            return
+        result={"node":node,"accepted_application_check":False,"before":diagnostics[node].get("SusClientId","")}
+        evidence["checks"]["cold-wua-diagnostic"]=result
+        save()
+        try:
+            from __main__ import wait
+            # This replica has no production endpoint. Leave the application acceptance result untouched.
+            if result["before"] and uuid.UUID(result["before"])!=uuid.UUID(shared):
+                raise RuntimeError("The guest already has a replacement ID")
+            ps(node,f"$r={quote(reg)};$old={quote(shared)};"
+               "$id=[string](Get-ItemProperty $r).SusClientId;"
+               "if($env:COMPUTERNAME -notlike 'CLONE*' -or ($id -and $id -ne $old)){throw 'Unexpected diagnostic target'};"
+               "Stop-Service wuauserv -ErrorAction Stop;"
+               "foreach($name in 'SusClientId','SusClientIdValidation'){if((Get-ItemProperty $r).PSObject.Properties.Name -contains $name){Remove-ItemProperty $r -Name $name -ErrorAction Stop}};"
+               "shutdown.exe /r /t 3;exit $LASTEXITCODE")
+            time.sleep(18)
+            wait(node,minutes=7)
+            system(node,"cold-managed-scan",r"""
+$session=New-Object -ComObject Microsoft.Update.Session
+$session.ClientApplicationID='DCLab.ColdIdentityDiagnostic'
+$search=$session.CreateUpdateSearcher();$search.ServerSelection=1;$search.Online=$true
+$rc=[int]$search.Search('IsInstalled=0 and IsHidden=0').ResultCode
+& "$env:windir\System32\wuauclt.exe" /reportnow
+$rc|Set-Content C:\DomainConsoleLab\cold-scan-result.txt
+""",minutes=4)
+            result["search_result"]=ps(node,r"Get-Content C:\DomainConsoleLab\cold-scan-result.txt")
+            result["after"]=json.loads(ps(node,probe+"\n$dcIdentity58|ConvertTo-Json -Compress"))
+            if result["after"].get("SusClientId"):
+                result["server"]=json.loads(ps("DCWSUS","$port=8530;$ssl=$false;$identityId58="+quote(result["after"]["SusClientId"])+";"+verify))
+        except Exception as exc:
+            result["error"]=str(exc)[:1600]
+        finally:
+            save()
 
     held = clients[-1]
     tap = "dclab"+str(nodes[held])
@@ -260,6 +320,7 @@ $reg='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
                     last_diag=time.monotonic()
                 time.sleep(15)
             capture_failed_repairs(active)
+            check_after_lab_restart(active)
             raise TimeoutError("Packaged console did not change registrations on "+", ".join(active)+" · "+gui.diagnostics()[:3300])
         evidence["checks"]["four-replacements"]=changed(clients[:-1])
         save()
