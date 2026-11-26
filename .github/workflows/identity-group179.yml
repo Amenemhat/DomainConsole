@@ -11,8 +11,8 @@ jobs:
     timeout-minutes: 240
     env:
       GH_TOKEN: ${{ github.token }}
-      APP_COMMIT: f3465cd79cd5d7db038116df8a5bb23f54707770
-      APP_RUN: '45877965957'
+      APP_COMMIT: 0a711408e501dc692c35d95ec6ffbb0816da90cf
+      APP_RUN: '45878163213'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
