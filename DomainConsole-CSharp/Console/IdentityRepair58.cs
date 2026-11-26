@@ -185,8 +185,7 @@ try {
  }
  if((Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -ErrorAction Stop).UseWUServer -ne 1){throw 'DC_IDENTITY_NOT_STARTED|UseWUServer=1 не подтверждён; сброс не выполнен'}
  $path58='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
- $previous58=Get-ItemProperty $path58 -ErrorAction Stop
- $id58=[string]$previous58.SusClientId
+ $id58=[string](Get-ItemProperty $path58 -ErrorAction Stop).SusClientId
  $parsedId58=[guid]::Empty
  if(![guid]::TryParse($id58,[ref]$parsedId58) -or $parsedId58 -eq [guid]::Empty){throw 'SusClientId пуст или невалиден; автоматический сброс не выполнен'}
  if($id58 -ne $dcExpectedId58){Write-Output ('ID уже изменён: '+$id58+'. Повторного сброса нет.');exit 0}
@@ -210,23 +209,6 @@ try {
   Start-Service wuauserv -ErrorAction Stop
   (Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Running,[TimeSpan]::FromSeconds(30))
  }
- function Restore-MissingIdentity58 {
-  if([string](Get-ItemProperty $path58 -ErrorAction Stop).SusClientId){return $false}
-  Assert-IdentityRepairIdle58
-  try{
-   Stop-IdentityService58
-   $current58=Get-ItemProperty $path58 -ErrorAction Stop
-   # Windows may have registered between the first read and the service stop.
-   if([string]$current58.SusClientId){return $false}
-   if($null -ne $previous58.SusClientIdValidation){
-    New-ItemProperty $path58 -Name SusClientIdValidation -PropertyType Binary -Value ([byte[]]$previous58.SusClientIdValidation) -Force -ErrorAction Stop|Out-Null
-   }
-   New-ItemProperty $path58 -Name SusClientId -PropertyType String -Value ([string]$previous58.SusClientId) -Force -ErrorAction Stop|Out-Null
-   return $true
-  }finally{
-   Start-IdentityService58
-  }
- }
  Assert-IdentityRepairIdle58
  $backupFolder58=Join-Path $env:ProgramData 'DomainConsole-Backups'
  New-Item $backupFolder58 -ItemType Directory -Force|Out-Null
@@ -236,10 +218,12 @@ try {
  $resetError58='';$restoreError58=''
  try{
   Stop-IdentityService58
+  $current58=Get-ItemProperty $path58 -ErrorAction Stop
+  if([string]$current58.SusClientId -ne $id58){throw 'SusClientId изменился до удаления; значения реестра сохранены'}
   Remove-ItemProperty $path58 -Name SusClientId -ErrorAction Stop
-  if((Get-ItemProperty $path58).PSObject.Properties.Name -contains 'SusClientIdValidation'){Remove-ItemProperty $path58 -Name SusClientIdValidation -ErrorAction Stop}
+  if($current58.PSObject.Properties.Name -contains 'SusClientIdValidation'){Remove-ItemProperty $path58 -Name SusClientIdValidation -ErrorAction Stop}
  }catch{$resetError58=$_.Exception.Message}finally{try{Start-IdentityService58}catch{$restoreError58=$_.Exception.Message}}
- if($resetError58 -or $restoreError58){throw ('Перерегистрация: '+$resetError58+'; восстановление wuauserv: '+$restoreError58)}
+ if($resetError58 -or $restoreError58){throw ('Сброс ID: '+$(if($resetError58){$resetError58}else{'выполнен'})+'; запуск wuauserv: '+$(if($restoreError58){$restoreError58}else{'подтверждён'})+'; резервная копия: '+$backup58)}
  function Read-NewIdentity58 {
   $candidate=[string](Get-ItemProperty $path58 -ErrorAction Stop).SusClientId
   $parsed=[guid]::Empty
@@ -247,34 +231,23 @@ try {
   return ''
  }
  $new58=Read-NewIdentity58
- $searchResult58=$null;$searchError58=''
  if(!$new58){
-  # Run the managed scan without a preceding asynchronous detect request.
-  Write-Output 'Служба wuauserv запущена. Выполняется один поиск на управляемом сервере WSUS.'
+  # A successful COM search alone does not renew WSUS authorization.
+  Write-Output 'Запуск wuauserv подтверждён. Запрашивается повторное получение авторизации WSUS.'
   try{
-   $session58=New-Object -ComObject Microsoft.Update.Session
-   $session58.ClientApplicationID='DomainConsole.Identity58'
-   $search58=$session58.CreateUpdateSearcher();$search58.ServerSelection=1;$search58.Online=$true
-   $searchResult58=[int]$search58.Search('IsInstalled=0 and IsHidden=0').ResultCode
-  }catch{$searchError58=$_.Exception.Message}
+   & "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow
+  }catch{throw ('Не удалось запросить авторизацию WSUS: '+$_.Exception.Message+'; резервная копия: '+$backup58)}
  }
  $new58=Read-NewIdentity58
- for($attempt58=0;!$new58 -and !$searchError58 -and $searchResult58 -eq 2 -and $attempt58 -lt 30;$attempt58++){
+ for($attempt58=0;!$new58 -and $attempt58 -lt 60;$attempt58++){
   Start-Sleep -Seconds 1
   $new58=Read-NewIdentity58
  }
  if(!$new58){
-  $failure58=if($searchError58){'Поиск на сервере WSUS завершился ошибкой: '+$searchError58}else{'WUA не подтвердил новый SusClientId. Результат поиска: '+$searchResult58}
-  try{
-   if(Restore-MissingIdentity58){$failure58+=' · Прежний ID восстановлен, конфликт остаётся.'}
-  }catch{$failure58+=' · Не удалось подтвердить восстановление прежнего ID: '+$_.Exception.Message+' · Резервная копия: '+$backup58}
-  $new58=Read-NewIdentity58
-  if(!$new58){throw $failure58}
+  throw ('WUA не подтвердил новый SusClientId за 60 секунд; запуск wuauserv подтверждён; резервная копия: '+$backup58)
  }
  & "$env:windir\System32\wuauclt.exe" /reportnow
- if($searchError58){throw ('Новый ID создан, поиск на сервере WSUS завершился ошибкой: '+$searchError58)}
- [pscustomobject]@{Computer=$name58;Finished=[DateTime]::UtcNow.ToString('o');OldId=$dcExpectedId58;NewId=$new58;SearchResult=$searchResult58;Backup=$backup58}|Format-List
- if($null -ne $searchResult58 -and $searchResult58 -ne 2){throw 'ID изменён, но поиск завершился не полностью; требуется диагностика'}
+ [pscustomobject]@{Computer=$name58;Finished=[DateTime]::UtcNow.ToString('o');OldId=$dcExpectedId58;NewId=$new58;Backup=$backup58}|Format-List
  'Новый ID создан; регистрация и отчёт подтверждаются отдельно на сервере. Установка этим шагом не выполнялась.'
 }finally{if($owns58){$mutex58.ReleaseMutex()};$mutex58.Dispose()}
 """;
