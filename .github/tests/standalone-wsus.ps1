@@ -26,6 +26,19 @@ $result=$search.Search('IsInstalled=0 and IsHidden=0')
 if([int]$result.ResultCode -ne 2){throw "Initial managed scan: $($result.ResultCode)"}
 $probe=Body 'Identity58.cs' 'IdentityProbe58'
 function Read-Identity {& ([ScriptBlock]::Create($probe+[Environment]::NewLine+'[pscustomobject]$dcIdentity58'))}
+$repairBody=Body 'IdentityRepair58.cs' 'IdentityRepairBody58'
+$tokens=$null;$parseErrors=$null
+$syntax=[System.Management.Automation.Language.Parser]::ParseInput($repairBody,[ref]$tokens,[ref]$parseErrors)
+$guard=$syntax.Find({param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Assert-IdentityRepairIdle58'},$true)
+if($parseErrors -or !$guard){throw 'Could not find the product readiness guard'}
+$checkReady=[scriptblock]::Create($guard.Extent.Text+[Environment]::NewLine+'Assert-IdentityRepairIdle58')
+$readyDeadline=[datetime]::UtcNow.AddMinutes(12)
+while($true){
+ try{& $checkReady;break}catch{
+  if($_.Exception.Message -notlike 'DC_IDENTITY_NOT_STARTED|Windows Update занят*' -or [datetime]::UtcNow -ge $readyDeadline){throw}
+  Start-Sleep -Seconds 15
+ }
+}
 $before=Read-Identity
 if($before.Error -or $before.Server -ne $url -or ![guid]::Parse($before.SusClientId)){throw 'Incomplete initial client observation'}
 $dcExpectedId58=$before.SusClientId
@@ -39,7 +52,7 @@ $bodyPath=Join-Path $labPath 'requested-repair.ps1'
 function Literal($text){"'"+$text.Replace("'","''")+"'"}
 $prefix='$dcExpectedId58='+(Literal $before.SusClientId)+';$dcExpectedMachine58='+(Literal $before.Machine)+';$dcExpectedName58='+(Literal $before.Name)+';$dcExpectedServer58='+(Literal $before.Server)+';'
 $utf8=New-Object Text.UTF8Encoding($true)
-[IO.File]::WriteAllText($bodyPath,$prefix+(Body 'IdentityRepair58.cs' 'IdentityRepairBody58'),$utf8)
+[IO.File]::WriteAllText($bodyPath,$prefix+$repairBody,$utf8)
 $exe=Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe'
 function Start-Attempt([string]$label) {
  $wrapper=Join-Path $labPath ($label+'.ps1')
