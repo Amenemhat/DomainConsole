@@ -46,12 +46,6 @@ while($true){
   Start-Sleep -Seconds 15
  }
 }
-$registrationPath='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
-function Read-LegacyRegistrationFields {
- (Get-ItemProperty -LiteralPath $registrationPath).PSObject.Properties.Name|Where-Object {$_ -in 'PingID','AccountDomainSid'}
-}
-$legacyBefore=@(Read-LegacyRegistrationFields)
-Write-Output ('Legacy WUA registration fields before repair: '+$(if($legacyBefore.Count){$legacyBefore -join ', '}else{'none'}))
 $before=Read-Identity
 if($before.Error -or $before.Server -ne $url -or ![guid]::Parse($before.SusClientId)){throw 'Incomplete initial client observation'}
 $dcExpectedId58=$before.SusClientId
@@ -71,7 +65,7 @@ function Start-Attempt([string]$label) {
  $wrapper=Join-Path $labPath ($label+'.ps1')
  $rescue='try { & '+(Literal $bodyPath)+' }catch{[IO.File]::WriteAllText('+(Literal ($wrapper+'.error'))+',$_.Exception.Message);exit 1}'
  [IO.File]::WriteAllText($wrapper,$rescue,$utf8)
- return Start-Process $exe -ArgumentList ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$wrapper+'"') -PassThru
+ return Start-Process $exe -ArgumentList ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$wrapper+'"') -RedirectStandardOutput ($wrapper+'.out') -PassThru
 }
 function End-Attempt($process) {
  if(!$process.WaitForExit(180000)){$process.Kill();throw 'Isolated WUA test process exceeded its time limit'}
@@ -105,6 +99,8 @@ if(0 -notin $codes){
  throw ('Neither concurrent request completed. Exit codes: '+($codes -join ', '))
 }
 foreach($label in 'first','second'){
+ $outputPath=Join-Path $labPath ($label+'.ps1.out')
+ if(Test-Path $outputPath){Write-Output ($label+' stdout: '+[IO.File]::ReadAllText($outputPath))}
  $errorPath=Join-Path $labPath ($label+'.ps1.error')
  if((Test-Path $errorPath) -and [IO.File]::ReadAllText($errorPath) -notmatch 'уже выполняется'){throw ('Unexpected operation failure: '+[IO.File]::ReadAllText($errorPath))}
 }
@@ -130,30 +126,18 @@ if($product){
  Write-Output ("PASS independent WUA registration, latest report and expected group: "+($product|ConvertTo-Json -Compress))
  return
 }
-# Compare the legacy registration metadata on this isolated host only.
-$legacy=@(Read-LegacyRegistrationFields)
-Write-Output ('Legacy WUA registration fields after the new ID: '+$(if($legacy.Count){$legacy -join ', '}else{'none'}))
-if(!$legacy.Count){throw 'The legacy WUA metadata fields do not exist; this repair path is inapplicable'}
-& $checkReady
-$diagnosticBackup=Join-Path $labPath 'before-metadata-check.reg'
-& reg.exe export 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate' $diagnosticBackup /y|Out-Null
-if($LASTEXITCODE){throw 'Could not save lab registration state'}
-try{
- Stop-Service wuauserv -ErrorAction Stop
- if((Read-Identity).SusClientId -ne $identityId58){throw 'New ID changed before the metadata check'}
- Remove-ItemProperty -LiteralPath $registrationPath -Name $legacy -ErrorAction Stop
-}finally{Start-Service wuauserv -ErrorAction Stop}
-$session=New-Object -ComObject Microsoft.Update.Session
-$session.ClientApplicationID='DomainConsole.RegistrationMetadataDiagnostic'
-$search=$session.CreateUpdateSearcher();$search.ServerSelection=1;$search.Online=$true
-$diagnostic=$search.Search('IsInstalled=0 and IsHidden=0')
-Write-Output ('Managed scan after the isolated metadata check: '+[int]$diagnostic.ResultCode)
-& "$env:windir\System32\wuauclt.exe" /reportnow
-if((Read-Identity).SusClientId -ne $identityId58){throw 'The metadata diagnostic changed the already-created ID'}
-$result=Wait-ForRegistration 300
+# Keep this control separate from product acceptance. The current local ID is already known.
+Write-Output 'Requesting native authorization after the new local identifier is known'
+& "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow
+$result=Wait-ForRegistration 120
+if(!$result){
+ & "$env:windir\System32\wuauclt.exe" /reportnow
+ $result=Wait-ForRegistration 180
+}
+if((Read-Identity).SusClientId -ne $identityId58){throw 'The diagnostic authorization changed the already-created ID'}
 if($result){
  Write-Output ("DIAGNOSTIC CONFIRMED: "+($result|ConvertTo-Json -Compress))
- throw 'Server confirmation required the separate diagnostic metadata check'
+ throw 'Server confirmation required a separate authorization request after the new ID was known'
 }
 Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-WindowsUpdateClient/Operational';StartTime=$began.ToLocalTime()} -MaxEvents 15 -ErrorAction SilentlyContinue|Select-Object Id,TimeCreated,Message|Format-List|Out-Host
 Write-Output ("Client IDs: old="+$before.SusClientId+"; new="+$after.SusClientId)
