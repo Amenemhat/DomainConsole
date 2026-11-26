@@ -14,7 +14,7 @@ public sealed partial class RemoteService {
   _=flight.Value.ContinueWith(_=>collectorRepairs47.TryRemove(new KeyValuePair<string,Lazy<Task<string>>>(key,flight)),TaskScheduler.Default);
   return flight.Value;
  }
- public static string RepairScript48()=>Resource42("repair48.ps1").Replace("@@REMOVE@@",RemoveCollectorScript43("Remove",true)).Replace("@@ENABLE@@",RemoveCollectorScript43("Enable",true)).Replace("@@GET@@",SnapshotScript42()).Replace("@@READ@@",SnapshotScript42("Read"));
+ public static string RepairScript48()=>Resource42("repair48.ps1").Replace("@@REMOVE@@",RemoveCollectorScript43("Remove",true)).Replace("@@ENABLE@@",RemoveCollectorScript43("Enable",true)).Replace("@@GET@@",SnapshotScript42(internalRepair:true)).Replace("@@READ@@",SnapshotScript42("Read",internalRepair:true));
  async Task<string> RepairCore47(TargetRecord target,string key){
   using var read=PollingControl43.Read();
   using var deadline=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);deadline.CancelAfter(TimeSpan.FromSeconds(150));

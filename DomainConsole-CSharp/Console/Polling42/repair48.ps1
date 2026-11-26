@@ -22,11 +22,14 @@ try{
   if($enabled.Status -ne 'Enabled'){throw ('Включение не подтверждено: '+($enabled|ConvertTo-Json -Depth 6 -Compress))}
   $clock=[Diagnostics.Stopwatch]::StartNew();$first=$true
   do{
-   $reply=if($first){& { @@GET@@ }|ConvertFrom-Json}else{& { @@READ@@ }|ConvertFrom-Json};$first=$false
+   $reply=if($first){& { @@GET@@ }|ConvertFrom-Json}else{& { @@READ@@ }|ConvertFrom-Json}
+   if($reply.Status -eq 'LockPending'){Start-Sleep -Seconds 2;continue}
+   $first=$false
    if($reply.Status -eq 'Ready'){break}
    if($reply.Status -notin @('Busy','Stopping')){throw ($reply.Reason+' ['+$reply.Status+']')}
    Start-Sleep -Seconds 2
   }while($clock.Elapsed.TotalSeconds -lt 90)
+  if($reply.Status -eq 'LockPending'){throw ('Истёк срок ожидания допуска к сборщику: '+$reply.Reason)}
   if($reply.Status -ne 'Ready' -or !$reply.Snapshot.Healthy -or !$reply.Snapshot.Complete){throw 'Полный свежий снимок после восстановления не получен'}
   $at=[DateTime]::Parse($reply.Snapshot.CollectedUtc).ToUniversalTime()
   if($at -lt [DateTime]::Parse($started).ToUniversalTime() -or $at -gt [DateTime]::UtcNow.AddSeconds(5)){throw 'Время снимка не подтверждает новый сбор'}

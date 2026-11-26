@@ -1,5 +1,6 @@
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 $mode='@@MODE@@'
+$internalRepair=@@INTERNAL_REPAIR@@
 $package=@@PACKAGE@@
 $disabled=Join-Path $env:ProgramData 'DomainConsoleCSharp\collector-disabled43.json'
 $path=Join-Path $env:ProgramData 'DomainConsoleCSharp\Snapshot41'
@@ -22,10 +23,20 @@ function Read-Json($name){
  try{return Get-Content -LiteralPath $f -Raw -Encoding UTF8|ConvertFrom-Json -ErrorAction Stop}catch{return $null}
 }
 function Reply($status,$reason,$seconds,$snapshot=$null){@{Status=$status;Reason=$reason;RetrySeconds=$seconds;Snapshot=$snapshot;Run=$run;State=(Read-Json 'state.json')}|ConvertTo-Json -Depth 28 -Compress}
+function Is-LockContention($exception){($exception.GetBaseException().HResult -band 0xffff) -in @(32,33)}
 function Save-Run{$run|ConvertTo-Json -Depth 6 -Compress|Set-Content -LiteralPath (Join-Path $path 'run.tmp') -Encoding UTF8;Move-Item -LiteralPath (Join-Path $path 'run.tmp') -Destination (Join-Path $path 'run.json') -Force}
-$lock=$null;$run=$null
+$repairGate=$null;$lock=$null;$run=$null
 try{
- if($mode -ne 'Inspect'){try{$lock=[IO.File]::Open((Join-Path $path 'admission.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}catch{Reply 'Busy' 'Проверку уже координирует другая консоль' 10;return}}
+ if($mode -ne 'Inspect' -and !$internalRepair){
+  $repairPath=Join-Path (Split-Path $path) 'repair48.lock'
+  if((Test-Path -LiteralPath $repairPath) -and ((Get-Item -LiteralPath $repairPath -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Ссылка вместо файла координации восстановления'}
+  try{$repairGate=[IO.File]::Open($repairPath,[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}
+  catch{if(!(Is-LockContention $_.Exception)){throw ('Не удалось открыть координацию сборщика: '+$_.Exception.GetBaseException().Message)};Reply 'Busy' 'Клиентский сборщик уже координируется другой командой' 10;return}
+ }
+ if($mode -ne 'Inspect'){
+  try{$lock=[IO.File]::Open((Join-Path $path 'admission.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}
+  catch{if(!(Is-LockContention $_.Exception)){throw ('Не удалось открыть допуск сборщика: '+$_.Exception.GetBaseException().Message)};Reply $(if($internalRepair){'LockPending'}else{'Busy'}) 'Проверку уже координирует другая консоль' 10;return}
+ }
  foreach($file in @(Get-ChildItem -LiteralPath $path -Force -ErrorAction SilentlyContinue)){
   $attributes=$file.Attributes
   if([int]$attributes -ne -1 -and ($attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Ссылка внутри каталога сборщика; запуск запрещён'}
@@ -62,7 +73,8 @@ try{
  }
  # OS task state alone is insufficient: a previous worker must also be gone.
  $execution=$null
- try{$execution=[IO.File]::Open((Join-Path $path 'execution.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}catch{Reply 'Unknown' 'Предыдущий исполнитель ещё удерживает блокировку; новый не запущен' 120;return}
+ try{$execution=[IO.File]::Open((Join-Path $path 'execution.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}
+ catch{if(!(Is-LockContention $_.Exception)){throw ('Не удалось открыть блокировку исполнения сборщика: '+$_.Exception.GetBaseException().Message)};Reply $(if($internalRepair){'LockPending'}else{'Unknown'}) 'Предыдущий исполнитель ещё удерживает блокировку; новый не запущен' 120;return}
  try{
   $workers=@(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction Stop|Where-Object {$_.CommandLine -and ($_.CommandLine.IndexOf($script,[StringComparison]::OrdinalIgnoreCase) -ge 0 -or $_.CommandLine.IndexOf((Join-Path $path 'Reboot.ps1'),[StringComparison]::OrdinalIgnoreCase) -ge 0 -or $_.CommandLine.IndexOf((Join-Path $path 'Activity.ps1'),[StringComparison]::OrdinalIgnoreCase) -ge 0)})
   if($workers.Count){Reply 'Unknown' 'Процесс предыдущего сборщика ещё существует; требуется сверка' 120;return}
@@ -106,5 +118,5 @@ try{
   Start-ScheduledTask -TaskName $name -TaskPath '\'
   Reply 'Busy' 'Сборщик запущен; ожидается результат' 10
  }finally{if($execution){$execution.Dispose()}}
-}finally{if($lock){$lock.Dispose()}}
+}finally{if($lock){$lock.Dispose()};if($repairGate){$repairGate.Dispose()}}
 

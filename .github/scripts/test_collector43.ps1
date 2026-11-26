@@ -51,10 +51,22 @@ if((Run 'probe42-Get.ps1').Status -ne 'Cooldown'){throw 'Reset immediately resta
 $null=Run 'probe42-Recover.ps1'
 Write-Output 'Collector43: real WinRM inspection with mismatched task, SYSTEM identity, no downgrade, owned hung supervisor cleanup, foreign task protection, unrelated maintenance/data preservation, disabled reinstall gate, idempotency and re-enable passed.'
 
+# Holding the recovery gate protects the gap after re-enable and before the first recovery read.
+$gatePath=Join-Path (Split-Path $path) 'repair48.lock'
+$gate=[IO.File]::Open($gatePath,[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+try{
+ $beforeRepair=(Get-ScheduledTaskInfo $task).LastRunTime
+ $r=Run 'probe42-Get.ps1'
+ if($r.Status -ne 'Busy' -or (Get-ScheduledTaskInfo $task).LastRunTime -ne $beforeRepair){throw 'Background GET could start a collector while recovery owns the gate'}
+ if((Run 'probe42-Inspect.ps1').Status -ne 'Inspected'){throw 'Read-only inspection requires the recovery gate'}
+}finally{$gate.Dispose()}
 
 # Two independent remote shells must share one recovery, not reinstall twice.
 $repairCode=[IO.File]::ReadAllText((Join-Path $Fixture 'collector48-repair.ps1'))
 $tokens=$null;$errors=$null;$null=[Management.Automation.Language.Parser]::ParseInput($repairCode,[ref]$tokens,[ref]$errors);if($errors){throw ($errors|Out-String)}
+$hung=Run 'probe42-autonomous.ps1'
+if($hung.Status -ne 'Busy'){throw 'Could not start hung supervisor before manual recovery'}
+Start-Sleep -Seconds 2
 $second=New-PSSession -Session $Session
 $repairJobs=@()
 try{
