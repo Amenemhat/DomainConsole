@@ -228,52 +228,90 @@ $root=Join-Path $env:SystemDrive 'inetpub\logs\LogFiles'
             evidence["checks"]["wsus-registration-http"]={"error":str(exc)[:1600]}
         save()
 
-    def check_after_lab_restart(active):
-        """Test one cold WUA restart after a real failure on a disposable guest."""
+    def compare_wua_restart(active):
+        """Compare a service restart with an OS restart on a failed disposable replica."""
         diagnostics=evidence["checks"].get("client-repair-diagnostics",{})
-        node=None
-        for candidate in active:
-            status=diagnostics.get(candidate,{}).get("Files",{}).get("status.json","")
+        for node in active:
+            status=diagnostics.get(node,{}).get("Files",{}).get("status.json","")
             try:
-                if "WUA не подтвердил новый SusClientId" in json.loads(status).get("Error",""):
-                    node=candidate
-                    break
+                failure=json.loads(status).get("Error","") if status else ""
             except ValueError:
                 continue
-        if node is None:
+            if "WUA не подтвердил новый SusClientId" in failure:
+                break
+        else:
             return
-        result={"node":node,"accepted_application_check":False,"before":diagnostics[node].get("SusClientId","")}
-        evidence["checks"]["cold-wua-diagnostic"]=result
-        save()
-        try:
-            from __main__ import wait
-            # This replica has no production endpoint. Leave the application acceptance result untouched.
-            if result["before"] and uuid.UUID(result["before"])!=uuid.UUID(shared):
-                raise RuntimeError("The guest already has a replacement ID")
-            ps(node,f"$r={quote(reg)};$old={quote(shared)};"
-               "$id=[string](Get-ItemProperty $r).SusClientId;"
-               "if($env:COMPUTERNAME -notlike 'CLONE*' -or ($id -and $id -ne $old)){throw 'Unexpected diagnostic target'};"
-               "Stop-Service wuauserv -ErrorAction Stop;"
-               "foreach($name in 'SusClientId','SusClientIdValidation'){if((Get-ItemProperty $r).PSObject.Properties.Name -contains $name){Remove-ItemProperty $r -Name $name -ErrorAction Stop}};"
-               "shutdown.exe /r /t 3;exit $LASTEXITCODE")
-            time.sleep(18)
-            wait(node,minutes=7)
-            system(node,"cold-managed-scan",r"""
+
+        from __main__ import wait
+        before=diagnostics[node].get("SusClientId","")
+        expected=evidence["checks"]["before"][node]
+        if before and before.lower()!=shared.lower():
+            return
+        reset=f"$r={quote(reg)};$old={quote(shared)};$p={quote(policy)};"
+        reset+=(
+            "$id=[string](Get-ItemProperty $r).SusClientId;"
+            "if($env:COMPUTERNAME -ne "+quote(node)+
+            " -or ($id -and $id -ne $old)"
+            " -or (Get-ItemProperty $p).WUServer -ne "+quote(expected["Server"])+
+            "){throw 'Unexpected diagnostic target or identity'};"
+            "Stop-Service wuauserv -ErrorAction Stop;"
+            "(Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Stopped,[TimeSpan]::FromSeconds(30));"
+            "foreach($name in 'SusClientId','SusClientIdValidation'){if((Get-ItemProperty $r).PSObject.Properties.Name -contains $name){Remove-ItemProperty $r -Name $name -ErrorAction Stop}};"
+        )
+        start="Start-Service wuauserv -ErrorAction Stop;(Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Running,[TimeSpan]::FromSeconds(30));"
+        scan=r"""
 $session=New-Object -ComObject Microsoft.Update.Session
-$session.ClientApplicationID='DCLab.ColdIdentityDiagnostic'
+$session.ClientApplicationID='DCLab.IdentityDiagnostic'
 $search=$session.CreateUpdateSearcher();$search.ServerSelection=1;$search.Online=$true
 $rc=[int]$search.Search('IsInstalled=0 and IsHidden=0').ResultCode
 & "$env:windir\System32\wuauclt.exe" /reportnow
-$rc|Set-Content C:\DomainConsoleLab\cold-scan-result.txt
-""",minutes=4)
-            result["search_result"]=ps(node,r"Get-Content C:\DomainConsoleLab\cold-scan-result.txt")
-            result["after"]=json.loads(ps(node,probe+"\n$dcIdentity58|ConvertTo-Json -Compress"))
-            if result["after"].get("SusClientId"):
-                result["server"]=json.loads(ps("DCWSUS","$port=8530;$ssl=$false;$identityId58="+quote(result["after"]["SusClientId"])+";"+verify))
-        except Exception as exc:
-            result["error"]=str(exc)[:1600]
-        finally:
+"""
+
+        for mode in ("warm","cold"):
+            key=mode+"-wua-diagnostic"
+            result={"node":node,"accepted_application_check":False,"before":before}
+            evidence["checks"][key]=result
             save()
+            try:
+                if mode=="cold":
+                    ps(node,reset+"shutdown.exe /r /t 3;exit $LASTEXITCODE")
+                    time.sleep(18)
+                    wait(node,minutes=7)
+                scan_file=rf"C:\DomainConsoleLab\{mode}-scan-result.txt"
+                # Both paths run the same managed scan with no preceding asynchronous detect request.
+                preparation=(reset if mode=="warm" else "")+start
+                system(node,mode+"-managed-scan",preparation+scan+"\n$rc|Set-Content "+quote(scan_file),minutes=4)
+                result["search_result"]=ps(node,"Get-Content "+quote(scan_file))
+                until=time.monotonic()+30
+                while True:
+                    result["after"]=json.loads(ps(node,probe+"\n$dcIdentity58|ConvertTo-Json -Compress"))
+                    new_id=result["after"].get("SusClientId","")
+                    if new_id and new_id.lower()!=shared.lower():
+                        break
+                    if time.monotonic()>=until:
+                        break
+                    time.sleep(5)
+                save()
+                if not new_id or new_id.lower()==shared.lower():
+                    before=new_id
+                    continue
+
+                name=result["after"]["Name"]
+                lookup="$port=8530;$ssl=$false;$identityId58="+quote(new_id)+";$lookupName58="+quote(name)+";"
+                until=time.monotonic()+180
+                while True:
+                    result["server"]=json.loads(ps("DCWSUS",lookup+verify))
+                    confirmed=result["server"]["Id"].lower()==new_id.lower() and result["server"]["Name"].rstrip(".").lower()==name.rstrip(".").lower()
+                    result["server_target_found"]=confirmed
+                    if confirmed or time.monotonic()>=until:
+                        break
+                    time.sleep(10)
+                return
+            except Exception as exc:
+                result["error"]=str(exc)[:1600]
+                return
+            finally:
+                save()
 
     held = clients[-1]
     tap = "dclab"+str(nodes[held])
@@ -320,7 +358,7 @@ $rc|Set-Content C:\DomainConsoleLab\cold-scan-result.txt
                     last_diag=time.monotonic()
                 time.sleep(15)
             capture_failed_repairs(active)
-            check_after_lab_restart(active)
+            compare_wua_restart(active)
             raise TimeoutError("Packaged console did not change registrations on "+", ".join(active)+" · "+gui.diagnostics()[:3300])
         evidence["checks"]["four-replacements"]=changed(clients[:-1])
         save()
