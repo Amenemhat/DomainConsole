@@ -5,7 +5,9 @@ using DomainConsole.Shared;
 namespace DomainConsole.Agent {
  public sealed class Identity54Fixture {public string UpdateID{get;set;} public int RevisionNumber=>3;}
  public sealed class Behavior54Fixture {public bool CanRequestUserInput=>false;}
- public sealed class Update54Fixture {public Identity54Fixture Identity{get;set;} public string Title{get;set;} public bool IsDownloaded{get;set;} public bool IsInstalled{get;set;}public bool EulaAccepted=>true;public Behavior54Fixture InstallationBehavior=>new Behavior54Fixture();}
+ public sealed class DownloadContent54Fixture {public string DownloadUrl=>"http://wsus.invalid/Content/fixture.cab";}
+ public sealed class DownloadContents54Fixture {public int Count=>1;public object Item(int i)=>new DownloadContent54Fixture();}
+ public sealed class Update54Fixture {public DownloadContents54Fixture DownloadContents=>new DownloadContents54Fixture();public Collection54Fixture BundledUpdates=>new Collection54Fixture();public Identity54Fixture Identity{get;set;} public string Title{get;set;} public bool IsDownloaded{get;set;} public bool IsInstalled{get;set;}public bool EulaAccepted=>true;public Behavior54Fixture InstallationBehavior=>new Behavior54Fixture();}
  public sealed class Collection54Fixture {public List<Update54Fixture> Items=new List<Update54Fixture>();public int Count=>Items.Count;public object Item(int i)=>Items[i];public int Add(Update54Fixture u){Items.Add(u);return Items.Count;}}
  public sealed class Result54Fixture {public int ResultCode{get;set;}=2;public int HResult=>ResultCode==2?0:unchecked((int)0x80240034);public bool RebootRequired{get;set;} public Collection54Fixture Updates{get;set;} public object GetUpdateResult(int i)=>this;}
  public sealed class Search54Fixture {public int ServerSelection{get;set;} public bool Online{get;set;} public Result54Fixture Result;public object BeginSearch(string criteria,object callback,object state)=>new FakeSearchJob();public object EndSearch(object job)=>Result;}
@@ -42,20 +44,31 @@ namespace DomainConsole.Agent {
      string saved=File.ReadAllText(FilePath("flow54-"+mode+".updates.json"));
      if(expected>0&&(!saved.Contains("ResultCode")||!saved.Contains("Revision")||!saved.Contains("Ended54")))throw new Exception("Individual installation result missing");
      if(mode=="partial"&&(!saved.Contains("Download")||!saved.Contains("KB A")||!saved.Contains("KB B")))throw new Exception("Partial batch erased outcome");
-     if((mode=="scan"||mode=="cached")&&session.Downloads!=0)throw new Exception("Unnecessary download in mode "+mode);
+     int downloads=mode=="scan"||mode=="cached"||mode=="empty"?0:mode=="reboot"?1:2;
+     if(session.Downloads!=downloads)throw new Exception("Download-to-install flow failed in mode "+mode);
     }
-    foreach(string mode in new[]{"background-download","background-install","installer-race"}){
-     var update=new Update54Fixture{Title="KB external",IsDownloaded=mode!="background-download",IsInstalled=mode=="background-install",
+    foreach(string mode in new[]{"background-download","background-disappeared","background-install","installer-race"}){
+     var update=new Update54Fixture{Title="KB external",IsDownloaded=mode is not ("background-download" or "background-disappeared"),IsInstalled=mode=="background-install",
       Identity=new Identity54Fixture{UpdateID=Guid.NewGuid().ToString()}};
      var session=new Session54Fixture{BusyReads=mode=="background-install"?1:0,Race=mode=="installer-race"};
      var collection=new Collection54Fixture();collection.Add(update);
      session.Search.Result=new Result54Fixture{Updates=collection};
      fixtureCom54=name=>name=="Microsoft.Update.Session"?(object)session:name=="Microsoft.Update.UpdateColl"?new Collection54Fixture():name=="Microsoft.Update.SystemInfo"?new Info54Fixture():throw new Exception(name);
-     fixtureTransfers54=()=>{update.IsDownloaded=true;return new[]{new ExistingUpdateTransfer{Id="background",Files=1,Bytes=100,Total=200}};};
+     int snapshots=0;
+     fixtureTransfers54=()=>{
+      if(++snapshots!=1)return Array.Empty<ExistingUpdateTransfer>();
+      if(mode=="background-download"){
+       var fresh=new Collection54Fixture();fresh.Add(new Update54Fixture{Title=update.Title,Identity=update.Identity,IsDownloaded=true});
+       session.Search.Result=new Result54Fixture{Updates=fresh};
+      }
+      return new[]{new ExistingUpdateTransfer{Id="background",Urls=new[]{"http://wsus.invalid/Content/fixture.cab"},Files=1,Bytes=100,Total=200}};
+     };
      State=new RemoteState{Status="Running"};
      Job=new RemoteJob{UpdateSource54="WindowsUpdate",AutoInstall54=true};
      int code=Updates("flow54-"+mode,true);
-     if(code!=0||session.Downloads!=0||session.Installs!=(mode=="background-download"?1:0)||State.InstalledCount38!=1||session.Search.Online)
+     bool expectedInstall=mode is "background-download" or "background-disappeared";
+     if(code!=0||session.Downloads!=(mode=="background-disappeared"?1:0)||session.Installs!=(expectedInstall?1:0)||State.InstalledCount38!=1||session.Search.Online||
+        (mode=="background-disappeared"&&snapshots!=3)||(mode=="background-download"&&snapshots!=1))
       throw new Exception("Existing Windows Update operation was not reused: "+mode);
     }
     Console.WriteLine("0.54: real update flow with isolated WUA fixture: scan-only, auto-install, partial download failure, reboot boundary, empty result, Internet source and retained package metadata passed.");

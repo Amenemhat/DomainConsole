@@ -103,6 +103,7 @@ ConvertTo-Json -InputObject $jobs -Depth 4 -Compress
    DateTime sample = default(DateTime);
    bool refresh = installerWasBusy;
    bool sawBackgroundTransfer = false;
+   int emptyTransferReads = 0;
    while (!Cancelled()) {
     if (wait.Elapsed >= limit) throw new UpdateObservationTimeout("Истекло время ожидания Windows Update. Результат не подтверждён; проверьте обновления повторно.");
     dynamic installer = session.CreateUpdateInstaller();
@@ -113,6 +114,7 @@ ConvertTo-Json -InputObject $jobs -Depth 4 -Compress
      if (Cancelled()) return null;
      if ((bool)update.IsInstalled || (bool)update.IsDownloaded) return update;
     }
+    if (busy) emptyTransferReads = 0;
     if (!busy && !inspectDownloads) return update;
     ExistingUpdateTransfer match = null;
     if (!busy) {
@@ -120,8 +122,18 @@ ConvertTo-Json -InputObject $jobs -Depth 4 -Compress
      var transfers = ReadUpdateTransfers(prefix);
      if (Cancelled()) return null;
      var matches = transfers?.Where(t => HasObservedUrl(t, urls)).Take(2).ToArray();
-     if (transfers != null && transfers.Length == 0 && !sawBackgroundTransfer) return update;
-     sawBackgroundTransfer |= transfers != null && transfers.Length > 0;
+     if (transfers != null && transfers.Length == 0) {
+      // Allow the just-finished BITS job to commit its payload to WUA before making a new request.
+      // The next sample refreshes the exact update first; an unreadable snapshot is never an empty queue.
+      if (!sawBackgroundTransfer) return update;
+      if (++emptyTransferReads >= 2) {
+       Log("Прежняя передача BITS завершилась. WUA ещё требует пакет; продолжается исходное задание.");
+       return update;
+      }
+     } else {
+      emptyTransferReads = 0;
+      sawBackgroundTransfer |= transfers != null;
+     }
      if (matches != null && matches.Length == 1) {
       stage = "Скачивает Windows Update · " + title;
       if (matches[0].Files == 1) match = matches[0];

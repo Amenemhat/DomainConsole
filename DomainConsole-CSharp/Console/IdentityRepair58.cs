@@ -178,20 +178,43 @@ try {
  }
  if((Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -ErrorAction Stop).UseWUServer -ne 1){throw 'UseWUServer=1 не подтверждён; сброс не выполнен'}
  $path58='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
- $id58=[string](Get-ItemProperty $path58 -ErrorAction Stop).SusClientId
+ $previous58=Get-ItemProperty $path58 -ErrorAction Stop
+ $id58=[string]$previous58.SusClientId
  $parsedId58=[guid]::Empty
  if(![guid]::TryParse($id58,[ref]$parsedId58) -or $parsedId58 -eq [guid]::Empty){throw 'SusClientId пуст или невалиден; автоматический сброс не выполнен'}
  if($id58 -ne $dcExpectedId58){Write-Output ('ID уже изменён: '+$id58+'. Повторного сброса нет.');exit 0}
- try{
-  $installer58=New-Object -ComObject Microsoft.Update.Installer
-  $installerBusy58=[bool]$installer58.IsBusy
-  Import-Module BitsTransfer -ErrorAction Stop
-  $downloads58=@(Get-BitsTransfer -AllUsers -ErrorAction Stop|Where-Object {
-   $_.DisplayName -eq 'WU Client Download' -and $_.JobState -in @('Connecting','Transferring','Queued','TransientError')
-  })
-  $installers58=@(Get-CimInstance Win32_Process -Filter "Name='TiWorker.exe' OR Name='MRT.exe'" -ErrorAction Stop)
- }catch{throw ('DC_IDENTITY_NOT_STARTED|Не удалось подтвердить готовность Windows Update на клиенте: '+$_.Exception.Message)}
- if($installerBusy58 -or $downloads58.Count -or $installers58.Count){throw 'DC_IDENTITY_NOT_STARTED|Windows Update занят; перерегистрация отложена'}
+ function Assert-IdentityRepairIdle58 {
+  try{
+   $installer58=New-Object -ComObject Microsoft.Update.Installer
+   $installerBusy58=[bool]$installer58.IsBusy
+   Import-Module BitsTransfer -ErrorAction Stop
+   $downloads58=@(Get-BitsTransfer -AllUsers -ErrorAction Stop|Where-Object {
+    $_.DisplayName -eq 'WU Client Download' -and $_.JobState -in @('Connecting','Transferring','Queued','TransientError')
+   })
+   $installers58=@(Get-CimInstance Win32_Process -Filter "Name='TiWorker.exe' OR Name='MRT.exe'" -ErrorAction Stop)
+  }catch{throw ('DC_IDENTITY_NOT_STARTED|Не удалось подтвердить готовность Windows Update на клиенте: '+$_.Exception.Message)}
+  if($installerBusy58 -or $downloads58.Count -or $installers58.Count){throw 'DC_IDENTITY_NOT_STARTED|Windows Update занят; перерегистрация отложена'}
+ }
+ function Restore-MissingIdentity58 {
+  if([string](Get-ItemProperty $path58 -ErrorAction Stop).SusClientId){return $false}
+  Assert-IdentityRepairIdle58
+  try{
+   Stop-Service wuauserv -ErrorAction Stop
+   (Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Stopped,[TimeSpan]::FromSeconds(30))
+   $current58=Get-ItemProperty $path58 -ErrorAction Stop
+   # Windows may have registered between the first read and the service stop.
+   if([string]$current58.SusClientId){return $false}
+   if($null -ne $previous58.SusClientIdValidation){
+    New-ItemProperty $path58 -Name SusClientIdValidation -PropertyType Binary -Value ([byte[]]$previous58.SusClientIdValidation) -Force -ErrorAction Stop|Out-Null
+   }
+   New-ItemProperty $path58 -Name SusClientId -PropertyType String -Value $id58 -Force -ErrorAction Stop|Out-Null
+   return $true
+  }finally{
+   Start-Service wuauserv -ErrorAction Stop
+   (Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Running,[TimeSpan]::FromSeconds(30))
+  }
+ }
+ Assert-IdentityRepairIdle58
  $backupFolder58=Join-Path $env:ProgramData 'DomainConsole-Backups'
  New-Item $backupFolder58 -ItemType Directory -Force|Out-Null
  $backup58=Join-Path $backupFolder58 ('WindowsUpdate-'+$env:COMPUTERNAME+'-'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N')+'.reg')
@@ -230,8 +253,15 @@ try {
   $new58=Read-NewIdentity58
  }
  & "$env:windir\System32\wuauclt.exe" /reportnow
- if($searchError58){throw ('Сброс выполнен, поиск на сервере WSUS завершился ошибкой: '+$searchError58)}
- if(!$new58){throw ('Сброс выполнен, WUA не подтвердил новый SusClientId. Результат поиска: '+$searchResult58)}
+ if(!$new58){
+  $failure58=if($searchError58){'Поиск на сервере WSUS завершился ошибкой: '+$searchError58}else{'WUA не подтвердил новый SusClientId. Результат поиска: '+$searchResult58}
+  try{
+   if(Restore-MissingIdentity58){$failure58+=' · Прежний ID восстановлен, конфликт остаётся.'}
+  }catch{$failure58+=' · Не удалось подтвердить восстановление прежнего ID: '+$_.Exception.Message+' · Резервная копия: '+$backup58}
+  $new58=Read-NewIdentity58
+  if(!$new58){throw $failure58}
+ }
+ if($searchError58){throw ('Новый ID создан, поиск на сервере WSUS завершился ошибкой: '+$searchError58)}
  [pscustomobject]@{Computer=$name58;Finished=[DateTime]::UtcNow.ToString('o');OldId=$dcExpectedId58;NewId=$new58;SearchResult=$searchResult58;Backup=$backup58}|Format-List
  if($null -ne $searchResult58 -and $searchResult58 -ne 2){throw 'ID изменён, но поиск завершился не полностью; требуется диагностика'}
  'Новый ID создан; регистрация и отчёт подтверждаются отдельно на сервере. Установка этим шагом не выполнялась.'

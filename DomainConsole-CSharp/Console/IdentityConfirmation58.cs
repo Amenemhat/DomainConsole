@@ -31,6 +31,11 @@ public partial class MainWindow {
      var target=ConnectionStore.Capture(row.Target);
      attempt.LastClientReadUtc=DateTimeOffset.UtcNow.ToString("o");Store.Write("identity-repairs58.json",identityRepairs58);
      try{
+      // This is observation of a manually accepted job, including when background polling is paused.
+      var submitted=IdentityRepairTarget(attempt);
+      if(submitted is {Status:"Submitted" or "SubmissionUnknown" or "Running"}&&CurrentEndpoint(submitted)&&CurrentIdentity(submitted))
+       await Poll(new ComputerRow(submitted,attempt.JobId),afterLink:true);
+      if(closing||!CurrentEndpoint(target)||!CurrentIdentity(target)||RecordIdentityReadinessFailure(attempt))continue;
       var observed=await remote.ReadIdentity(target,CancellationToken.None);
       await ResolveIdentitySource(observed,ReadWsus(),checkedSources,CancellationToken.None);
       if(closing||!CurrentEndpoint(target)||!CurrentIdentity(target))continue;
@@ -43,9 +48,10 @@ public partial class MainWindow {
    }
   }finally{readingManualRepairs=false;if(!closing){ExpireIdentityRepairs58();refreshSurvey?.Invoke();}}
  }
+ TargetRecord? IdentityRepairTarget(IdentityRepairAttempt58 attempt)=>History.FirstOrDefault(j=>j.Id==attempt.JobId)?.Targets.FirstOrDefault(t=>t.Host.Equals(attempt.Host,StringComparison.OrdinalIgnoreCase));
  bool RecordIdentityReadinessFailure(IdentityRepairAttempt58 attempt){
   if(attempt.Phase.StartsWith("Перерегистрация не начата",StringComparison.Ordinal))return true;
-  var target=History.FirstOrDefault(j=>j.Id==attempt.JobId)?.Targets.FirstOrDefault(t=>t.Host.Equals(attempt.Host,StringComparison.OrdinalIgnoreCase));
+  var target=IdentityRepairTarget(attempt);
   if(target==null||!IdentityRepairNotStarted(target))return false;
   var error=target.State?.Error??"";
   if(error.StartsWith(IdentityNotStarted,StringComparison.Ordinal))error=error[IdentityNotStarted.Length..];
@@ -59,9 +65,10 @@ public partial class MainWindow {
    if(RecordIdentityReadinessFailure(attempt))continue;
    if(attempt.StartedUtc.Length==0)attempt.StartedUtc=attempt.At;
    if(attempt.DeadlineUtc.Length==0&&DateTimeOffset.TryParse(attempt.StartedUtc,out var start)){attempt.DeadlineUtc=start.AddMinutes(10).ToString("o");changed=true;}
-   if(!DateTimeOffset.TryParse(attempt.DeadlineUtc,out var deadline)||now<deadline)continue;
-   var target=History.FirstOrDefault(j=>j.Id==attempt.JobId)?.Targets.FirstOrDefault(t=>t.Host.Equals(attempt.Host,StringComparison.OrdinalIgnoreCase));
-   var expired=ExpiredIdentityRepairPhase(attempt,target);
+   var target=IdentityRepairTarget(attempt);
+   var localFailure=IdentityRepairFailure(target);
+   if(localFailure.Length==0&&(!DateTimeOffset.TryParse(attempt.DeadlineUtc,out var deadline)||now<deadline))continue;
+   var expired=localFailure.Length>0?localFailure:ExpiredIdentityRepairPhase(attempt,target);
    if(attempt.Phase!=expired){
     attempt.Phase=expired;attempt.At=now.ToString("o");changed=true;
     Event31(attempt.Host,"identity-delay58",attempt.JobId,"Проверка перерегистрации WSUS","Warning",attempt.Phase,scope:attempt.JobId);
@@ -69,11 +76,13 @@ public partial class MainWindow {
   }
   if(changed)Store.Write("identity-repairs58.json",identityRepairs58);
  }
+ static string IdentityRepairFailure(TargetRecord? target)=>target?.State is {Status:"Failed" or "InterventionRequired",Ended.Length:>0} failure
+  ?"Перерегистрация завершилась с ошибкой · "+(failure.Error.Length>0?failure.Error:ComputerRow.StatusText(target.Status)):"";
  static string ExpiredIdentityRepairPhase(IdentityRepairAttempt58 attempt,TargetRecord? target){
   if(attempt.NewId.Length>0)return "Регистрация задерживается: новый ID прочитан, свежая запись или отчёт WSUS не подтверждены за 10 минут";
   if(target==null)return "Регистрация задерживается: новый ID не подтверждён за 10 минут";
-  if(target.State is {Status:"Failed" or "InterventionRequired",Ended.Length:>0} failure)
-   return "Перерегистрация завершилась с ошибкой · "+(failure.Error.Length>0?failure.Error:ComputerRow.StatusText(target.Status));
+  var localFailure=IdentityRepairFailure(target);
+  if(localFailure.Length>0)return localFailure;
   if(target.State is {Status:"Running"})return "Клиент выполняет перерегистрацию · новый ID не подтверждён за 10 минут";
   if(target.State is {Status:"Completed" or "AwaitingReboot"})return "Клиент завершил команду · новый ID не подтверждён за 10 минут";
   return "Результат задания не подтверждён за 10 минут · новый ID не прочитан";
