@@ -182,6 +182,39 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
         raise RuntimeError("Incorrect AD scope")
     evidence["checks"]["directory"] = ous
     save()
+    def capture_failed_repairs(active):
+        # Preserve the actual executor state and WUA errors before the disposable guests are stopped.
+        summary=json.loads(gui.diagnostics())
+        evidence["checks"]["repair-progress"]=summary
+        attempts={item["Host"].split(".",1)[0].upper():item.get("JobId","") for item in summary["Repair"]}
+        diagnostics=evidence["checks"].setdefault("client-repair-diagnostics",{})
+        for node in active:
+            job_id=attempts.get(node,"")
+            try:
+                if job_id:
+                    job_id=str(uuid.UUID(job_id))
+                script=r"""
+$root=Join-Path $env:ProgramData 'DomainConsoleCSharp'
+$files=@{}
+if($job){
+ $dir=Join-Path $root $job
+ foreach($name in 'status.json','step-1.out','step-1.err'){
+  $file=Join-Path $dir $name
+  if(Test-Path -LiteralPath $file){
+   try{$text=Get-Content -Raw -Encoding UTF8 -LiteralPath $file -ErrorAction Stop;$files[$name]=if($text){$text.Substring([Math]::Max(0,$text.Length-6000))}else{''}}
+   catch{$files[$name]=$_.Exception.Message}
+  }
+ }
+}
+$events=@(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-WindowsUpdateClient/Operational'; StartTime=(Get-Date).AddMinutes(-25)} -MaxEvents 20 -ErrorAction SilentlyContinue|Select-Object Id,TimeCreated,Message)
+$reg='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
+@{At=[DateTime]::UtcNow.ToString('o');Files=$files;Events=$events;SusClientId=[string](Get-ItemProperty $reg -ErrorAction SilentlyContinue).SusClientId;Service=(Get-Service wuauserv).Status.ToString()}|ConvertTo-Json -Depth 5 -Compress
+"""
+                diagnostics[node]=json.loads(ps(node,"$job="+quote(job_id)+";"+script))
+            except Exception as exc:
+                diagnostics[node]={"error":str(exc)[:1600]}
+            save()
+
     held = clients[-1]
     tap = "dclab"+str(nodes[held])
     subprocess.run(["ip","link","set",tap,"down"],check=True)
@@ -226,6 +259,7 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
                     save()
                     last_diag=time.monotonic()
                 time.sleep(15)
+            capture_failed_repairs(active)
             raise TimeoutError("Packaged console did not change registrations on "+", ".join(active)+" · "+gui.diagnostics()[:3300])
         evidence["checks"]["four-replacements"]=changed(clients[:-1])
         save()
