@@ -46,6 +46,12 @@ while($true){
   Start-Sleep -Seconds 15
  }
 }
+$registrationPath='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
+function Read-LegacyRegistrationFields {
+ (Get-ItemProperty -LiteralPath $registrationPath).PSObject.Properties.Name|Where-Object {$_ -in 'PingID','AccountDomainSid'}
+}
+$legacyBefore=@(Read-LegacyRegistrationFields)
+Write-Output ('Legacy WUA registration fields before repair: '+$(if($legacyBefore.Count){$legacyBefore -join ', '}else{'none'}))
 $before=Read-Identity
 if($before.Error -or $before.Server -ne $url -or ![guid]::Parse($before.SusClientId)){throw 'Incomplete initial client observation'}
 $dcExpectedId58=$before.SusClientId
@@ -124,19 +130,30 @@ if($product){
  Write-Output ("PASS independent WUA registration, latest report and expected group: "+($product|ConvertTo-Json -Compress))
  return
 }
-# Diagnostic continuation only. It cannot count as acceptance of the original product path.
+# Compare the legacy registration metadata on this isolated host only.
+$legacy=@(Read-LegacyRegistrationFields)
+Write-Output ('Legacy WUA registration fields after the new ID: '+$(if($legacy.Count){$legacy -join ', '}else{'none'}))
+if(!$legacy.Count){throw 'The legacy WUA metadata fields do not exist; this repair path is inapplicable'}
+& $checkReady
+$diagnosticBackup=Join-Path $labPath 'before-metadata-check.reg'
+& reg.exe export 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate' $diagnosticBackup /y|Out-Null
+if($LASTEXITCODE){throw 'Could not save lab registration state'}
+try{
+ Stop-Service wuauserv -ErrorAction Stop
+ if((Read-Identity).SusClientId -ne $identityId58){throw 'New ID changed before the metadata check'}
+ Remove-ItemProperty -LiteralPath $registrationPath -Name $legacy -ErrorAction Stop
+}finally{Start-Service wuauserv -ErrorAction Stop}
 $session=New-Object -ComObject Microsoft.Update.Session
-$session.ClientApplicationID='DomainConsole.RegistrationDiagnostic'
+$session.ClientApplicationID='DomainConsole.RegistrationMetadataDiagnostic'
 $search=$session.CreateUpdateSearcher();$search.ServerSelection=1;$search.Online=$true
 $diagnostic=$search.Search('IsInstalled=0 and IsHidden=0')
-Write-Output ('Post-registration managed diagnostic search result: '+[int]$diagnostic.ResultCode)
+Write-Output ('Managed scan after the isolated metadata check: '+[int]$diagnostic.ResultCode)
 & "$env:windir\System32\wuauclt.exe" /reportnow
-$afterScan=Read-Identity
-if($afterScan.SusClientId -ne $identityId58){throw 'Diagnostic search changed the previously claimed local ID'}
+if((Read-Identity).SusClientId -ne $identityId58){throw 'The metadata diagnostic changed the already-created ID'}
 $result=Wait-ForRegistration 300
 if($result){
- Write-Output ("DIAGNOSTIC CONFIRMED: managed scan and report after the new ID: "+($result|ConvertTo-Json -Compress))
- throw 'Server confirmation required the separate diagnostic continuation'
+ Write-Output ("DIAGNOSTIC CONFIRMED: "+($result|ConvertTo-Json -Compress))
+ throw 'Server confirmation required the separate diagnostic metadata check'
 }
 Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-WindowsUpdateClient/Operational';StartTime=$began.ToLocalTime()} -MaxEvents 15 -ErrorAction SilentlyContinue|Select-Object Id,TimeCreated,Message|Format-List|Out-Host
 Write-Output ("Client IDs: old="+$before.SusClientId+"; new="+$after.SusClientId)
