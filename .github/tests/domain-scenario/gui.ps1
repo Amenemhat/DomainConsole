@@ -137,6 +137,13 @@ function Application-Window($title,[bool]$prefix=$false){
  if($limited.Domain -or @($limited.Results.PSObject.Properties).Count -ne 1){throw 'The limited pass must start with the one historical client only'}
  Browse-Domain $window
  $discovered=Read-Data 'identity-survey.json'
+ $onlineHosts=@($observed.PSObject.Properties | Where-Object Name -ne 'CLONE5' | ForEach-Object {$_.Value.Name.ToLowerInvariant()})
+ # Repeat discovery once after a read timeout on an online guest, before any consent.
+ $timedOut=@($onlineHosts | Where-Object {$discovered.Results.$_ -like 'Не удалось проверить · Превышено время операции*'})
+ if($timedOut.Count -gt 0){
+  Browse-Domain $window
+  $discovered=Read-Data 'identity-survey.json'
+ }
  if(@($discovered.Results.PSObject.Properties).Count -ne $computers.Count){throw 'The confirmed domain pass did not cover every AD computer'}
  Set-Content "$lab\read-only.done" 'checked'
  Wait-For {Test-Path "$lab\allow-consent.done"} 'read-only resource measurements' 120|Out-Null
