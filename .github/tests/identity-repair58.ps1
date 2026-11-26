@@ -42,7 +42,7 @@ function Get-ItemProperty {param($Path,$ErrorAction,$Name)
  return [pscustomobject]@{SusClientId=$global:id58;SusClientIdValidation=$global:validation58}
 }
 function Export-Fixture58 {param($Path) Invoke-Fixture58 'Backup';$global:LASTEXITCODE=0;if($env:CASE58 -eq 'backup-fails'){$global:LASTEXITCODE=5}else{[IO.File]::WriteAllText($Path,'fixture registry backup')}}
-function Stop-Service {param($Name,$ErrorAction) if($Name -ne 'wuauserv'){throw 'Unexpected service'};Invoke-Fixture58 'Stop';if($env:CASE58 -in @('stop-fails','stop-and-start-fail')){throw 'STOP_FIXTURE_FAILURE'};$global:service58='Stopped'}
+function Stop-Service {param($Name,$ErrorAction) if($Name -ne 'wuauserv'){throw 'Unexpected service'};Invoke-Fixture58 'Stop';if($env:CASE58 -in @('stop-fails','stop-and-start-fail')){throw 'STOP_FIXTURE_FAILURE'};$global:service58='Stopped';if($env:CASE58 -eq 'late-native-registers' -and $global:trace58 -contains 'Report'){$global:id58='33333333-3333-3333-3333-333333333333';$global:validation58=[byte[]]@(4,5)}}
 function Start-Service {param($Name,$ErrorAction) if($Name -ne 'wuauserv'){throw 'Unexpected service'};Invoke-Fixture58 'Start';if($env:CASE58 -eq 'stop-and-start-fail'){throw 'START_FIXTURE_FAILURE'};$global:service58='Running';if(!$global:id58 -and $env:CASE58 -eq 'after-delete'){$global:id58='33333333-3333-3333-3333-333333333333'}}
 function Get-Service {param($Name) $s=[pscustomobject]@{};$s|Add-Member ScriptMethod WaitForStatus {param($status,$timeout)};return $s}
 function Remove-ItemProperty {param($Path,$Name,$ErrorAction) Invoke-Fixture58 ('Remove-'+$Name);if($env:CASE58 -eq 'remove-fails'){throw 'REMOVE_FIXTURE_FAILURE'};if($Name -eq 'SusClientId'){$global:id58=''}else{$global:validation58=$null};if($env:CASE58 -eq 'after-delete' -and $Name -eq 'SusClientId'){throw 'INTERRUPTED_AFTER_DELETE'}}
@@ -54,13 +54,13 @@ function New-ItemProperty {param($Path,$Name,$PropertyType,$Value,[switch]$Force
 }
 $fixtureInstaller58=[pscustomobject]@{IsBusy=($env:CASE58 -eq 'busy')}
 $fixtureSearch58=[pscustomobject]@{ServerSelection=0;Online=$false}
-$fixtureSearch58|Add-Member ScriptMethod Search {param($criteria) Invoke-Fixture58 'Search';if($this.ServerSelection -ne 1 -or !$this.Online){throw 'Search source incorrect'};if($env:CASE58 -ne 'no-new-id'){$global:id58='33333333-3333-3333-3333-333333333333'};[pscustomobject]@{ResultCode=$(if($env:CASE58 -eq 'search-fails'){4}else{2})}}
+$fixtureSearch58|Add-Member ScriptMethod Search {param($criteria) Invoke-Fixture58 'Search';if($this.ServerSelection -ne 1 -or !$this.Online){throw 'Search source incorrect'};if($env:CASE58 -notin @('no-new-id','late-native-registers')){$global:id58='33333333-3333-3333-3333-333333333333'};[pscustomobject]@{ResultCode=$(if($env:CASE58 -eq 'search-fails'){4}else{2})}}
 $fixtureSession58=[pscustomobject]@{ClientApplicationID=''}
 $fixtureSession58|Add-Member ScriptMethod CreateUpdateSearcher {$fixtureSearch58}
 '@
 $root=Join-Path $env:RUNNER_TEMP ('identity58-'+[guid]::NewGuid().ToString('N'))
 New-Item $root -ItemType Directory|Out-Null
-foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed','backup-fails','stop-fails','stop-and-start-fail','remove-fails','after-delete','search-fails','no-new-id','native-registers','success')){
+foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed','backup-fails','stop-fails','stop-and-start-fail','remove-fails','after-delete','search-fails','no-new-id','native-registers','late-native-registers','success')){
  $folder=Join-Path $root $case;New-Item $folder -ItemType Directory|Out-Null
  $file=Join-Path $folder 'case.ps1';$state=Join-Path $folder 'state.json'
  $suffix=@'
@@ -80,7 +80,7 @@ foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-serv
  if(!$process.WaitForExit(20000)){$process.Kill();throw "Fixture timed out: $case"}
  $output=$stdout.Result+"`n"+$stderr.Result
  $data=Get-Content $state -Raw|ConvertFrom-Json
- $expectedSuccess=$case -in @('already-changed','native-registers','success')
+ $expectedSuccess=$case -in @('already-changed','native-registers','late-native-registers','success')
  if(($process.ExitCode -eq 0) -ne $expectedSuccess){throw "Unexpected result for ${case}: $output"}
  if($case -in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed') -and $data.Trace.Count -ne 0){throw "Guard changed state: $case"}
  if($case -eq 'backup-fails' -and ($data.Trace -contains 'Stop')){throw 'Backup failure reached service stop'}
@@ -88,7 +88,8 @@ foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-serv
  if($case -eq 'stop-and-start-fail' -and ($output -notmatch 'STOP_FIXTURE_FAILURE' -or $output -notmatch 'START_FIXTURE_FAILURE')){throw 'Primary or restoration failure was lost'}
  if($case -eq 'success' -and (($data.Trace -join ',') -ne 'Backup,Stop,Remove-SusClientId,Remove-SusClientIdValidation,Start,Authorize,Search,Report' -or $data.Id -ne '33333333-3333-3333-3333-333333333333')){throw 'Successful repair did not follow expected order'}
  if($case -eq 'native-registers' -and (($data.Trace -join ',') -ne 'Backup,Stop,Remove-SusClientId,Remove-SusClientIdValidation,Start,Authorize,Report' -or !$data.Id)){throw 'An unnecessary online search followed a successful native registration'}
- if($case -eq 'no-new-id' -and ($output -notmatch 'WUA .*SusClientId' -or @($data.Trace|Where-Object {$_ -eq 'Search'}).Count -ne 1 -or $data.Id -ne '22222222-2222-2222-2222-222222222222' -or ($data.Validation -join ',') -ne '1,2,3' -or $data.Service -ne 'Running')){throw 'Missing identity did not restore the original registration values and service'}
+ if($case -eq 'no-new-id' -and ($output -notmatch 'WUA .*SusClientId' -or @($data.Trace|Where-Object {$_ -eq 'Search'}).Count -ne 1 -or $data.Id -ne '22222222-2222-2222-2222-222222222222' -or ($data.Validation -join ',') -ne '1,2,3' -or $data.Service -ne 'Running')){throw ('Missing identity did not restore the original registration values and service: '+($data|ConvertTo-Json -Compress)+'; '+$output)}
+ if($case -eq 'late-native-registers' -and ($data.Id -ne '33333333-3333-3333-3333-333333333333' -or ($data.Validation -join ',') -ne '4,5' -or $data.Trace -like 'Restore-*')){throw 'Rollback overwrote a new ID created while stopping wuauserv'}
  if($case -in @('search-fails','after-delete') -and $data.Id -ne '33333333-3333-3333-3333-333333333333'){throw ('Partial repair lost new identity: '+($data|ConvertTo-Json -Compress)+'; '+$output)}
  if($case -in @('busy','bits-active','bits-error','installer-process') -and $output -notmatch 'DC_IDENTITY_NOT_STARTED'){throw "Missing readiness outcome for $case"}
  $expectedErrors=@{'stop-fails'='STOP_FIXTURE_FAILURE';'remove-fails'='REMOVE_FIXTURE_FAILURE';'after-delete'='INTERRUPTED_AFTER_DELETE'}

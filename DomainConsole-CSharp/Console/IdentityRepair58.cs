@@ -207,7 +207,7 @@ try {
    if($null -ne $previous58.SusClientIdValidation){
     New-ItemProperty $path58 -Name SusClientIdValidation -PropertyType Binary -Value ([byte[]]$previous58.SusClientIdValidation) -Force -ErrorAction Stop|Out-Null
    }
-   New-ItemProperty $path58 -Name SusClientId -PropertyType String -Value $id58 -Force -ErrorAction Stop|Out-Null
+   New-ItemProperty $path58 -Name SusClientId -PropertyType String -Value ([string]$previous58.SusClientId) -Force -ErrorAction Stop|Out-Null
    return $true
   }finally{
    Start-Service wuauserv -ErrorAction Stop
