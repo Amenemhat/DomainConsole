@@ -63,9 +63,9 @@ $utf8=New-Object Text.UTF8Encoding($true)
 $exe=Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe'
 function Start-Attempt([string]$label) {
  $wrapper=Join-Path $labPath ($label+'.ps1')
- $rescue='try { & '+(Literal $bodyPath)+' }catch{[IO.File]::WriteAllText('+(Literal ($wrapper+'.error'))+',$_.Exception.Message);exit 1}'
+ $rescue='try { & '+(Literal $bodyPath)+' | Out-File -Encoding utf8 -LiteralPath '+(Literal ($wrapper+'.out'))+' }catch{[IO.File]::WriteAllText('+(Literal ($wrapper+'.error'))+',$_.Exception.Message);exit 1}'
  [IO.File]::WriteAllText($wrapper,$rescue,$utf8)
- return Start-Process $exe -ArgumentList ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$wrapper+'"') -RedirectStandardOutput ($wrapper+'.out') -PassThru
+ return Start-Process $exe -ArgumentList ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$wrapper+'"') -PassThru
 }
 function End-Attempt($process) {
  if(!$process.WaitForExit(180000)){$process.Kill();throw 'Isolated WUA test process exceeded its time limit'}
