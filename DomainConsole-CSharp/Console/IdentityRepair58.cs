@@ -230,6 +230,14 @@ try {
   if([guid]::TryParse($candidate,[ref]$parsed) -and $parsed -ne [guid]::Empty -and $parsed -ne $parsedId58){return $candidate}
   return ''
  }
+ function Wait-NewIdentity58([int]$seconds) {
+  $candidate=Read-NewIdentity58
+  for($second=0;!$candidate -and $second -lt $seconds;$second++){
+   Start-Sleep -Seconds 1
+   $candidate=Read-NewIdentity58
+  }
+  return $candidate
+ }
  $new58=Read-NewIdentity58
  if(!$new58){
   # A successful COM search alone does not renew WSUS authorization.
@@ -237,14 +245,26 @@ try {
   try{
    & "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow
   }catch{throw ('Не удалось запросить авторизацию WSUS: '+$_.Exception.Message+'; резервная копия: '+$backup58)}
- }
- $new58=Read-NewIdentity58
- for($attempt58=0;!$new58 -and $attempt58 -lt 60;$attempt58++){
-  Start-Sleep -Seconds 1
-  $new58=Read-NewIdentity58
+  $new58=Wait-NewIdentity58 60
  }
  if(!$new58){
-  throw ('WUA не подтвердил новый SusClientId за 60 секунд; запуск wuauserv подтверждён; резервная копия: '+$backup58)
+  $searchResult58=$null
+  try{
+   Assert-IdentityRepairIdle58
+   $new58=Read-NewIdentity58
+   if(!$new58){
+    if((Get-Service wuauserv).Status -eq 'Stopped'){Start-IdentityService58}
+    Write-Output 'Новый ID пока не появился. Выполняется один поиск на управляемом сервере WSUS.'
+    $session58=New-Object -ComObject Microsoft.Update.Session
+    $session58.ClientApplicationID='DomainConsole.Identity58'
+    $search58=$session58.CreateUpdateSearcher()
+    $search58.ServerSelection=1
+    $search58.Online=$true
+    $searchResult58=[int]$search58.Search('IsInstalled=0 and IsHidden=0').ResultCode
+    $new58=Wait-NewIdentity58 30
+   }
+  }catch{throw ('После сброса ID управляемый поиск не завершён: '+$_.Exception.Message.Replace('DC_IDENTITY_NOT_STARTED|','')+'; резервная копия: '+$backup58)}
+  if(!$new58){throw ('WUA не подтвердил новый SusClientId после штатного запроса и одного поиска. Код поиска: '+$searchResult58+'; резервная копия: '+$backup58)}
  }
  & "$env:windir\System32\wuauclt.exe" /reportnow
  [pscustomobject]@{Computer=$name58;Finished=[DateTime]::UtcNow.ToString('o');OldId=$dcExpectedId58;NewId=$new58;Backup=$backup58}|Format-List

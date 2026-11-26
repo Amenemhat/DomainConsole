@@ -4,6 +4,7 @@ $template=[IO.File]::ReadAllText((Join-Path $ScriptFolder 'identity-repair58.ps1
 $installationFixture='55555555-5555-5555-5555-555555555555'
 $template=('$dcExpectedInstallation58='''+$installationFixture+''';$dcExpectedStatusServer58=''http://wsus.invalid:8530'';')+$template.Replace('$dcExpectedInstallation58='''';','').Replace('$dcExpectedStatusServer58='''';','')
 $template=$template.Replace('$installer58=New-Object -ComObject Microsoft.Update.Installer','$installer58=$fixtureInstaller58')
+$template=$template.Replace('$session58=New-Object -ComObject Microsoft.Update.Session','$session58=$fixtureSession58')
 $template=$template.Replace("& reg.exe export 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate' $"+'backup58 /y | Out-Null','Export-Fixture58 $backup58')
 $template=$template.Replace('& "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow','Request-FixtureRegistration58')
 $template=$template.Replace('& "$env:windir\System32\wuauclt.exe" /reportnow','Report-FixtureRegistration58')
@@ -23,7 +24,15 @@ $global:service58='Running'
 $global:validation58=[byte[]]@(1,2,3)
 $global:waitReads58=0
 function Invoke-Fixture58 {param($Name) $global:trace58.Add($Name)}
-function Start-Sleep {param($Milliseconds) $global:waitReads58++;if($env:CASE58 -eq 'delayed-registration' -and $global:waitReads58 -eq 60){$global:fixtureId58='33333333-3333-3333-3333-333333333333'}}
+function Start-Sleep {
+ param($Milliseconds)
+ $global:waitReads58++
+ if($global:waitReads58 -eq 60){
+  if($env:CASE58 -eq 'delayed-registration'){$global:fixtureId58='33333333-3333-3333-3333-333333333333'}
+  if($env:CASE58 -in @('fallback-registers','no-new-id')){$global:service58='Stopped'}
+  if($env:CASE58 -eq 'fallback-busy'){$fixtureInstaller58.IsBusy=$true}
+ }
+}
 function Get-CimInstance {param($ClassName,$ErrorAction,$Filter)
  if($ClassName -eq 'Win32_ComputerSystem'){return [pscustomobject]@{PartOfDomain=$true;Domain=$(if($env:CASE58 -eq 'wrong-name'){'other.invalid'}else{'invalid'})}}
  if($ClassName -eq 'Win32_ComputerSystemProduct'){return [pscustomobject]@{UUID=$(if($env:CASE58 -eq 'wrong-machine'){'44444444-4444-4444-4444-444444444444'}else{'11111111-1111-1111-1111-111111111111'})}}
@@ -45,7 +54,7 @@ function Get-ItemProperty {param($Path,$ErrorAction,$Name)
 function Export-Fixture58 {param($Path) Invoke-Fixture58 'Backup';$global:LASTEXITCODE=0;if($env:CASE58 -eq 'backup-fails'){$global:LASTEXITCODE=5}else{[IO.File]::WriteAllText($Path,'fixture registry backup')}}
 function Stop-Service {param($Name,$ErrorAction) if($Name -ne 'wuauserv'){throw 'Unexpected service'};Invoke-Fixture58 'Stop';if($env:CASE58 -in @('stop-fails','stop-and-start-fail')){throw 'STOP_FIXTURE_FAILURE'};$global:service58='Stopped';if($env:CASE58 -eq 'id-changed-before-removal'){$global:fixtureId58='33333333-3333-3333-3333-333333333333';$global:validation58=[byte[]]@(4,5)}}
 function Start-Service {param($Name,$ErrorAction) if($Name -ne 'wuauserv'){throw 'Unexpected service'};Invoke-Fixture58 'Start';if($env:CASE58 -eq 'stop-and-start-fail'){throw 'START_FIXTURE_FAILURE'};$global:service58='Running';if(!$global:fixtureId58 -and $env:CASE58 -in @('after-delete','native-registers')){$global:fixtureId58='33333333-3333-3333-3333-333333333333'}}
-function Get-Service {param($Name) $s=[pscustomobject]@{};$s|Add-Member ScriptMethod WaitForStatus {param($status,$timeout)};return $s}
+function Get-Service {param($Name) $s=[pscustomobject]@{Status=$global:service58};$s|Add-Member ScriptMethod WaitForStatus {param($status,$timeout)};return $s}
 function Remove-ItemProperty {param($Path,$Name,$ErrorAction) Invoke-Fixture58 ('Remove-'+$Name);if($env:CASE58 -eq 'remove-fails'){throw 'REMOVE_FIXTURE_FAILURE'};if($Name -eq 'SusClientId'){$global:fixtureId58=''}else{$global:validation58=$null};if($env:CASE58 -eq 'after-delete' -and $Name -eq 'SusClientId'){throw 'INTERRUPTED_AFTER_DELETE'}}
 function New-ItemProperty {throw 'Unexpected write of a WSUS registration value'}
 function Request-FixtureRegistration58 {
@@ -58,10 +67,20 @@ function Report-FixtureRegistration58 {
  Invoke-Fixture58 'Report'
 }
 $fixtureInstaller58=[pscustomobject]@{IsBusy=($env:CASE58 -eq 'busy')}
+$fixtureSearcher58=[pscustomobject]@{ServerSelection=0;Online=$false}
+$fixtureSearcher58|Add-Member ScriptMethod Search {
+ param($criteria)
+ if($this.ServerSelection -ne 1 -or !$this.Online -or $global:service58 -ne 'Running'){throw 'Managed fallback used the wrong source or service state'}
+ Invoke-Fixture58 'Search'
+ if($env:CASE58 -eq 'fallback-registers'){$global:fixtureId58='33333333-3333-3333-3333-333333333333'}
+ [pscustomobject]@{ResultCode=2}
+}
+$fixtureSession58=[pscustomobject]@{ClientApplicationID=''}
+$fixtureSession58|Add-Member ScriptMethod CreateUpdateSearcher {$fixtureSearcher58}
 '@
 $root=Join-Path $env:RUNNER_TEMP ('identity58-'+[guid]::NewGuid().ToString('N'))
 New-Item $root -ItemType Directory|Out-Null
-foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-report-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed','backup-fails','stop-fails','stop-and-start-fail','id-changed-before-removal','remove-fails','after-delete','request-fails','no-new-id','native-registers','delayed-registration','success')){
+foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-report-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed','backup-fails','stop-fails','stop-and-start-fail','id-changed-before-removal','remove-fails','after-delete','request-fails','no-new-id','native-registers','delayed-registration','success','fallback-registers','fallback-busy')){
  $folder=Join-Path $root $case;New-Item $folder -ItemType Directory|Out-Null
  $file=Join-Path $folder 'case.ps1';$state=Join-Path $folder 'state.json'
  $suffix=@'
@@ -81,7 +100,7 @@ foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-serv
  if(!$process.WaitForExit(20000)){$process.Kill();throw "Fixture timed out: $case"}
  $output=$stdout.Result+"`n"+$stderr.Result
  $data=Get-Content $state -Raw|ConvertFrom-Json
- $expectedSuccess=$case -in @('already-changed','native-registers','delayed-registration','success')
+ $expectedSuccess=$case -in @('already-changed','native-registers','delayed-registration','success','fallback-registers')
  if(($process.ExitCode -eq 0) -ne $expectedSuccess){throw "Unexpected result for ${case}: $output"}
  if($case -in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-report-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed') -and $data.Trace.Count -ne 0){throw "Guard changed state: $case"}
  if($case -eq 'backup-fails' -and ($data.Trace -contains 'Stop')){throw 'Backup failure reached service stop'}
@@ -90,11 +109,13 @@ foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-serv
  $resetTrace='Backup,Stop,Remove-SusClientId,Remove-SusClientIdValidation,Start'
  if($case -in @('success','delayed-registration') -and (($data.Trace -join ',') -ne "$resetTrace,RequestRegistration,Report" -or $data.Id -ne '33333333-3333-3333-3333-333333333333')){throw 'Repair did not request registration once and report the new ID'}
  if($case -eq 'native-registers' -and (($data.Trace -join ',') -ne "$resetTrace,Report" -or !$data.Id)){throw 'An unnecessary registration request followed creation of a new ID'}
+ if($case -eq 'fallback-registers' -and (($data.Trace -join ',') -ne "$resetTrace,RequestRegistration,Start,Search,Report" -or $data.WaitReads -ne 60 -or !$data.Id)){throw 'The managed fallback repeated the reset, missed its limits or failed to report the new ID'}
+ if($case -eq 'fallback-busy' -and (($data.Trace -join ',') -ne "$resetTrace,RequestRegistration" -or $data.WaitReads -ne 60 -or $output -match 'DC_IDENTITY_NOT_STARTED')){throw 'An active installer was disturbed or a post-reset failure was marked as unstarted'}
  if($case -eq 'no-new-id'){
   $backup=@(Get-ChildItem (Join-Path $folder 'DomainConsole-Backups') -Filter '*.reg')
   # Windows PowerShell can wrap the backup path across error output lines.
   $compactOutput=$output -replace '\s',''
-  if($output -notmatch 'WUA .*SusClientId' -or $backup.Count -ne 1 -or !$compactOutput.Contains($backup[0].Name) -or ($data.Trace -join ',') -ne "$resetTrace,RequestRegistration" -or $data.WaitReads -ne 60 -or $data.Id -or $data.Validation -or $data.Service -ne 'Running'){throw ('Missing identity exceeded the wait, repeated work or lost the backup path: '+($data|ConvertTo-Json -Compress)+'; '+$output)}
+  if($output -notmatch 'WUA .*SusClientId' -or $backup.Count -ne 1 -or !$compactOutput.Contains($backup[0].Name) -or ($data.Trace -join ',') -ne "$resetTrace,RequestRegistration,Start,Search" -or $data.WaitReads -ne 90 -or $data.Id -or $data.Validation -or $data.Service -ne 'Running'){throw ('Missing identity exceeded the wait, repeated work or lost the backup path: '+($data|ConvertTo-Json -Compress)+'; '+$output)}
  }
  if($case -eq 'id-changed-before-removal' -and ($data.Id -ne '33333333-3333-3333-3333-333333333333' -or ($data.Validation -join ',') -ne '4,5' -or ($data.Trace -join ',') -ne 'Backup,Stop,Start' -or $data.Service -ne 'Running')){throw 'An ID registered while stopping wuauserv was overwritten or the service was left stopped'}
  if($case -eq 'after-delete' -and $data.Id -ne '33333333-3333-3333-3333-333333333333'){throw ('Partial repair lost new identity: '+($data|ConvertTo-Json -Compress)+'; '+$output)}
