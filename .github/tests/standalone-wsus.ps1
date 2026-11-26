@@ -102,16 +102,34 @@ if((End-Attempt $replay) -ne 0 -or (Read-Identity).SusClientId -ne $after.SusCli
 if((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography').MachineGuid -ne $machineGuid -or !(Test-Path $marker) -or (Get-ItemProperty $p).WUServer -ne $url){throw 'Machine identity, policy or existing download cache was modified'}
 Write-Output ('PASS client mutex, two independent repair processes and replay: exits '+($codes -join ',')+'; one backup; MachineGuid, policy and cached downloads preserved')
 $read=Body 'IdentityConfirmation58.cs' 'IdentityServerScript58'
-$identityId58=$after.SusClientId;$ssl=$false;$port=8530
-$end=[datetime]::UtcNow.AddMinutes(10)
-do{
- try{
+$identityId58=$after.SusClientId;$lookupName58=$after.Name;$ssl=$false;$port=8530
+function Wait-ForRegistration([int]$seconds){
+ $until=[datetime]::UtcNow.AddSeconds($seconds)
+ do {
   $record=& ([ScriptBlock]::Create($read))|ConvertFrom-Json
-  if([guid]$record.Id -eq [guid]$after.SusClientId -and $record.Name.TrimEnd('.') -eq $after.Name.TrimEnd('.') -and [datetime]$record.ReportedUtc -ge $began -and $record.Groups -contains $group.Name){
-   Write-Output ("PASS independent WUA registration, latest report and expected group: "+($record|ConvertTo-Json -Compress))
-   return
-  }
- }catch{Write-Output ('Waiting for exact server record: '+$_.Exception.Message)}
- Start-Sleep -Seconds 20
-}while([datetime]::UtcNow -lt $end)
-throw ('WSUS has not confirmed name, new identifier, group and report by the deadline: '+($record|ConvertTo-Json -Compress))
+  if($record.Id -eq $identityId58 -and $record.Name.TrimEnd('.') -eq $after.Name.TrimEnd('.') -and [datetime]$record.ReportedUtc -ge $began -and $record.Groups -contains $group.Name){return $record}
+  Start-Sleep -Seconds 15
+ }while([datetime]::UtcNow -lt $until)
+ Write-Host ("Last exact WSUS lookup: "+($record|ConvertTo-Json -Compress))
+}
+$product=Wait-ForRegistration 120
+if($product){
+ Write-Output ("PASS independent WUA registration, latest report and expected group: "+($product|ConvertTo-Json -Compress))
+ return
+}
+# Diagnostic continuation only. It cannot count as acceptance of the original product path.
+$session=New-Object -ComObject Microsoft.Update.Session
+$session.ClientApplicationID='DomainConsole.RegistrationDiagnostic'
+$search=$session.CreateUpdateSearcher();$search.ServerSelection=1;$search.Online=$true
+$diagnostic=$search.Search('IsInstalled=0 and IsHidden=0')
+Write-Output ('Post-registration managed diagnostic search result: '+[int]$diagnostic.ResultCode)
+& "$env:windir\System32\wuauclt.exe" /reportnow
+$afterScan=Read-Identity
+if($afterScan.SusClientId -ne $identityId58){throw 'Diagnostic search changed the previously claimed local ID'}
+$result=Wait-ForRegistration 300
+if($result){
+ Write-Output ("DIAGNOSTIC CONFIRMED: managed scan and report after the new ID: "+($result|ConvertTo-Json -Compress))
+ throw 'Server confirmation required the separate diagnostic continuation'
+}
+Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-WindowsUpdateClient/Operational';StartTime=$began.ToLocalTime()} -MaxEvents 15 -ErrorAction SilentlyContinue|Select-Object Id,TimeCreated,Message|Format-List|Out-Host
+throw 'The exact WSUS record or a current report remained absent after the diagnostic continuation'
