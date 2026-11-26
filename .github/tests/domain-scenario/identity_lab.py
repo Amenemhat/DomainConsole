@@ -1,5 +1,6 @@
 """Exercise the released PowerShell bodies against WUA, AD and WSUS in the private lab."""
 import concurrent.futures
+from datetime import datetime
 import json
 from pathlib import Path
 import re
@@ -217,11 +218,12 @@ $reg='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
         try:
             iis=r"""
 $root=Join-Path $env:SystemDrive 'inetpub\logs\LogFiles'
-@(
+$entries=@(
  Get-ChildItem $root -Filter *.log -Recurse -ErrorAction SilentlyContinue|Sort-Object LastWriteTimeUtc -Descending|Select-Object -First 5|ForEach-Object {
   Get-Content -LiteralPath $_.FullName -Tail 1500|Where-Object {$_ -like '#Fields:*' -or $_ -match '/(?:ClientWebService|SimpleAuthWebService|ReportingWebService)/'}|Select-Object -Last 50
  }
-)|ConvertTo-Json -Compress
+)
+ConvertTo-Json -InputObject $entries -Compress
 """
             evidence["checks"]["wsus-registration-http"]=json.loads(ps("DCWSUS",iis) or "[]")
         except Exception as exc:
@@ -376,7 +378,13 @@ $rc=[int]$search.Search('IsInstalled=0 and IsHidden=0').ResultCode
     if shared.lower() in ids or len(ids)!=len(clients):
         raise RuntimeError("Repair failed to produce distinct new Windows IDs")
     evidence["checks"]["after"] = after
+    attempts=json.loads(gui.diagnostics())["Repair"]
+    started={item["Host"].split(".",1)[0].upper():item["StartedUtc"] for item in attempts if item["JobId"]}
+    evidence["checks"]["repair_started_utc"]=started
     save()
+    if set(started)!=set(clients) or not all(started.values()):
+        raise RuntimeError("Missing product repair start timestamp for one or more expected clients")
+    repair_start={node:datetime.fromisoformat(value) for node,value in started.items()}
     pending = set(clients)
     deadline = time.monotonic()+620
     while pending and time.monotonic()<deadline:
@@ -386,18 +394,17 @@ $rc=[int]$search.Search('IsInstalled=0 and IsHidden=0').ResultCode
                 target=json.loads(ps("DCWSUS", "$port=8530;$ssl=$false;$identityId58="+quote(current["SusClientId"])+";"+verify))
             except RuntimeError:
                 continue
-            # A server record must match ID and real FQDN, report after the pre-repair probe and contain the client-side group.
-            from datetime import datetime
-            def stamp(value):
-                return datetime.fromisoformat(value.replace("Z","+00:00"))
+            # An update report must be newer than the repair of this exact device.
             if (target["Id"].lower()==current["SusClientId"].lower() and target["Name"].rstrip(".").lower()==current["Name"].rstrip(".").lower()
-                    and stamp(target["ReportedUtc"])>=stamp(before[node]["At"]) and "DCLabClients" in target["Groups"]):
+                    and datetime.fromisoformat(target["ReportedUtc"])>=repair_start[node]
+                    and "DCLabClients" in target["Groups"]):
                 pending.remove(node)
                 evidence["checks"].setdefault("confirmed",{})[node]=target
                 save()
         if pending:
             time.sleep(20)
     if pending:
+        capture_failed_repairs(sorted(pending))
         raise RuntimeError("WSUS has not confirmed fresh registration in 10 minutes: "+", ".join(sorted(pending)))
     evidence["checks"]["packaged-console"]=gui.finish()
     resources("after",clients)
