@@ -69,7 +69,15 @@ if((Backup-Count) -ne $beforeCopies -or (Read-Identity).SusClientId -ne $before.
 $one=Start-Attempt 'first'
 $two=Start-Attempt 'second'
 $codes=@((End-Attempt $one),(End-Attempt $two))
-if(0 -notin $codes){throw 'Neither concurrent request completed'}
+if(0 -notin $codes){
+ foreach($label in 'first','second'){
+  $errorPath=Join-Path $labPath ($label+'.ps1.error')
+  if(Test-Path $errorPath){Write-Output ($label+': '+[IO.File]::ReadAllText($errorPath))}
+ }
+ $local=Read-Identity
+ Write-Output ("Local ID present: "+[bool]$local.SusClientId+"; ID changed: "+($local.SusClientId -ne $before.SusClientId)+"; new backups: "+((Backup-Count)-$beforeCopies)+"; service: "+(Get-Service wuauserv).Status)
+ throw ('Neither concurrent request completed. Exit codes: '+($codes -join ', '))
+}
 foreach($label in 'first','second'){
  $errorPath=Join-Path $labPath ($label+'.ps1.error')
  if((Test-Path $errorPath) -and [IO.File]::ReadAllText($errorPath) -notmatch 'уже выполняется'){throw ('Unexpected operation failure: '+[IO.File]::ReadAllText($errorPath))}
