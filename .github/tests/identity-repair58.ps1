@@ -90,7 +90,12 @@ foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-serv
  $resetTrace='Backup,Stop,Remove-SusClientId,Remove-SusClientIdValidation,Start'
  if($case -in @('success','delayed-registration') -and (($data.Trace -join ',') -ne "$resetTrace,RequestRegistration,Report" -or $data.Id -ne '33333333-3333-3333-3333-333333333333')){throw 'Repair did not request registration once and report the new ID'}
  if($case -eq 'native-registers' -and (($data.Trace -join ',') -ne "$resetTrace,Report" -or !$data.Id)){throw 'An unnecessary registration request followed creation of a new ID'}
- if($case -eq 'no-new-id' -and ($output -notmatch 'WUA .*SusClientId' -or $output -notmatch 'WindowsUpdate-fixture-.*\.reg' -or ($data.Trace -join ',') -ne "$resetTrace,RequestRegistration" -or $data.WaitReads -ne 60 -or $data.Id -or $data.Validation -or $data.Service -ne 'Running')){throw ('Missing identity exceeded the wait, repeated work or lost the backup path: '+($data|ConvertTo-Json -Compress)+'; '+$output)}
+ if($case -eq 'no-new-id'){
+  $backup=@(Get-ChildItem (Join-Path $folder 'DomainConsole-Backups') -Filter '*.reg')
+  # Windows PowerShell can wrap the backup path across error output lines.
+  $compactOutput=$output -replace '\s',''
+  if($output -notmatch 'WUA .*SusClientId' -or $backup.Count -ne 1 -or !$compactOutput.Contains($backup[0].Name) -or ($data.Trace -join ',') -ne "$resetTrace,RequestRegistration" -or $data.WaitReads -ne 60 -or $data.Id -or $data.Validation -or $data.Service -ne 'Running'){throw ('Missing identity exceeded the wait, repeated work or lost the backup path: '+($data|ConvertTo-Json -Compress)+'; '+$output)}
+ }
  if($case -eq 'id-changed-before-removal' -and ($data.Id -ne '33333333-3333-3333-3333-333333333333' -or ($data.Validation -join ',') -ne '4,5' -or ($data.Trace -join ',') -ne 'Backup,Stop,Start' -or $data.Service -ne 'Running')){throw 'An ID registered while stopping wuauserv was overwritten or the service was left stopped'}
  if($case -eq 'after-delete' -and $data.Id -ne '33333333-3333-3333-3333-333333333333'){throw ('Partial repair lost new identity: '+($data|ConvertTo-Json -Compress)+'; '+$output)}
  if($case -eq 'request-fails' -and (($data.Trace -join ',') -ne "$resetTrace,RequestRegistration" -or $data.WaitReads -ne 0 -or $data.Service -ne 'Running')){throw 'An unsuccessful authorization request was repeated or sent a report'}
