@@ -9,6 +9,13 @@ function Body($file,$name){
 [void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration')
 $wsus=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530)
 $group=$wsus.CreateComputerTargetGroup('DomainConsoleAcceptance')
+try{
+ Import-Module WebAdministration
+ $site='IIS:\Sites\WSUS Administration'
+ Set-ItemProperty $site logFile.enabled -Value $true
+ Set-ItemProperty $site logFile.flushByEntryCountW3CLog -Value 1
+}catch{Write-Warning ('IIS trace setup: '+$_.Exception.Message)}
+
 $url="http://${env:COMPUTERNAME}:8530"
 $p='HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate'
 New-Item $p -Force|Out-Null;New-Item ($p+'\AU') -Force|Out-Null
@@ -132,4 +139,18 @@ if($result){
  throw 'Server confirmation required the separate diagnostic continuation'
 }
 Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-WindowsUpdateClient/Operational';StartTime=$began.ToLocalTime()} -MaxEvents 15 -ErrorAction SilentlyContinue|Select-Object Id,TimeCreated,Message|Format-List|Out-Host
+Write-Output ("Client IDs: old="+$before.SusClientId+"; new="+$after.SusClientId)
+$wsus.SearchComputerTargets($after.Name)|Select-Object Id,FullDomainName,LastSyncTime,LastReportedStatusTime|Format-List|Out-Host
+$iisRoot=Join-Path $env:SystemDrive 'inetpub\logs\LogFiles'
+Get-ChildItem -LiteralPath $iisRoot -Filter '*.log' -Recurse -ErrorAction SilentlyContinue|
+ Sort-Object LastWriteTimeUtc -Descending|Select-Object -First 2|ForEach-Object {
+  Get-Content -LiteralPath $_.FullName -Tail 250|Where-Object {$_ -like '#Fields:*' -or $_ -match '/(?:ClientWebService|SimpleAuthWebService|ReportingWebService)/'}|Select-Object -Last 35
+ }
+try{
+ $updateLog=Join-Path $labPath 'WindowsUpdate.log'
+ Get-WindowsUpdateLog -LogPath $updateLog | Out-Null
+ Get-Content -LiteralPath $updateLog -Tail 3500|Where-Object {
+  $_ -match 'RegisterComputer|ClientWebService|SimpleAuthWebService|ReportingWebService|AuthorizationCookie|GetCookie|SyncUpdates|WSUS server|SUSClientId|DomainConsole\.RegistrationDiagnostic'
+ } | Select-Object -Last 100
+}catch{Write-Warning ('Could not decode Windows Update trace: '+$_.Exception.Message)}
 throw 'The exact WSUS record or a current report remained absent after the diagnostic continuation'
