@@ -11,8 +11,8 @@ jobs:
     timeout-minutes: 240
     env:
       GH_TOKEN: ${{ github.token }}
-      APP_COMMIT: 4affb2c5f0f95cf7be8095376a4ab8cf9587fb2a
-      APP_RUN: '45891931815'
+      APP_COMMIT: 5334b257f807e8d91b2f23168f64b9868d85efa3
+      APP_RUN: '45902821605'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -20,6 +20,14 @@ jobs:
           ref: ${{ env.APP_COMMIT }}
           path: _app
           persist-credentials: false
+      - name: Prepare private network and Windows VMs
+        run: bash .github/lab/prepare-guests.sh
+      - name: Personalize independent Windows disks
+        run: bash .github/lab/wait-for-guests.sh specialized 100
+      - name: Verify the Active Directory lab
+        run: bash .github/lab/wait-for-guests.sh domain 55
+      - name: Verify the WSUS server
+        run: bash .github/lab/wait-for-guests.sh wsus 45
       - name: Verify and download the exact Windows build of 0.59
         run: |
           set -euo pipefail
@@ -62,14 +70,6 @@ jobs:
           cp -r .github/tests/domain-scenario "$lab/scenario-1"
           git rev-parse HEAD:.github/tests/domain-scenario > "$lab/scenario-1.tree"
           mv "$lab/package.json.tmp" "$lab/package.json"
-      - name: Prepare private network and Windows VMs
-        run: bash .github/lab/prepare-guests.sh
-      - name: Personalize independent Windows disks
-        run: bash .github/lab/wait-for-guests.sh specialized 100
-      - name: Verify the Active Directory lab
-        run: bash .github/lab/wait-for-guests.sh domain 55
-      - name: Verify the WSUS server
-        run: bash .github/lab/wait-for-guests.sh wsus 45
       - name: Check four initial repairs, the returning fifth client and all WSUS registrations
         run: |
           bash .github/lab/wait-for-guests.sh attempt-1 85
