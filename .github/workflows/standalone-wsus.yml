@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: ['lab/0.57-wsus']
-    paths: ['docs/testing/candidate-0.57.sha','.github/tests/standalone-wsus.ps1','.github/workflows/standalone-wsus.yml']
+    paths: ['docs/testing/standalone-wsus.sha','.github/tests/standalone-wsus.ps1','.github/workflows/standalone-wsus.yml']
 permissions:
   contents: read
 jobs:
@@ -16,7 +16,7 @@ jobs:
         id: candidate
         shell: pwsh
         run: |
-          $source=(Get-Content docs/testing/candidate-0.57.sha -Raw).Trim()
+          $source=(Get-Content docs/testing/standalone-wsus.sha -Raw).Trim()
           if($source -notmatch '^[a-f0-9]{40}$'){throw 'Invalid revision'}
           "sha=$source" >> $env:GITHUB_OUTPUT
       - uses: actions/checkout@v4
