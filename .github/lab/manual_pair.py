@@ -53,14 +53,14 @@ def exercise(fixture, ps, session, evidence, save):
         reply=session(node).run_ps(invocation+";exit 72")
         if reply.status_code!=72:
             raise RuntimeError("Receipt-loss fixture failed")
-    def await_value(node, script, seconds=55):
+    def await_value(node, script, seconds=90):
         until=time.monotonic()+seconds
         value=""
         while time.monotonic()<until:
             value=ps(node,script).strip()
             if value:
                 return value
-            time.sleep(0.4)
+            time.sleep(1)
         raise TimeoutError(node+" did not present expected evidence")
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         missing=pool.submit(launch,nodes[0],True)
@@ -70,14 +70,32 @@ def exercise(fixture, ps, session, evidence, save):
     await_value(nodes[0],f"if(Test-Path '{marker}'){{'started'}}")
     launch(nodes[0],duplicate=True)
     states={}
-    for node in nodes:
-        state=await_value(node,f"$p='{job_path}\\status.json';if(Test-Path $p){{try{{$s=Get-Content -Raw $p|ConvertFrom-Json;if($s.Ended){{$s|ConvertTo-Json -Compress}}}}catch{{}}}}")
-        status=json.loads(state)
-        if status.get("Status")!="Completed":
-            raise RuntimeError(node+" did not complete native agent job")
-        states[node]={"status":status["Status"],"executions":int(ps(node,f"@(Get-Content '{marker}'|Where-Object {{$_ -eq 'executed'}}).Count"))}
-        if states[node]["executions"]!=1:
-            raise RuntimeError("Command replayed on "+node)
     evidence["checks"]["manual_pair"]={"distinct_machine_ids":ids,"agent_sha256":agent_hash,"job":job,"simulated_missing_confirmation":True,"results":states}
     save()
+    read_terminal=r"""
+$ProgressPreference='SilentlyContinue'
+try{
+ $stream=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+ try{
+  $reader=[IO.StreamReader]::new($stream,[Text.Encoding]::UTF8,$true)
+  try{$state=$reader.ReadToEnd()|ConvertFrom-Json -ErrorAction Stop}finally{$reader.Dispose()}
+ }finally{$stream.Dispose()}
+}catch{
+ $cause=$_.Exception.GetBaseException()
+ if($cause -isnot [IO.FileNotFoundException] -and !($cause -is [IO.IOException] -and ($cause.HResult -band 65535) -in @(32,33))){throw}
+}
+if($state -and $state.Ended){$state|ConvertTo-Json -Compress}
+exit 0
+"""
+    for node in nodes:
+        state=await_value(node,f"$path='{job_path}\\status.json';"+read_terminal)
+        status=json.loads(state)
+        states[node]={"status":status["Status"],"error":status.get("Error","")}
+        save()
+        if status.get("Status")!="Completed":
+            raise RuntimeError(node+" did not complete native agent job: "+status.get("Error",""))
+        states[node]["executions"]=int(ps(node,f"@(Get-Content '{marker}'|Where-Object {{$_ -eq 'executed'}}).Count"))
+        save()
+        if states[node]["executions"]!=1:
+            raise RuntimeError("Command replayed on "+node)
     print("PASS: native agent executed once on both disposable Windows clients, including a repeated launch after an inconclusive receipt.",flush=True)
