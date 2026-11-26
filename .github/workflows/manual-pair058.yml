@@ -12,15 +12,16 @@ jobs:
     timeout-minutes: 115
     env:
       DC_TEST_MANUAL_PAIR: '1'
-      APP_COMMIT: 0a711408e501dc692c35d95ec6ffbb0816da90cf
-      APP_RUN: '45878163213'
+      APP_COMMIT: 4affb2c5f0f95cf7be8095376a4ab8cf9587fb2a
+      APP_RUN: '45891931815'
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - name: Fetch and hash the published candidate bytes
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 120); do
+          deadline=$((SECONDS + 45 * 60))
+          while (( SECONDS < deadline )); do
             if build=$(timeout 20 gh api "repos/$GITHUB_REPOSITORY/actions/runs/$APP_RUN") &&
                jq -e '.status=="completed"' <<<"$build" >/dev/null; then
               break
