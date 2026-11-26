@@ -59,12 +59,24 @@ public partial class MainWindow {
    if(RecordIdentityReadinessFailure(attempt))continue;
    if(attempt.StartedUtc.Length==0)attempt.StartedUtc=attempt.At;
    if(attempt.DeadlineUtc.Length==0&&DateTimeOffset.TryParse(attempt.StartedUtc,out var start)){attempt.DeadlineUtc=start.AddMinutes(10).ToString("o");changed=true;}
-   if(DateTimeOffset.TryParse(attempt.DeadlineUtc,out var deadline)&&now>=deadline&&!attempt.Phase.StartsWith("Регистрация задерживается")){
-    attempt.Phase="Регистрация задерживается: 10 минут истекли; обновите серверный обзор или проверьте доставку отчёта";attempt.At=now.ToString("o");changed=true;
-    Event31(attempt.Host,"identity-delay58",attempt.JobId,"Подтверждение регистрации WSUS задерживается","Warning",attempt.Phase,scope:attempt.JobId);
+   if(!DateTimeOffset.TryParse(attempt.DeadlineUtc,out var deadline)||now<deadline)continue;
+   var target=History.FirstOrDefault(j=>j.Id==attempt.JobId)?.Targets.FirstOrDefault(t=>t.Host.Equals(attempt.Host,StringComparison.OrdinalIgnoreCase));
+   var expired=ExpiredIdentityRepairPhase(attempt,target);
+   if(attempt.Phase!=expired){
+    attempt.Phase=expired;attempt.At=now.ToString("o");changed=true;
+    Event31(attempt.Host,"identity-delay58",attempt.JobId,"Проверка перерегистрации WSUS","Warning",attempt.Phase,scope:attempt.JobId);
    }
   }
   if(changed)Store.Write("identity-repairs58.json",identityRepairs58);
+ }
+ static string ExpiredIdentityRepairPhase(IdentityRepairAttempt58 attempt,TargetRecord? target){
+  if(attempt.NewId.Length>0)return "Регистрация задерживается: новый ID прочитан, свежая запись или отчёт WSUS не подтверждены за 10 минут";
+  if(target==null)return "Регистрация задерживается: новый ID не подтверждён за 10 минут";
+  if(target.State is {Status:"Failed" or "InterventionRequired",Ended.Length:>0} failure)
+   return "Перерегистрация завершилась с ошибкой · "+(failure.Error.Length>0?failure.Error:ComputerRow.StatusText(target.Status));
+  if(target.State is {Status:"Running"})return "Клиент выполняет перерегистрацию · новый ID не подтверждён за 10 минут";
+  if(target.State is {Status:"Completed" or "AwaitingReboot"})return "Клиент завершил команду · новый ID не подтверждён за 10 минут";
+  return "Результат задания не подтверждён за 10 минут · новый ID не прочитан";
  }
  static bool SameServer(string policy,WsusSettings settings){
   if(!Uri.TryCreate(policy,UriKind.Absolute,out var client)||string.IsNullOrWhiteSpace(settings.Host))return false;

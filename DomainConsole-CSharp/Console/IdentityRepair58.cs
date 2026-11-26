@@ -105,12 +105,13 @@ public partial class MainWindow {
      var began=DateTimeOffset.UtcNow;
      try{
       var current=await ReadIdentityWithRetry(frozen.Target,remote.ReadIdentity,stop.Token);
-      await ResolveIdentitySource(current,ReadWsus(),verifiedSources,stop.Token);
+      await ResolveIdentitySource(current,ReadWsus(),verifiedSources,stop.Token,retry:true);
       if(!Available())continue;
       current.Address=string.IsNullOrWhiteSpace(frozen.Target.ConnectionAddress)?frozen.Host:frozen.Target.ConnectionAddress;
       ObserveIdentity58(row.Host,current,false);
       if(!IdentityPolicy58.SameApprovedDevice(identity,current,DateTimeOffset.UtcNow)){
-       Defer("Участник, прежний ID или источник WSUS больше не подтверждены. Повторите диагностику");continue;
+       var reason=current.Error.Length>0?current.Error:identity.VerifiedSource.Length>0&&current.VerifiedSource.Length==0&&current.Server.Equals(identity.Server,StringComparison.OrdinalIgnoreCase)?"Не удалось повторно подтвердить адрес WSUS "+current.Server:"Участник, прежний ID или источник WSUS изменились";
+       Defer(reason+". Повторите диагностику");continue;
       }
       verifiedIdentity=current;
       ConnectionSucceeded(row.Host,began,true);
@@ -204,16 +205,35 @@ try {
   if((Get-ItemProperty $path58).PSObject.Properties.Name -contains 'SusClientIdValidation'){Remove-ItemProperty $path58 -Name SusClientIdValidation -ErrorAction Stop}
  }catch{$resetError58=$_.Exception.Message}finally{try{Start-Service wuauserv -ErrorAction Stop;(Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Running,[TimeSpan]::FromSeconds(30))}catch{$restoreError58=$_.Exception.Message}}
  if($resetError58 -or $restoreError58){throw ('Перерегистрация: '+$resetError58+'; восстановление wuauserv: '+$restoreError58)}
+ function Read-NewIdentity58 {
+  $candidate=[string](Get-ItemProperty $path58 -ErrorAction Stop).SusClientId
+  $parsed=[guid]::Empty
+  if([guid]::TryParse($candidate,[ref]$parsed) -and $parsed -ne [guid]::Empty -and $parsed -ne $parsedId58){return $candidate}
+  return ''
+ }
+ Write-Output 'Служба wuauserv запущена. Запрошен штатный поиск для регистрации.'
  & "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow
- $session58=New-Object -ComObject Microsoft.Update.Session
- $session58.ClientApplicationID='DomainConsole.Identity58'
- $search58=$session58.CreateUpdateSearcher();$search58.ServerSelection=1;$search58.Online=$true
- $result58=$search58.Search('IsInstalled=0 and IsHidden=0')
+ $new58=Read-NewIdentity58
+ for($attempt58=0;!$new58 -and $attempt58 -lt 20;$attempt58++){
+  Start-Sleep -Seconds 1
+  $new58=Read-NewIdentity58
+ }
+ $searchResult58=$null;$searchError58=''
+ if(!$new58){
+  Write-Output 'Новый ID ещё не создан. Выполняется один поиск на управляемом сервере WSUS.'
+  try{
+   $session58=New-Object -ComObject Microsoft.Update.Session
+   $session58.ClientApplicationID='DomainConsole.Identity58'
+   $search58=$session58.CreateUpdateSearcher();$search58.ServerSelection=1;$search58.Online=$true
+   $searchResult58=[int]$search58.Search('IsInstalled=0 and IsHidden=0').ResultCode
+  }catch{$searchError58=$_.Exception.Message}
+  $new58=Read-NewIdentity58
+ }
  & "$env:windir\System32\wuauclt.exe" /reportnow
- $new58=[string](Get-ItemProperty $path58 -ErrorAction Stop).SusClientId
- if(!$new58 -or $new58 -eq $dcExpectedId58){throw 'Новый SusClientId не подтверждён'}
- [pscustomobject]@{Computer=$name58;Finished=[DateTime]::UtcNow.ToString('o');OldId=$dcExpectedId58;NewId=$new58;SearchResult=[int]$result58.ResultCode;Backup=$backup58}|Format-List
- if([int]$result58.ResultCode -ne 2){throw 'ID изменён, но поиск завершился не полностью; требуется диагностика'}
+ if($searchError58){throw ('Сброс выполнен, поиск на сервере WSUS завершился ошибкой: '+$searchError58)}
+ if(!$new58){throw ('Сброс выполнен, WUA не подтвердил новый SusClientId. Результат поиска: '+$searchResult58)}
+ [pscustomobject]@{Computer=$name58;Finished=[DateTime]::UtcNow.ToString('o');OldId=$dcExpectedId58;NewId=$new58;SearchResult=$searchResult58;Backup=$backup58}|Format-List
+ if($null -ne $searchResult58 -and $searchResult58 -ne 2){throw 'ID изменён, но поиск завершился не полностью; требуется диагностика'}
  'Новый ID создан; регистрация и отчёт подтверждаются отдельно на сервере. Установка этим шагом не выполнялась.'
 }finally{if($owns58){$mutex58.ReleaseMutex()};$mutex58.Dispose()}
 """;
