@@ -12,8 +12,8 @@ jobs:
     timeout-minutes: 115
     env:
       DC_TEST_MANUAL_PAIR: '1'
-      APP_COMMIT: 4affb2c5f0f95cf7be8095376a4ab8cf9587fb2a
-      APP_RUN: '45891931815'
+      APP_COMMIT: 5334b257f807e8d91b2f23168f64b9868d85efa3
+      APP_RUN: '45902821605'
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
