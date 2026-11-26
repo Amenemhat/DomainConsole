@@ -7,6 +7,42 @@ namespace DomainConsole;
 public partial class MainWindow {
  static IEnumerable<T> Visual33<T>(DependencyObject root) where T:DependencyObject {for(int i=0;i<VisualTreeHelper.GetChildrenCount(root);i++){var child=VisualTreeHelper.GetChild(root,i);if(child is T found)yield return found;foreach(var nested in Visual33<T>(child))yield return nested;}}
  static double Contrast33(Brush foreground,Brush background){static double L(Brush brush){var c=((SolidColorBrush)brush).Color;static double S(byte b){double n=b/255d;return n<=.04045?n/12.92:Math.Pow((n+.055)/1.055,2.4);}return .2126*S(c.R)+.7152*S(c.G)+.0722*S(c.B);}var a=L(foreground);var b=L(background);return (Math.Max(a,b)+.05)/(Math.Min(a,b)+.05);}
+ void VerifyBackgroundActionsLayout(ComputerRow row){
+  var previous=backgroundUpdates.GetValueOrDefault(row.Host);
+  var oldExpanded=BackgroundGroup.IsExpanded;
+  var oldWidth=Width;
+  var oldHeight=Height;
+  try{
+   MainTabs.SelectedItem=WsusTab;
+   Width=1000;
+   Height=640;
+   BackgroundGroup.IsExpanded=true;
+   backgroundUpdates[row.Host]=new(){
+    CollectedUtc=DateTimeOffset.UtcNow.ToString("o"),
+    Downloads=Enumerable.Range(0,8).Select(index=>new BackgroundDownload{
+     Id=Guid.NewGuid().ToString(),State="Transferring",Received=30,Total=100,
+     LocalName=@"C:\Windows\SoftwareDistribution\Download\"+new string('a',100)+index+".cab"
+    }).ToList()
+   };
+   UpdateWsusStage();
+   UpdateLayout();
+   Dispatcher.Invoke(()=>{},DispatcherPriority.ContextIdle);
+   var button=DownloadPriorityButton;
+   if(!button.IsVisible||button.ActualHeight<8||button.ActualWidth<8)
+    throw new Exception("Background download action is hidden");
+   var bottom=button.TranslatePoint(new Point(button.ActualWidth/2,button.ActualHeight-4),this);
+   if(InputHitTest(bottom) is not DependencyObject hit||(hit!=button&&!button.IsAncestorOf(hit)))
+    throw new Exception("Background download action is clipped or covered");
+   if(BackgroundDetails.ViewportHeight<=0||BackgroundDetails.ExtentHeight<=BackgroundDetails.ViewportHeight)
+    throw new Exception("Long background details do not scroll inside the panel");
+  }finally{
+   if(previous==null)backgroundUpdates.Remove(row.Host);else backgroundUpdates[row.Host]=previous;
+   BackgroundGroup.IsExpanded=oldExpanded;
+   Width=oldWidth;
+   Height=oldHeight;
+   UpdateWsusStage();
+  }
+ }
  void VerifyRelease33(){
   foreach(var pair in new[]{(CommandsNavigation33,CommandsTab),(HistoryNavigation33,HistoryTab),(WsusNavigation33,WsusTab)}){HeaderNavigation33_Click(pair.Item1,new RoutedEventArgs());if(MainTabs.SelectedItem!=pair.Item2||pair.Item1.IsChecked!=true)throw new Exception("Header navigation selection mismatch");}MainTabs.SelectedItem=CommandsTab;if(Editor.BorderThickness.Left!=1||HeaderLink.BorderThickness.Left!=0||HeaderReboot.BorderThickness.Left!=0||WsusHeader.Visibility!=Visibility.Collapsed)throw new Exception("Editor frame / transparent controls / hidden WSUS caption mismatch");if(new StatusGlyph().Width!=20)throw new Exception("Status glyph size mismatch");if(CommandsNavigation33.IsChecked!=true||HistoryNavigation33.IsChecked==true||WsusNavigation33.IsChecked==true)throw new Exception("Programmatic tab change not reflected in header");
 
@@ -14,6 +50,7 @@ public partial class MainWindow {
   var originalLog33=WsusOutput.Text;var originalOutput33=OutputBox.Text;var row=Current();var prior=recentEvents31.GetValueOrDefault(row.Host);var memory=memoryEvents32.GetValueOrDefault(row.Host);int palette=Theme.Current;double width=Width,height=Height;bool recent=RecentGroup.IsExpanded;bool running=timer.IsEnabled;timer.Stop();
   try{WsusOutput.Text=OutputBox.Text="## Проверка перезагрузки клиента\nФлаги Windows Update / CBS отсутствуют.\n## Результаты команд\nПоиск обновлений: успешно · 0 (0x00000000)\n## Этапы выполнения\nПроверка политики клиента · завершено\nПоиск обновлений · завершено\n## Результаты обновлений\nПрименимых обновлений: 0\n## Вывод команды\nСвежий отчёт получен сервером.";recentEvents31[row.Host]=new(){new(){Text="Обновления проверены: применимых обновлений нет",Kind="Success"},new(){Text="Ожидание ответа клиента: состояние будет уточнено следующей проверкой",Kind="Warning"},new(){Text="Связь подтверждена, сведения клиента обновлены",Kind="Info"}};memoryEvents32[row.Host]=Enumerable.Range(0,6).Select(i=>new ClientEvent31{At=DateTime.UtcNow.AddMinutes(-i-1).ToString("o"),Text="Событие истории "+i,Details="Подробности события",Kind=i%2==0?"Warning":"Success"}).ToList();RecentGroup.IsExpanded=true;EventHistoryGroup32.IsExpanded=false;BackgroundGroup.IsExpanded=false;
    foreach(int style in new[]{0,1,2}){Theme.Apply(style,false);foreach(string tone in new[]{"TextPrimary","TextMuted"})foreach(string surface in new[]{"ActiveSurface","SelectionSurface","SidebarSurface"})if(Contrast33(Theme.Brush(tone),Theme.Brush(surface))<4.5)throw new Exception("Insufficient contrast: "+style+" "+tone+" "+surface);Width=1000;Height=640;MainTabs.SelectedItem=CommandsTab;RefreshHeader31(row);foreach(var active in Computers.Take(2))active.SetActivity(true,42,"Загрузка обновлений · 42%",active==row);for(int sample=0;sample<Math.Min(5,Computers.Count);sample++)Computers[sample].SetOutcome(new[]{"Unknown","Success","Stale","Reboot","Error"}[sample],"Тестовый статус палитры");foreach(var branch in branches.Values)branch.Refresh(Computers.Take(2).Select(x=>x.Host).ToHashSet(StringComparer.OrdinalIgnoreCase));BackgroundGroup.Visibility=Visibility.Visible;BackgroundSummary.Text="Фоновые загрузки · 2 задания";UpdateLayout();Dispatcher.Invoke(()=>{},DispatcherPriority.ContextIdle);double center=HeaderLinkText.TranslatePoint(new Point(0,HeaderLinkText.ActualHeight/2),CompactHeader32).Y;if(Math.Abs(HeaderLinkGlyph.TranslatePoint(new Point(0,HeaderLinkGlyph.ActualHeight/2),CompactHeader32).Y-center)>1.5)throw new Exception("Connection icon and text not vertically aligned");if(Math.Abs(MicrosoftBox.TranslatePoint(new Point(0,MicrosoftBox.ActualHeight/2),CommandWorkspace).Y-KindBox.TranslatePoint(new Point(0,KindBox.ActualHeight/2),CommandWorkspace).Y)>1.5)throw new Exception("Command option not vertically aligned");if(Visual33<TabPanel>(MainTabs).Any(x=>x.IsVisible))throw new Exception("Old tab header row still visible");if(HeaderActions34.Parent==IdentityHeader34)throw new Exception("Navigation still consumes header width");Capture32("contrast33-"+style+"-compact");MainTabs.SelectedItem=WsusTab;Width=1366;Height=768;Capture32("contrast33-"+style+"-wsus");}
+   VerifyBackgroundActionsLayout(row);
    Theme.Apply(0,false);EventHistoryGroup32.IsExpanded=true;historyEventsKey32="";RefreshEventHistory32(row.Host);UpdateLayout();var warning=EventList32.Items.OfType<ClientEvent31>().First(x=>x.Kind=="Warning");if(!Visual33<TextBlock>(EventList32).Any(t=>t.Text==warning.Body38&&t.Foreground.ToString()==warning.Brush.ToString()))throw new Exception("History warning lost its color");Capture32("contrast33-history");
   }finally{WsusOutput.Text=originalLog33;OutputBox.Text=originalOutput33;if(prior==null)recentEvents31.Remove(row.Host);else recentEvents31[row.Host]=prior;if(memory==null)memoryEvents32.Remove(row.Host);else memoryEvents32[row.Host]=memory;RecentGroup.IsExpanded=recent;EventHistoryGroup32.IsExpanded=false;Width=width;Height=height;Theme.Apply(palette,false);historyEventsKey32="";RefreshOutcomes();RefreshBranches();RefreshHeader31(row);if(running)timer.Start();}
  }

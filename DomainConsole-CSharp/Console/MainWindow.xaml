@@ -325,12 +325,12 @@
               <Expander.Header>
                 <TextBlock x:Name="BackgroundSummary" TextWrapping="NoWrap" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" Text="Фоновая активность клиента" FontWeight="SemiBold"/>
               </Expander.Header>
-              <StackPanel MaxHeight="175">
-                <TextBlock x:Name="BackgroundRelation" TextWrapping="Wrap" Margin="0,3"/>
-                <ProgressBar x:Name="BackgroundProgress" Height="4" Maximum="100" Visibility="Collapsed"/>
+              <DockPanel MaxHeight="175">
+                <TextBlock x:Name="BackgroundRelation" DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,3"/>
+                <Button x:Name="DownloadPriorityButton" DockPanel.Dock="Top" Content="Скорость выбранной загрузки…" Click="DownloadPriority_Click" HorizontalAlignment="Left" Margin="0,0,0,4" Visibility="Collapsed" ToolTip="Выбрать конкретное задание BITS: повысить приоритет или вернуть исходный"/>
+                <ProgressBar x:Name="BackgroundProgress" DockPanel.Dock="Top" Height="4" Maximum="100" Visibility="Collapsed"/>
                 <TextBox x:Name="BackgroundDetails" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="145" VerticalScrollBarVisibility="Auto" Margin="0,4"/>
-                <Button x:Name="DownloadPriorityButton" Content="Скорость выбранной загрузки…" Click="DownloadPriority_Click" HorizontalAlignment="Left" Visibility="Collapsed" ToolTip="Выбрать конкретное задание BITS: повысить приоритет или вернуть исходный"/>
-              </StackPanel>
+              </DockPanel>
             </Expander>
           <StackPanel Grid.Row="4">
           <TextBlock x:Name="DiagnosticStage" TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" Visibility="Collapsed" Margin="0,2,0,3"/>
