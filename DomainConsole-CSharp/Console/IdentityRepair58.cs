@@ -234,25 +234,24 @@ try {
   if([guid]::TryParse($candidate,[ref]$parsed) -and $parsed -ne [guid]::Empty -and $parsed -ne $parsedId58){return $candidate}
   return ''
  }
- Write-Output 'Служба wuauserv запущена. Запрошен штатный поиск для регистрации.'
- & "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow
  $new58=Read-NewIdentity58
- for($attempt58=0;!$new58 -and $attempt58 -lt 20;$attempt58++){
-  Start-Sleep -Seconds 1
-  $new58=Read-NewIdentity58
- }
  $searchResult58=$null;$searchError58=''
  if(!$new58){
-  Write-Output 'Новый ID ещё не создан. Выполняется один поиск на управляемом сервере WSUS.'
+  # Run the managed scan without a preceding asynchronous detect request.
+  Write-Output 'Служба wuauserv запущена. Выполняется один поиск на управляемом сервере WSUS.'
   try{
    $session58=New-Object -ComObject Microsoft.Update.Session
    $session58.ClientApplicationID='DomainConsole.Identity58'
    $search58=$session58.CreateUpdateSearcher();$search58.ServerSelection=1;$search58.Online=$true
    $searchResult58=[int]$search58.Search('IsInstalled=0 and IsHidden=0').ResultCode
   }catch{$searchError58=$_.Exception.Message}
-  $new58=Read-NewIdentity58
  }
  & "$env:windir\System32\wuauclt.exe" /reportnow
+ $new58=Read-NewIdentity58
+ for($attempt58=0;!$new58 -and !$searchError58 -and $searchResult58 -eq 2 -and $attempt58 -lt 30;$attempt58++){
+  Start-Sleep -Seconds 1
+  $new58=Read-NewIdentity58
+ }
  if(!$new58){
   $failure58=if($searchError58){'Поиск на сервере WSUS завершился ошибкой: '+$searchError58}else{'WUA не подтвердил новый SusClientId. Результат поиска: '+$searchResult58}
   try{
