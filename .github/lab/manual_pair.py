@@ -1,5 +1,4 @@
 """Check the packaged agent on two independent disposable Windows guests."""
-import base64
 import concurrent.futures
 import hashlib
 import json
@@ -7,14 +6,10 @@ import time
 import uuid
 import zipfile
 
-def exercise(root, ps, session, evidence, save):
-    nodes=("DCWSUS","DCAD")
-    ids={n:ps(n,r"(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography').MachineGuid") for n in nodes}
-    if not all(ids.values()) or len(set(ids.values()))!=2:
-        raise RuntimeError("Expected two independent Windows installations")
+def prepare_fixture(root):
+    """Stage the exact package before boot, leaving WinRM for the behavior under test."""
     with zipfile.ZipFile(root/"package.zip") as package:
         agent=package.read("Agent/DomainConsole.Agent.exe")
-    agent_hash=hashlib.sha256(agent).hexdigest()
     job=str(uuid.uuid4())
     root_path=r"C:\DomainConsoleLab\manual58"
     job_path=root_path+"\\"+job
@@ -22,18 +17,29 @@ def exercise(root, ps, session, evidence, save):
     marker=job_path+"\\executions.txt"
     action="Add-Content -LiteralPath '"+marker+"' -Value 'executed'; Start-Sleep -Seconds 6"
     payload={"Id":job,"Manual56":True,"OutputChannel":"Commands","Steps":[{"Name":"Receipt loss fixture","Kind":"PowerShell","Code":action}]}
-    definition=base64.b64encode(json.dumps(payload).encode("utf-8")).decode()
-    def stage(node):
-        ps(node,f"New-Item -ItemType Directory -Force '{job_path}'|Out-Null; [IO.File]::WriteAllBytes('{exe}',[byte[]]@()); [IO.File]::WriteAllBytes('{job_path}\\job.json',[Convert]::FromBase64String('{definition}'))")
-        # pywinrm encodes the PowerShell command again in UTF-16 before cmd.exe.
-        chunk_size=1700
-        for offset in range(0,len(agent),chunk_size):
-            part=base64.b64encode(agent[offset:offset+chunk_size]).decode()
-            ps(node,f"$f=[IO.File]::Open('{exe}',[IO.FileMode]::Append);try{{$b=[Convert]::FromBase64String('{part}');$f.Write($b,0,$b.Length)}}finally{{$f.Dispose()}}")
+    (root/"manual-agent.exe").write_bytes(agent)
+    (root/"manual-job.json").write_text(json.dumps(payload),encoding="utf-8")
+    guest="/DomainConsoleLab/manual58"
+    return (job,job_path,exe,marker,hashlib.sha256(agent).hexdigest()), [
+        f"mkdir-p {guest}/{job}",
+        f"upload {root / 'manual-agent.exe'} {guest}/DomainConsole.Agent.exe",
+        f"upload {root / 'manual-job.json'} {guest}/{job}/job.json",
+    ]
+
+
+def exercise(fixture, ps, session, evidence, save):
+    nodes=("DCWSUS","DCAD")
+    ids={n:ps(n,r"(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography').MachineGuid") for n in nodes}
+    if not all(ids.values()) or len(set(ids.values()))!=2:
+        raise RuntimeError("Expected two independent Windows installations")
+    job,job_path,exe,marker,agent_hash=fixture
+    for node in nodes:
         if ps(node,f"(Get-FileHash -Algorithm SHA256 '{exe}').Hash").lower()!=agent_hash:
             raise RuntimeError("Agent copy mismatch for "+node)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-        list(pool.map(stage,nodes))
+        if ps(node,f"(Get-Content -Raw '{job_path}\\job.json'|ConvertFrom-Json).Id")!=job:
+            raise RuntimeError("Job definition mismatch for "+node)
+    evidence["checks"]["staged_agent"]={"nodes":list(nodes),"agent_sha256":agent_hash,"job":job}
+    save()
     scheduled="DCLab-Manual58-"+job
     second=scheduled+"-repeat"
     for node in nodes:

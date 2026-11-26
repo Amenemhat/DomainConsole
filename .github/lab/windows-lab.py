@@ -83,7 +83,7 @@ def unattended(node):
 </component></settings></unattend>'''
 
 
-def prepare(node):
+def prepare(node,extra_files=()):
     disk = root / (node + ".qcow2")
     call("qemu-img", "create", "-q", "-f", "qcow2", "-F", "vpc", "-b", base, disk)
     answer = root / (node + ".xml")
@@ -97,7 +97,7 @@ def prepare(node):
                 f"upload {here / 'guest-init.ps1'} /DomainConsoleLab/guest-init.ps1",
                 f"upload {config} /DomainConsoleLab/node.json",
                 f"upload {root / 'SetupComplete.cmd'} /Windows/Setup/Scripts/SetupComplete.cmd"]
-    call("guestfish", "--rw", "-a", disk, "-i", input="\n".join(commands) + "\n", text=True)
+    call("guestfish", "--rw", "-a", disk, "-i", input="\n".join([*commands,*extra_files]) + "\n", text=True)
     pointer=root/"setup-location.reg"
     pointer.write_text('Windows Registry Editor Version 5.00\n\n[HKEY_LOCAL_MACHINE\\SYSTEM\\Setup]\n"UnattendFile"="C:\\\\DomainConsoleLab\\\\unattend.xml"\n')
     call("virt-win-reg","--merge",disk,pointer)
@@ -230,9 +230,13 @@ def main():
     (root / "SetupComplete.cmd").write_bytes(b"@echo off\r\npowershell -NoProfile -ExecutionPolicy Bypass -File C:\\DomainConsoleLab\\guest-init.ps1\r\n")
     part = call("guestfish", "--ro", "-a", base, "run", ":", "part-get-parttype", "/dev/sda", capture_output=True, text=True).stdout.strip()
     log("Guest partition table: " + part)
+    extra_files=()
+    if manual_pair:
+        from manual_pair import exercise, prepare_fixture
+        fixture,extra_files=prepare_fixture(root)
     for node in nodes:
         log("Creating distinct Windows guest " + node)
-        prepare(node)
+        prepare(node,extra_files)
     checkpoint("disks")
     # First drive one guest through specialization with the runner CPU to itself.
     boot("DCWSUS",part=="gpt")
@@ -240,8 +244,7 @@ def main():
     if manual_pair:
         boot("DCAD",part=="gpt")
         wait("DCAD",minutes=12)
-        from manual_pair import exercise
-        exercise(root,ps,session,evidence,save)
+        exercise(fixture,ps,session,evidence,save)
         checkpoint("winrm")
         return
     if bootstrap_only:

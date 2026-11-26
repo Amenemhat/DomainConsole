@@ -9,7 +9,7 @@ permissions:
 jobs:
   independent-clients:
     runs-on: ubuntu-24.04
-    timeout-minutes: 70
+    timeout-minutes: 85
     env:
       DC_TEST_MANUAL_PAIR: '1'
       GH_TOKEN: ${{ github.token }}
@@ -23,10 +23,10 @@ jobs:
             grep -Fx '94a48820c6f1afef6052931adf96682ff4575881 success'
           gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15101316844/zip" > "$RUNNER_TEMP/dc-wsus-lab/package.zip"
           echo "745cad018811944c5f0727555b62132a34484a69ae8c27f706c55e639e795d97  $RUNNER_TEMP/dc-wsus-lab/package.zip" | sha256sum -c
+      - name: Prepare the private network and launch Windows guests
+        run: bash .github/lab/prepare-guests.sh
       - name: Boot two disposable Windows guests and test an unconfirmed receipt
-        run: |
-          bash .github/lab/prepare-guests.sh
-          bash .github/lab/wait-for-guests.sh guest-exit 35
+        run: bash .github/lab/wait-for-guests.sh guest-exit 50
       - uses: actions/upload-artifact@v4
         if: always()
         with:
