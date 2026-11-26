@@ -6,6 +6,8 @@ import time
 import uuid
 import zipfile
 
+from requests.exceptions import Timeout
+
 def prepare_fixture(root):
     """Stage the exact package before boot, leaving WinRM for the behavior under test."""
     with zipfile.ZipFile(root/"package.zip") as package:
@@ -55,13 +57,17 @@ def exercise(fixture, ps, session, evidence, save):
             raise RuntimeError("Receipt-loss fixture failed")
     def await_value(node, script, seconds=90):
         until=time.monotonic()+seconds
-        value=""
+        last_timeout=None
         while time.monotonic()<until:
-            value=ps(node,script).strip()
-            if value:
-                return value
+            try:
+                value=ps(node,script).strip()
+            except Timeout as timeout:
+                last_timeout=timeout
+            else:
+                if value:
+                    return value
             time.sleep(1)
-        raise TimeoutError(node+" did not present expected evidence")
+        raise TimeoutError(node+" did not present expected evidence") from last_timeout
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         missing=pool.submit(launch,nodes[0],True)
         peer=pool.submit(launch,nodes[1])
@@ -84,18 +90,19 @@ try{
  $cause=$_.Exception.GetBaseException()
  if($cause -isnot [IO.FileNotFoundException] -and !($cause -is [IO.IOException] -and ($cause.HResult -band 65535) -in @(32,33))){throw}
 }
-if($state -and $state.Ended){$state|ConvertTo-Json -Compress}
+if($state -and $state.Ended){
+ $executions=@(Get-Content -LiteralPath $executionMarker|Where-Object {$_ -eq 'executed'}).Count
+ @{Status=$state.Status;Error=$state.Error;Executions=$executions}|ConvertTo-Json -Compress
+}
 exit 0
 """
     for node in nodes:
-        state=await_value(node,f"$path='{job_path}\\status.json';"+read_terminal)
+        state=await_value(node,f"$path='{job_path}\\status.json';$executionMarker='{marker}';"+read_terminal)
         status=json.loads(state)
-        states[node]={"status":status["Status"],"error":status.get("Error","")}
+        states[node]={"status":status["Status"],"error":status.get("Error",""),"executions":status["Executions"]}
         save()
         if status.get("Status")!="Completed":
             raise RuntimeError(node+" did not complete native agent job: "+status.get("Error",""))
-        states[node]["executions"]=int(ps(node,f"@(Get-Content '{marker}'|Where-Object {{$_ -eq 'executed'}}).Count"))
-        save()
         if states[node]["executions"]!=1:
             raise RuntimeError("Command replayed on "+node)
     print("PASS: native agent executed once on both disposable Windows clients, including a repeated launch after an inconclusive receipt.",flush=True)
