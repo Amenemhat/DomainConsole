@@ -73,7 +73,7 @@ public partial class MainWindow {
    overviewRun61.Phase="WSUS: чтение записей и сводок…";RenderOverview61();
    var snapshot=await remote.ReadWsusSnapshot58(settings,cancellation.Token);
    if(!Current58())throw new OperationCanceledException();
-   serverSnapshot58=snapshot;ConfirmIdentityRepairs58();await Task.Run(()=>Store.Write("wsus-server-snapshot58.json",snapshot));
+   serverSnapshot58=snapshot;await Task.Run(()=>Store.Write("wsus-server-snapshot58.json",snapshot));
    var details=new List<ComputerRow>();
    foreach(var row in rows){
     var name=ConnectionStore.WsusName(row.Host);var matches=snapshot.Find(name);
