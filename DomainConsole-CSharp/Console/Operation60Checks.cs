@@ -34,6 +34,25 @@ public partial class MainWindow {
   try{await ReadIdentityWithRetry(a,(_,_)=>{reads++;return Task.FromException<ClientIdentity58>(new TimeoutException());},CancellationToken.None);
    throw new InvalidOperationException("Identity read hid a persistent timeout");}
   catch(TimeoutException) when(reads==2){}
+  var observedAt=DateTimeOffset.UtcNow;
+  var approvedIdentity=new ClientIdentity58{
+   Address=a.Host,Name=a.Host,Machine="11111111-1111-1111-1111-111111111111",SusClientId="22222222-2222-2222-2222-222222222222",
+   Server="http://wsus:8530",StatusServer="http://wsus:8530",UseWUServer=1,At=observedAt.ToString("o"),
+   VerifiedSource="http://wsus.invalid:8530",ServerId="33333333-3333-3333-3333-333333333333",SourceCheckedAt=observedAt.ToString("o")
+  };
+  var currentIdentity=Store.Clone(approvedIdentity);
+  var wsus=new WsusSettings{Host="wsus.invalid"};
+  if(!ReuseIdentityForRepair(approvedIdentity,currentIdentity,a,wsus,observedAt)||
+     ReuseIdentityForRepair(approvedIdentity,currentIdentity,b,wsus,observedAt)||
+     ReuseIdentityForRepair(approvedIdentity,currentIdentity,a,new WsusSettings{Host="other.invalid"},observedAt))
+   throw new Exception("An identity read was not tied to its approved endpoint and WSUS server.");
+  currentIdentity.SourceCheckedAt=observedAt.AddMinutes(-11).ToString("o");
+  if(ReuseIdentityForRepair(approvedIdentity,currentIdentity,a,wsus,observedAt))
+   throw new Exception("An expired WSUS alias proof was reused.");
+  currentIdentity.SourceCheckedAt=approvedIdentity.SourceCheckedAt;
+  currentIdentity.StatusServer="http://other.invalid:8530";
+  if(ReuseIdentityForRepair(approvedIdentity,currentIdentity,a,wsus,observedAt))
+   throw new Exception("An identity read survived a changed reporting server.");
   if(!DeliveryMayHaveStarted(new IOException("DC_SUBMISSION_UNKNOWN|WinRM connection lost"))||
    DeliveryMayHaveStarted(new IOException("WinRM connection failed before dispatch")))
    throw new Exception("Pre-dispatch and post-dispatch transport failures were conflated");

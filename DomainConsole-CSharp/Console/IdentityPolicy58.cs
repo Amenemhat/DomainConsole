@@ -32,7 +32,8 @@ public static class IdentityPolicy58 {
   current.Name.TrimEnd('.').Equals(approved.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase)&&
   Guid.TryParse(approved.Machine,out var hardware)&&hardware==Guid.Parse(current.Machine)&&
   (Installation(approved)==Guid.Empty||Installation(current)==Installation(approved))&&
-  current.Server.TrimEnd('/').Equals(approved.Server.TrimEnd('/'),StringComparison.OrdinalIgnoreCase);
+  current.Server.TrimEnd('/').Equals(approved.Server.TrimEnd('/'),StringComparison.OrdinalIgnoreCase)&&
+  (approved.StatusServer.Length==0||current.StatusServer.TrimEnd('/').Equals(approved.StatusServer.TrimEnd('/'),StringComparison.OrdinalIgnoreCase));
  public static List<ClientIdentity58> Participants(IEnumerable<ClientIdentity58> records,ClientIdentity58 selected,DateTimeOffset now){
   var participants=new List<ClientIdentity58>();
   foreach(var hardware in records.Where(r=>r.Key==selected.Key&&r.Fresh(now)&&Usable(r)).GroupBy(r=>Guid.Parse(r.Machine))){
