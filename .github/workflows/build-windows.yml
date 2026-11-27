@@ -8,6 +8,7 @@ on:
       - 'DomainConsole-Source.zip'
       - '.github/workflows/build-windows.yml'
       - '.github/scripts/**'
+      - '.github/tests/identity-repair58.ps1'
 permissions:
   contents: read
 jobs:

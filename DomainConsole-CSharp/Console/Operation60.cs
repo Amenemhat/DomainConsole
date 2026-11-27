@@ -47,7 +47,16 @@ public partial class MainWindow {
    int sec=Math.Max(0,(int)Math.Ceiling((wait.Until-now).TotalSeconds));
    return new((reportReading.Contains(selected.Host)?"Получаем отчёт WSUS":"Ожидаем новый отчёт WSUS")+" · до срока ожидания "+sec/60+" мин "+sec%60+" с",true);
   }
-  if(maintenancePlans.TryGetValue(selected.Host,out var plan)&&!plan.Done){
+  maintenancePlans.TryGetValue(selected.Host,out var plan);
+  if(plan!=null&&!plan.Done){
+   if(PostBootReadinessDeadline(plan) is { } deadline&&!TransportBudget41.Paused){
+    if(deadline<=now)return new("Контрольный поиск после перезагрузки · ожидает запуска",false);
+    var remaining=deadline-now;
+    int minutes=(int)Math.Ceiling(remaining.TotalMinutes);
+    string cause=plan.Detail.Length>0?plan.Detail:now<plan.ReadyAfter?"Пауза перед контрольной проверкой":"Ожидаем контрольную проверку клиента";
+    return new("Обслуживание · "+plan.Phase+" · "+cause+" · до тайм-аута "+minutes+" мин",!LostObservation51(selected.Host));
+   }
+
    bool waiting=plan.Phase=="Ожидается перезагрузка"||plan.Phase=="Требуется действие";
    return new(TransportBudget41.Paused?"Наблюдение за обслуживанием приостановлено":waiting?plan.Phase:"Обслуживание · "+plan.Phase, !waiting&&!TransportBudget41.Paused&&!LostObservation51(selected.Host));
   }
@@ -89,7 +98,20 @@ public partial class MainWindow {
    void FailedPreparation(string message){if(History.Contains(job))return;var target=Store.Clone(pair.Frozen.Target);target.Status="LaunchRejected";target.State=new(){Id=job.Id,Status="LaunchRejected",Ended=DateTime.UtcNow.ToString("o")};target.Output="## Запуск не выполнен\n"+message;job.Targets.Add(target);History.Insert(0,job);Event31(target.Host,"prepare60",job.Id,"Запуск не выполнен","Warning",message);Save();}
    try{
     Event31(pair.Frozen.Host,"manual-accepted",job.Id,"Ручная команда принята","Info",job.Name+" · проверка перед отправкой",scope:job.Id);
-    async Task<(bool Accepted,bool Force,bool Wait)> Prepare(){if(template.OutputChannel=="WSUS"){await slots.WaitAsync();try{var repaired=await remote.InspectControl56(pair.Frozen.Target,true);using var repairDoc=System.Text.Json.JsonDocument.Parse(repaired);ApplyReconciled60(pair.Frozen.Host,repairDoc.RootElement);if(repairDoc.RootElement.GetProperty("Removed").GetArrayLength()>0)Event31(pair.Frozen.Host,"reconcile60",job.Id,"Освобождены блокировки прерванных заданий","Warning",repairDoc.RootElement.GetProperty("Message").GetString()??"");}finally{slots.Release();}}return await PrepareUpdateAction(new(){pair.Frozen},job.Steps,job.MicrosoftSource,slots);}
+    async Task<(bool Accepted,bool Force,bool Wait)> Prepare(){
+     if(template.OutputChannel=="WSUS"){
+      await slots.WaitAsync();
+      try{
+       var repaired=await remote.InspectControl56(pair.Frozen.Target,true);
+       using var repairDoc=System.Text.Json.JsonDocument.Parse(repaired);
+       ApplyReconciled60(pair.Frozen.Host,repairDoc.RootElement);
+       if(repairDoc.RootElement.GetProperty("Removed").GetArrayLength()>0)
+        Event31(pair.Frozen.Host,"reconcile60",job.Id,"Освобождены блокировки прерванных заданий","Warning",repairDoc.RootElement.GetProperty("Message").GetString()??"");
+      }catch(Exception ex){throw new InvalidOperationException("Проверка заданий и блокировок: "+ex.Message,ex);}
+      finally{slots.Release();}
+     }
+     return await PrepareUpdateAction(new(){pair.Frozen},job.Steps,job.MicrosoftSource,slots);
+    }
     if(await CompletePreparedSubmission47(job,new(){pair.Selected},new(){pair.Frozen},Prepare,beginPlan))await SendQueue(job.Id);else FailedPreparation("Подготовка не подтверждена или действие отменено пользователем. Прежние задания продолжаются.");
    }catch(Exception ex){FailedPreparation(ex.Message);Notify(pair.Frozen.Name+": "+ShortConnectionError(ex.Message));}
    finally{preparing60.Remove(PreparationKey60(pair.Frozen.Host,template.OutputChannel));RefreshActivity();if(CurrentHost(pair.Frozen.Host))ShowCurrent();}

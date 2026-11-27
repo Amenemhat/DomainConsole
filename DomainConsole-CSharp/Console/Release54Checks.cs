@@ -23,7 +23,9 @@ public partial class MainWindow {
   VerifySavedStatus55();
   var trace=Path.Combine(Path.GetTempPath(),"ui-release54-progress.txt");
   File.WriteAllText(trace,"Verifying endpoint cancellation.\n");
-  AwaitUi39(VerifyConnectionCancel54(ConnectionStore.Capture(new(){Host="cancel54.fixture.invalid"})));
+  // The transport fixture runs off the UI thread and does not need a dispatcher frame.
+  VerifyConnectionCancel54(ConnectionStore.Capture(new(){Host="cancel54.fixture.invalid"}))
+   .WaitAsync(TimeSpan.FromSeconds(20)).GetAwaiter().GetResult();
   File.AppendAllText(trace,"Endpoint cancellation verified.\n");
   var now=DateTimeOffset.UtcNow;var host="release54.fixture.invalid";var original=ConnectionStore.Profiles.GetValueOrDefault(host);
   try{

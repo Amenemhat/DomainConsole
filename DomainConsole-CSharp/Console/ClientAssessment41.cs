@@ -7,11 +7,12 @@ namespace DomainConsole;
 public sealed record ClientAssessment41(string Kind,string Title,string Details){
  public bool InstallationSucceeded51 {get;init;}
  public string HeadlineTone51=>InstallationSucceeded51?"Success":Tone;
- public string Tone=>Kind switch{"Success"=>"Success","Error" or "SyncError"=>"Error","Needed" or "Working" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Warning"};
- public string Glyph=>Kind switch{"Success"=>"Success","Error" or "SyncError"=>"Error","Reboot"=>"Reboot","Working"=>"Working","Needed" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Warning"};
+ public string Tone=>Kind switch{"Success" or "WsusHealthy"=>"Success","Reboot"=>"Reboot","Error" or "SyncError"=>"Error","Needed" or "Working" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown" or "WsusIncomplete"=>"Unknown",_=>"Warning"};
+ public string Glyph=>Kind switch{"Success" or "WsusHealthy"=>"Success","Error" or "SyncError"=>"Error","Reboot"=>"Reboot","Working"=>"Working","Needed" or "ReportPending"=>"Info","Stale"=>"Stale","Unknown" or "WsusIncomplete"=>"Unknown",_=>"Warning"};
 }
 public static class ClientReadiness41 {
  public static string IPv4(string value){if(!IPAddress.TryParse(value,out var ip))return "";if(ip.IsIPv4MappedToIPv6)ip=ip.MapToIPv4();return ip.AddressFamily==AddressFamily.InterNetwork?ip.ToString():"";}
+ public static bool NeedsClientDiagnosis(string kind)=>kind is "Error" or "SyncError" or "Reboot" or "Discrepancy" or "NoWsus" or "Stale";
  public static ClientAssessment41 Evaluate(WsusReport? report,bool saved,bool found,RebootView40 reboot,RemoteState? state,bool active,bool searched,int? remaining,string searchAt,string error,DateTimeOffset now,int hours,string boot=""){
   string dates=report==null?"":"Отчёт WSUS: "+Display36.Date(report.LastReportedUtc)+" · "+ReportPresentation35.AgeAt41(report.LastReportedUtc,now);
   ClientAssessment41 Result(string k,string title,string detail)=>new(k,title,detail+(dates.Length>0?"\n"+dates:""));
@@ -29,25 +30,29 @@ public static class ClientReadiness41 {
   if(report==null)return Result("Unknown","Отчёт WSUS не получен","Прочитайте данные сервера WSUS");
   if(!found)return Result("NoWsus","Клиент не найден в WSUS","Проверьте регистрацию клиента");
   if(ReportPresentation35.Tone(report.LastReportedUtc,now,hours)!="Success")return Result("Stale","Отчёт WSUS устарел или время некорректно","Проверьте дату отчёта и доставку отчётности");
+  if(report.InstalledPendingRebootCount>0&&
+     !Criteria45.Newer(boot,report.LastReportedUtc)&&
+     !(reboot.Required==false&&Criteria45.Newer(reboot.Stamp,report.LastReportedUtc)))
+   return Result("Reboot","По отчёту WSUS ожидается перезагрузка","Проверьте флаги на клиенте перед перезагрузкой");
   bool comparable=searched&&report.RequiredComplete&&report.RequiredError.Length==0&&report.ApprovedUnknownCount==0&&DateTimeOffset.TryParse(searchAt,out var scanTime)&&scanTime<=now.AddMinutes(1)&&now-scanTime<=TimeSpan.FromHours(hours)&&(!DateTimeOffset.TryParse(boot,out var bootTime)||scanTime>=bootTime);
   if(comparable&&remaining.HasValue&&remaining!=report.NeededCount){if(Criteria45.Newer(searchAt,report.LastReportedUtc))return Result("ReportPending","Поиск клиента: "+remaining+" · ожидается подтверждение WSUS","Серверный счётчик "+report.NeededCount+" относится к более раннему отчёту; поиск клиента: "+Display36.Date(searchAt));return Result("Discrepancy","Данные клиента и WSUS расходятся","Поиск клиента: "+remaining+" · "+Display36.Date(searchAt)+"; WSUS: "+report.NeededCount+". Требуется сверка применимости конкретных обновлений");}
-  if(report.NeededCount>0)return Result("Needed","К установке: "+(report.RequiredComplete?"":"≥ ")+report.NeededCount,"Одобрены и применимы · установите в согласованное время");
-  if(report.LastSyncResult!="Succeeded")return Result("Warning","Проверка неполная · результат поиска WSUS неизвестен","Последнее соединение: "+Display36.Date(report.LastSyncUtc));
-  if(error.Length>0)return Result("Warning","Проверка неполная · данные WSUS не обновлены","Показан сохранённый результат; повторите чтение отчёта");
-  if(saved)return Result("Stale","Сохранённый снимок · текущая готовность не проверена","Прочитайте отчёт WSUS и состояние клиента");
-  if(report.NeededCount!=0||!report.RequiredComplete||report.RequiredError.Length>0||report.ApprovedUnknownCount>0)return Result("Warning","Проверка неполная · применимость не уточнена","Требуется полный подсчёт одобренных обновлений");
-  if(!reboot.Fresh||reboot.Required!=false)return Result("Warning",reboot.Limitation.Length>0?reboot.Limitation:"Проверка неполная · флаги перезагрузки не подтверждены","К установке по отчёту: 0 · проверьте флаги на клиенте\n"+reboot.Details);
-  if(DateTimeOffset.TryParse(boot,out var b)&&DateTimeOffset.TryParse(report.LastReportedUtc,out var r)&&r<b)return Result("Warning","Проверка неполная · отчёт получен до загрузки Windows","Нужен отчёт после последней загрузки");
-  if(searched&&remaining>0)return Result("Warning","Текущая применимость не подтверждена","По последнему поиску клиента осталось "+remaining+" · "+Display36.Date(searchAt)+". По отчёту WSUS к установке: 0.");
-  if(!searched)return Result("Warning","Поиск клиента не подтверждён","К установке по отчёту: 0 · нет сохранённого успешного поиска для этого источника");
-  if(!DateTimeOffset.TryParse(searchAt,out var at)||at>now.AddMinutes(1))return Result("Warning","Время поиска клиента не подтверждено","К установке по отчёту: 0 · проверьте время и результат поиска");
-  if(DateTimeOffset.TryParse(boot,out var started)&&at<started)return Result("Warning","Поиск клиента выполнен до перезагрузки","К установке по отчёту: 0 · нужна проверка после последней загрузки");
-  if(remaining!=0||now-at>TimeSpan.FromHours(hours))return Result("Warning","Нужна повторная проверка обновлений","Последний подтверждённый поиск: "+Display36.Date(searchAt));
+  if(report.NeededCount>0)return Result("Needed","К установке: "+(report.RequiredComplete?"":"≥ ")+report.NeededCount,"Одобрены и применимы · ожидается установка по настройкам Windows Update");
+  if(report.LastSyncResult!="Succeeded")return Result("WsusIncomplete","Результат поиска WSUS неизвестен","Последнее соединение: "+Display36.Date(report.LastSyncUtc));
+  if(report.NeededCount!=0||!report.RequiredComplete||report.RequiredError.Length>0||report.ApprovedUnknownCount>0)return Result("WsusIncomplete","WSUS не подтвердил применимость обновлений","В отчёте недостаточно данных об одобренных обновлениях");
+  bool reportAfterBoot=!Criteria45.Newer(boot,report.LastReportedUtc);
+  if(saved||error.Length>0||!comparable||remaining!=0||!reboot.Fresh||reboot.Required!=false||!reportAfterBoot)
+   return Result("WsusHealthy","По отчёту WSUS необходимых обновлений нет","Поиск и флаги на ПК учитываются отдельно."+
+    (error.Length>0?"\nПоследнее чтение WSUS не обновило этот отчёт.":""));
   return Result("Success","Проверено · необходимых обновлений нет","Отчёт WSUS свежий · перезагрузка не требуется\nПоиск клиента: "+Display36.Date(searchAt)+" · флаги: "+Display36.Date(reboot.Stamp));
  }
 }
 public partial class MainWindow {
  Dictionary<string,ClientAssessment41>? refreshClientStatus41;
+ bool NeedsRoutineClientDiagnosis(ComputerRow row,string kind)=>
+  ClientReadiness41.NeedsClientDiagnosis(kind)||kind=="Unknown"&&
+  reportCache.TryGetValue(row.Host,out var cache)&&CacheMatches(cache)&&cache.Found&&
+  ReportPresentation35.Tone(cache.Report.LastReportedUtc,DateTimeOffset.UtcNow,ReportPresentation35.FreshHours)=="Stale";
+
  ClientAssessment41 AssessClient41(ComputerRow row){if(refreshClientStatus41!=null&&refreshClientStatus41.TryGetValue(row.Host,out var cached))return cached;var result=AssessClientCore41(row);if(refreshClientStatus41!=null)refreshClientStatus41[row.Host]=result;return result;}
  ClientAssessment41 AssessClientCore41(ComputerRow row){
   var jobs=HostJobs39(row.Host).Where(x=>CurrentIdentity(x.Target)).ToList();var operation=RelevantActive61(jobs);
@@ -63,6 +68,9 @@ public partial class MainWindow {
   bool active=operation.Target!=null;var proof=RebootViewFor40(row);
   var assessment=ClientReadiness41.Evaluate(cache?.Found==true?cache.Report:null,cache!=null&&!liveReports.Contains(row.Host),cache?.Found??false,proof,state,active,scan.Step!=null,scan.State?.UpdatesRemaining,scan.Step?.Ended??"",overviewErrors.GetValueOrDefault(row.Host,""),DateTimeOffset.UtcNow,ReportPresentation35.FreshHours,rebootSnapshots.GetValueOrDefault(row.Host)?.BootUtc??"");
   if(!active&&backgroundUpdates.TryGetValue(row.Host,out var live)&&FreshActivity(live)&&live.InstallerBusy){assessment=new("Working","На клиенте выполняется операция",assessment.Title+"\n"+assessment.Details);active=true;}
+  if(!active&&cache?.Found==true&&assessment.Kind is ("Success" or "WsusHealthy" or "Needed")&&
+     (cache.LookupMissing53||cache.LookupError53.StartsWith("Клиент не найден при последнем чтении WSUS",StringComparison.Ordinal)))
+   assessment=new("NoWsus","Клиент не найден при последнем чтении WSUS","Сохранённый отчёт: "+Display36.Date(cache.Report.LastReportedUtc));
   if(!active&&cache?.Found==false&&assessment.Kind is not ("Error" or "SyncError" or "Reboot"))assessment=overviewErrors.GetValueOrDefault(row.Host,"").Length>0?new("Warning","Не удалось обновить данные WSUS","Прежний результат: клиент не найден · "+Display36.Date(cache.ReceivedUtc)):!liveReports.Contains(row.Host)?new("Stale","Сохранённый результат: клиент не найден в WSUS","Получен: "+Display36.Date(cache.ReceivedUtc)+" · требуется чтение сервера"):new("NoWsus","Клиент не найден в WSUS","Проверьте регистрацию клиента");
   if(HeaderRebootJob(row)!=null&&assessment.Kind is not ("Error" or "SyncError"))assessment=new("Reboot","Перезагрузка назначена",assessment.Title+"\n"+assessment.Details);
   assessment=PreserveReady43(row,assessment,active,state,cache,proof,scan.Step?.Ended??"");if(assessment.Kind=="Success"&&rebootWatches.TryGetValue(row.Host,out var watch43)&&!watch43.Done&&rebootSnapshots.TryGetValue(row.Host,out var snap43)&&RebootReturned(watch43,snap43)&&ObservedAfter(snap43,watch43.RequestedUtc)&&snap43.Required==false){watch43.Done=true;watch43.Phase="Перезагрузка и готовность подтверждены";Store.Write("reboot-watches.json",rebootWatches);}

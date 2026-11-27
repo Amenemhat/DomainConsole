@@ -27,8 +27,25 @@ try {
  if(!$process.WaitForExit(5000) -or $result.Status -ne 'InterventionRequired' -or !$script:disabled54){throw 'Owned executor not confirmed stopped'}
  $saved=Get-Content $status -Raw|ConvertFrom-Json
  if($saved.Results.Count -ne 1 -or $sentinel.HasExited){throw 'Partial result or unrelated executor lost'}
- 'PASS: early stop rejected; reused PID rejected; exact owned executor stopped; partial results and unrelated process preserved.'
+ $download=Start-Process $exe -ArgumentList ('run "'+$p+'"') -PassThru
+ $mode='download'
+ Remove-Item $flag
+ $state.ExecutorPid37=$download.Id
+ $state.ExecutorStarted37=$download.StartTime.ToUniversalTime().ToString('o')
+ $state.SupportsImmediateStop=$true
+ $state.SupportsWuaCancel=$true
+ $state.Stage='Установка · fixture'
+ $state|ConvertTo-Json -Depth 10|Set-Content $status -Encoding UTF8
+ $rejected=$false
+ try{& ([scriptblock]::Create($script))}catch{$rejected=$_.Exception.Message -match 'Скачивание не подтверждено'}
+ if(!$rejected -or $download.HasExited -or (Test-Path $flag)){throw 'Immediate download stop touched an installation'}
+ $state.Stage='Скачивание · fixture'
+ $state|ConvertTo-Json -Depth 10|Set-Content $status -Encoding UTF8
+ $result=& ([scriptblock]::Create($script))|ConvertFrom-Json
+ $saved=Get-Content $status -Raw|ConvertFrom-Json
+ if(!(Test-Path $flag) -or !$download.WaitForExit(5000) -or $result.Status -ne 'InterventionRequired' -or $saved.StopStatus -ne 'Forced' -or $saved.Results.Count -ne 1 -or $sentinel.HasExited){throw 'Download did not cancel and escalate to only its own agent'}
+ 'PASS: bounded download cancellation, install protection, verified executor ownership and partial results.'
 }finally{
- foreach($owned in @($process,$sentinel)){if(!$owned.HasExited){$owned.Kill();$null=$owned.WaitForExit(5000)};$owned.Dispose()}
+ foreach($owned in @($process,$sentinel,$download)|Where-Object {$_}){if(!$owned.HasExited){$owned.Kill();$null=$owned.WaitForExit(5000)};$owned.Dispose()}
  Remove-Item $fixture -Recurse -Force
 }

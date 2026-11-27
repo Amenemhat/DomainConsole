@@ -23,7 +23,7 @@ public partial class MainWindow {
  readonly Dictionary<string,int> overviewAttempts45=Store.Read("overview-attempts45.json",new Dictionary<string,int>());
  string treeAnchor="",recentAnchor="";string statusScope=Store.Read("status-scope.json","");
  static readonly (string Key,string Label)[] StatusCategories={
-  ("IdentityConflict","Дубли / конфликты ID"),("Working","Выполняется операция"),("AdDisabled","Отключены в AD"),("Error","Ошибка установки / задания"),("SyncError","Последний поиск: ошибка"),("Warning","Требует внимания"),("Discrepancy","Расхождение клиента и WSUS"),("ReportPending","Ожидается подтверждение WSUS"),("Reboot","Нужна перезагрузка"),("Success","Последняя полная проверка успешна"),("Needed","Есть необходимые обновления"),("Stale","Отчёт устарел"),("NoWsus","Нет в WSUS"),("Unreachable","Нет связи WinRM"),("Access","Нет доступа"),("Connected","Связь подтверждена"),("Unknown","Нет данных")};
+  ("IdentityConflict","Дубли / конфликты ID"),("Working","Выполняется операция"),("AdDisabled","Отключены в AD"),("Error","Ошибка установки / задания"),("SyncError","Последний поиск: ошибка"),("Warning","Требует внимания"),("Discrepancy","Расхождение клиента и WSUS"),("ReportPending","Ожидается подтверждение WSUS"),("Reboot","Нужна перезагрузка"),("Success","Последняя полная проверка успешна"),("WsusHealthy","Норма по свежему отчёту WSUS"),("WsusIncomplete","Неполные данные WSUS"),("Needed","Есть необходимые обновления"),("Stale","Отчёт устарел"),("NoWsus","Нет в WSUS"),("Unreachable","Нет связи WinRM"),("Access","Нет доступа"),("Connected","Связь подтверждена"),("Unknown","Нет данных")};
  string OverviewServer=>WsusHost.Text.Trim()+":"+WsusPort.Text.Trim();
  bool CacheMatches(CachedWsusReport cached)=>cached.Server.Equals(OverviewServer,StringComparison.OrdinalIgnoreCase)&&(cached.Host41.Length==0||SavedEvidence55.Matches(cached.Endpoint41,new TargetRecord{Host=cached.Host41}));
  OverviewResult OverviewStatus(ComputerRow row){var status=AssessClient41(row);return new(status.Kind,status.Title+"\n"+status.Details);}
@@ -68,12 +68,12 @@ public partial class MainWindow {
   overviewRunning=true;using var cancellation=CancellationTokenSource.CreateLinkedTokenSource(PollingControl43.Token);overviewCancel=cancellation;SetOverviewAction33(true);
   bool Current58()=>!closing&&!cancellation.IsCancellationRequested&&server==OverviewServer&&ssl==WsusSsl.IsChecked;
   int done=0,errors=0,succeeded61=0;bool cancelled=false;
-  overviewRun61=new(){Server=server,Started=DateTimeOffset.UtcNow.ToString("o"),Total=rows.Count,LastPartial=overviewRun61.Server==server?overviewRun61.LastPartial:"",LastFull=overviewRun61.Server==server?overviewRun61.LastFull:""};
+  overviewRun61=new(){Server=server,Started=DateTimeOffset.UtcNow.ToString("o"),Total=rows.Count,ReportsRead=0,LastPartial=overviewRun61.Server==server?overviewRun61.LastPartial:"",LastFull=overviewRun61.Server==server?overviewRun61.LastFull:""};
   try{
    overviewRun61.Phase="WSUS: чтение записей и сводок…";RenderOverview61();
    var snapshot=await remote.ReadWsusSnapshot58(settings,cancellation.Token);
    if(!Current58())throw new OperationCanceledException();
-   serverSnapshot58=snapshot;ConfirmIdentityRepairs58();await Task.Run(()=>Store.Write("wsus-server-snapshot58.json",snapshot));
+   serverSnapshot58=snapshot;await Task.Run(()=>Store.Write("wsus-server-snapshot58.json",snapshot));
    var details=new List<ComputerRow>();
    foreach(var row in rows){
     var name=ConnectionStore.WsusName(row.Host);var matches=snapshot.Find(name);
@@ -101,7 +101,7 @@ public partial class MainWindow {
       }catch(Exception ex){errors++;overviewRun61.Error=ex.Message;ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);}
      }
     }catch(OperationCanceledException){throw;}catch(Exception ex){foreach(var row in chunk)ApplyOverviewReply53(row,new(){Error=ex.Message},server,false);errors+=chunk.Length;overviewRun61.Error=ex.Message;}
-    done+=chunk.Length;overviewRun61.Processed+=chunk.Length;overviewRun61.Errors=errors;RenderOverview61();await PersistReportCacheAsync58();
+    done+=chunk.Length;overviewRun61.Processed+=chunk.Length;overviewRun61.ReportsRead=succeeded61;overviewRun61.Errors=errors;RenderOverview61();await PersistReportCacheAsync58();
     RefreshOutcomes();if(ComputerGrid.SelectedItem is ComputerRow focused&&chunk.Contains(focused))ShowCurrent();
    }
    overviewPending45.Clear();overviewAttempts45.Clear();overviewDue45.Clear();
@@ -122,15 +122,31 @@ public partial class MainWindow {
    if(!cancelled&&errors==0)overviewRun61.LastFull=overviewRun61.Ended;
    else if(succeeded61>0)overviewRun61.LastPartial=overviewRun61.Ended;
    Store.Write("overview-run61.json",overviewRun61);
-   if(!closing){RenderOverview61();RefreshOutcomes();}
+   if(!closing){RenderOverview61();RefreshOutcomes();if(ComputerGrid.SelectedItem is ComputerRow)ShowCurrent();}
   }
  }
 
  static bool IsCheckSource(object source){for(var d=source as DependencyObject;d!=null;d=d is Visual?VisualTreeHelper.GetParent(d):LogicalTreeHelper.GetParent(d)){if(d is CheckBox)return true;if(d is TreeViewItem or ListBoxItem)break;}return false;}
  List<ComputerRow> VisibleTreeRows(){var result=new List<ComputerRow>();void Walk(ItemsControl parent){foreach(TreeViewItem item in parent.Items){if(item.Visibility!=Visibility.Visible)continue;if(item.Tag is ComputerRow row)result.Add(row);if(item.IsExpanded)Walk(item);}}Walk(OuTree);return result;}
  void MarkRange(ComputerRow row,List<ComputerRow> visible,bool value,bool shift,bool recent){var anchor=recent?recentAnchor:treeAnchor;int a=visible.FindIndex(r=>r.Host.Equals(anchor,StringComparison.OrdinalIgnoreCase)),b=visible.IndexOf(row);batchSelecting=true;try{if(shift&&a>=0&&b>=0){foreach(var item in visible.Skip(Math.Min(a,b)).Take(Math.Abs(b-a)+1))item.Selected=value&&!item.Target.AdDisabled;}else{row.Selected=value;if(recent)recentAnchor=row.Host;else treeAnchor=row.Host;}}finally{batchSelecting=false;}}
- void Recent_PreviewMouseDown(object sender,MouseButtonEventArgs e){if(Ancestor<DockPanel>(e.OriginalSource as DependencyObject)?.Tag as string=="ReadyDivider"){e.Handled=true;return;}if(Ancestor<Button>(e.OriginalSource as DependencyObject)?.Tag as string=="Needed37")return;if(IsCheckSource(e.OriginalSource)||!Keyboard.Modifiers.HasFlag(ModifierKeys.Control))return;var item=ItemsControl.ContainerFromElement(RecentList,e.OriginalSource as DependencyObject) as ListBoxItem;if(item?.DataContext is not ComputerRow row)return;MarkRange(row,RecentComputers.ToList(),!row.Selected,false,true);ComputerGrid.SelectedItem=row;RecentList.SelectedItem=row;UpdateSelectionCount();ShowCurrent();e.Handled=true;}
- void RefreshRebootHeader(){if(HeaderReboot==null)return;if(ComputerGrid.SelectedItem is not ComputerRow row){HeaderReboot.IsEnabled=false;HeaderAbortReboot.Visibility=Visibility.Collapsed;HeaderWsusStatus.Text="";return;}HeaderReboot.IsEnabled=true;PostRebootInfo.Visibility=rebootWatches.TryGetValue(row.Host,out var watched)&&!watched.Done?Visibility.Visible:Visibility.Collapsed;var status=OverviewStatus(row);var execution34=ExecutionRow(row,MainTabs.SelectedItem==WsusTab);bool active34=IsCurrentExecution(execution34.Target.Status);HeaderWsusStatus.Text="";HeaderWsusStatus.ToolTip=RebootReason(row).Length>0?RebootReason(row):status.Hint.Split('\n')[0];HeaderWsusStatus.Foreground=status.Kind switch {"Error"=>Theme.Tone("Error"),"Warning" or "Reboot"=>Theme.Tone("Warning"),"Success"=>Theme.Tone("Success"),"Stale"=>Theme.Tone("Info"),_=>Theme.Brush("TextMuted")};var scheduled=HeaderRebootJob(row);HeaderAbortReboot.Visibility=scheduled!=null?Visibility.Visible:Visibility.Collapsed;HeaderReboot.Content=UiIcon32.Create("reboot");HeaderReboot.SetResourceReference(Control.ForegroundProperty,RebootReason(row).Length>0?"WarningText":"InfoText");HeaderReboot.ToolTip=RebootViewFor40(row).Title+"\n"+RebootViewFor40(row).Details+"\nПерезагрузка только текущего ПК: "+row.Host+". Задержка и сообщение выбираются в подтверждении.";}
+ bool MarkRowFromClick(ComputerRow row,Func<List<ComputerRow>> visible,ModifierKeys modifiers,bool recent){
+  bool shift=modifiers.HasFlag(ModifierKeys.Shift);
+  if(!shift&&!modifiers.HasFlag(ModifierKeys.Control)){
+   if(recent)recentAnchor=row.Host;else treeAnchor=row.Host;
+   return false;
+  }
+  MarkRange(row,visible(),shift||!row.Selected,shift,recent);
+  UpdateSelectionCount();
+  return true;
+ }
+ void Recent_PreviewMouseDown(object sender,MouseButtonEventArgs e){
+  if(Ancestor<DockPanel>(e.OriginalSource as DependencyObject)?.Tag as string=="ReadyDivider"){e.Handled=true;return;}
+  if(Ancestor<Button>(e.OriginalSource as DependencyObject)?.Tag as string=="Needed37"||IsCheckSource(e.OriginalSource))return;
+  var item=ItemsControl.ContainerFromElement(RecentList,e.OriginalSource as DependencyObject) as ListBoxItem;
+  if(item?.DataContext is not ComputerRow row||!MarkRowFromClick(row,()=>RecentComputers.ToList(),Keyboard.Modifiers,true))return;
+  ComputerGrid.SelectedItem=row;RecentList.SelectedItem=row;ShowCurrent();e.Handled=true;
+ }
+ void RefreshRebootHeader(){if(HeaderReboot==null)return;if(ComputerGrid.SelectedItem is not ComputerRow row){HeaderReboot.IsEnabled=false;HeaderAbortReboot.Visibility=Visibility.Collapsed;HeaderWsusStatus.Text="";return;}HeaderReboot.IsEnabled=true;PostRebootInfo.Visibility=rebootWatches.TryGetValue(row.Host,out var watched)&&!watched.Done?Visibility.Visible:Visibility.Collapsed;var status=OverviewStatus(row);var execution34=ExecutionRow(row,MainTabs.SelectedItem==WsusTab);bool active34=IsCurrentExecution(execution34.Target.Status);HeaderWsusStatus.Text="";HeaderWsusStatus.ToolTip=RebootReason(row).Length>0?RebootReason(row):status.Hint.Split('\n')[0];HeaderWsusStatus.Foreground=status.Kind switch {"Error"=>Theme.Tone("Error"),"Warning" or "Reboot"=>Theme.Tone(status.Kind),"Success"=>Theme.Tone("Success"),"Stale"=>Theme.Tone("Info"),_=>Theme.Brush("TextMuted")};var scheduled=HeaderRebootJob(row);HeaderAbortReboot.Visibility=scheduled!=null?Visibility.Visible:Visibility.Collapsed;HeaderReboot.Content=UiIcon32.Create("reboot");HeaderReboot.SetResourceReference(Control.ForegroundProperty,status.Kind=="Reboot"||RebootReason(row).Length>0?"RebootText":"InfoText");HeaderReboot.ToolTip=RebootViewFor40(row).Title+"\n"+RebootViewFor40(row).Details+"\nПерезагрузка только текущего ПК: "+row.Host+". Задержка и сообщение выбираются в подтверждении.";}
  async void HeaderReboot_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{var row=Current();if(HeaderRebootJob(row)!=null){Notify("Перезагрузка уже назначена. Для изменения сначала отмените её.");return;}var window=new Window{Owner=this,Title="Перезагрузка · "+row.Host,Width=540,SizeToContent=SizeToContent.Height,WindowStartupLocation=WindowStartupLocation.CenterOwner};var panel=new StackPanel{Margin=new(20)};window.Content=panel;panel.Children.Add(RebootDialogEvidence40(row));panel.Children.Add(new TextBlock{Text="Только текущий компьютер: "+row.Host,FontWeight=FontWeights.SemiBold});panel.Children.Add(new TextBlock{Text="Остальные галочки не влияют. Сохраните документы на клиенте.",TextWrapping=TextWrapping.Wrap});panel.Children.Add(new TextBlock{Text="Задержка в секундах (0–86400)"});var delay=new TextBox{Text="60"};panel.Children.Add(delay);var message=new TextBox{Text="Плановая перезагрузка. Сохраните документы.",MaxLength=400};panel.Children.Add(message);var force=new CheckBox{Content="Принудительно закрыть приложения (возможна потеря данных)"};panel.Children.Add(force);var scan=new CheckBox{Content="Проверить обновления после перезагрузки",IsChecked=true,ToolTip="После подтверждения новой загрузки выполняется один поиск. Установка зависит от переключателя Авто."};panel.Children.Add(scan);var actions=new WrapPanel();panel.Children.Add(actions);var run=new Button{Content="Перезагрузить",IsDefault=true};actions.Children.Add(run);actions.Children.Add(new Button{Content="Отмена",IsCancel=true});run.Click+=(s,a)=>{if(!int.TryParse(delay.Text,out var seconds)||seconds<0||seconds>86400){MessageBox.Show(window,"Укажите задержку 0–86400 секунд.");return;}window.DialogResult=true;};if(window.ShowDialog()!=true)return;
   // Windows shutdown /t > 0 implies /f. Delay in the agent script keeps force-close opt-in.
   int wait=int.Parse(delay.Text);var code=HeaderRebootCode(wait,message.Text,force.IsChecked==true);

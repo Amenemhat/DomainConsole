@@ -13,13 +13,25 @@ public partial class MainWindow {
    var report=Report();if(server=="failed")report.FailedCount=1;if(server=="sync-failed")report.LastSyncResult="Failed";if(server=="old")report.LastReportedUtc=now.AddDays(-3).ToString("o");if(server=="partial")report.RequiredComplete=false;if(server=="needed")report.NeededCount=2;
    var reboot=flag switch{"required"=>clean with{Required=true,Sources=new[]{"Windows Update API","RebootRequired (Windows Update)"}},"unknown"=>clean with{Required=null,Fresh=false},"partial"=>clean with{Required=null,Fresh=false,Limitation="CBS не прочитан"},"old-clear"=>clean with{Fresh=false},_=>clean};
    var result=ClientReadiness41.Evaluate(report,false,true,reboot,done,active,true,0,scan,"",now,24,boot);
-   string expected=active?"Working":flag=="required"?"Reboot":server=="failed"?"Error":server=="sync-failed"?"SyncError":server=="old"?"Stale":server=="needed"?"Discrepancy":server=="partial"||flag!="clear"?"Warning":"Success";
+   string expected=active?"Working":flag=="required"?"Reboot":server=="failed"?"Error":server=="sync-failed"?"SyncError":server=="old"?"Stale":server=="needed"?"Discrepancy":server=="partial"?"WsusIncomplete":flag!="clear"?"WsusHealthy":"Success";
    Check(result.Kind==expected,flag+"/"+server+"/active="+active);
    var criteria=Criteria45.Build(result,report,reboot,done,active,scan,0,false,"",boot);
-   Check(criteria.Count==3&&criteria[2].Action==(!active&&!reboot.Fresh&&result.Kind!="Success"),"action "+flag+"/"+server+"/"+active);
+   Check(criteria.Count==3&&criteria[2].Action==(!active&&!reboot.Fresh&&result.Kind is not ("Success" or "WsusHealthy")),"action "+flag+"/"+server+"/"+active);
    Check(criteria[2].Glyph==(flag=="required"?"Reboot":flag=="clear"?"Success":flag=="old-clear"?"Stale":"Unknown"),"reboot glyph "+flag+"/"+server+"/"+active);
    Check(report.LastReportedUtc==(server=="old"?now.AddDays(-3).ToString("o"):now.AddMinutes(-1).ToString("o")),"report provenance "+flag+"/"+server+"/"+active);
   }
+  var serverOnly=Report();
+  var unobserved=clean with{Required=null,Fresh=false,Stamp=""};
+  ClientAssessment41 FromServer(RemoteState? state=null)=>ClientReadiness41.Evaluate(serverOnly,false,true,unobserved,state,false,false,null,"","",now,24,boot);
+  var observed=FromServer();
+  Check(observed.Kind=="WsusHealthy"&&!ClientReadiness41.NeedsClientDiagnosis(observed.Kind),"fresh report replaces the routine client check");
+  Check(!ClientReadiness41.NeedsClientDiagnosis("WsusIncomplete")&&!ClientReadiness41.NeedsClientDiagnosis("Needed")&&ClientReadiness41.NeedsClientDiagnosis("Error")&&ClientReadiness41.NeedsClientDiagnosis("Stale"),"normal automatic updates stay out of client probe queue");
+  Check(FromServer(new(){Status="Failed"}).Kind=="Error","fresh report does not erase an explicit job error");
+  serverOnly.InstalledPendingRebootCount=1;
+  Check(FromServer().Kind=="Reboot"&&unobserved.Required==null,"WSUS pending reboot does not prove a local flag");
+  serverOnly.InstalledPendingRebootCount=0;
+  serverOnly.LastReportedUtc=now.AddDays(-3).ToString("o");
+  Check(FromServer().Kind=="Stale","rereading the server cannot refresh an old report");
   foreach(string stamp in new[]{"invalid",now.AddHours(1).ToString("o")}){
    var invalid=DescribeReboot40(new(){Required=true,CollectedUtc=stamp},"",now);
    Check(invalid.Required==null&&!invalid.Fresh,"invalid reboot timestamp "+stamp);

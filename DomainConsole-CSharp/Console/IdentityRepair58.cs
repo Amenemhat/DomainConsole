@@ -20,7 +20,12 @@ public sealed class IdentityRepairAttempt58 {
 public partial class MainWindow {
  readonly Dictionary<string,IdentityRepairAttempt58> identityRepairs58=Store.Read("identity-repairs58.json",new Dictionary<string,IdentityRepairAttempt58>());
  readonly Dictionary<string,List<string>> manualIdentityScopes=Store.Read("identity-scope-approvals.json",new Dictionary<string,List<string>>());
- static string MemberIdentity(ClientIdentity58 i)=>i.Machine.ToLowerInvariant()+"|"+i.Name.TrimEnd('.').ToLowerInvariant();
+ static string MemberIdentity(ClientIdentity58 i){
+  var installation=IdentityPolicy58.Installation(i);
+  return i.Machine.ToLowerInvariant()+"|"+i.Name.TrimEnd('.').ToLowerInvariant()+
+   (installation==Guid.Empty?"":"|"+installation.ToString("D"))+
+   (IdentityPolicy58.HasAdapterEvidence(i)?"|"+IdentityPolicy58.DirectoryObject(i).ToString("D")+"|"+i.AdapterMac.ToUpperInvariant():"");
+ }
  void RememberDiagnosticScope(ClientIdentity58 identity){
   if(!IdentityPolicy58.Usable(identity)||manualIdentityScopes.ContainsKey(identity.Key))return;
   var retained=identities58.Values.Select(x=>x.Key).Concat(identityRepairs58.Values.Where(a=>a.Key.LastIndexOf('|')>0).Select(a=>a.Key[..a.Key.LastIndexOf('|')])).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -36,13 +41,24 @@ public partial class MainWindow {
   Store.Write("identity-scope-approvals.json",manualIdentityScopes);
   Event31(host,"identity-stop58",anchor.Key,"Остановлена передача новым участникам","Info","Уже принятые клиентами задания завершают восстановление служб.");
  }
+ const string IdentityNotStarted="DC_IDENTITY_NOT_STARTED|";
+ static bool IdentityRepairNotStarted(TargetRecord target)=>target.Status is "LaunchRejected" or "AccessDenied"||
+  target.State is {Status:"Failed"} state&&state.Ended.Length>0&&
+   (state.Step==0||state.Error.StartsWith(IdentityNotStarted,StringComparison.Ordinal));
  readonly HashSet<string> identityRepairBusy58=new(StringComparer.OrdinalIgnoreCase);
+ void MarkIdentitySending58(IdentityRepairAttempt58 attempt){
+  var started=DateTimeOffset.UtcNow;
+  attempt.StartedUtc=started.ToString("o");
+  attempt.DeadlineUtc=started.AddMinutes(10).ToString("o");
+  attempt.Phase="Передача задания перерегистрации";
+  Store.Write("identity-repairs58.json",identityRepairs58);
+ }
  // A solitary returning clone can extend only a previously proven, explicitly approved repair.
  List<ClientIdentity58> RepairCandidates58(ClientIdentity58 seen,bool manual){
   var now=DateTimeOffset.UtcNow;
-  var members=IdentityPolicy58.Participants(identities58.Values,seen,now);
+  var members=IdentityPolicy58.Participants(identities58.Values,seen,now,manual);
   manualIdentityScopes.TryGetValue(seen.Key,out var approved);
-  bool confirmed=IdentityPolicy58.Confirmed(members,seen,now);
+  bool confirmed=IdentityPolicy58.Confirmed(members,seen,now,manual);
   bool established=approved?.Distinct().Count()>=2&&identityRepairs58.Values.Any(a=>a.Key.StartsWith(seen.Key+"|",StringComparison.OrdinalIgnoreCase)&&a.JobId.Length>0);
   if(manual&&(confirmed||established)||!manual&&approved==null&&confirmed)return members;
   return members.Where(i=>approved?.Contains(MemberIdentity(i))==true).ToList();
@@ -53,6 +69,22 @@ public partial class MainWindow {
   if(past==null||past.Key.LastIndexOf('|')<1)return null;
   var key=past.Key[..past.Key.LastIndexOf('|')];
   return identities58.Values.FirstOrDefault(i=>i.Key==key&&i.Fresh(DateTimeOffset.UtcNow));
+ }
+ static string IdentityRepairAddress(TargetRecord target)=>string.IsNullOrWhiteSpace(target.ConnectionAddress)?target.Host:target.ConnectionAddress;
+ internal static string IdentityRepairDeviceKey(ClientIdentity58 identity,bool manual){
+  var key=identity.Key+"|"+identity.Machine.ToLowerInvariant();
+  var installation=IdentityPolicy58.Installation(identity);
+  if(installation!=Guid.Empty)key+=":"+installation.ToString("D");
+  if(manual&&IdentityPolicy58.HasAdapterEvidence(identity))key+=":ad:"+IdentityPolicy58.DirectoryObject(identity).ToString("D");
+  return key;
+ }
+ internal static bool ReuseIdentityForRepair(ClientIdentity58 approved,ClientIdentity58 current,TargetRecord target,WsusSettings settings,DateTimeOffset now){
+  if(!IdentityPolicy58.SameApprovedDevice(approved,current,now)||
+     !current.Address.Equals(IdentityRepairAddress(target),StringComparison.OrdinalIgnoreCase))return false;
+  if(IdentityPolicy58.HasAdapterEvidence(approved)&&(!Guid.TryParse(target.DirectoryId,out var directory)||directory!=IdentityPolicy58.DirectoryObject(approved)))return false;
+  if(current.VerifiedSource.Length==0)return true;
+  return SameServer(current.Source,settings)&&DateTimeOffset.TryParse(current.SourceCheckedAt,out var checkedAt)&&
+   checkedAt<=now&&now-checkedAt<TimeSpan.FromMinutes(10)&&current.ServerId.Equals(approved.ServerId,StringComparison.OrdinalIgnoreCase);
  }
  async Task RepairIdentityGroup58(string host,bool manual){
   using var foreground=manual?PollingControl43.Manual56("identity"):null;
@@ -75,9 +107,17 @@ public partial class MainWindow {
    foreach(var identity in participants){
     if(stop.IsCancellationRequested)break;
     var row=Computers.FirstOrDefault(r=>r.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase));if(row==null||row.Target.AdDisabled)continue;
-    string key=identity.Key+"|"+identity.Machine.ToLowerInvariant();
+    string legacyKey=identity.Key+"|"+identity.Machine.ToLowerInvariant();
+    string baseKey=IdentityRepairDeviceKey(identity,false);
+    string key=IdentityRepairDeviceKey(identity,manual);
     // A persisted attempt survives a crash, even if delivery acknowledgement was lost.
-    if(identityRepairs58.TryGetValue(key,out var prior)&&prior.JobId.Length>0&&(!manual||!History.Any(j=>j.Id==prior.JobId&&j.Targets.All(t=>t.Status is "LaunchRejected" or "AccessDenied")))){if(manual)Notify(identity.Name+": попытка ещё активна; проверьте задание "+prior.JobId);continue;}
+    var legacy=identityRepairs58.GetValueOrDefault(legacyKey);
+    var sameClient=identityRepairs58.Values.Where(a=>a.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase)&&
+     (a.Key==legacyKey||a.Key==baseKey||a.Key.StartsWith(baseKey+":ad:",StringComparison.OrdinalIgnoreCase)))
+     .OrderByDescending(a=>a.JobId.Length>0).FirstOrDefault();
+    var prior=sameClient??identityRepairs58.GetValueOrDefault(key)??(key==baseKey?legacy:null);
+    if(sameClient!=null)key=sameClient.Key;
+    if(prior!=null&&prior.JobId.Length>0&&(!manual||!History.Any(j=>j.Id==prior.JobId&&j.Targets.All(IdentityRepairNotStarted)))){if(manual)Notify(identity.Name+": попытка ещё активна; проверьте задание "+prior.JobId);continue;}
     void Defer(string reason){
      identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase=reason,At=DateTimeOffset.UtcNow.ToString("o")};
      Store.Write("identity-repairs58.json",identityRepairs58);refreshSurvey?.Invoke();
@@ -86,38 +126,52 @@ public partial class MainWindow {
     bool Available()=>!closing&&!stop.IsCancellationRequested&&!row.Target.AdDisabled&&CurrentEndpoint(frozen.Target)&&CurrentIdentity(frozen.Target);
     if(!Available()||!ConnectionStore.CanConnect(frozen.Target)){Defer("Подключение к согласованной цели недоступно");continue;}
     if(HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target))){Defer("Ожидается завершение активного задания");continue;}
-    if(!identity.Fresh(DateTimeOffset.UtcNow)||!ConnectionFresh(row.Host)){
-     if(!manual){Defer("Ожидается свежая проверка клиента");continue;}
+    var verifiedIdentity=identity;
+    var now=DateTimeOffset.UtcNow;
+    if(!manual&&(!identity.Fresh(now)||!ConnectionFresh(row.Host))){
+     Defer("Ожидается свежая проверка клиента");continue;
+    }
+    if(manual&&identities58.TryGetValue(row.Host,out var fresh)&&ReuseIdentityForRepair(identity,fresh,frozen.Target,ReadWsus(),now)){
+     // The submitted job rechecks the live device, policy and ID on the client before changing anything.
+     verifiedIdentity=fresh;
+    }else if(manual){
      var began=DateTimeOffset.UtcNow;
      try{
-      var current=await remote.ReadIdentity(frozen.Target,stop.Token);
-      await ResolveIdentitySource(current,ReadWsus(),verifiedSources,stop.Token);
+      var current=await ReadIdentityWithRetry(frozen.Target,remote.ReadIdentityForManualRepair,stop.Token);
+      await ResolveIdentitySource(current,ReadWsus(),verifiedSources,stop.Token,retry:true);
       if(!Available())continue;
-      current.Address=string.IsNullOrWhiteSpace(frozen.Target.ConnectionAddress)?frozen.Host:frozen.Target.ConnectionAddress;
+      current.Address=IdentityRepairAddress(frozen.Target);
       ObserveIdentity58(row.Host,current,false);
       if(!IdentityPolicy58.SameApprovedDevice(identity,current,DateTimeOffset.UtcNow)){
-       Defer("Участник, прежний ID или источник WSUS больше не подтверждены. Повторите диагностику");continue;
+       var reason=current.Error.Length>0?current.Error:identity.VerifiedSource.Length>0&&current.VerifiedSource.Length==0&&current.Server.Equals(identity.Server,StringComparison.OrdinalIgnoreCase)?"Не удалось повторно подтвердить адрес WSUS "+current.Server:"Участник, прежний ID или источник WSUS изменились";
+       Defer(reason+". Повторите диагностику");continue;
       }
+      verifiedIdentity=current;
       ConnectionSucceeded(row.Host,began,true);
      }catch(OperationCanceledException) when(stop.IsCancellationRequested){break;}
      catch(Exception ex){Defer("Не удалось повторно прочитать согласованного клиента: "+ConnectionBrief31(ex.Message));continue;}
     }
-    if(identity.UseWUServer!=1){Defer("Политика UseWUServer=1 не подтверждена");continue;}
-    try{
-     var live=await remote.LiveUpdates(frozen.Target);
-     if(live.Busy||live.Jobs.Count>0||live.Limitation.Length>0||live.InstallationEvidence.Length>0){
-      var reason=live.Limitation.Length>0?live.Limitation:live.InstallationEvidence.Length>0?live.InstallationEvidence:live.Jobs.Count>0?"активное задание клиента":"Windows Update занят";
-      Defer("Ожидается завершение обслуживания или уточнение состояния · "+reason);continue;
-     }
-    }catch(Exception ex){Defer("Проверка активности не завершена: "+ConnectionBrief31(ex.Message));continue;}
+    if(verifiedIdentity.UseWUServer!=1){Defer("Политика UseWUServer=1 не подтверждена");continue;}
+    // WUA installer COM is not a reliable WinRM preflight. The manual job checks it
+    // on the client as SYSTEM before backing up or modifying the registry.
+    if(!manual){
+     try{
+      var live=await remote.LiveUpdates(frozen.Target);
+      if(live.Busy||live.Jobs.Count>0||live.Limitation.Length>0||live.InstallationEvidence.Length>0){
+       var reason=live.Limitation.Length>0?live.Limitation:live.InstallationEvidence.Length>0?live.InstallationEvidence:live.Jobs.Count>0?"активное задание клиента":"Windows Update занят";
+       Defer("Ожидается завершение обслуживания или уточнение состояния · "+reason);continue;
+      }
+     }catch(OperationCanceledException) when(stop.IsCancellationRequested){break;}
+     catch(Exception ex){Defer("Проверка активности не завершена: "+ConnectionBrief31(ex.Message));continue;}
+    }
     if(stop.IsCancellationRequested)break;
     if(!Available()||HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target)))continue;
-    var job=new RemoteJob{Manual56=manual,AutoInstall54=false,AutoReboot=false,MicrosoftSource=false,OutputChannel="WSUS",Name="Перерегистрация общего SusClientId",Steps=new(){new(){Name="Перерегистрация клиента WSUS",Kind="PowerShell",TouchesUpdates=true,Code=RemoteService.IdentityRepairScript58(identity)}}};
-    identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Manual=manual,JobId=job.Id,StartedUtc=DateTimeOffset.UtcNow.ToString("o"),DeadlineUtc=DateTimeOffset.UtcNow.AddMinutes(10).ToString("o"),Phase="Подготовлено; повторный сброс запрещён",At=DateTimeOffset.UtcNow.ToString("o")};
+    var job=new RemoteJob{Manual56=manual,AutoInstall54=false,AutoReboot=false,MicrosoftSource=false,OutputChannel="WSUS",Name="Перерегистрация общего SusClientId",Steps=new(){new(){Name="Перерегистрация клиента WSUS",Kind="PowerShell",TouchesUpdates=true,Code=RemoteService.IdentityRepairScript58(verifiedIdentity)}}};
+    identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Manual=manual,JobId=job.Id,Phase="Ожидает передачи; повторный сброс запрещён",At=DateTimeOffset.UtcNow.ToString("o")};
     Store.Write("identity-repairs58.json",identityRepairs58);
     Event31(row.Host,"identity-repair58",job.Id,"Перерегистрация клиента подготовлена","Info","Прежний ID: "+identity.SusClientId,scope:job.Id);
     bool accepted=await CompletePreparedSubmission47(job,new(){row},new(){frozen},()=>Task.FromResult((Accepted:true,Force:false,Wait:false)),false);
-    if(accepted){identityRepairs58[key].Phase="Задание создано; ожидается новый ID и регистрация на сервере";await SendQueue(manual?job.Id:"");}
+    if(accepted)await SendQueue(manual?job.Id:"");
     else identityRepairs58[key].Phase="Передача не подтверждена; требуется проверка задания";
     Store.Write("identity-repairs58.json",identityRepairs58);
    }
@@ -125,19 +179,10 @@ public partial class MainWindow {
   }catch(Exception ex){Event31(host,"identity-repair58-error",ex.Message,"Перерегистрация требует проверки","Warning",ex.Message);}
   finally{identityRepairStops.Remove(observed.Key);identityRepairBusy58.Remove(observed.Key);refreshSurvey?.Invoke();if(manual)_=ObserveManualRepairs58();}
  }
- void ConfirmIdentityRepairs58(){
-  if(!SnapshotMatches58)return;
-  foreach(var attempt in identityRepairs58.Values.Where(a=>a.Phase!="Подтверждено")){
-   if(!identities58.TryGetValue(attempt.Host,out var identity)||!identity.Fresh(DateTimeOffset.UtcNow)||identity.SusClientId==attempt.OldId)continue;
-   var record=serverSnapshot58.Records.FirstOrDefault(r=>r.Id.Equals(identity.SusClientId,StringComparison.OrdinalIgnoreCase)&&r.Name.TrimEnd('.').Equals(identity.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase));
-   if(record!=null)CompleteIdentityRegistration58(attempt,identity,new(){Id=record.Id,Name=record.Name,ReportedUtc=record.Summary?.LastReportedUtc??""});
-  }
-  Store.Write("identity-repairs58.json",identityRepairs58);
- }
 }
 public sealed partial class RemoteService {
  public static string IdentityRepairScript58(ClientIdentity58 identity)=>
-  "$dcExpectedId58="+PowerShellBridge.Literal(identity.SusClientId)+";$dcExpectedMachine58="+PowerShellBridge.Literal(identity.Machine)+";$dcExpectedName58="+PowerShellBridge.Literal(identity.Name)+";$dcExpectedServer58="+PowerShellBridge.Literal(identity.Server)+";"+IdentityRepairBody58;
+  "$dcExpectedId58="+PowerShellBridge.Literal(identity.SusClientId)+";$dcExpectedMachine58="+PowerShellBridge.Literal(identity.Machine)+";$dcExpectedInstallation58="+PowerShellBridge.Literal(IdentityPolicy58.Installation(identity)==Guid.Empty?"":identity.InstallationId)+";$dcExpectedName58="+PowerShellBridge.Literal(identity.Name)+";$dcExpectedServer58="+PowerShellBridge.Literal(identity.Server)+";$dcExpectedStatusServer58="+PowerShellBridge.Literal(identity.StatusServer)+";$dcExpectedAdapterMac58="+PowerShellBridge.Literal(IdentityPolicy58.HasAdapterEvidence(identity)?identity.AdapterMac.ToUpperInvariant():"")+";\n"+IdentityAdapterProbe58+"\n"+IdentityRepairBody58;
  public const string IdentityRepairBody58="""
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.ServiceProcess
@@ -149,16 +194,45 @@ try {
  $cs58=Get-CimInstance Win32_ComputerSystem -ErrorAction Stop
  $name58=$env:COMPUTERNAME+$(if($cs58.PartOfDomain){'.'+$cs58.Domain}else{''})
  $machine58=[string](Get-CimInstance Win32_ComputerSystemProduct -ErrorAction Stop).UUID
- $server58=[string](Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate' -ErrorAction Stop).WUServer
- if($name58 -ne $dcExpectedName58 -or $machine58 -ne $dcExpectedMachine58 -or $server58.TrimEnd('/') -ne $dcExpectedServer58.TrimEnd('/')){throw 'Идентичность или сервер клиента изменились; сброс не выполнен'}
- if((Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -ErrorAction Stop).UseWUServer -ne 1){throw 'UseWUServer=1 не подтверждён; сброс не выполнен'}
+ $policy58=Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate' -ErrorAction Stop
+ $server58=[string]$policy58.WUServer
+ if($name58 -ne $dcExpectedName58 -or $machine58 -ne $dcExpectedMachine58 -or $server58.TrimEnd('/') -ne $dcExpectedServer58.TrimEnd('/')){throw 'DC_IDENTITY_NOT_STARTED|Идентичность или сервер клиента изменились; сброс не выполнен'}
+ if($dcExpectedStatusServer58 -and ([string]$policy58.WUStatusServer).TrimEnd('/') -ne $dcExpectedStatusServer58.TrimEnd('/')){throw 'DC_IDENTITY_NOT_STARTED|Адрес отправки отчёта WSUS изменился; сброс не выполнен'}
+ if($dcExpectedInstallation58){
+  $installation58=[string](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography' -Name MachineGuid -ErrorAction Stop).MachineGuid
+  if($installation58 -ne $dcExpectedInstallation58){throw 'DC_IDENTITY_NOT_STARTED|Установка Windows изменилась; сброс не выполнен'}
+ }
+ if($dcExpectedAdapterMac58){
+  try{$adapter58=Read-IdentityAdapter58}catch{throw 'DC_IDENTITY_NOT_STARTED|Не удалось повторно проверить физический сетевой адаптер'}
+  if($adapter58 -ne $dcExpectedAdapterMac58){throw 'DC_IDENTITY_NOT_STARTED|Физический сетевой адаптер изменился или не определён; сброс не выполнен'}
+ }
+ if((Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -ErrorAction Stop).UseWUServer -ne 1){throw 'DC_IDENTITY_NOT_STARTED|UseWUServer=1 не подтверждён; сброс не выполнен'}
  $path58='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
  $id58=[string](Get-ItemProperty $path58 -ErrorAction Stop).SusClientId
  $parsedId58=[guid]::Empty
  if(![guid]::TryParse($id58,[ref]$parsedId58) -or $parsedId58 -eq [guid]::Empty){throw 'SusClientId пуст или невалиден; автоматический сброс не выполнен'}
  if($id58 -ne $dcExpectedId58){Write-Output ('ID уже изменён: '+$id58+'. Повторного сброса нет.');exit 0}
- $installer58=New-Object -ComObject Microsoft.Update.Installer
- if($installer58.IsBusy){throw 'Установщик Windows Update занят; перерегистрация отложена'}
+ function Assert-IdentityRepairIdle58 {
+  try{
+   $installer58=New-Object -ComObject Microsoft.Update.Installer
+   $installerBusy58=[bool]$installer58.IsBusy
+   Import-Module BitsTransfer -ErrorAction Stop
+   $downloads58=@(Get-BitsTransfer -AllUsers -ErrorAction Stop|Where-Object {
+    $_.DisplayName -eq 'WU Client Download' -and $_.JobState -in @('Connecting','Transferring','Queued','TransientError')
+   })
+   $installers58=@(Get-CimInstance Win32_Process -Filter "Name='TiWorker.exe' OR Name='MRT.exe'" -ErrorAction Stop)
+  }catch{throw ('DC_IDENTITY_NOT_STARTED|Не удалось подтвердить готовность Windows Update на клиенте: '+$_.Exception.Message)}
+  if($installerBusy58 -or $downloads58.Count -or $installers58.Count){throw 'DC_IDENTITY_NOT_STARTED|Windows Update занят; перерегистрация отложена'}
+ }
+ function Stop-IdentityService58 {
+  Stop-Service wuauserv -ErrorAction Stop
+  (Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Stopped,[TimeSpan]::FromSeconds(30))
+ }
+ function Start-IdentityService58 {
+  Start-Service wuauserv -ErrorAction Stop
+  (Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Running,[TimeSpan]::FromSeconds(30))
+ }
+ Assert-IdentityRepairIdle58
  $backupFolder58=Join-Path $env:ProgramData 'DomainConsole-Backups'
  New-Item $backupFolder58 -ItemType Directory -Force|Out-Null
  $backup58=Join-Path $backupFolder58 ('WindowsUpdate-'+$env:COMPUTERNAME+'-'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N')+'.reg')
@@ -166,22 +240,57 @@ try {
  if($LASTEXITCODE -ne 0){throw 'Не удалось сохранить реестр; сброс отменён'}
  $resetError58='';$restoreError58=''
  try{
-  Stop-Service wuauserv -ErrorAction Stop
-  (Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Stopped,[TimeSpan]::FromSeconds(30))
+  Stop-IdentityService58
+  $current58=Get-ItemProperty $path58 -ErrorAction Stop
+  if([string]$current58.SusClientId -ne $id58){throw 'SusClientId изменился до удаления; значения реестра сохранены'}
   Remove-ItemProperty $path58 -Name SusClientId -ErrorAction Stop
-  if((Get-ItemProperty $path58).PSObject.Properties.Name -contains 'SusClientIdValidation'){Remove-ItemProperty $path58 -Name SusClientIdValidation -ErrorAction Stop}
- }catch{$resetError58=$_.Exception.Message}finally{try{Start-Service wuauserv -ErrorAction Stop;(Get-Service wuauserv).WaitForStatus([ServiceProcess.ServiceControllerStatus]::Running,[TimeSpan]::FromSeconds(30))}catch{$restoreError58=$_.Exception.Message}}
- if($resetError58 -or $restoreError58){throw ('Перерегистрация: '+$resetError58+'; восстановление wuauserv: '+$restoreError58)}
- & "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow
- $session58=New-Object -ComObject Microsoft.Update.Session
- $session58.ClientApplicationID='DomainConsole.Identity58'
- $search58=$session58.CreateUpdateSearcher();$search58.ServerSelection=1;$search58.Online=$true
- $result58=$search58.Search('IsInstalled=0 and IsHidden=0')
+  if($current58.PSObject.Properties.Name -contains 'SusClientIdValidation'){Remove-ItemProperty $path58 -Name SusClientIdValidation -ErrorAction Stop}
+ }catch{$resetError58=$_.Exception.Message}finally{try{Start-IdentityService58}catch{$restoreError58=$_.Exception.Message}}
+ if($resetError58 -or $restoreError58){throw ('Сброс ID: '+$(if($resetError58){$resetError58}else{'выполнен'})+'; запуск wuauserv: '+$(if($restoreError58){$restoreError58}else{'подтверждён'})+'; резервная копия: '+$backup58)}
+ function Read-NewIdentity58 {
+  $candidate=[string](Get-ItemProperty $path58 -ErrorAction Stop).SusClientId
+  $parsed=[guid]::Empty
+  if([guid]::TryParse($candidate,[ref]$parsed) -and $parsed -ne [guid]::Empty -and $parsed -ne $parsedId58){return $candidate}
+  return ''
+ }
+ function Wait-NewIdentity58([int]$seconds) {
+  $candidate=Read-NewIdentity58
+  for($second=0;!$candidate -and $second -lt $seconds;$second++){
+   Start-Sleep -Seconds 1
+   $candidate=Read-NewIdentity58
+  }
+  return $candidate
+ }
+ $new58=Read-NewIdentity58
+ # A new local ID can coexist with authorization for the old ID.
+ $scanBeforeReport58=[bool]$new58
+ try{
+  if($scanBeforeReport58){Assert-IdentityRepairIdle58}
+  Write-Output 'Запуск wuauserv подтверждён. Запрашивается повторное получение авторизации WSUS.'
+  & "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow
+ }catch{throw ('Не удалось запросить авторизацию WSUS: '+$_.Exception.Message.Replace('DC_IDENTITY_NOT_STARTED|','')+'; резервная копия: '+$backup58)}
+ if($scanBeforeReport58){Start-Sleep -Seconds 60}else{$new58=Wait-NewIdentity58 60}
+ if($scanBeforeReport58 -or !$new58){
+  $searchResult58=$null
+  try{
+   Assert-IdentityRepairIdle58
+   $new58=Read-NewIdentity58
+   if($scanBeforeReport58 -or !$new58){
+    if((Get-Service wuauserv).Status -eq 'Stopped'){Start-IdentityService58}
+    Write-Output 'Выполняется один поиск на управляемом сервере WSUS перед запросом отчёта.'
+    $session58=New-Object -ComObject Microsoft.Update.Session
+    $session58.ClientApplicationID='DomainConsole.Identity58'
+    $search58=$session58.CreateUpdateSearcher()
+    $search58.ServerSelection=1
+    $search58.Online=$true
+    $searchResult58=[int]$search58.Search('IsInstalled=0 and IsHidden=0').ResultCode
+    $new58=Wait-NewIdentity58 30
+   }
+  }catch{throw ('После сброса ID управляемый поиск не завершён: '+$_.Exception.Message.Replace('DC_IDENTITY_NOT_STARTED|','')+'; резервная копия: '+$backup58)}
+  if(!$new58){throw ('WUA не подтвердил новый SusClientId после штатного запроса и одного поиска. Код поиска: '+$searchResult58+'; резервная копия: '+$backup58)}
+ }
  & "$env:windir\System32\wuauclt.exe" /reportnow
- $new58=[string](Get-ItemProperty $path58 -ErrorAction Stop).SusClientId
- if(!$new58 -or $new58 -eq $dcExpectedId58){throw 'Новый SusClientId не подтверждён'}
- [pscustomobject]@{Computer=$name58;Finished=[DateTime]::UtcNow.ToString('o');OldId=$dcExpectedId58;NewId=$new58;SearchResult=[int]$result58.ResultCode;Backup=$backup58}|Format-List
- if([int]$result58.ResultCode -ne 2){throw 'ID изменён, но поиск завершился не полностью; требуется диагностика'}
+ [pscustomobject]@{Computer=$name58;Finished=[DateTime]::UtcNow.ToString('o');OldId=$dcExpectedId58;NewId=$new58;Backup=$backup58}|Format-List
  'Новый ID создан; регистрация и отчёт подтверждаются отдельно на сервере. Установка этим шагом не выполнялась.'
 }finally{if($owns58){$mutex58.ReleaseMutex()};$mutex58.Dispose()}
 """;

@@ -1,4 +1,5 @@
 using System.IO;
+using DomainConsole.Shared;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -29,6 +30,10 @@ public partial class MainWindow {
    var delayed=new IdentityRepairAttempt58{Host=row.Host,OldId="33333333-3333-3333-3333-333333333333",JobId="fixture-registration58",StartedUtc=DateTimeOffset.UtcNow.AddMinutes(-11).ToString("o"),DeadlineUtc=DateTimeOffset.UtcNow.AddMinutes(-1).ToString("o")};
    identityRepairs58[timeoutKey]=delayed;ExpireIdentityRepairs58();
    if(!delayed.Phase.StartsWith("Регистрация задерживается"))throw new Exception("Registration deadline did not produce delayed state");
+   var target=new TargetRecord{Status="Submitted"};
+   if(!ExpiredIdentityRepairPhase(delayed,target).StartsWith("Результат задания не подтверждён"))throw new Exception("A submitted job was rendered as a missing WSUS report");
+   target.Status="Failed";target.State=new RemoteState{Status="Failed",Ended=DateTimeOffset.UtcNow.ToString("o"),Error="WUA_FIXTURE"};
+   if(!ExpiredIdentityRepairPhase(delayed,target).Contains("WUA_FIXTURE"))throw new Exception("Registration hid the native failure");
    foreach(int color in new[]{0,1,2}){
     Theme.Apply(color,false);RefreshOutcomes();ShowCurrent();RefreshIdentity58(row.Host);
     if(HeaderIdentity58.Visibility!=Visibility.Visible||!IdentityConflict58(row.Host))throw new Exception("Identity conflict is not visible");

@@ -5,14 +5,17 @@ namespace DomainConsole;
 
 public partial class MainWindow {
  // A manual pass validates each distinct policy address at most once.
- async Task ResolveIdentitySource(ClientIdentity58 item,WsusSettings settings,Dictionary<string,string> checkedSources,CancellationToken token){
+ async Task ResolveIdentitySource(ClientIdentity58 item,WsusSettings settings,Dictionary<string,string> checkedSources,CancellationToken token,bool retry=false){
   if(!IdentityPolicy58.Usable(item)||SameServer(item.Server,settings)||string.IsNullOrWhiteSpace(settings.Host))return;
   var policy=new Uri(item.Server);
-  if(policy.Port!=settings.Port||policy.Scheme!=(settings.Ssl?"https":"http")||policy.AbsolutePath!="/"||policy.UserInfo.Length!=0||policy.Query.Length!=0||policy.HostNameType!=UriHostNameType.Dns)return;
+  if(policy.Port!=settings.Port||policy.Scheme!=(settings.Ssl?"https":"http")||policy.AbsolutePath!="/"||policy.UserInfo.Length!=0||policy.Query.Length!=0||policy.HostNameType is not (UriHostNameType.Dns or UriHostNameType.IPv4 or UriHostNameType.IPv6))return;
   if(!checkedSources.TryGetValue(item.Server,out var verified)){
    if(checkedSources.Count>=64)return;
-   try{verified=await remote.VerifyWsusAlias(settings,policy.DnsSafeHost,token);}
-   catch(Exception) when(!token.IsCancellationRequested){verified="";}
+   for(int attempt=0;;attempt++){
+    try{verified=await remote.VerifyWsusAlias(settings,policy.DnsSafeHost,token);break;}
+    catch(TimeoutException) when(retry&&attempt==0&&!token.IsCancellationRequested){await Task.Delay(500,token);}
+    catch(Exception) when(!token.IsCancellationRequested){verified="";break;}
+   }
    checkedSources[item.Server]=verified;
   }
   if(Guid.TryParse(verified,out var id)&&id!=Guid.Empty){
@@ -32,9 +35,14 @@ public sealed partial class RemoteService {
  internal const string VerifyWsusAliasScript="""
 $ErrorActionPreference='Stop'
 $local=[Net.Dns]::GetHostEntry($env:COMPUTERNAME).HostName.TrimEnd('.')
-$aliasName=[Net.Dns]::GetHostEntry($aliasHost).HostName.TrimEnd('.')
+$address=$null
+$sameHost=if([Net.IPAddress]::TryParse($aliasHost,[ref]$address)){
+ @([Net.Dns]::GetHostAddresses($local)|Where-Object {$_.Equals($address)}).Count -gt 0
+}else{
+ [Net.Dns]::GetHostEntry($aliasHost).HostName.TrimEnd('.') -eq $local
+}
 $verified=''
-if($local -and $local -eq $aliasName){
+if($local -and $sameHost){
  [void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration')
  $primary=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($env:COMPUTERNAME,$ssl,$port)
  $alias=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer($aliasHost,$ssl,$port)

@@ -45,6 +45,46 @@ public partial class MainWindow {
     }
    }
    maintenancePlans.Clear();History.Clear();queue.Clear();
+   var cutoff49=DateTimeOffset.UtcNow;
+   var captured49=ConnectionStore.Capture(row.Target);
+   var expired49=new MaintenancePlan{
+    Host=row.Host,Identity=captured49.ConnectionIdentity,Phase=PostBootReadinessPhase,
+    ReadyAfter=cutoff49.AddMinutes(-10),Detail="Проверка готовности не удалась",Install=true,Next=cutoff49.AddHours(1)
+   };
+   var active49=new RemoteJob{OutputChannel="WSUS",Targets=new(){new(){Host=row.Host,Status="Running"}}};
+   expired49.JobId=active49.Id;maintenancePlans[row.Host]=expired49;History.Add(active49);
+   ExpirePlans44(cutoff49.AddSeconds(-1));
+   ExpirePlans44(cutoff49);
+   if(expired49.Done||queue.Count!=0||active49.Targets[0].Status!="Running")
+    throw new Exception("Readiness fallback interrupted live work");
+   active49.Targets[0].Status="Completed";
+   ExpirePlans44(cutoff49.AddSeconds(-1));
+   if(queue.Count!=0)throw new Exception("Readiness fallback began before deadline");
+   PollingControl43.Pause();
+   ExpirePlans44(cutoff49);
+   if(queue.Count!=0||expired49.Done)throw new Exception("Readiness fallback bypassed pause");
+   PollingControl43.Resume();
+   ReconcilePlan44(row.Host,active49.Id,new(){State=new(){Status="Completed"}});
+   ExpirePlans44(cutoff49);
+   var fallback49=queue.Single().Job;
+   if(fallback49.Id!=expired49.PostBootFallbackJobId||fallback49.Steps.Single().Kind!="UpdateScan"||
+      fallback49.AutoInstall54||fallback49.AutoReboot||expired49.Phase=="Требуется действие")
+    throw new Exception("Expired readiness did not queue a single search-only job");
+   var checkpointBeforeQueue49=Store.Clone(expired49);
+   checkpointBeforeQueue49.JobId=active49.Id;checkpointBeforeQueue49.NextJobId=fallback49.Id;
+   checkpointBeforeQueue49.ReadyAfter=cutoff49.AddMinutes(-10);checkpointBeforeQueue49.Phase=PostBootReadinessPhase;
+   maintenancePlans[row.Host]=checkpointBeforeQueue49;
+   queue.Clear();RestoreMaintenanceQueues();ExpirePlans44(cutoff49);
+   ReconcilePlan44(row.Host,active49.Id,new(){State=new(){Status="Failed"}});
+   if(History.Count!=2||queue.Count!=1||checkpointBeforeQueue49.Done)
+    throw new Exception("Restart or late readiness response changed the fallback job");
+   fallback49.Targets[0].Status="Completed";
+   queue.Clear();
+   ReconcilePlan44(row.Host,fallback49.Id,new(){State=new(){Status="Completed",HasUpdateSteps=true,UpdatesRemaining=1}});
+   ExpirePlans44(cutoff49.AddMinutes(1));
+   if(!checkpointBeforeQueue49.Done||checkpointBeforeQueue49.Phase!="Контрольный поиск завершён"||queue.Count!=0)
+    throw new Exception("Fallback search incorrectly continued to installation");
+   maintenancePlans.Clear();History.Clear();queue.Clear();
    var incompatible49=new RemoteJob{Steps=new(){new(){Kind="Updates"}},Targets=new(){new(){Host=row.Host,Status="Queued"}}};History.Add(incompatible49);
    var checkpoint49=new MaintenancePlan{Host=row.Host,Install=true,SearchAfterBoot49=true,NextJobId=incompatible49.Id};maintenancePlans[row.Host]=checkpoint49;
    QueueMaintenanceJob(checkpoint49,ConnectionStore.Capture(row.Target));

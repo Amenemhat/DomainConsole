@@ -125,17 +125,68 @@ namespace DomainConsole.Agent {
    if(Cancelled()){WriteJson(prefix+".updates.json",details);return 0;}if(scanOnly&&(!Job.AutoInstall54||total==0)){for(int n=0;n<total;n++){dynamic u=result.Updates.Item(n);details.Add(new{Title=(string)u.Title,Downloaded=(bool)u.IsDownloaded});}WriteJson(prefix+".updates.json",details);return useWsus?Report():0;}
    for(int i=0;i<total;i++){
     if(Cancelled())break;State.UpdateIndex38=i+1;dynamic update=result.Updates.Item(i);string updateStarted54=DateTime.UtcNow.ToString("o");
-    if((bool)update.InstallationBehavior.CanRequestUserInput){Log("Skipped interactive update: "+update.Title);continue;}
-    if(!(bool)update.EulaAccepted)update.AcceptEula();dynamic one=Com("Microsoft.Update.UpdateColl");one.Add(update);
-    Stage("Скачивание · "+(string)update.Title);State.Progress=total==0?100:100*i/total;Save();
-    var intent54=new UpdateAttempt54{Id=(string)update.Identity.UpdateID,Revision=(int)update.Identity.RevisionNumber,Title=(string)update.Title,Started54=updateStarted54,Phase54="Download"};State.UpdateIntents54.Add(intent54);Save();
-    dynamic downloader=session.CreateUpdateDownloader();downloader.Updates=one;dynamic downloaded=AsyncDownload(downloader);
-    dynamic downloadItem=downloaded.GetUpdateResult(0);if((int)downloadItem.ResultCode!=2||(int)downloadItem.HResult!=0){failures++;int hr=(int)downloadItem.HResult;if(hr==0)hr=(int)downloaded.HResult;string failure="Не скачано: "+(string)update.Title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+"; ResultCode="+downloadItem.ResultCode+". "+ExecutionDiagnosis.Explain(hr);Log(failure);if(string.IsNullOrEmpty(State.Error))State.Error=failure;ApplyRecommendation(failure);details.Add(new{Id=(string)update.Identity.UpdateID,Revision=(int)update.Identity.RevisionNumber,Started54=updateStarted54,Ended54=DateTime.UtcNow.ToString("o"),Title=(string)update.Title,Download=(int)downloadItem.ResultCode,HResult=hr});WriteJson(prefix+".updates.json",details);Save();continue;}
-    if(Cancelled()){details.Add(new{Id=(string)update.Identity.UpdateID,Revision=(int)update.Identity.RevisionNumber,Started54=updateStarted54,Ended54=DateTime.UtcNow.ToString("o"),Title=(string)update.Title,Download=2,HResult=0});WriteJson(prefix+".updates.json",details);break;}Stage("Установка · "+(string)update.Title);dynamic installer=session.CreateUpdateInstaller();installer.Updates=one;installer.AllowSourcePrompts=false;
-    intent54.Phase54="Install";Save();
-    dynamic installed=AsyncInstall(installer);dynamic item=installed.GetUpdateResult(0);int code=(int)item.ResultCode;
-    if(code==2){State.InstalledCount38++;State.InstalledUpdates45.Add(new InstalledUpdate45{Id=(string)update.Identity.UpdateID,Revision=(int)update.Identity.RevisionNumber,Title=(string)update.Title,At=DateTime.UtcNow.ToString("o")});}details.Add(new{Id=(string)update.Identity.UpdateID,Revision=(int)update.Identity.RevisionNumber,Started54=updateStarted54,Ended54=DateTime.UtcNow.ToString("o"),Title=(string)update.Title,ResultCode=code,HResult=(int)item.HResult,RebootRequired=(bool)installed.RebootRequired});
-    if(code!=2){failures++;int hr=(int)item.HResult;string installError="Не установлено: "+(string)update.Title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+". "+ExecutionDiagnosis.Explain(hr);Log(installError);if(string.IsNullOrEmpty(State.Error))State.Error=installError;ApplyRecommendation(installError);}State.RebootRequired=State.RebootRequired||(bool)installed.RebootRequired;
+    var observation=Stopwatch.StartNew();
+    bool installerWasBusy=false, downloadedHere=false;
+    UpdateAttempt54 intent54=null;
+    while(!Cancelled()){
+     update=ObserveExistingUpdate(session,(object)update,(int)search.ServerSelection,prefix,observation,installerWasBusy,!downloadedHere);
+     if(Cancelled())break;
+     string title=(string)update.Title;
+     string id=(string)update.Identity.UpdateID;
+     int revision=(int)update.Identity.RevisionNumber;
+     if((bool)update.IsInstalled){
+      State.InstalledCount38++;
+      dynamic systemInfo=Com("Microsoft.Update.SystemInfo");
+      State.RebootRequired=State.RebootRequired||(bool)systemInfo.RebootRequired;
+      details.Add(new{Id=id,Revision=revision,Started54=updateStarted54,Ended54=DateTime.UtcNow.ToString("o"),Title=title,ResultCode=2,HResult=0,RebootRequired=State.RebootRequired,InstalledByWindows=true});
+      Log("Штатная установка подтверждена Windows Update: "+title);
+      break;
+     }
+     if((bool)update.InstallationBehavior.CanRequestUserInput){Log("Skipped interactive update: "+title);break;}
+     if(!(bool)update.EulaAccepted)update.AcceptEula();
+     dynamic one=Com("Microsoft.Update.UpdateColl");
+     one.Add(update);
+     if(intent54==null){
+      intent54=new UpdateAttempt54{Id=id,Revision=revision,Title=title,Started54=updateStarted54,Phase54="Install"};
+      State.UpdateIntents54.Add(intent54);
+     }
+     if(!(bool)update.IsDownloaded&&!downloadedHere){
+      Stage("Скачивание · "+title);
+      intent54.Phase54="Download";Save();
+      dynamic downloader=session.CreateUpdateDownloader();downloader.Updates=one;dynamic downloaded=AsyncDownload(downloader);
+      dynamic downloadItem=downloaded.GetUpdateResult(0);
+      if((int)downloadItem.ResultCode!=2||(int)downloadItem.HResult!=0){
+       failures++;int hr=(int)downloadItem.HResult;if(hr==0)hr=(int)downloaded.HResult;
+       string failure="Не скачано: "+title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+"; ResultCode="+downloadItem.ResultCode+". "+ExecutionDiagnosis.Explain(hr);
+       Log(failure);if(string.IsNullOrEmpty(State.Error))State.Error=failure;ApplyRecommendation(failure);
+       details.Add(new{Id=id,Revision=revision,Started54=updateStarted54,Ended54=DateTime.UtcNow.ToString("o"),Title=title,Download=(int)downloadItem.ResultCode,HResult=hr});
+       break;
+      }
+      downloadedHere=true;
+     }
+     if(Cancelled()){
+      details.Add(new{Id=id,Revision=revision,Started54=updateStarted54,Ended54=DateTime.UtcNow.ToString("o"),Title=title,Download=2,HResult=0});
+      break;
+     }
+     Stage("Установка · "+title);
+     dynamic installer=session.CreateUpdateInstaller();installer.Updates=one;installer.AllowSourcePrompts=false;
+     intent54.Phase54="Install";Save();
+     dynamic installed;
+     try{installed=AsyncInstall(installer);}
+     catch(UpdateInstallerBusy){installerWasBusy=true;downloadedHere=false;continue;}
+     dynamic item=installed.GetUpdateResult(0);int code=(int)item.ResultCode;
+     if(code==2){
+      State.InstalledCount38++;
+      State.InstalledUpdates45.Add(new InstalledUpdate45{Id=id,Revision=revision,Title=title,At=DateTime.UtcNow.ToString("o")});
+     }
+     details.Add(new{Id=id,Revision=revision,Started54=updateStarted54,Ended54=DateTime.UtcNow.ToString("o"),Title=title,ResultCode=code,HResult=(int)item.HResult,RebootRequired=(bool)installed.RebootRequired});
+     if(code!=2){
+      failures++;int hr=(int)item.HResult;string installError="Не установлено: "+title+"; HRESULT "+ExecutionDiagnosis.Code(hr)+". "+ExecutionDiagnosis.Explain(hr);
+      Log(installError);if(string.IsNullOrEmpty(State.Error))State.Error=installError;ApplyRecommendation(installError);
+     }
+     State.RebootRequired=State.RebootRequired||(bool)installed.RebootRequired;
+     break;
+    }
     State.UpdatesRemaining=total-State.InstalledCount38;WriteJson(prefix+".updates.json",details);Save();if(State.RebootRequired)break;
    }
    dynamic info=Com("Microsoft.Update.SystemInfo");State.RebootRequired=State.RebootRequired||(bool)info.RebootRequired;WriteJson(prefix+".updates.json",details);
@@ -232,13 +283,14 @@ namespace DomainConsole.Agent {
           }else throw new Exception("Неподдерживаемый тип команды: "+step.Kind+". Ошибка формата задания; используйте CMD или PowerShell.");
           var nativeFile=FilePath(prefix+".native.json");int nativeCode;if(File.Exists(nativeFile)&&int.TryParse(File.ReadAllText(nativeFile),out nativeCode))stepResult.NativeExitCode=nativeCode;
           if(stepResult.ExitCode==3010){State.RebootRequired=true;stepResult.ExitCode=0;}
-         }catch(Exception ex){stepResult.ExitCode=1;stepResult.Error=ex.Message+" [HRESULT 0x"+ex.HResult.ToString("X8")+"]";State.Error=stepResult.Error;Log(ex.ToString());}
+         }catch(UpdateObservationTimeout ex){stepResult.ExitCode=1;stepResult.Error=ex.Message;State.Status="InterventionRequired";Log(ex.Message);}
+         catch(Exception ex){stepResult.ExitCode=1;stepResult.Error=ex.Message+" [HRESULT 0x"+ex.HResult.ToString("X8")+"]";State.Error=stepResult.Error;Log(ex.ToString());}
          if(stepResult.ExitCode!=0&&File.Exists(FilePath(prefix+".failure.txt")))stepResult.Error=File.ReadAllText(FilePath(prefix+".failure.txt"));
          if(stepResult.ExitCode!=0&&!Cancelled()){if(string.IsNullOrWhiteSpace(stepResult.Error))stepResult.Error=!string.IsNullOrWhiteSpace(State.Error)&&(step.Kind=="Updates"||step.Kind=="UpdateScan")?State.Error:"Код завершения: "+ExecutionDiagnosis.Code(stepResult.ExitCode)+". "+ExecutionDiagnosis.Explain(stepResult.ExitCode);State.Error=stepResult.Error;ApplyRecommendation(stepResult.Error);Log(stepResult.Error);}
          stepResult.Ended=DateTime.UtcNow.ToString("o");State.StageEnded=stepResult.Ended;lock(Gate){State.Results.Add(stepResult);}Save();
-         if(stepResult.ExitCode!=0&&(!Job.ContinueOnError||ServiceRecovery47.Protected(step.Kind))&&!Cancelled()){State.Status="Failed";Save();}
+         if(stepResult.ExitCode!=0&&(!Job.ContinueOnError||ServiceRecovery47.Protected(step.Kind))&&!Cancelled()&&State.Status!="InterventionRequired"){State.Status="Failed";Save();}
          if((step.Kind=="Updates"||step.Kind=="UpdateScan")&&stepResult.ExitCode!=0){diagnostics.Add(prefix);State.DiagnosticStatus="Pending";Save();}
-         if(stepResult.ExitCode!=0&&(!Job.ContinueOnError||ServiceRecovery47.Protected(step.Kind)))break;
+         if(stepResult.ExitCode!=0&&(!Job.ContinueOnError||ServiceRecovery47.Protected(step.Kind)||State.Status=="InterventionRequired"))break;
         }
         if(Cancelled())State.Status="Cancelled";
         if(State.Status=="Running")State.Status=State.Results.Any(r=>r.ExitCode!=0)?"CompletedWithErrors":State.RebootRequired?"AwaitingReboot":"Completed";

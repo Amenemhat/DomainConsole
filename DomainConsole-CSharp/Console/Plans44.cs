@@ -2,9 +2,18 @@ using System.Windows;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
+ const string PostBootReadinessPhase="После перезагрузки: ожидание готовности";
+ static DateTimeOffset? PostBootReadinessDeadline(MaintenancePlan plan){
+  if(plan.Done||plan.Phase!=PostBootReadinessPhase)return null;
+  var ready=plan.ReadyAfter!=default?plan.ReadyAfter:
+   DateTimeOffset.TryParse(plan.StartedUtc,out var started)?started:DateTimeOffset.MinValue;
+  return ready.AddMinutes(10);
+ }
  void NormalizePlan44(MaintenancePlan p){var root=History.FirstOrDefault(j=>j.Id==p.PlanId37)??History.FirstOrDefault(j=>j.Id==p.JobId);if(root!=null&&DateTimeOffset.TryParse(root.Created,out var created)&&(!DateTimeOffset.TryParse(p.StartedUtc,out var started)||created<started)){p.StartedUtc=created.ToString("o");p.DeadlineUtc44=created.AddDays(2).ToString("o");}}
  static bool PlanExpired44(MaintenancePlan p,DateTimeOffset now){if(!DateTimeOffset.TryParse(p.StartedUtc,out var start)||start>now.AddMinutes(1))return true;var deadline=start.AddDays(2);if(DateTimeOffset.TryParse(p.DeadlineUtc44,out var saved)&&saved<deadline)deadline=saved;return now>=deadline;}
  void ReconcilePlan44(string host,string id,PollResult data){if(!maintenancePlans.TryGetValue(host,out var p)||p.Done||p.JobId!=id||data.State==null)return;var state=data.State;if(IsCurrentExecution(state.Status)||state.Status=="Queued")return;
+  if(p.PostBootFallbackJobId==id){FinishPostBootSearch(p,state.Status);SaveMaintenance();return;}
+  if(p.Phase==PostBootReadinessPhase)return;
   if(state.Status=="InterventionRequired"&&state.HasUpdateSteps&&InactiveEvidence(data)&&
      (state.Deferred52||InterruptedByBoot(state,data)||state.ExecutorPid37>0&&!string.IsNullOrEmpty(state.ExecutorStarted37)&&DateTimeOffset.TryParse(state.Updated,out var interruptedAt47)&&DateTimeOffset.UtcNow-interruptedAt47>TimeSpan.FromMinutes(2)||!string.IsNullOrEmpty(state.Ended)&&state.Error.StartsWith("DC_INTERRUPTED46:",StringComparison.Ordinal))){
    if(p.RecoveryCheck47)return;
@@ -15,7 +24,12 @@ public partial class MainWindow {
   else {p.Next=DateTimeOffset.UtcNow;p.Phase=state.RebootEvidence?.Required==true?"Ожидается перезагрузка":"Проверка результата обслуживания";}
   SaveMaintenance();
  }
- void FinishPlan44(string host,bool persist=true){if(maintenancePlans.TryGetValue(host,out var p)){p.Done=true;p.Next=DateTimeOffset.UtcNow;p.Phase="Обслуживание остановлено пользователем";p.Detail="Автоматическое продолжение прекращено. Переданные задания продолжаются.";foreach(var id in new[]{p.JobId,p.NextJobId}){var job=History.FirstOrDefault(j=>j.Id==id&&j.AutomaticChild31);if(job!=null)foreach(var t in job.Targets.Where(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&t.Status=="Queued"&&t.State==null))t.Status="Cancelled";}var pending=queue.Where(q=>q.Target.Status!="Cancelled").ToList();queue.Clear();foreach(var item in pending)queue.Enqueue(item);if(persist){SaveMaintenance();Save();}Event31(host,"plan44",p.JobId+"|stopped","Автоматическое продолжение остановлено","Info",p.Detail);}}
+ void FinishPostBootSearch(MaintenancePlan plan,string? status){
+  plan.Done=true;
+  plan.Phase=status is "Completed" or "VerifiedAfterReboot"?"Контрольный поиск завершён":"Обслуживание завершено";
+  plan.Detail=status==null?"":ComputerRow.StatusText(status);
+ }
+ void FinishPlan44(string host,bool persist=true,string? warning=null,bool quiet=false){if(maintenancePlans.TryGetValue(host,out var p)){p.Done=true;p.Next=DateTimeOffset.UtcNow;p.Phase=quiet?"Обслуживание завершено":warning==null?"Обслуживание остановлено пользователем":"Требуется действие";p.Detail=warning??"Автоматическое продолжение прекращено. Переданные задания продолжаются.";foreach(var id in new[]{p.JobId,p.NextJobId}){var job=History.FirstOrDefault(j=>j.Id==id&&j.AutomaticChild31);if(job!=null)foreach(var t in job.Targets.Where(t=>t.Host.Equals(host,StringComparison.OrdinalIgnoreCase)&&t.Status=="Queued"&&t.State==null))t.Status="Cancelled";}var pending=queue.Where(q=>q.Target.Status!="Cancelled").ToList();queue.Clear();foreach(var item in pending)queue.Enqueue(item);if(persist){SaveMaintenance();Save();}if(!quiet)Event31(host,"plan44",p.JobId+(warning==null?"|stopped":"|timeout"),warning==null?"Автоматическое продолжение остановлено":"Истёк срок ожидания обслуживания",warning==null?"Info":"Warning",p.Detail);}}
  async void PlanReset44_Click(object sender,RoutedEventArgs e)=>await Guard(async()=>{var row=Current();if(MessageBox.Show(this,"Завершить сохранённый план только этого компьютера и перечитать состояние? Работающие установки и команды не останавливаются.","План обслуживания",MessageBoxButton.YesNo)!=MessageBoxResult.Yes)return;FinishPlan44(row.Host);ShowCurrent();RefreshOutcomes();if(!TransportBudget41.Paused){await ReleaseFinishedPlans37();await ReadClientStatus(row,force:true);await FetchWsusReport(row);}else Notify("План завершён. Для чтения текущего состояния включите опрос.");});
  void RefreshPlan44(string host){if(PlanReset44!=null)PlanReset44.Visibility=maintenancePlans.TryGetValue(host,out var p)&&!p.Done?Visibility.Visible:Visibility.Collapsed;}
 }

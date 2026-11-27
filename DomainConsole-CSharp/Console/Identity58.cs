@@ -8,17 +8,18 @@ public partial class MainWindow {
  readonly HashSet<string> compromisedIds58=new(Store.Read("compromised-ids58.json",new List<string>()),StringComparer.OrdinalIgnoreCase);
  void ObserveIdentity58(string host,ClientIdentity58? identity,bool allowRepair=true){
   if(identity==null||identity.At.Length==0)return;identity.Host=host;
-  if(identities58.TryGetValue(host,out var previous)&&string.CompareOrdinal(previous.At,identity.At)>0)return;
+  if(identities58.TryGetValue(host,out var previous)&&string.CompareOrdinal(previous.At,identity.At)>0&&(allowRepair||previous.Fresh(DateTimeOffset.UtcNow)))return;
   if(previous!=null&&identity.Error.Length>0){previous.Error=identity.Error;previous.ErrorAt=identity.At;Store.Write("client-identities58.json",identities58);return;}
   // A collector reading the same endpoint and hardware may reuse only the still-fresh proof from a manual pass.
-  if(identity.VerifiedSource.Length==0&&previous?.VerifiedSource.Length>0&&DateTimeOffset.TryParse(previous.SourceCheckedAt,out var verifiedAt)&&DateTimeOffset.UtcNow-verifiedAt<TimeSpan.FromMinutes(10)&&previous.Server.Equals(identity.Server,StringComparison.OrdinalIgnoreCase)&&previous.Machine.Equals(identity.Machine,StringComparison.OrdinalIgnoreCase)&&previous.Name.Equals(identity.Name,StringComparison.OrdinalIgnoreCase)){
+  if(allowRepair&&identity.VerifiedSource.Length==0&&previous?.VerifiedSource.Length>0&&DateTimeOffset.TryParse(previous.SourceCheckedAt,out var verifiedAt)&&DateTimeOffset.UtcNow-verifiedAt<TimeSpan.FromMinutes(10)&&previous.Server.Equals(identity.Server,StringComparison.OrdinalIgnoreCase)&&previous.Machine.Equals(identity.Machine,StringComparison.OrdinalIgnoreCase)&&previous.Name.Equals(identity.Name,StringComparison.OrdinalIgnoreCase)){
    identity.VerifiedSource=previous.VerifiedSource;identity.ServerId=previous.ServerId;identity.SourceCheckedAt=previous.SourceCheckedAt;
   }
   identities58[host]=identity;Store.Write("client-identities58.json",identities58);
   if(!allowRepair)RememberDiagnosticScope(identity);
-  if(IdentityPolicy58.Confirmed(identities58.Values,identity,DateTimeOffset.UtcNow)){
+  var participants=IdentityPolicy58.Participants(identities58.Values,identity,DateTimeOffset.UtcNow,manual:!allowRepair);
+  if(IdentityPolicy58.Confirmed(participants,identity,DateTimeOffset.UtcNow,manual:!allowRepair)){
    compromisedIds58.Add(identity.Key);Store.Write("compromised-ids58.json",compromisedIds58.ToList());
-   foreach(var member in IdentityPolicy58.Participants(identities58.Values,identity,DateTimeOffset.UtcNow))Event31(member.Host,"identity58",identity.Key,"Подтверждён общий SusClientId","Warning","ID: "+identity.SusClientId+". Участники: "+string.Join(", ",IdentityPolicy58.Participants(identities58.Values,identity,DateTimeOffset.UtcNow).Select(r=>r.Name))+". Требуется перерегистрация всех участников.");
+   foreach(var member in participants)Event31(member.Host,"identity58",identity.Key,"Подтверждён общий SusClientId","Warning","ID: "+identity.SusClientId+". Участники: "+string.Join(", ",participants.Select(r=>r.Name))+". Требуется перерегистрация всех участников.");
   }
   if(allowRepair)_=VerifyIdentityRegistration58(host);
   if(allowRepair&&surveyWindow==null&&surveyRun==null&&AutoServiceEnabled&&compromisedIds58.Contains(identity.Key))_=RepairIdentityGroup58(host,false);
@@ -86,13 +87,14 @@ public partial class MainWindow {
    bool repairing=anchor!=null&&identityRepairBusy58.Contains(anchor.Key);
    bool busy=surveyRun!=null||repairing;peers.IsEnabled=all.IsEnabled=!busy;stop.IsEnabled=busy;resume.IsEnabled=!busy&&owner&&survey.Results.Count<survey.Hosts.Count;
    var current=anchor;
-   var members=current==null?new List<ClientIdentity58>():IdentityPolicy58.Participants(identities58.Values,current,DateTimeOffset.UtcNow);
-   bool confirmed=current!=null&&IdentityPolicy58.Confirmed(members,current,DateTimeOffset.UtcNow);
-   bool approved=current!=null&&manualIdentityScopes.TryGetValue(current.Key,out var allowed)&&members.Any(m=>allowed.Contains(MemberIdentity(m)));
+   var members=current==null?new List<ClientIdentity58>():IdentityPolicy58.Participants(identities58.Values,current,DateTimeOffset.UtcNow,manual:true);
+   bool confirmed=current!=null&&IdentityPolicy58.Confirmed(members,current,DateTimeOffset.UtcNow,manual:true);
    var candidates=current==null?new List<ClientIdentity58>():RepairCandidates58(current,true);
    bool expanded=current!=null&&manualIdentityScopes.TryGetValue(current.Key,out var existing)&&existing.Count>0&&candidates.Any(p=>!existing.Contains(MemberIdentity(p)));
-   repair.IsEnabled=!busy&&candidates.Count>0;
-   repair.Content=expanded?"Подтвердить расширение группы · "+string.Join(", ",candidates.Select(p=>p.Name)):confirmed?"Исправить общий ID · подтверждённых участников: "+members.Count:approved?"Продолжить ранее согласованное исправление":"Исправить подтверждённый конфликт";
+   repair.IsEnabled=!busy&&!App.RecoveryPending57&&candidates.Count>0;
+   repair.Content=expanded?"Подтвердить расширение группы · "+candidates.Count+" ПК":candidates.Count>0?"Сбросить SusClientId · "+candidates.Count+" ПК":"Сбросить SusClientId";
+   ToolTipService.SetShowOnDisabled(repair,true);
+   repair.ToolTip=busy?"Дождитесь окончания текущей проверки или исправления.":App.RecoveryPending57?"Сначала завершите восстановление состояния консоли.":candidates.Count>0?string.Join("\n",candidates.Select(p=>p.Name)):"Нужна свежая проверка общего ID на разных клиентах одного сервера WSUS.";
    var attempts=RepairGroupFor(row.Host);verify.IsEnabled=!busy&&attempts.Count>0;
    var coverage=owner?$"{(survey.Domain?"Область AD":"Клиент и известные кандидаты")} · проверено {survey.Results.Count} из {survey.Hosts.Count} · ожидают {survey.Hosts.Count-survey.Results.Count} · общий ID подтверждён у {(confirmed?members.Count:0)}": "Выберите область проверки.";
    int failed=owner?survey.Results.Count(p=>p.Value.StartsWith("Не удалось")||p.Value.StartsWith("Неполные")||p.Value.StartsWith("Пропущен")):0;
@@ -123,6 +125,7 @@ try {
  $computer58=Get-CimInstance Win32_ComputerSystem -ErrorAction Stop
  $dcIdentity58.Name=$env:COMPUTERNAME+$(if($computer58.PartOfDomain){'.'+$computer58.Domain}else{''})
  $dcIdentity58.Machine=[string](Get-CimInstance Win32_ComputerSystemProduct -ErrorAction Stop).UUID
+ $dcIdentity58.InstallationId=[string](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography' -Name MachineGuid -ErrorAction SilentlyContinue).MachineGuid
  $policy58=Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate' -ErrorAction Stop
  $dcIdentity58.Server=[string]$policy58.WUServer
  $dcIdentity58.StatusServer=[string]$policy58.WUStatusServer

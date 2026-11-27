@@ -11,7 +11,7 @@ public sealed class StatusGlyph:FrameworkElement {
  public string Kind{get=>(string)GetValue(KindProperty);set=>SetValue(KindProperty,value);}public Brush Tint{get=>(Brush)GetValue(TintProperty);set=>SetValue(TintProperty,value);}
  protected override AutomationPeer? OnCreateAutomationPeer()=>string.IsNullOrWhiteSpace(AutomationProperties.GetName(this))?base.OnCreateAutomationPeer():new FrameworkElementAutomationPeer(this);
  public StatusGlyph(){Width=20;Height=20;VerticalAlignment=VerticalAlignment.Center;SnapsToDevicePixels=true;}
- public static string ForTone50(string tone)=>tone switch {"Success"=>"Success","Error" or "SyncError"=>"Error","Warning"=>"Warning","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Info"};
+ public static string ForTone50(string tone)=>tone switch {"Success"=>"Success","Reboot"=>"Reboot","Error" or "SyncError"=>"Error","Warning"=>"Warning","Stale"=>"Stale","Unknown"=>"Unknown",_=>"Info"};
  public static string ForOperation50(string stage){
   if(stage.StartsWith("Установка",StringComparison.OrdinalIgnoreCase))return "Install";
   if(stage.StartsWith("Скачивание",StringComparison.OrdinalIgnoreCase))return "Download";

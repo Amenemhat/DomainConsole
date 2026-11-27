@@ -15,11 +15,11 @@ public sealed partial class RemoteService {
  static string Resource42(string name){using var stream=typeof(RemoteService).Assembly.GetManifestResourceStream("DomainConsole.Polling42."+name)??throw new IOException("Не найден сценарий опроса "+name);using var reader=new StreamReader(stream);return reader.ReadToEnd();}
  static string Worker42(string part,string body)=>"$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';Start-Sleep -Milliseconds 200;$ps=[PowerShell]::Create();try{$null=$ps.AddScript("+PowerShellBridge.Literal("$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';"+body)+");$pending=$ps.BeginInvoke();$stopping=$false;while(!$pending.IsCompleted){if(!$stopping -and ((Test-Path (Join-Path $PSScriptRoot 'cancel.flag')) -or (Test-Path (Join-Path $PSScriptRoot '"+part+".cancel')))){$null=$ps.BeginStop($null,$null);$stopping=$true};Start-Sleep -Milliseconds 100};$data=$ps.EndInvoke($pending);$data|Set-Content -LiteralPath (Join-Path $PSScriptRoot '"+part+".json') -Encoding UTF8}catch{[IO.File]::WriteAllText((Join-Path $PSScriptRoot '"+part+".error'),$_.Exception.Message);exit 1}finally{$ps.Dispose()}";
 
- public static string SnapshotScript42(string mode="Get",string? reboot=null,string? activity=null,string? supervisor=null){
+ public static string SnapshotScript42(string mode="Get",string? reboot=null,string? activity=null,string? supervisor=null,bool internalRepair=false){
   string collect=supervisor??Resource42("collector.ps1"),r=Worker42("Reboot",reboot??RebootStateScript),a=Worker42("Activity",activity??LiveUpdateScript);
   string Hash(string v)=>Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(v))).ToLowerInvariant();
   string package=JsonSerializer.Serialize(new{Version=47,Protocol=1,Collector=Hash(collect),Reboot=Hash(r),Activity=Hash(a)});
-  return Resource42("admission.ps1").Replace("@@MODE@@",mode).Replace("@@PACKAGE@@","("+PowerShellBridge.Literal(package)+"|ConvertFrom-Json)").Replace("@@COLLECTOR@@",PowerShellBridge.Literal(collect)).Replace("@@REBOOT@@",PowerShellBridge.Literal(r)).Replace("@@ACTIVITY@@",PowerShellBridge.Literal(a));
+  return Resource42("admission.ps1").Replace("@@MODE@@",mode).Replace("@@INTERNAL_REPAIR@@",internalRepair?"$true":"$false").Replace("@@PACKAGE@@","("+PowerShellBridge.Literal(package)+"|ConvertFrom-Json)").Replace("@@COLLECTOR@@",PowerShellBridge.Literal(collect)).Replace("@@REBOOT@@",PowerShellBridge.Literal(r)).Replace("@@ACTIVITY@@",PowerShellBridge.Literal(a));
  }
 
  public static PollWait42? SnapshotWait42(TargetRecord target)=>snapshotWait42.GetValueOrDefault(TransportBudget41.Key(target));

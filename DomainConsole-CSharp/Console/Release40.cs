@@ -14,7 +14,7 @@ public sealed record RebootView40(bool? Required,bool Fresh,string Stamp,string[
  public bool PreviouslyRequired {get;init;}
  public string Title=>Required==true?(Fresh?"Требуется перезагрузка":"По последней проверке требовалась перезагрузка"):!Fresh?"Перезагрузка · результат требует уточнения":Required==true?"Требуется перезагрузка":Required==false?"Перезагрузка не требуется":"Перезагрузка не уточнена";
  public string Details=>(Sources.Length>0?"Подтвердили источники: "+Sources.Length+"\n"+string.Join("; ",Sources)+"\n":"")+"Проверено: "+Display36.Date(Stamp)+(Limitation.Length>0?"\n"+Limitation:"");
- public string Tone=>Fresh&&Required==false?"Success":"Warning";
+ public string Tone=>Required==true?"Reboot":Fresh&&Required==false?"Success":"Warning";
 }
 public partial class MainWindow {
  async void OpenRawEvents40()=>await Guard(async()=>{var row=Current();if(eventWrites39.TryGetValue(row.Host,out var pending))await pending;var folder=EventFolder31(row.Host);if(!System.IO.Directory.Exists(folder)){Notify("Сохранённых событий этого клиента пока нет");return;}System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(folder){UseShellExecute=true});});

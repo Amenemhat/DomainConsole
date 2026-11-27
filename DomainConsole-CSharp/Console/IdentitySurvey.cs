@@ -35,9 +35,14 @@ public partial class MainWindow {
   if(anchor.UseWUServer!=1)return "Источник WSUS не подтверждён · "+WsusPolicyFinding(anchor);
   if(!IdentityPolicy58.Usable(anchor))return "Проверка неполная · не подтверждены устройство или источник WSUS";
   bool ambiguous=survey.Hosts.Select(h=>identities58.GetValueOrDefault(h)).Any(peer=>peer!=null&&peer.Fresh(DateTimeOffset.UtcNow)&&peer.Key==anchor.Key&&peer.Machine.Equals(anchor.Machine,StringComparison.OrdinalIgnoreCase)&&!peer.Name.TrimEnd('.').Equals(anchor.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase));
-  if(ambiguous)return "Один аппаратный идентификатор у разных имён · возможны переименование или клонирование. Исправление неоднозначных устройств недоступно";
+  if(ambiguous)return "SusClientId совпадает · устройства с одним аппаратным UUID пока не удалось различить по установке Windows или данным адаптера и AD";
   if(survey.ServerName.Length>0&&!survey.ServerName.TrimEnd('.').Equals(anchor.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase))return "Имя записи WSUS отличается от имени клиента · возможны переименование или устаревшая запись";
   if(failed>0)return "Проверка неполная · общий ID у доступных участников не подтверждён";
+  var sameId=survey.Hosts.Select(h=>identities58.GetValueOrDefault(h)).OfType<ClientIdentity58>()
+   .Where(peer=>!peer.Host.Equals(anchor.Host,StringComparison.OrdinalIgnoreCase)&&Guid.TryParse(peer.SusClientId,out var peerId)&&peerId==id).ToList();
+  if(sameId.Any(peer=>!peer.Fresh(DateTimeOffset.UtcNow)))return "SusClientId совпадает · срок подтверждения части участников истёк. Повторите проверку";
+  if(sameId.Any(peer=>peer.Key!=anchor.Key))return "SusClientId совпадает · не подтверждён единый источник WSUS";
+  if(sameId.Count>0)return "SusClientId совпадает · разные устройства пока не подтверждены";
   if(survey.Hosts.Any(h=>identities58.TryGetValue(h,out var peer)&&peer.Fresh(DateTimeOffset.UtcNow)&&IdentityPolicy58.Usable(peer)&&peer.Source.Equals(anchor.Source,StringComparison.OrdinalIgnoreCase)&&!peer.SusClientId.Equals(anchor.SusClientId,StringComparison.OrdinalIgnoreCase)))return "Идентификаторы проверенных устройств различаются · общий ID не подтверждён";
   return "На проверенных устройствах общий ID не подтверждён";
  }
@@ -74,7 +79,7 @@ public partial class MainWindow {
     var target=ConnectionStore.Capture(row.Target);var began=DateTimeOffset.UtcNow;survey.ScopeMessage="Читаем "+host;refreshSurvey?.Invoke();
     try{
      if(!ConnectionStore.CanConnect(target))throw new InvalidOperationException("Проверьте адрес и учётные данные");
-     var result=await (readClient??remote.ReadIdentity)(target,stop.Token);
+     var result=await ReadIdentityWithRetry(target,readClient??(verifyRegistration?remote.ReadIdentity:remote.ReadIdentityForManualRepair),stop.Token);
      stop.Token.ThrowIfCancellationRequested();
      if(!CurrentEndpoint(target)||!CurrentIdentity(target))throw new InvalidOperationException("Цель изменилась во время чтения");
      if(maintenancePlans.TryGetValue(host,out var plan))result.Activity+=" · план консоли: "+plan.Phase;
@@ -100,6 +105,13 @@ public partial class MainWindow {
   }catch(OperationCanceledException) when(stop.IsCancellationRequested){}
   finally{survey.Updated=DateTimeOffset.UtcNow;survey.ScopeMessage=stop.IsCancellationRequested?"Поиск приостановлен":"Проход завершён";surveyRun=null;Store.Write("identity-survey.json",survey);refreshSurvey?.Invoke();}
  }
+ internal static async Task<ClientIdentity58> ReadIdentityWithRetry(TargetRecord target,Func<TargetRecord,CancellationToken,Task<ClientIdentity58>> read,CancellationToken token){
+  try{return await read(target,token);}
+  catch(TimeoutException) when(!token.IsCancellationRequested){
+   await Task.Delay(TimeSpan.FromMilliseconds(500),token);
+   return await read(target,token);
+  }
+ }
  async void OpenIdentitySurvey(ComputerRow selected){
   if(surveyWindow!=null){surveyWindow.Activate();return;}
   if(surveyRun!=null)selected=Computers.FirstOrDefault(r=>r.Host.Equals(survey.Owner,StringComparison.OrdinalIgnoreCase))??selected;
@@ -110,19 +122,34 @@ public partial class MainWindow {
 }
 
 public sealed partial class RemoteService {
- public async Task<ClientIdentity58> ReadIdentity(TargetRecord target,CancellationToken token){
+ public Task<ClientIdentity58> ReadIdentity(TargetRecord target,CancellationToken token)=>ReadIdentity(target,token,false);
+ public Task<ClientIdentity58> ReadIdentityForManualRepair(TargetRecord target,CancellationToken token)=>ReadIdentity(target,token,true);
+ async Task<ClientIdentity58> ReadIdentity(TargetRecord target,CancellationToken token,bool manual){
   using var read=PollingControl43.Read();
   using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(TimeSpan.FromSeconds(30));
-  string json=await PowerShellBridge.Execute(Invoke(target,IdentityProbe58+"\n"+ManualIdentityActivity+"\n$dcIdentity58 | ConvertTo-Json -Compress"),timeout.Token);
-  return JsonSerializer.Deserialize<ClientIdentity58>(json,Store.Options)??throw new InvalidOperationException("Клиент вернул пустой ответ");
+  bool readAdapter=manual&&!target.AdDisabled&&Guid.TryParse(target.DirectoryId,out var directoryId)&&directoryId!=Guid.Empty;
+  var adapterScript=readAdapter?IdentityAdapterProbe58+"\nif(!$dcIdentity58.Error){try{$dcIdentity58.AdapterMac=Read-IdentityAdapter58}catch{}}":"";
+  string json=await PowerShellBridge.Execute(Invoke(target,IdentityProbe58+"\n"+ManualIdentityActivity+"\n"+adapterScript+"\n$dcIdentity58 | ConvertTo-Json -Compress"),timeout.Token);
+  var result=JsonSerializer.Deserialize<ClientIdentity58>(json,Store.Options)??throw new InvalidOperationException("Клиент вернул пустой ответ");
+  if(readAdapter&&target.Host.TrimEnd('.').Equals(result.Name.TrimEnd('.'),StringComparison.OrdinalIgnoreCase)&&IdentityPolicy58.ValidAdapterMac(result.AdapterMac))result.DirectoryId=target.DirectoryId;
+  else result.AdapterMac="";
+  result.At=DateTimeOffset.UtcNow.ToString("o");
+  return result;
  }
+ const string IdentityAdapterProbe58="""
+function Read-IdentityAdapter58 {
+ $active=@(Get-NetAdapter -Physical -ErrorAction Stop|Where-Object Status -eq 'Up')
+ if($active.Count -eq 1){return ([string]$active[0].MacAddress -replace '[-:]','').ToUpperInvariant()}
+ return ''
+}
+""";
  // Read local process metadata inside the existing manual WinRM call. No scheduled task or agent is started.
  const string ManualIdentityActivity="""
 try {
- $dcWork=@(Get-CimInstance Win32_Process -Filter "Name='DomainConsole.Agent.exe' OR Name='TiWorker.exe' OR Name='TrustedInstaller.exe' OR Name='msiexec.exe'" -ErrorAction Stop)
- $dcExecutors=@($dcWork|Where-Object {$_.Name -eq 'DomainConsole.Agent.exe' -and $_.CommandLine -match '\brun\s+'})
- $dcServicing=@($dcWork|Where-Object {$_.Name -ne 'DomainConsole.Agent.exe'}|Select-Object -ExpandProperty Name -Unique)
- $dcIdentity58.Activity="Исполнителей заданий: "+$dcExecutors.Count
+ $dcWork=@(Get-Process -Name 'DomainConsole.Agent','TiWorker','TrustedInstaller','msiexec' -ErrorAction SilentlyContinue)
+ $dcExecutors=@($dcWork|Where-Object {$_.ProcessName -eq 'DomainConsole.Agent'})
+ $dcServicing=@($dcWork|Where-Object {$_.ProcessName -ne 'DomainConsole.Agent'}|Select-Object -ExpandProperty ProcessName -Unique)
+ $dcIdentity58.Activity="Процессов исполнителя: "+$dcExecutors.Count
  if($dcServicing.Count){$dcIdentity58.Activity+=" · процессы обслуживания: "+($dcServicing -join ', ')}
 } catch {$dcIdentity58.Activity="Активность не уточнена: "+$_.Exception.Message}
 """;
