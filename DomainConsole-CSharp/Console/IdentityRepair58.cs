@@ -46,6 +46,13 @@ public partial class MainWindow {
   target.State is {Status:"Failed"} state&&state.Ended.Length>0&&
    (state.Step==0||state.Error.StartsWith(IdentityNotStarted,StringComparison.Ordinal));
  readonly HashSet<string> identityRepairBusy58=new(StringComparer.OrdinalIgnoreCase);
+ void MarkIdentitySending58(IdentityRepairAttempt58 attempt){
+  var started=DateTimeOffset.UtcNow;
+  attempt.StartedUtc=started.ToString("o");
+  attempt.DeadlineUtc=started.AddMinutes(10).ToString("o");
+  attempt.Phase="Передача задания перерегистрации";
+  Store.Write("identity-repairs58.json",identityRepairs58);
+ }
  // A solitary returning clone can extend only a previously proven, explicitly approved repair.
  List<ClientIdentity58> RepairCandidates58(ClientIdentity58 seen,bool manual){
   var now=DateTimeOffset.UtcNow;
@@ -160,11 +167,11 @@ public partial class MainWindow {
     if(stop.IsCancellationRequested)break;
     if(!Available()||HostJobs39(row.Host).Any(x=>ActiveTarget(x.Target)))continue;
     var job=new RemoteJob{Manual56=manual,AutoInstall54=false,AutoReboot=false,MicrosoftSource=false,OutputChannel="WSUS",Name="Перерегистрация общего SusClientId",Steps=new(){new(){Name="Перерегистрация клиента WSUS",Kind="PowerShell",TouchesUpdates=true,Code=RemoteService.IdentityRepairScript58(verifiedIdentity)}}};
-    identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Manual=manual,JobId=job.Id,StartedUtc=DateTimeOffset.UtcNow.ToString("o"),DeadlineUtc=DateTimeOffset.UtcNow.AddMinutes(10).ToString("o"),Phase="Подготовлено; повторный сброс запрещён",At=DateTimeOffset.UtcNow.ToString("o")};
+    identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Manual=manual,JobId=job.Id,Phase="Ожидает передачи; повторный сброс запрещён",At=DateTimeOffset.UtcNow.ToString("o")};
     Store.Write("identity-repairs58.json",identityRepairs58);
     Event31(row.Host,"identity-repair58",job.Id,"Перерегистрация клиента подготовлена","Info","Прежний ID: "+identity.SusClientId,scope:job.Id);
     bool accepted=await CompletePreparedSubmission47(job,new(){row},new(){frozen},()=>Task.FromResult((Accepted:true,Force:false,Wait:false)),false);
-    if(accepted){identityRepairs58[key].Phase="Задание создано; ожидается новый ID и регистрация на сервере";await SendQueue(manual?job.Id:"");}
+    if(accepted)await SendQueue(manual?job.Id:"");
     else identityRepairs58[key].Phase="Передача не подтверждена; требуется проверка задания";
     Store.Write("identity-repairs58.json",identityRepairs58);
    }

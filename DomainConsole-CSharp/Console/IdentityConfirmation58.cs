@@ -25,6 +25,8 @@ public partial class MainWindow {
     if(pending.Count==0)break;
     foreach(var attempt in pending){
      if(closing||App.RecoveryPending57)break;
+     var submitted=IdentityRepairTarget(attempt);
+     if(submitted?.Status is "Queued" or "Sending")continue;
      if(surveyRun!=null||identityChecks58.Contains(attempt.Host)||DateTimeOffset.TryParse(attempt.LastClientReadUtc,out var previous)&&DateTimeOffset.UtcNow-previous<TimeSpan.FromMinutes(1))continue;
      var row=Computers.FirstOrDefault(r=>r.Host.Equals(attempt.Host,StringComparison.OrdinalIgnoreCase));
      if(row==null||row.Target.AdDisabled||!ConnectionStore.CanConnect(row.Target))continue;
@@ -32,7 +34,6 @@ public partial class MainWindow {
      attempt.LastClientReadUtc=DateTimeOffset.UtcNow.ToString("o");Store.Write("identity-repairs58.json",identityRepairs58);
      try{
       // This is observation of a manually accepted job, including when background polling is paused.
-      var submitted=IdentityRepairTarget(attempt);
       if(submitted is {Status:"Submitted" or "SubmissionUnknown" or "Running"}&&CurrentEndpoint(submitted)&&CurrentIdentity(submitted))
        await Poll(new ComputerRow(submitted,attempt.JobId),afterLink:true);
       if(closing||!CurrentEndpoint(target)||!CurrentIdentity(target)||RecordIdentityReadinessFailure(attempt))continue;
@@ -63,9 +64,10 @@ public partial class MainWindow {
   bool changed=false;var now=DateTimeOffset.UtcNow;
   foreach(var attempt in identityRepairs58.Values.Where(a=>a.JobId.Length>0&&a.Phase!="Подтверждено")){
    if(RecordIdentityReadinessFailure(attempt))continue;
+   var target=IdentityRepairTarget(attempt);
+   if(target?.Status=="Queued")continue;
    if(attempt.StartedUtc.Length==0)attempt.StartedUtc=attempt.At;
    if(attempt.DeadlineUtc.Length==0&&DateTimeOffset.TryParse(attempt.StartedUtc,out var start)){attempt.DeadlineUtc=start.AddMinutes(10).ToString("o");changed=true;}
-   var target=IdentityRepairTarget(attempt);
    var localFailure=IdentityRepairFailure(target);
    if(localFailure.Length==0&&(!DateTimeOffset.TryParse(attempt.DeadlineUtc,out var deadline)||now<deadline))continue;
    var expired=localFailure.Length>0?localFailure:ExpiredIdentityRepairPhase(attempt,target);

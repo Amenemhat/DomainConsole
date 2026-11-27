@@ -260,15 +260,20 @@ public partial class MainWindow:Window {
  if(App.RecoveryPending57&&explicitId43.Length==0)return;
   if(sending||closing)return;ExpireQueuedWsus();sending=true;
   try{while(queue.Count>0&&!closing){
+   var identityJobs=identityRepairs58.Values.Where(a=>a.JobId.Length>0)
+    .GroupBy(a=>a.JobId,StringComparer.OrdinalIgnoreCase).ToDictionary(group=>group.Key,group=>group.First(),StringComparer.OrdinalIgnoreCase);
+   bool identitySending=History.Any(job=>identityJobs.ContainsKey(job.Id)&&job.Targets.Any(t=>t.Status=="Sending"));
    var eligible=queue.Where(q=>q.Target.Status=="Queued"&&!HoldForHeaderReboot(q.Job,q.Target)&&
     (!App.RecoveryPending57||q.Job.Id==explicitId43)&&(!TransportBudget41.Paused||q.Job.Manual56||q.Job.Id==explicitId43));
    var manualSending=History.Where(job=>job.Manual56).SelectMany(job=>job.Targets)
     .Where(target=>target.Status=="Sending").Select(target=>target.Host).ToHashSet(StringComparer.OrdinalIgnoreCase);
-   var next=SelectReadySubmission(eligible,explicitId43,host=>manualSending.Contains(host)||ManualPreparationPending(host));
+   var next=SelectReadySubmission(eligible,explicitId43,host=>manualSending.Contains(host)||ManualPreparationPending(host),
+    identitySending?identityJobs.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase):null);
    if(next.Job==null)break;
    int active=History.SelectMany(j=>j.Targets).Count(t=>t.Status is "Sending" or "Submitted" or "Running");
    if(limit>0&&active>=limit&&!next.Job.Manual56&&!next.Job.IndependentControl&&next.Job.Id!=explicitId43)break;
    var pending=queue.ToList();queue.Clear();bool removed=false;foreach(var q in pending){if(!removed&&q==next){removed=true;continue;}queue.Enqueue(q);}
+   if(identityJobs.TryGetValue(next.Job.Id,out var registration))MarkIdentitySending58(registration);
    next.Target.Status="Sending";Sync(next.Job);Save();_=SendOne(next.Job,next.Target);await Task.Delay(80);
   }}finally{sending=false;}
  }
@@ -276,8 +281,8 @@ public partial class MainWindow:Window {
   preparing60.ContainsKey(PreparationKey60(host,"Commands"));
 
  static (RemoteJob Job,TargetRecord Target) SelectReadySubmission(
-  IEnumerable<(RemoteJob Job,TargetRecord Target)> eligible,string explicitId,Func<string,bool> manualPending){
-  return eligible.Where(q=>q.Job.Manual56||q.Job.Id==explicitId||!manualPending(q.Target.Host))
+  IEnumerable<(RemoteJob Job,TargetRecord Target)> eligible,string explicitId,Func<string,bool> manualPending,IReadOnlySet<string>? blockedJobs=null){
+  return eligible.Where(q=>blockedJobs?.Contains(q.Job.Id)!=true&&(q.Job.Manual56||q.Job.Id==explicitId||!manualPending(q.Target.Host)))
    .OrderByDescending(q=>q.Job.Manual56)
    .ThenByDescending(q=>q.Job.IndependentControl)
    .ThenByDescending(q=>q.Job.Id==explicitId)

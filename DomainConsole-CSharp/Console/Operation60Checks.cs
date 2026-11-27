@@ -18,6 +18,13 @@ public partial class MainWindow {
    throw new Exception("A manual preflight stalled work on an unrelated peer or admitted automatic work on the same client.");
   if(SelectReadySubmission(candidates.Take(1),"",_=>false).Target!=a)
    throw new Exception("Automatic dispatch did not resume after manual preparation.");
+  var nextIdentity=new RemoteJob{Manual56=true};
+  var urgent=new RemoteJob{Manual56=true,IndependentControl=true};
+  var pendingIdentity=new (RemoteJob Job,TargetRecord Target)[]{(nextIdentity,a),(urgent,b)};
+  if(SelectReadySubmission(pendingIdentity,nextIdentity.Id,_=>false,new HashSet<string>{nextIdentity.Id}).Job!=urgent||
+     SelectReadySubmission(pendingIdentity.Take(1),nextIdentity.Id,_=>false,new HashSet<string>{nextIdentity.Id}).Job!=null||
+     SelectReadySubmission(pendingIdentity.Take(1),nextIdentity.Id,_=>false).Job!=nextIdentity)
+   throw new Exception("Identity delivery either overlapped another transfer or blocked ordinary manual controls.");
   foreach(var unresolved in new[]{"Sending","Submitted","SubmissionUnknown"}){
    var target=new TargetRecord{Status=unresolved};
    if(!SubmissionCanStillRun(target,false))
