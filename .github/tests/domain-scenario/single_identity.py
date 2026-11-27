@@ -8,11 +8,10 @@ from identity_lab import body, policy, quote, reg
 from single_wsus_wire import accepted_authorization
 
 
-def exercise(ps, system, wait, evidence, save, capture, natural_only=False):
+def exercise(ps, system, wait, evidence, save, capture, url, natural_only=False):
     client = "CLONE1"
     server = "DCWSUS"
     group = "DCLabSingleClient"
-    url = "http://dcwsus.dc057.test:8530"
     checks = evidence["checks"]
     wsus_api = ("[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');"
                 "$wsus=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530);")

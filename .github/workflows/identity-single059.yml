@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
       - name: Start private Windows lab with one client
         run: bash .github/lab/prepare-guests.sh
-      - name: Verify server and isolated domain
+      - name: Verify the isolated WSUS server
         run: bash .github/lab/wait-for-guests.sh wsus 55
       - name: Check one reset and a fresh report for the new ID
         run: bash .github/lab/wait-for-guests.sh single-identity 35

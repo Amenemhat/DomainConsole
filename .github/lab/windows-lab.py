@@ -29,8 +29,11 @@ print("::add-mask::" + password, flush=True)
 nodes = {"DCWSUS": 10, "DCAD": 11, **{f"CLONE{i}": 20 + i for i in range(1, 6)}}
 bootstrap_only=os.environ.get("DC_BOOTSTRAP_ONLY")=="1"
 single_identity=os.environ.get("DC_SINGLE_IDENTITY")=="1"
+single_natural=single_identity and os.environ.get("DC_SINGLE_NATURAL_ONLY")=="1"
 if bootstrap_only:
     nodes={"DCWSUS":10}
+elif single_natural:
+    nodes={"DCWSUS":10,"CLONE1":21}
 elif single_identity:
     nodes={"DCWSUS":10,"DCAD":11,"CLONE1":21}
 private_addresses=["10.77.57."+str(n) for n in nodes.values()]
@@ -343,10 +346,13 @@ def main():
         boot(node,gpt)
         wait(node,minutes=12)
     checkpoint("winrm")
-    setup_domain()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
-        list(pool.map(join, [n for n in nodes if n != "DCAD"]))
-    checkpoint("domain")
+    if not single_natural:
+        setup_domain()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+            list(pool.map(join, [n for n in nodes if n != "DCAD"]))
+        checkpoint("domain")
+    else:
+        evidence["workgroup_control"]=True
     system("DCWSUS", "install-wsus", (here / "wsus.ps1").read_text(), minutes=35)
     evidence["checks"]["WSUS"] = ps("DCWSUS", "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');([Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530)).Version.ToString()")
     log("WSUS API available: " + evidence["checks"]["WSUS"])
@@ -358,8 +364,8 @@ def main():
         def capture():
             return capture_exchange(root, "dclab21", ip("CLONE1"), ip("DCWSUS"))
 
-        exercise(ps,system,wait,evidence,save,capture,
-                 natural_only=os.environ.get("DC_SINGLE_NATURAL_ONLY") == "1")
+        url=f"http://{ip('DCWSUS')}:8530" if single_natural else "http://dcwsus.dc057.test:8530"
+        exercise(ps,system,wait,evidence,save,capture,url,natural_only=single_natural)
         checkpoint("single-identity")
         return
     until=time.monotonic()+45*60
