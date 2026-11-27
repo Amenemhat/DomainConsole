@@ -8,6 +8,7 @@ $template=$template.Replace('$session58=New-Object -ComObject Microsoft.Update.S
 $template=$template.Replace("& reg.exe export 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate' $"+'backup58 /y | Out-Null','Export-Fixture58 $backup58')
 $template=$template.Replace('& "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow','Request-FixtureRegistration58')
 $template=$template.Replace('& "$env:windir\System32\wuauclt.exe" /reportnow','Report-FixtureRegistration58')
+$template=$template.Replace('Start-Sleep -Seconds 60','Wait-FixtureAuthorization58')
 $template=$template.Replace('Start-Sleep -Seconds 1','Start-Sleep -Milliseconds 1')
 # Refuse to execute if any system-changing native command escaped the substitutions.
 if($template -match '& reg.exe|& "\$env:windir|New-Object -ComObject'){throw 'Fixture isolation incomplete'}
@@ -74,6 +75,7 @@ function Report-FixtureRegistration58 {
  if($global:fixtureId58 -ne '33333333-3333-3333-3333-333333333333'){throw 'A report was requested without a new ID'}
  Invoke-Fixture58 'Report'
 }
+function Wait-FixtureAuthorization58 {Invoke-Fixture58 'WaitAuthorization'}
 $fixtureInstaller58=[pscustomobject]@{IsBusy=($env:CASE58 -eq 'busy')}
 $fixtureSearcher58=[pscustomobject]@{ServerSelection=0;Online=$false}
 $fixtureSearcher58|Add-Member ScriptMethod Search {
@@ -116,7 +118,7 @@ foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-serv
  if($case -eq 'stop-and-start-fail' -and ($output -notmatch 'STOP_FIXTURE_FAILURE' -or $output -notmatch 'START_FIXTURE_FAILURE')){throw 'Primary or restoration failure was lost'}
  $resetTrace='Backup,Stop,Remove-SusClientId,Remove-SusClientIdValidation,Start'
  if($case -in @('success','delayed-registration') -and (($data.Trace -join ',') -ne "$resetTrace,RequestRegistration,Report" -or $data.Id -ne '33333333-3333-3333-3333-333333333333')){throw 'Repair did not request registration once and report the new ID'}
- if($case -eq 'native-registers' -and (($data.Trace -join ',') -ne "$resetTrace,Search,Report" -or $data.WaitReads -ne 0 -or !$data.Id)){throw 'The new ID must be used in one managed search before reporting'}
+ if($case -eq 'native-registers' -and (($data.Trace -join ',') -ne "$resetTrace,RequestRegistration,WaitAuthorization,Search,Report" -or $data.WaitReads -ne 0 -or !$data.Id)){throw 'The new ID must be used in one reauthorization and one managed search before reporting'}
  if($case -eq 'native-registers-busy' -and (($data.Trace -join ',') -ne $resetTrace -or !$data.Id -or $output -match 'DC_IDENTITY_NOT_STARTED')){throw 'A busy installer must keep the new ID without a search or a second reset'}
  if($case -eq 'fallback-registers' -and (($data.Trace -join ',') -ne "$resetTrace,RequestRegistration,Start,Search,Report" -or $data.WaitReads -ne 60 -or !$data.Id)){throw 'The managed fallback repeated the reset, missed its limits or failed to report the new ID'}
  if($case -eq 'fallback-busy' -and (($data.Trace -join ',') -ne "$resetTrace,RequestRegistration" -or $data.WaitReads -ne 60 -or $output -match 'DC_IDENTITY_NOT_STARTED')){throw 'An active installer was disturbed or a post-reset failure was marked as unstarted'}

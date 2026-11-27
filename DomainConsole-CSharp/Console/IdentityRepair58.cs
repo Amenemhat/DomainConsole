@@ -239,16 +239,14 @@ try {
   return $candidate
  }
  $new58=Read-NewIdentity58
- # A new local ID at service start has not yet been used in a managed scan.
+ # A new local ID can coexist with authorization for the old ID.
  $scanBeforeReport58=[bool]$new58
- if(!$new58){
-  # A successful COM search alone does not renew WSUS authorization.
+ try{
+  if($scanBeforeReport58){Assert-IdentityRepairIdle58}
   Write-Output 'Запуск wuauserv подтверждён. Запрашивается повторное получение авторизации WSUS.'
-  try{
-   & "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow
-  }catch{throw ('Не удалось запросить авторизацию WSUS: '+$_.Exception.Message+'; резервная копия: '+$backup58)}
-  $new58=Wait-NewIdentity58 60
- }
+  & "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow
+ }catch{throw ('Не удалось запросить авторизацию WSUS: '+$_.Exception.Message.Replace('DC_IDENTITY_NOT_STARTED|','')+'; резервная копия: '+$backup58)}
+ if($scanBeforeReport58){Start-Sleep -Seconds 60}else{$new58=Wait-NewIdentity58 60}
  if($scanBeforeReport58 -or !$new58){
   $searchResult58=$null
   try{
