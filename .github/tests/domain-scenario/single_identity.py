@@ -8,7 +8,7 @@ from identity_lab import body, policy, quote, reg
 from single_wsus_wire import accepted_authorization
 
 
-def exercise(ps, system, wait, evidence, save, capture):
+def exercise(ps, system, wait, evidence, save, capture, natural_only=False):
     client = "CLONE1"
     server = "DCWSUS"
     group = "DCLabSingleClient"
@@ -108,6 +108,50 @@ if($result -ne 2){throw ('Baseline managed search failed: '+$result)}
     checks["stage"] = "reset one client"
     save()
     script = "& {\n" + prefix + repair_body + "\n} | Out-File -Encoding utf8 -FilePath C:\\DomainConsoleLab\\single-repair.out"
+
+    if natural_only:
+        # Keep the single exact command and leave the local agent alone after it returns.
+        # Only read the registry and the WSUS record while native Windows work continues.
+        observation = {"samples": []}
+        checks["natural_observation"] = observation
+        with capture() as snapshot:
+            try:
+                system(client, "single-repair", script, minutes=5)
+            except RuntimeError as error:
+                checks["repair_error"] = str(error)
+            checks["repair_stdout"] = ps(client, "if(Test-Path C:\\DomainConsoleLab\\single-repair.out){Get-Content -Raw -Encoding UTF8 C:\\DomainConsoleLab\\single-repair.out}")
+            observation["started_utc"] = datetime.now(timezone.utc).isoformat()
+            deadline = time.monotonic() + 600
+            try:
+                while True:
+                    observed = observe_client()
+                    checks["client_after"] = observed
+                    identifier = observed["SusClientId"]
+                    observation["samples"].append({key: observed[key] for key in
+                        ("At", "BootUtc", "Service", "ServiceProcessId", "SusClientId", "ValidationBytes")})
+                    if observed["BootUtc"] != original["BootUtc"]:
+                        raise RuntimeError("Windows rebooted during the no-reboot control")
+                    if observed["BackupCount"] != original["BackupCount"] + 1:
+                        raise RuntimeError("Expected exactly one candidate reset backup")
+                    if identifier and UUID(identifier) != UUID(old_id):
+                        record = observe_server(identifier, name)
+                        observation["server"] = record
+                        if confirmed(record, identifier, name, started):
+                            observation["confirmed"] = True
+                            break
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError("WSUS did not confirm a replacement ID within ten minutes without reboot")
+                    time.sleep(min(30, max(0, deadline - time.monotonic())))
+            finally:
+                observation["wire"] = snapshot()
+                checks["server_old_id_after"] = observe_server(old_id, name)
+                save()
+        if "repair_error" in checks:
+            raise RuntimeError("Windows completed the registration without reboot, but the candidate reported failure")
+        checks["stage"] = "confirmed without reboot"
+        save()
+        return
+
     candidate_failure = None
     try:
         system(client, "single-repair", script, minutes=5)

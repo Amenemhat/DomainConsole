@@ -10,6 +10,7 @@ jobs:
     timeout-minutes: 100
     env:
       DC_SINGLE_IDENTITY: '1'
+      DC_SINGLE_NATURAL_ONLY: '1'
       APP_COMMIT: 5334b257f807e8d91b2f23168f64b9868d85efa3
     steps:
       - uses: actions/checkout@v4

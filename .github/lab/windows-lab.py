@@ -358,7 +358,8 @@ def main():
         def capture():
             return capture_exchange(root, "dclab21", ip("CLONE1"), ip("DCWSUS"))
 
-        exercise(ps,system,wait,evidence,save,capture)
+        exercise(ps,system,wait,evidence,save,capture,
+                 natural_only=os.environ.get("DC_SINGLE_NATURAL_ONLY") == "1")
         checkpoint("single-identity")
         return
     until=time.monotonic()+45*60
