@@ -239,6 +239,8 @@ try {
   return $candidate
  }
  $new58=Read-NewIdentity58
+ # A new local ID at service start has not yet been used in a managed scan.
+ $scanBeforeReport58=[bool]$new58
  if(!$new58){
   # A successful COM search alone does not renew WSUS authorization.
   Write-Output 'Запуск wuauserv подтверждён. Запрашивается повторное получение авторизации WSUS.'
@@ -247,14 +249,14 @@ try {
   }catch{throw ('Не удалось запросить авторизацию WSUS: '+$_.Exception.Message+'; резервная копия: '+$backup58)}
   $new58=Wait-NewIdentity58 60
  }
- if(!$new58){
+ if($scanBeforeReport58 -or !$new58){
   $searchResult58=$null
   try{
    Assert-IdentityRepairIdle58
    $new58=Read-NewIdentity58
-   if(!$new58){
+   if($scanBeforeReport58 -or !$new58){
     if((Get-Service wuauserv).Status -eq 'Stopped'){Start-IdentityService58}
-    Write-Output 'Новый ID пока не появился. Выполняется один поиск на управляемом сервере WSUS.'
+    Write-Output 'Выполняется один поиск на управляемом сервере WSUS перед запросом отчёта.'
     $session58=New-Object -ComObject Microsoft.Update.Session
     $session58.ClientApplicationID='DomainConsole.Identity58'
     $search58=$session58.CreateUpdateSearcher()

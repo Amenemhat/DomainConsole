@@ -53,7 +53,15 @@ function Get-ItemProperty {param($Path,$ErrorAction,$Name)
 }
 function Export-Fixture58 {param($Path) Invoke-Fixture58 'Backup';$global:LASTEXITCODE=0;if($env:CASE58 -eq 'backup-fails'){$global:LASTEXITCODE=5}else{[IO.File]::WriteAllText($Path,'fixture registry backup')}}
 function Stop-Service {param($Name,$ErrorAction) if($Name -ne 'wuauserv'){throw 'Unexpected service'};Invoke-Fixture58 'Stop';if($env:CASE58 -in @('stop-fails','stop-and-start-fail')){throw 'STOP_FIXTURE_FAILURE'};$global:service58='Stopped';if($env:CASE58 -eq 'id-changed-before-removal'){$global:fixtureId58='33333333-3333-3333-3333-333333333333';$global:validation58=[byte[]]@(4,5)}}
-function Start-Service {param($Name,$ErrorAction) if($Name -ne 'wuauserv'){throw 'Unexpected service'};Invoke-Fixture58 'Start';if($env:CASE58 -eq 'stop-and-start-fail'){throw 'START_FIXTURE_FAILURE'};$global:service58='Running';if(!$global:fixtureId58 -and $env:CASE58 -in @('after-delete','native-registers')){$global:fixtureId58='33333333-3333-3333-3333-333333333333'}}
+function Start-Service {
+ param($Name,$ErrorAction)
+ if($Name -ne 'wuauserv'){throw 'Unexpected service'}
+ Invoke-Fixture58 'Start'
+ if($env:CASE58 -eq 'stop-and-start-fail'){throw 'START_FIXTURE_FAILURE'}
+ $global:service58='Running'
+ if(!$global:fixtureId58 -and $env:CASE58 -in @('after-delete','native-registers','native-registers-busy')){$global:fixtureId58='33333333-3333-3333-3333-333333333333'}
+ if($env:CASE58 -eq 'native-registers-busy'){$fixtureInstaller58.IsBusy=$true}
+}
 function Get-Service {param($Name) $s=[pscustomobject]@{Status=$global:service58};$s|Add-Member ScriptMethod WaitForStatus {param($status,$timeout)};return $s}
 function Remove-ItemProperty {param($Path,$Name,$ErrorAction) Invoke-Fixture58 ('Remove-'+$Name);if($env:CASE58 -eq 'remove-fails'){throw 'REMOVE_FIXTURE_FAILURE'};if($Name -eq 'SusClientId'){$global:fixtureId58=''}else{$global:validation58=$null};if($env:CASE58 -eq 'after-delete' -and $Name -eq 'SusClientId'){throw 'INTERRUPTED_AFTER_DELETE'}}
 function New-ItemProperty {throw 'Unexpected write of a WSUS registration value'}
@@ -80,7 +88,7 @@ $fixtureSession58|Add-Member ScriptMethod CreateUpdateSearcher {$fixtureSearcher
 '@
 $root=Join-Path $env:RUNNER_TEMP ('identity58-'+[guid]::NewGuid().ToString('N'))
 New-Item $root -ItemType Directory|Out-Null
-foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-report-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed','backup-fails','stop-fails','stop-and-start-fail','id-changed-before-removal','remove-fails','after-delete','request-fails','no-new-id','native-registers','delayed-registration','success','fallback-registers','fallback-busy')){
+foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-report-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed','backup-fails','stop-fails','stop-and-start-fail','id-changed-before-removal','remove-fails','after-delete','request-fails','no-new-id','native-registers','native-registers-busy','delayed-registration','success','fallback-registers','fallback-busy')){
  $folder=Join-Path $root $case;New-Item $folder -ItemType Directory|Out-Null
  $file=Join-Path $folder 'case.ps1';$state=Join-Path $folder 'state.json'
  $suffix=@'
@@ -108,7 +116,8 @@ foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-serv
  if($case -eq 'stop-and-start-fail' -and ($output -notmatch 'STOP_FIXTURE_FAILURE' -or $output -notmatch 'START_FIXTURE_FAILURE')){throw 'Primary or restoration failure was lost'}
  $resetTrace='Backup,Stop,Remove-SusClientId,Remove-SusClientIdValidation,Start'
  if($case -in @('success','delayed-registration') -and (($data.Trace -join ',') -ne "$resetTrace,RequestRegistration,Report" -or $data.Id -ne '33333333-3333-3333-3333-333333333333')){throw 'Repair did not request registration once and report the new ID'}
- if($case -eq 'native-registers' -and (($data.Trace -join ',') -ne "$resetTrace,Report" -or !$data.Id)){throw 'An unnecessary registration request followed creation of a new ID'}
+ if($case -eq 'native-registers' -and (($data.Trace -join ',') -ne "$resetTrace,Search,Report" -or $data.WaitReads -ne 0 -or !$data.Id)){throw 'The new ID must be used in one managed search before reporting'}
+ if($case -eq 'native-registers-busy' -and (($data.Trace -join ',') -ne $resetTrace -or !$data.Id -or $output -match 'DC_IDENTITY_NOT_STARTED')){throw 'A busy installer must keep the new ID without a search or a second reset'}
  if($case -eq 'fallback-registers' -and (($data.Trace -join ',') -ne "$resetTrace,RequestRegistration,Start,Search,Report" -or $data.WaitReads -ne 60 -or !$data.Id)){throw 'The managed fallback repeated the reset, missed its limits or failed to report the new ID'}
  if($case -eq 'fallback-busy' -and (($data.Trace -join ',') -ne "$resetTrace,RequestRegistration" -or $data.WaitReads -ne 60 -or $output -match 'DC_IDENTITY_NOT_STARTED')){throw 'An active installer was disturbed or a post-reset failure was marked as unstarted'}
  if($case -eq 'no-new-id'){
