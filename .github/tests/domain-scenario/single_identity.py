@@ -1,13 +1,14 @@
 """Reset one real Windows client through the candidate repair script and read WSUS independently."""
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import time
 from uuid import UUID
 
 from identity_lab import body, policy, quote, reg
+from single_wsus_wire import accepted_authorization
 
 
-def exercise(ps, system, wait, evidence, save):
+def exercise(ps, system, wait, evidence, save, capture):
     client = "CLONE1"
     server = "DCWSUS"
     group = "DCLabSingleClient"
@@ -74,7 +75,9 @@ if($result -ne 2){throw ('Baseline managed search failed: '+$result)}
 """
     checks["stage"] = "baseline"
     save()
-    system(client, "single-baseline", settings, minutes=5)
+    with capture() as snapshot:
+        system(client, "single-baseline", settings, minutes=5)
+        checks["baseline_wire"] = snapshot()
     checks["initial_id_seeded"] = ps(client, r"Get-Content C:\DomainConsoleLab\single-baseline-seeded.txt") == "True"
     deadline = time.monotonic() + 240
     while True:
@@ -92,6 +95,9 @@ if($result -ne 2){throw ('Baseline managed search failed: '+$result)}
         if time.monotonic() >= deadline:
             raise RuntimeError("Baseline did not establish a real client ID and current WSUS record")
         time.sleep(12)
+    if not accepted_authorization(checks["baseline_wire"], old_id):
+        raise RuntimeError("Baseline trace could not verify the old client's WSUS authorization; no ID was reset")
+    save()
     print(f"Baseline confirmed: {name}, {old_id}", flush=True)
 
     expected = {"Id": old_id, "Machine": original["Machine"], "Installation": original["InstallationId"],
@@ -196,23 +202,51 @@ for($second=0;!$newId -and $second -lt 30;$second++){
  Start-Sleep -Seconds 1
  $newId=[string](Get-ItemProperty $path).SusClientId
 }
-if($newId){& "$env:windir\System32\wuauclt.exe" /reportnow}
 """, minutes=5)
         control["search_code"] = ps(client, r"Get-Content C:\DomainConsoleLab\single-reboot-search-code.txt")
-        deadline = time.monotonic() + 10 * 60
+        after_search = observe_client()
+        control["after_search"] = after_search
+        identifier = after_search["SusClientId"]
+        if not identifier or UUID(identifier) == UUID(old_id):
+            raise RuntimeError("WUA did not create a new ID after the reboot and managed search")
+        if after_search["BackupCount"] != pre_reboot["BackupCount"]:
+            raise RuntimeError("The diagnostic unexpectedly performed a second reset")
+        control["server_before_reauthorization"] = observe_server(identifier, name)
+        control["stage"] = "one reauthorization after the new local ID"
+        save()
+        with capture() as snapshot:
+            reauthorization_started = datetime.now(timezone.utc)
+            control["reauthorization_started_utc"] = reauthorization_started.isoformat()
+            system(client, "single-reauthorize-new-id", "$expected=" + quote(identifier) + r"""
+$actual=[string](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate').SusClientId
+if($actual -ne $expected){throw 'The new local ID changed before authorizing'}
+& "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow
+""", minutes=2)
+            deadline = time.monotonic() + 120
+            while True:
+                control["reauthorization_wire"] = snapshot()
+                accepted = accepted_authorization(control["reauthorization_wire"], identifier, reauthorization_started)
+                if accepted or time.monotonic() >= deadline:
+                    break
+                time.sleep(12)
+            if accepted:
+                control["new_authorization"] = accepted
+                system(client, "single-report-new-id", r'& "$env:windir\System32\wuauclt.exe" /reportnow', minutes=2)
+                control["report_requested"] = True
+            control["reauthorization_wire"] = snapshot()
+            save()
+        deadline = time.monotonic() + 8 * 60
         while True:
             observed = observe_client()
-            control["after_search"] = observed
-            identifier = observed["SusClientId"]
-            if identifier and UUID(identifier) != UUID(old_id):
-                record = observe_server(identifier, name)
-                control["server"] = record
-                if confirmed(record, identifier, name, datetime.fromisoformat(after_boot["BootUtc"])):
-                    if observed["BackupCount"] != pre_reboot["BackupCount"]:
-                        raise RuntimeError("The diagnostic unexpectedly performed a second reset")
-                    control["stage"] = "confirmed after reboot"
-                    print(f"DIAGNOSTIC PASS: {name} registered {identifier} after one reboot and no second reset.", flush=True)
-                    break
+            control["client_final"] = observed
+            if observed["SusClientId"] != identifier or observed["BackupCount"] != pre_reboot["BackupCount"]:
+                raise RuntimeError("The new ID or the reset count changed during reauthorization")
+            record = observe_server(identifier, name)
+            control["server"] = record
+            if confirmed(record, identifier, name, datetime.fromisoformat(after_boot["BootUtc"])):
+                control["stage"] = "confirmed after reboot"
+                print(f"DIAGNOSTIC PASS: {name} registered {identifier} after one reboot and no second reset.", flush=True)
+                break
             save()
             if time.monotonic() >= deadline:
                 raise RuntimeError("WSUS did not confirm the replacement ID after the controlled reboot")

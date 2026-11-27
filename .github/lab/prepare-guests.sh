@@ -12,8 +12,11 @@ OPENSSL_CONF="$PWD/.github/lab/ntlm-openssl.cnf" /usr/bin/python3 -c 'import has
 
 sudo apt-get update -qq
 diagnostic_packages=()
-if [[ "${DC_SINGLE_IDENTITY:-}" == "1" ]]; then diagnostic_packages+=(tshark); fi
+if [[ "${DC_SINGLE_IDENTITY:-}" == "1" ]]; then diagnostic_packages+=(tcpdump tshark); fi
 sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils seabios ovmf libguestfs-tools python3-winrm python3-pil libguestfs-perl ntfs-3g genisoimage "${diagnostic_packages[@]}"
+if [[ "${DC_SINGLE_IDENTITY:-}" == "1" ]]; then
+  sudo /usr/bin/python3 .github/tests/domain-scenario/single_wsus_wire.py
+fi
 # Reclaim space from unused SDKs on this disposable runner before writing seven overlays.
 sudo rm -rf /usr/local/lib/android/sdk /usr/share/dotnet /opt/ghc
 df -h "$lab"
