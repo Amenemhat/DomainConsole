@@ -343,7 +343,12 @@ $rc=[int]$search.Search('IsInstalled=0 and IsHidden=0').ResultCode
 
     def first_consent(active):
         gui.start(before)
-        gui.wait("read-only.done",900)
+        try:
+            gui.wait("read-only.done",900)
+        except (TimeoutError, RuntimeError):
+            evidence["checks"]["read-only-survey-failure"]=json.loads(gui.diagnostics())
+            save()
+            raise
         evidence["checks"]["read-only-survey"]=json.loads(gui.diagnostics())
         save()
         resources("diagnosis",active)

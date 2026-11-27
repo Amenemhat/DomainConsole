@@ -104,11 +104,12 @@ function Application-Window($title,[bool]$prefix=$false){
   Complete-Survey $computers.Count
  }
  New-Item $data -ItemType Directory -Force |Out-Null
- $computers=@(Get-ADComputer -Filter * -Properties DNSHostName,OperatingSystem|ForEach-Object {
+ $computers=@(Get-ADComputer -Filter "Name -like 'CLONE*'" -Properties DNSHostName,OperatingSystem|ForEach-Object {
   @{Name=$_.Name;Host=$_.DNSHostName.ToLowerInvariant();OU=($_.DistinguishedName -split ',',2)[1];OS=$_.OperatingSystem;DirectoryId=$_.ObjectGUID.ToString();AdDisabled=$false}
  })
  $chosen='clone1.dc057.test'
  $observed=Get-Content "$lab\observations.json" -Raw|ConvertFrom-Json
+ if($computers.Count -ne @($observed.PSObject.Properties).Count){throw 'The directory snapshot does not contain the exact fixture clients'}
  $pair=@($observed.PSObject.Properties).Count -eq 2
  $previous=@{}
  foreach($x in $observed.PSObject.Properties.Value){
