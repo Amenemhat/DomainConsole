@@ -365,7 +365,8 @@ def main():
             return capture_exchange(root, "dclab21", ip("CLONE1"), ip("DCWSUS"))
 
         url=f"http://{ip('DCWSUS')}:8530" if single_natural else "http://dcwsus.dc057.test:8530"
-        exercise(ps,system,wait,evidence,save,capture,url,natural_only=single_natural)
+        exercise(ps,system,wait,evidence,save,capture,url,natural_only=single_natural,
+                 own_process=single_natural and os.environ.get("DC_SINGLE_OWN_WUA_PROCESS") == "1")
         checkpoint("single-identity")
         return
     until=time.monotonic()+45*60

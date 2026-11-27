@@ -8,7 +8,7 @@ from identity_lab import body, policy, quote, reg
 from single_wsus_wire import accepted_authorization
 
 
-def exercise(ps, system, wait, evidence, save, capture, url, natural_only=False):
+def exercise(ps, system, wait, evidence, save, capture, url, natural_only=False, own_process=False):
     client = "CLONE1"
     server = "DCWSUS"
     group = "DCLabSingleClient"
@@ -19,6 +19,7 @@ def exercise(ps, system, wait, evidence, save, capture, url, natural_only=False)
     probe = body("Identity58.cs", "IdentityProbe58")
     verify = body("IdentityConfirmation58.cs", "IdentityServerScript58")
     repair_body = body("IdentityRepair58.cs", "IdentityRepairBody58")
+    checks["own_process_control"] = own_process
 
     def observe_client():
         snapshot = probe + r"""
@@ -27,6 +28,10 @@ $dcIdentity58.BackupCount=@(Get-ChildItem $backups -Filter '*.reg' -ErrorAction 
 $service=Get-CimInstance Win32_Service -Filter "Name='wuauserv'"
 $dcIdentity58.Service=$service.State
 $dcIdentity58.ServiceProcessId=$service.ProcessId
+$dcIdentity58.ServiceType=$service.ServiceType
+if($service.ProcessId){
+ $dcIdentity58.ServiceProcessMembers=@(Get-CimInstance Win32_Service -Filter ('ProcessId='+$service.ProcessId) | Select-Object -ExpandProperty Name)
+}else{$dcIdentity58.ServiceProcessMembers=@()}
 $dcIdentity58.BootUtc=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString('o')
 $dcIdentity58|ConvertTo-Json -Compress
 """
@@ -44,7 +49,8 @@ $dcIdentity58|ConvertTo-Json -Compress
         reported = datetime.fromisoformat(record["ReportedUtc"])
         return reported.year > 2000 and (since is None or reported >= since)
 
-    settings = f"$p={quote(policy)};$r={quote(reg)};$wsusUrl={quote(url)};$group={quote(group)};\n" + r"""
+    own_setting = "$true" if own_process else "$false"
+    settings = f"$p={quote(policy)};$r={quote(reg)};$wsusUrl={quote(url)};$group={quote(group)};$own={own_setting};\n" + r"""
 New-Item -Path $p -Force|Out-Null
 New-Item -Path ($p+'\AU') -Force|Out-Null
 foreach($key in 'WUServer','WUStatusServer'){
@@ -55,6 +61,15 @@ New-ItemProperty -Path $p -Name TargetGroup -Value $group -PropertyType String -
 New-ItemProperty -Path ($p+'\AU') -Name UseWUServer -Value 1 -PropertyType DWord -Force|Out-Null
 New-ItemProperty -Path ($p+'\AU') -Name AUOptions -Value 2 -PropertyType DWord -Force|Out-Null
 Stop-Service wuauserv
+if($own){
+ if($env:COMPUTERNAME -ne 'CLONE1' -or (Get-CimInstance Win32_ComputerSystem).PartOfDomain -or
+    $wsusUrl -ne 'http://10.77.57.10:8530' -or !(Test-Path C:\DomainConsoleLab\network-ready.txt)){
+  throw 'Disposable workgroup guest required for the isolated service configuration'
+ }
+ (Get-Service wuauserv).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(30))
+ & sc.exe config wuauserv type= own | Out-Null
+ if($LASTEXITCODE){throw ('Could not isolate wuauserv: '+$LASTEXITCODE)}
+}
 if(!(Test-Path $r)){New-Item $r -Force|Out-Null}
 $seeded=![string](Get-ItemProperty $r).SusClientId
 if($seeded){
@@ -96,6 +111,8 @@ if($result -ne 2){throw ('Baseline managed search failed: '+$result)}
         time.sleep(12)
     if not accepted_authorization(checks["baseline_wire"], old_id):
         raise RuntimeError("Baseline trace could not verify the old client's WSUS authorization; no ID was reset")
+    if own_process and (not original["ServiceProcessId"] or original["ServiceProcessMembers"] != ["wuauserv"]):
+        raise RuntimeError("Baseline wuauserv is not running alone; no ID was reset")
     save()
     print(f"Baseline confirmed: {name}, {old_id}", flush=True)
 
@@ -127,7 +144,7 @@ if($result -ne 2){throw ('Baseline managed search failed: '+$result)}
                     checks["client_after"] = observed
                     identifier = observed["SusClientId"]
                     observation["samples"].append({key: observed[key] for key in
-                        ("At", "BootUtc", "Service", "ServiceProcessId", "SusClientId", "ValidationBytes")})
+                        ("At", "BootUtc", "Service", "ServiceProcessId", "ServiceProcessMembers", "SusClientId", "ValidationBytes")})
                     if observed["BootUtc"] != original["BootUtc"]:
                         raise RuntimeError("Windows rebooted during the no-reboot control")
                     if observed["BackupCount"] != original["BackupCount"] + 1:
@@ -145,6 +162,12 @@ if($result -ne 2){throw ('Baseline managed search failed: '+$result)}
                 observation["wire"] = snapshot()
                 checks["server_old_id_after"] = observe_server(old_id, name)
                 save()
+        if own_process:
+            replaced = [sample for sample in observation["samples"]
+                        if sample["ServiceProcessId"] and sample["ServiceProcessId"] != original["ServiceProcessId"]
+                        and sample["ServiceProcessMembers"] == ["wuauserv"]]
+            if not replaced or not accepted_authorization(observation["wire"], identifier, started):
+                raise RuntimeError("WSUS was confirmed, but the new WUA process or on-wire authorization was not verified")
         if "repair_error" in checks:
             raise RuntimeError("Windows completed the registration without reboot, but the candidate reported failure")
         checks["stage"] = "confirmed without reboot"
