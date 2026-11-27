@@ -354,7 +354,7 @@ def main():
     if single_identity:
         sys.path.insert(0,str(here.parent / "tests" / "domain-scenario"))
         from single_identity import exercise
-        exercise(ps,system,evidence,save)
+        exercise(ps,system,wait,evidence,save)
         checkpoint("single-identity")
         return
     until=time.monotonic()+45*60

@@ -7,7 +7,7 @@ from uuid import UUID
 from identity_lab import body, policy, quote, reg
 
 
-def exercise(ps, system, evidence, save):
+def exercise(ps, system, wait, evidence, save):
     client = "CLONE1"
     server = "DCWSUS"
     group = "DCLabSingleClient"
@@ -24,7 +24,10 @@ def exercise(ps, system, evidence, save):
         snapshot = probe + r"""
 $backups=Join-Path $env:ProgramData 'DomainConsole-Backups'
 $dcIdentity58.BackupCount=@(Get-ChildItem $backups -Filter '*.reg' -ErrorAction SilentlyContinue).Count
-$dcIdentity58.Service=(Get-Service wuauserv).Status.ToString()
+$service=Get-CimInstance Win32_Service -Filter "Name='wuauserv'"
+$dcIdentity58.Service=$service.State
+$dcIdentity58.ServiceProcessId=$service.ProcessId
+$dcIdentity58.BootUtc=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString('o')
 $dcIdentity58|ConvertTo-Json -Compress
 """
         return json.loads(ps(client, snapshot))
@@ -99,6 +102,7 @@ if($result -ne 2){throw ('Baseline managed search failed: '+$result)}
     checks["stage"] = "reset one client"
     save()
     script = "& {\n" + prefix + repair_body + "\n} | Out-File -Encoding utf8 -FilePath C:\\DomainConsoleLab\\single-repair.out"
+    candidate_failure = None
     try:
         system(client, "single-repair", script, minutes=5)
     except RuntimeError as error:
@@ -134,6 +138,8 @@ if($result -ne 2){throw ('Baseline managed search failed: '+$result)}
         if observed["BackupCount"] != original["BackupCount"] + 1:
             raise RuntimeError("The one-client reset did not produce exactly one registry backup")
         print(f"PASS: one client changed ID to {identifier}; WSUS recorded a fresh report.", flush=True)
+    except RuntimeError as error:
+        candidate_failure = error
     finally:
         checks["server_old_id_after"] = observe_server(old_id, name)
         try:
@@ -145,3 +151,74 @@ Get-Content $log -Tail 2400 | Select-String -Pattern 'RegisterComputer|GetCookie
         except Exception as error:
             checks["trace_error"] = str(error)[:800]
         save()
+
+    if candidate_failure is None:
+        return
+    checks["candidate_failed"] = str(candidate_failure)
+    pre_reboot = observe_client()
+    checks["client_before_reboot"] = pre_reboot
+    save()
+    if pre_reboot["SusClientId"] or pre_reboot["BackupCount"] != original["BackupCount"] + 1:
+        raise candidate_failure
+
+    # Diagnostic only: reboot one disposable guest once without deleting any values again.
+    control = checks["reboot_control"] = {"stage": "reboot requested"}
+    save()
+    try:
+        ps(client, r"""
+$computer=Get-CimInstance Win32_ComputerSystem
+if($env:COMPUTERNAME -ne 'CLONE1' -or !$computer.PartOfDomain -or $computer.Domain -ne 'dc057.test'){
+ throw 'Disposable CLONE1 required'
+}
+shutdown.exe /r /t 5 /c 'Single-client WUA process diagnostic'
+if($LASTEXITCODE){throw "Lab reboot failed: $LASTEXITCODE"}
+""")
+        time.sleep(15)
+        wait(client, minutes=7)
+        after_boot = observe_client()
+        control["after_reboot"] = after_boot
+        if datetime.fromisoformat(after_boot["BootUtc"]) <= datetime.fromisoformat(pre_reboot["BootUtc"]):
+            raise RuntimeError("A new Windows boot was not observed")
+        control["stage"] = "one managed search"
+        save()
+        system(client, "single-reboot-search", r"""
+$session=New-Object -ComObject Microsoft.Update.Session
+$session.ClientApplicationID='DomainConsole.SingleRebootDiagnostic'
+$searcher=$session.CreateUpdateSearcher()
+$searcher.ServerSelection=1
+$searcher.Online=$true
+$result=[int]$searcher.Search('IsInstalled=0 and IsHidden=0').ResultCode
+$result|Set-Content C:\DomainConsoleLab\single-reboot-search-code.txt
+if($result -ne 2){throw ('Managed diagnostic search failed: '+$result)}
+$path='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
+$newId=[string](Get-ItemProperty $path).SusClientId
+for($second=0;!$newId -and $second -lt 30;$second++){
+ Start-Sleep -Seconds 1
+ $newId=[string](Get-ItemProperty $path).SusClientId
+}
+if($newId){& "$env:windir\System32\wuauclt.exe" /reportnow}
+""", minutes=5)
+        control["search_code"] = ps(client, r"Get-Content C:\DomainConsoleLab\single-reboot-search-code.txt")
+        deadline = time.monotonic() + 180
+        while True:
+            observed = observe_client()
+            control["after_search"] = observed
+            identifier = observed["SusClientId"]
+            if identifier and UUID(identifier) != UUID(old_id):
+                record = observe_server(identifier, name)
+                control["server"] = record
+                if confirmed(record, identifier, name, datetime.fromisoformat(after_boot["BootUtc"])):
+                    if observed["BackupCount"] != pre_reboot["BackupCount"]:
+                        raise RuntimeError("The diagnostic unexpectedly performed a second reset")
+                    control["stage"] = "confirmed after reboot"
+                    print(f"DIAGNOSTIC PASS: {name} registered {identifier} after one reboot and no second reset.", flush=True)
+                    break
+            save()
+            if time.monotonic() >= deadline:
+                raise RuntimeError("WSUS did not confirm the replacement ID after the controlled reboot")
+            time.sleep(15)
+    except Exception as error:
+        control["error"] = str(error)[:1000]
+    finally:
+        save()
+    raise candidate_failure
