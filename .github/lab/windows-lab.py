@@ -28,8 +28,11 @@ password = "Dc!7" + secrets.token_hex(20)
 print("::add-mask::" + password, flush=True)
 nodes = {"DCWSUS": 10, "DCAD": 11, **{f"CLONE{i}": 20 + i for i in range(1, 6)}}
 bootstrap_only=os.environ.get("DC_BOOTSTRAP_ONLY")=="1"
+single_identity=os.environ.get("DC_SINGLE_IDENTITY")=="1"
 if bootstrap_only:
     nodes={"DCWSUS":10}
+elif single_identity:
+    nodes={"DCWSUS":10,"DCAD":11,"CLONE1":21}
 private_addresses=["10.77.57."+str(n) for n in nodes.values()]
 os.environ["NO_PROXY"]=os.environ["no_proxy"]=",".join(["localhost","127.0.0.1",*private_addresses,os.environ.get("NO_PROXY","")])
 evidence = {"source": os.environ["GITHUB_SHA"], "booted": {}, "checks": {}}
@@ -348,6 +351,12 @@ def main():
     evidence["checks"]["WSUS"] = ps("DCWSUS", "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');([Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530)).Version.ToString()")
     log("WSUS API available: " + evidence["checks"]["WSUS"])
     checkpoint("wsus")
+    if single_identity:
+        sys.path.insert(0,str(here.parent / "tests" / "domain-scenario"))
+        from single_identity import exercise
+        exercise(ps,system,evidence,save)
+        checkpoint("single-identity")
+        return
     until=time.monotonic()+45*60
     while not (root/"package.json").is_file() and time.monotonic()<until:
         time.sleep(3)

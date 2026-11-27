@@ -1,0 +1,32 @@
+name: Diagnose one remote WSUS client
+on:
+  push:
+    branches: ['lab/0.59-identity-single']
+permissions:
+  contents: read
+jobs:
+  one-client:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      DC_SINGLE_IDENTITY: '1'
+      APP_COMMIT: 5334b257f807e8d91b2f23168f64b9868d85efa3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.APP_COMMIT }}
+          path: _app
+          persist-credentials: false
+      - name: Start private Windows lab with one client
+        run: bash .github/lab/prepare-guests.sh
+      - name: Verify server and isolated domain
+        run: bash .github/lab/wait-for-guests.sh wsus 55
+      - name: Check one reset and a fresh report for the new ID
+        run: bash .github/lab/wait-for-guests.sh single-identity 35
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: single-wsus-client
+          path: ${{ runner.temp }}/dc-wsus-lab/evidence.json
+          if-no-files-found: warn
