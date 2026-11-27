@@ -234,8 +234,11 @@ if($job){
  }
 }
 $events=@(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-WindowsUpdateClient/Operational'; StartTime=(Get-Date).AddMinutes(-25)} -MaxEvents 20 -ErrorAction SilentlyContinue|Select-Object Id,TimeCreated,Message)
+$agentCache=@(Get-ChildItem (Join-Path $root 'Agent') -File -Recurse -ErrorAction SilentlyContinue|Select-Object -First 20 Name,Length)
+$taskName='DomainConsoleCSharp-'+$job
+$task=if($job){Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue}
 $reg='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'
-@{At=[DateTime]::UtcNow.ToString('o');Files=$files;Events=$events;SusClientId=[string](Get-ItemProperty $reg -ErrorAction SilentlyContinue).SusClientId;Service=(Get-Service wuauserv).Status.ToString()}|ConvertTo-Json -Depth 5 -Compress
+@{At=[DateTime]::UtcNow.ToString('o');Files=$files;Events=$events;AgentCache=$agentCache;TaskState=[string]$task.State;SusClientId=[string](Get-ItemProperty $reg -ErrorAction SilentlyContinue).SusClientId;Service=(Get-Service wuauserv).Status.ToString()}|ConvertTo-Json -Depth 5 -Compress
 """
                 diagnostics[node]=json.loads(ps(node,"$job="+quote(job_id)+";"+script))
             except Exception as exc:
@@ -378,7 +381,10 @@ $rc=[int]$search.Search('IsInstalled=0 and IsHidden=0').ResultCode
             if len(readings)==len(active):
                 return readings
             if time.monotonic()-last_diag>60:
-                evidence["checks"]["repair-progress"]=json.loads(gui.diagnostics())
+                status=json.loads(gui.diagnostics())
+                evidence["checks"]["repair-progress"]=status
+                submissions=evidence["checks"].setdefault("submission_samples",[])
+                submissions.append(status["History"])
                 save()
                 last_diag=time.monotonic()
             time.sleep(15)

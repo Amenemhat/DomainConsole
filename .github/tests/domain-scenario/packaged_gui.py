@@ -64,7 +64,16 @@ $d="$p\package\Data"
 $e=if(Test-Path "$p\gui-error.txt"){[string](Get-Content -Raw -Encoding UTF8 "$p\gui-error.txt")}else{''}
 $survey=if(Test-Path "$d\identity-survey.json"){Get-Content -Raw -Encoding UTF8 "$d\identity-survey.json"|ConvertFrom-Json}
 $repairs=if(Test-Path "$d\identity-repairs58.json"){(Get-Content -Raw -Encoding UTF8 "$d\identity-repairs58.json"|ConvertFrom-Json).PSObject.Properties.Value|Select-Object Host,Phase,JobId,OldId,NewId,StartedUtc}
-@{Stage=$survey.ScopeMessage;Rows=$survey.Results;Repair=@($repairs);Error=$e;History=$(if(Test-Path "$d/history.json"){$jobs=Get-Content "$d/history.json" -Raw -Encoding UTF8|ConvertFrom-Json;@($jobs)|Select-Object -Last 5|ForEach-Object {@{Id=$_.Id;Name=$_.Name;Statuses=@($_.Targets|ForEach-Object {[string]$_.Status})}}});Task=(Get-ScheduledTask DCLab-Console -ErrorAction SilentlyContinue).State.ToString()}|ConvertTo-Json -Depth 4 -Compress
+$history=if(Test-Path "$d\history.json"){
+ $jobs=Get-Content "$d\history.json" -Raw -Encoding UTF8|ConvertFrom-Json
+ @($jobs)|Select-Object -Last 5|ForEach-Object {
+  @{Id=$_.Id;Name=$_.Name;Targets=@($_.Targets|ForEach-Object {
+   $output=[string]$_.Output
+   @{Host=$_.Host;Status=$_.Status;Output=$output.Substring(0,[Math]::Min(1800,$output.Length))}
+  })}
+ }
+}
+@{Stage=$survey.ScopeMessage;Rows=$survey.Results;Repair=@($repairs);Error=$e;History=@($history);Task=(Get-ScheduledTask DCLab-Console -ErrorAction SilentlyContinue).State.ToString()}|ConvertTo-Json -Depth 7 -Compress
 """)
     def wait(self, file, timeout):
         end = time.monotonic() + timeout
