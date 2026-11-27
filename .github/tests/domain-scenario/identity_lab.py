@@ -2,6 +2,7 @@
 import concurrent.futures
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -62,6 +63,7 @@ def verify_windows_firmware(nodes, ps, root, evidence, save):
 def exercise(nodes, ps, system, evidence, save, root, gui):
     clients = [n for n in nodes if n.startswith("CLONE")]
     pair = len(clients) == 2
+    own_service = pair or os.environ.get("DC_IDENTITY_OWN_WUA_PROCESS") == "1"
     if not pair:
         verify_windows_firmware(nodes,ps,root,evidence,save)
     probe = body("Identity58.cs", "IdentityProbe58")
@@ -81,7 +83,7 @@ $scan=$searcher.Search('IsInstalled=0 and IsHidden=0');if([int]$scan.ResultCode 
 & "$env:windir\\System32\\wuauclt.exe" /reportnow
 """
     def probe_client(node):
-        boot = "\n$dcIdentity58.BootUtc=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString('o')" if pair else ""
+        boot = "\n$dcIdentity58.BootUtc=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString('o')" if own_service else ""
         result = json.loads(ps(node, probe + boot + "\n$dcIdentity58|ConvertTo-Json -Compress"))
         if result.get("Error") or not result.get("Machine") or not result.get("SusClientId"):
             incomplete=evidence["checks"].setdefault("incomplete",{})
@@ -104,14 +106,14 @@ foreach($v in 'Registry64','Registry32'){
     def configure(node,shared=None):
         marker="Restart-Service wuauserv -Force"
         policy_only,scan=settings.split(marker,1)
-        if pair:
+        if not pair and node==clients[-2]:
+            policy_only=policy_only.replace("http://dcwsus.dc057.test:8530","http://dcwsus:8530")
+        if own_service:
             policy_only+=r"""Stop-Service wuauserv
 (Get-Service wuauserv).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(30))
 & sc.exe config wuauserv type= own | Out-Null
 if($LASTEXITCODE){throw 'Could not isolate the disposable client service'}
 """
-        elif node==clients[-2]:
-            policy_only=policy_only.replace("http://dcwsus.dc057.test:8530","http://dcwsus:8530")
         if shared is None:
             # Reproduce an imaged machine on a pristine OS that may have no SusClientId yet.
             seed=f"$r='{reg}';if(!(Test-Path $r)){{New-Item $r -Force|Out-Null}};if(!(Get-ItemProperty $r -Name SusClientId -ErrorAction SilentlyContinue)){{New-ItemProperty $r -Name SusClientId -Value ([guid]::NewGuid().ToString()) -PropertyType String -Force|Out-Null}};"
@@ -376,7 +378,7 @@ $rc=[int]$search.Search('IsInstalled=0 and IsHidden=0').ResultCode
                 last_diag=time.monotonic()
             time.sleep(15)
         capture_failed_repairs(active)
-        if not pair:
+        if not own_service:
             compare_wua_restart(active)
         raise TimeoutError("Packaged console did not change registrations on "+", ".join(active)+" · "+gui.diagnostics()[:3300])
 
@@ -411,8 +413,8 @@ $rc=[int]$search.Search('IsInstalled=0 and IsHidden=0').ResultCode
     ids={r["SusClientId"].lower() for r in after.values()}
     if shared.lower() in ids or len(ids)!=len(clients):
         raise RuntimeError("Repair failed to produce distinct new Windows IDs")
-    if pair and any(after[node]["BootUtc"] != before[node]["BootUtc"] for node in clients):
-        raise RuntimeError("Unexpected Windows reboot during the clone pair check")
+    if own_service and any(after[node]["BootUtc"] != before[node]["BootUtc"] for node in clients):
+        raise RuntimeError("Unexpected Windows reboot during the client identity check")
     evidence["checks"]["after"] = after
     attempts=json.loads(gui.diagnostics())["Repair"]
     started={item["Host"].split(".",1)[0].upper():item["StartedUtc"] for item in attempts if item["JobId"]}

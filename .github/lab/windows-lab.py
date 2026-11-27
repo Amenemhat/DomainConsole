@@ -308,7 +308,7 @@ def setup_domain():
 
 def join(node):
     ou="LabA" if nodes[node]%2 else "LabB"
-    if clone_pair:
+    if clone_pair or os.environ.get("DC_IDENTITY_OWN_WUA_PROCESS")=="1":
         ps(node,r"""
 $end=[DateTime]::UtcNow.AddMinutes(2)
 do {
