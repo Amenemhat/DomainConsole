@@ -354,7 +354,9 @@ def main():
     if single_identity:
         sys.path.insert(0,str(here.parent / "tests" / "domain-scenario"))
         from single_identity import exercise
-        exercise(ps,system,wait,evidence,save)
+        from single_wsus_wire import capture_exchange
+        with capture_exchange(root, ip("CLONE1"), ip("DCWSUS"), evidence["checks"], save):
+            exercise(ps,system,wait,evidence,save)
         checkpoint("single-identity")
         return
     until=time.monotonic()+45*60

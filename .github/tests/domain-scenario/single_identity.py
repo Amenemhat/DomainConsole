@@ -199,7 +199,7 @@ for($second=0;!$newId -and $second -lt 30;$second++){
 if($newId){& "$env:windir\System32\wuauclt.exe" /reportnow}
 """, minutes=5)
         control["search_code"] = ps(client, r"Get-Content C:\DomainConsoleLab\single-reboot-search-code.txt")
-        deadline = time.monotonic() + 180
+        deadline = time.monotonic() + 10 * 60
         while True:
             observed = observe_client()
             control["after_search"] = observed
@@ -216,9 +216,10 @@ if($newId){& "$env:windir\System32\wuauclt.exe" /reportnow}
             save()
             if time.monotonic() >= deadline:
                 raise RuntimeError("WSUS did not confirm the replacement ID after the controlled reboot")
-            time.sleep(15)
+            time.sleep(30)
     except Exception as error:
         control["error"] = str(error)[:1000]
     finally:
+        control["server_old_id_after_reboot"] = observe_server(old_id, name)
         save()
     raise candidate_failure
