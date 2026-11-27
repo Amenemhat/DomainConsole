@@ -24,6 +24,12 @@ if($env:CASE58 -eq 'invalid-id'){$global:fixtureId58='00000000-0000-0000-0000-00
 $global:service58='Running'
 $global:validation58=[byte[]]@(1,2,3)
 $global:waitReads58=0
+if($env:CASE58 -in @('native-registers','wrong-adapter','adapter-unavailable')){$dcExpectedAdapterMac58='001122334455'}
+function Read-IdentityAdapter58 {
+ if($env:CASE58 -eq 'adapter-unavailable'){throw 'Adapter state not available'}
+ if($env:CASE58 -eq 'wrong-adapter'){return '001122334466'}
+ return '001122334455'
+}
 function Invoke-Fixture58 {param($Name) $global:trace58.Add($Name)}
 function Start-Sleep {
  param($Milliseconds)
@@ -90,7 +96,7 @@ $fixtureSession58|Add-Member ScriptMethod CreateUpdateSearcher {$fixtureSearcher
 '@
 $root=Join-Path $env:RUNNER_TEMP ('identity58-'+[guid]::NewGuid().ToString('N'))
 New-Item $root -ItemType Directory|Out-Null
-foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-report-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed','backup-fails','stop-fails','stop-and-start-fail','id-changed-before-removal','remove-fails','after-delete','request-fails','no-new-id','native-registers','native-registers-busy','delayed-registration','success','fallback-registers','fallback-busy')){
+foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-adapter','adapter-unavailable','wrong-server','wrong-report-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed','backup-fails','stop-fails','stop-and-start-fail','id-changed-before-removal','remove-fails','after-delete','request-fails','no-new-id','native-registers','native-registers-busy','delayed-registration','success','fallback-registers','fallback-busy')){
  $folder=Join-Path $root $case;New-Item $folder -ItemType Directory|Out-Null
  $file=Join-Path $folder 'case.ps1';$state=Join-Path $folder 'state.json'
  $suffix=@'
@@ -113,6 +119,7 @@ foreach($case in @('wrong-name','wrong-machine','wrong-installation','wrong-serv
  $expectedSuccess=$case -in @('already-changed','native-registers','delayed-registration','success','fallback-registers')
  if(($process.ExitCode -eq 0) -ne $expectedSuccess){throw "Unexpected result for ${case}: $output"}
  if($case -in @('wrong-name','wrong-machine','wrong-installation','wrong-server','wrong-report-server','wrong-policy','invalid-id','busy','bits-active','bits-error','installer-process','already-changed') -and $data.Trace.Count -ne 0){throw "Guard changed state: $case"}
+ if($case -in @('wrong-adapter','adapter-unavailable') -and ($data.Trace.Count -ne 0 -or $output -notmatch 'DC_IDENTITY_NOT_STARTED')){throw "Adapter check did not block the reset: $case"}
  if($case -eq 'backup-fails' -and ($data.Trace -contains 'Stop')){throw 'Backup failure reached service stop'}
  if($case -in @('stop-fails','remove-fails','after-delete') -and ($data.Service -ne 'Running' -or $data.Trace -notcontains 'Start')){throw "Service not restored: $case"}
  if($case -eq 'stop-and-start-fail' -and ($output -notmatch 'STOP_FIXTURE_FAILURE' -or $output -notmatch 'START_FIXTURE_FAILURE')){throw 'Primary or restoration failure was lost'}

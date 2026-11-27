@@ -23,7 +23,8 @@ public partial class MainWindow {
  static string MemberIdentity(ClientIdentity58 i){
   var installation=IdentityPolicy58.Installation(i);
   return i.Machine.ToLowerInvariant()+"|"+i.Name.TrimEnd('.').ToLowerInvariant()+
-   (installation==Guid.Empty?"":"|"+installation.ToString("D"));
+   (installation==Guid.Empty?"":"|"+installation.ToString("D"))+
+   (IdentityPolicy58.HasAdapterEvidence(i)?"|"+IdentityPolicy58.DirectoryObject(i).ToString("D")+"|"+i.AdapterMac.ToUpperInvariant():"");
  }
  void RememberDiagnosticScope(ClientIdentity58 identity){
   if(!IdentityPolicy58.Usable(identity)||manualIdentityScopes.ContainsKey(identity.Key))return;
@@ -48,9 +49,9 @@ public partial class MainWindow {
  // A solitary returning clone can extend only a previously proven, explicitly approved repair.
  List<ClientIdentity58> RepairCandidates58(ClientIdentity58 seen,bool manual){
   var now=DateTimeOffset.UtcNow;
-  var members=IdentityPolicy58.Participants(identities58.Values,seen,now);
+  var members=IdentityPolicy58.Participants(identities58.Values,seen,now,manual);
   manualIdentityScopes.TryGetValue(seen.Key,out var approved);
-  bool confirmed=IdentityPolicy58.Confirmed(members,seen,now);
+  bool confirmed=IdentityPolicy58.Confirmed(members,seen,now,manual);
   bool established=approved?.Distinct().Count()>=2&&identityRepairs58.Values.Any(a=>a.Key.StartsWith(seen.Key+"|",StringComparison.OrdinalIgnoreCase)&&a.JobId.Length>0);
   if(manual&&(confirmed||established)||!manual&&approved==null&&confirmed)return members;
   return members.Where(i=>approved?.Contains(MemberIdentity(i))==true).ToList();
@@ -63,9 +64,17 @@ public partial class MainWindow {
   return identities58.Values.FirstOrDefault(i=>i.Key==key&&i.Fresh(DateTimeOffset.UtcNow));
  }
  static string IdentityRepairAddress(TargetRecord target)=>string.IsNullOrWhiteSpace(target.ConnectionAddress)?target.Host:target.ConnectionAddress;
+ internal static string IdentityRepairDeviceKey(ClientIdentity58 identity,bool manual){
+  var key=identity.Key+"|"+identity.Machine.ToLowerInvariant();
+  var installation=IdentityPolicy58.Installation(identity);
+  if(installation!=Guid.Empty)key+=":"+installation.ToString("D");
+  if(manual&&IdentityPolicy58.HasAdapterEvidence(identity))key+=":ad:"+IdentityPolicy58.DirectoryObject(identity).ToString("D");
+  return key;
+ }
  internal static bool ReuseIdentityForRepair(ClientIdentity58 approved,ClientIdentity58 current,TargetRecord target,WsusSettings settings,DateTimeOffset now){
   if(!IdentityPolicy58.SameApprovedDevice(approved,current,now)||
      !current.Address.Equals(IdentityRepairAddress(target),StringComparison.OrdinalIgnoreCase))return false;
+  if(IdentityPolicy58.HasAdapterEvidence(approved)&&(!Guid.TryParse(target.DirectoryId,out var directory)||directory!=IdentityPolicy58.DirectoryObject(approved)))return false;
   if(current.VerifiedSource.Length==0)return true;
   return SameServer(current.Source,settings)&&DateTimeOffset.TryParse(current.SourceCheckedAt,out var checkedAt)&&
    checkedAt<=now&&now-checkedAt<TimeSpan.FromMinutes(10)&&current.ServerId.Equals(approved.ServerId,StringComparison.OrdinalIgnoreCase);
@@ -92,12 +101,15 @@ public partial class MainWindow {
     if(stop.IsCancellationRequested)break;
     var row=Computers.FirstOrDefault(r=>r.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase));if(row==null||row.Target.AdDisabled)continue;
     string legacyKey=identity.Key+"|"+identity.Machine.ToLowerInvariant();
-    var installation=IdentityPolicy58.Installation(identity);
-    string key=installation==Guid.Empty?legacyKey:legacyKey+":"+installation.ToString("D");
+    string baseKey=IdentityRepairDeviceKey(identity,false);
+    string key=IdentityRepairDeviceKey(identity,manual);
     // A persisted attempt survives a crash, even if delivery acknowledgement was lost.
     var legacy=identityRepairs58.GetValueOrDefault(legacyKey);
-    if(legacy?.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase)==true)key=legacyKey;
-    var prior=identityRepairs58.GetValueOrDefault(key)??legacy;
+    var sameClient=identityRepairs58.Values.Where(a=>a.Host.Equals(identity.Host,StringComparison.OrdinalIgnoreCase)&&
+     (a.Key==legacyKey||a.Key==baseKey||a.Key.StartsWith(baseKey+":ad:",StringComparison.OrdinalIgnoreCase)))
+     .OrderByDescending(a=>a.JobId.Length>0).FirstOrDefault();
+    var prior=sameClient??identityRepairs58.GetValueOrDefault(key)??(key==baseKey?legacy:null);
+    if(sameClient!=null)key=sameClient.Key;
     if(prior!=null&&prior.JobId.Length>0&&(!manual||!History.Any(j=>j.Id==prior.JobId&&j.Targets.All(IdentityRepairNotStarted)))){if(manual)Notify(identity.Name+": попытка ещё активна; проверьте задание "+prior.JobId);continue;}
     void Defer(string reason){
      identityRepairs58[key]=new(){Key=key,Host=row.Host,OldId=identity.SusClientId,Phase=reason,At=DateTimeOffset.UtcNow.ToString("o")};
@@ -118,7 +130,7 @@ public partial class MainWindow {
     }else if(manual){
      var began=DateTimeOffset.UtcNow;
      try{
-      var current=await ReadIdentityWithRetry(frozen.Target,remote.ReadIdentity,stop.Token);
+      var current=await ReadIdentityWithRetry(frozen.Target,remote.ReadIdentityForManualRepair,stop.Token);
       await ResolveIdentitySource(current,ReadWsus(),verifiedSources,stop.Token,retry:true);
       if(!Available())continue;
       current.Address=IdentityRepairAddress(frozen.Target);
@@ -163,7 +175,7 @@ public partial class MainWindow {
 }
 public sealed partial class RemoteService {
  public static string IdentityRepairScript58(ClientIdentity58 identity)=>
-  "$dcExpectedId58="+PowerShellBridge.Literal(identity.SusClientId)+";$dcExpectedMachine58="+PowerShellBridge.Literal(identity.Machine)+";$dcExpectedInstallation58="+PowerShellBridge.Literal(IdentityPolicy58.Installation(identity)==Guid.Empty?"":identity.InstallationId)+";$dcExpectedName58="+PowerShellBridge.Literal(identity.Name)+";$dcExpectedServer58="+PowerShellBridge.Literal(identity.Server)+";$dcExpectedStatusServer58="+PowerShellBridge.Literal(identity.StatusServer)+";"+IdentityRepairBody58;
+  "$dcExpectedId58="+PowerShellBridge.Literal(identity.SusClientId)+";$dcExpectedMachine58="+PowerShellBridge.Literal(identity.Machine)+";$dcExpectedInstallation58="+PowerShellBridge.Literal(IdentityPolicy58.Installation(identity)==Guid.Empty?"":identity.InstallationId)+";$dcExpectedName58="+PowerShellBridge.Literal(identity.Name)+";$dcExpectedServer58="+PowerShellBridge.Literal(identity.Server)+";$dcExpectedStatusServer58="+PowerShellBridge.Literal(identity.StatusServer)+";$dcExpectedAdapterMac58="+PowerShellBridge.Literal(IdentityPolicy58.HasAdapterEvidence(identity)?identity.AdapterMac.ToUpperInvariant():"")+";\n"+IdentityAdapterProbe58+"\n"+IdentityRepairBody58;
  public const string IdentityRepairBody58="""
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.ServiceProcess
@@ -182,6 +194,10 @@ try {
  if($dcExpectedInstallation58){
   $installation58=[string](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography' -Name MachineGuid -ErrorAction Stop).MachineGuid
   if($installation58 -ne $dcExpectedInstallation58){throw 'DC_IDENTITY_NOT_STARTED|Установка Windows изменилась; сброс не выполнен'}
+ }
+ if($dcExpectedAdapterMac58){
+  try{$adapter58=Read-IdentityAdapter58}catch{throw 'DC_IDENTITY_NOT_STARTED|Не удалось повторно проверить физический сетевой адаптер'}
+  if($adapter58 -ne $dcExpectedAdapterMac58){throw 'DC_IDENTITY_NOT_STARTED|Физический сетевой адаптер изменился или не определён; сброс не выполнен'}
  }
  if((Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -ErrorAction Stop).UseWUServer -ne 1){throw 'DC_IDENTITY_NOT_STARTED|UseWUServer=1 не подтверждён; сброс не выполнен'}
  $path58='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate'

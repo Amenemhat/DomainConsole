@@ -16,9 +16,10 @@ public partial class MainWindow {
   }
   identities58[host]=identity;Store.Write("client-identities58.json",identities58);
   if(!allowRepair)RememberDiagnosticScope(identity);
-  if(IdentityPolicy58.Confirmed(identities58.Values,identity,DateTimeOffset.UtcNow)){
+  var participants=IdentityPolicy58.Participants(identities58.Values,identity,DateTimeOffset.UtcNow,manual:!allowRepair);
+  if(IdentityPolicy58.Confirmed(participants,identity,DateTimeOffset.UtcNow,manual:!allowRepair)){
    compromisedIds58.Add(identity.Key);Store.Write("compromised-ids58.json",compromisedIds58.ToList());
-   foreach(var member in IdentityPolicy58.Participants(identities58.Values,identity,DateTimeOffset.UtcNow))Event31(member.Host,"identity58",identity.Key,"Подтверждён общий SusClientId","Warning","ID: "+identity.SusClientId+". Участники: "+string.Join(", ",IdentityPolicy58.Participants(identities58.Values,identity,DateTimeOffset.UtcNow).Select(r=>r.Name))+". Требуется перерегистрация всех участников.");
+   foreach(var member in participants)Event31(member.Host,"identity58",identity.Key,"Подтверждён общий SusClientId","Warning","ID: "+identity.SusClientId+". Участники: "+string.Join(", ",participants.Select(r=>r.Name))+". Требуется перерегистрация всех участников.");
   }
   if(allowRepair)_=VerifyIdentityRegistration58(host);
   if(allowRepair&&surveyWindow==null&&surveyRun==null&&AutoServiceEnabled&&compromisedIds58.Contains(identity.Key))_=RepairIdentityGroup58(host,false);
@@ -86,8 +87,8 @@ public partial class MainWindow {
    bool repairing=anchor!=null&&identityRepairBusy58.Contains(anchor.Key);
    bool busy=surveyRun!=null||repairing;peers.IsEnabled=all.IsEnabled=!busy;stop.IsEnabled=busy;resume.IsEnabled=!busy&&owner&&survey.Results.Count<survey.Hosts.Count;
    var current=anchor;
-   var members=current==null?new List<ClientIdentity58>():IdentityPolicy58.Participants(identities58.Values,current,DateTimeOffset.UtcNow);
-   bool confirmed=current!=null&&IdentityPolicy58.Confirmed(members,current,DateTimeOffset.UtcNow);
+   var members=current==null?new List<ClientIdentity58>():IdentityPolicy58.Participants(identities58.Values,current,DateTimeOffset.UtcNow,manual:true);
+   bool confirmed=current!=null&&IdentityPolicy58.Confirmed(members,current,DateTimeOffset.UtcNow,manual:true);
    var candidates=current==null?new List<ClientIdentity58>():RepairCandidates58(current,true);
    bool expanded=current!=null&&manualIdentityScopes.TryGetValue(current.Key,out var existing)&&existing.Count>0&&candidates.Any(p=>!existing.Contains(MemberIdentity(p)));
    repair.IsEnabled=!busy&&!App.RecoveryPending57&&candidates.Count>0;
