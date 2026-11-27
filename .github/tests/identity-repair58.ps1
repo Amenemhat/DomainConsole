@@ -3,6 +3,8 @@ $ErrorActionPreference='Stop'
 $template=[IO.File]::ReadAllText((Join-Path $ScriptFolder 'identity-repair58.ps1'))
 $installationFixture='55555555-5555-5555-5555-555555555555'
 $template=('$dcExpectedInstallation58='''+$installationFixture+''';$dcExpectedStatusServer58=''http://wsus.invalid:8530'';')+$template.Replace('$dcExpectedInstallation58='''';','').Replace('$dcExpectedStatusServer58='''';','')
+$template=$template.Replace('$dcExpectedAdapterMac58='''';','')
+$template=[regex]::Replace($template,'(?ms)^function Read-IdentityAdapter58 \{.*?^\}\r?\n','')
 $template=$template.Replace('$installer58=New-Object -ComObject Microsoft.Update.Installer','$installer58=$fixtureInstaller58')
 $template=$template.Replace('$session58=New-Object -ComObject Microsoft.Update.Session','$session58=$fixtureSession58')
 $template=$template.Replace("& reg.exe export 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate' $"+'backup58 /y | Out-Null','Export-Fixture58 $backup58')
@@ -11,7 +13,7 @@ $template=$template.Replace('& "$env:windir\System32\wuauclt.exe" /reportnow','R
 $template=$template.Replace('Start-Sleep -Seconds 60','Wait-FixtureAuthorization58')
 $template=$template.Replace('Start-Sleep -Seconds 1','Start-Sleep -Milliseconds 1')
 # Refuse to execute if any system-changing native command escaped the substitutions.
-if($template -match '& reg.exe|& "\$env:windir|New-Object -ComObject'){throw 'Fixture isolation incomplete'}
+if($template -match '& reg.exe|& "\$env:windir|New-Object -ComObject|Get-NetAdapter'){throw 'Fixture isolation incomplete'}
 $prefix=@'
 $ErrorActionPreference='Stop'
 [Console]::OutputEncoding=New-Object Text.UTF8Encoding($false)
