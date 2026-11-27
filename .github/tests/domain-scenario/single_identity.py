@@ -8,7 +8,7 @@ from identity_lab import body, policy, quote, reg
 from single_wsus_wire import accepted_authorization
 
 
-def exercise(ps, system, wait, evidence, save, capture, url, natural_only=False, own_process=False):
+def exercise(ps, system, wait, evidence, save, capture, url, natural_only=False, own_process=False, fresh_auth=False):
     client = "CLONE1"
     server = "DCWSUS"
     group = "DCLabSingleClient"
@@ -20,6 +20,15 @@ def exercise(ps, system, wait, evidence, save, capture, url, natural_only=False,
     verify = body("IdentityConfirmation58.cs", "IdentityServerScript58")
     repair_body = body("IdentityRepair58.cs", "IdentityRepairBody58")
     checks["own_process_control"] = own_process
+    if fresh_auth:
+        boundary = " # A new local ID at service start has not yet been used in a managed scan."
+        if repair_body.count(boundary) != 1:
+            raise RuntimeError("Could not isolate the stage before WSUS authorization")
+        repair_body = repair_body.replace(boundary, """
+ if(!$new58){throw 'The service did not create a local ID for the authorization control'}
+ Write-Output 'LAB: new local ID; no authorization, scan or report requested yet'
+ return
+""" + boundary)
 
     def observe_client():
         snapshot = probe + r"""
@@ -48,6 +57,50 @@ $dcIdentity58|ConvertTo-Json -Compress
             return False
         reported = datetime.fromisoformat(record["ReportedUtc"])
         return reported.year > 2000 and (since is None or reported >= since)
+
+    def test_fresh_authorization(snapshot, original, observation):
+        local = observe_client()
+        observation["before_authorization"] = local
+        identifier = local["SusClientId"]
+        if (not identifier or UUID(identifier) == UUID(original["SusClientId"])
+                or not local["ServiceProcessId"] or local["ServiceProcessId"] == original["ServiceProcessId"]
+                or local["ServiceProcessMembers"] != ["wuauserv"] or local["BootUtc"] != original["BootUtc"]):
+            raise RuntimeError("The new local ID and service process were not confirmed")
+        guard = "$expected=" + quote(identifier) + r"""
+$actual=[string](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate').SusClientId
+if($actual -ne $expected){throw 'The new local ID changed before the lab action'}
+"""
+        began = datetime.now(timezone.utc)
+        observation["authorization_requested_utc"] = began.isoformat()
+        system(client, "single-authorize-before-scan", guard +
+               r'& "$env:windir\System32\wuauclt.exe" /resetauthorization /detectnow', minutes=2)
+        deadline = time.monotonic() + 60
+        while True:
+            trace = snapshot()
+            if accepted_authorization(trace, identifier, began) or time.monotonic() >= deadline:
+                break
+            time.sleep(12)
+        observation["wire_before_managed_search"] = trace
+        if not accepted_authorization(trace, identifier, began):
+            observation["managed_search_started_utc"] = datetime.now(timezone.utc).isoformat()
+            system(client, "single-scan-after-authorization", guard + r"""
+$installer=New-Object -ComObject Microsoft.Update.Installer
+if($installer.IsBusy){throw 'Installer became busy during the lab control'}
+$session=New-Object -ComObject Microsoft.Update.Session
+$session.ClientApplicationID='DomainConsole.SingleFreshAuthorization'
+$search=$session.CreateUpdateSearcher();$search.ServerSelection=1;$search.Online=$true
+$result=[int]$search.Search('IsInstalled=0 and IsHidden=0').ResultCode
+if($result -ne 2){throw ('Managed search result was not successful: '+$result)}
+""", minutes=3)
+        trace = snapshot()
+        observation["wire_after_authorization"] = trace
+        if accepted_authorization(trace, identifier, began):
+            record = observe_server(identifier, local["Name"])
+            if not confirmed(record, identifier, local["Name"], began):
+                system(client, "single-report-new-authorization", guard +
+                       r'& "$env:windir\System32\wuauclt.exe" /reportnow', minutes=2)
+                observation["report_requested"] = True
+        save()
 
     own_setting = "$true" if own_process else "$false"
     settings = f"$p={quote(policy)};$r={quote(reg)};$wsusUrl={quote(url)};$group={quote(group)};$own={own_setting};\n" + r"""
@@ -136,9 +189,13 @@ if($result -ne 2){throw ('Baseline managed search failed: '+$result)}
             except RuntimeError as error:
                 checks["repair_error"] = str(error)
             checks["repair_stdout"] = ps(client, "if(Test-Path C:\\DomainConsoleLab\\single-repair.out){Get-Content -Raw -Encoding UTF8 C:\\DomainConsoleLab\\single-repair.out}")
-            observation["started_utc"] = datetime.now(timezone.utc).isoformat()
-            deadline = time.monotonic() + 600
             try:
+                if fresh_auth:
+                    if "repair_error" in checks or "LAB: new local ID" not in checks["repair_stdout"]:
+                        raise RuntimeError("The lab did not pause at a new local ID")
+                    test_fresh_authorization(snapshot, original, observation)
+                observation["started_utc"] = datetime.now(timezone.utc).isoformat()
+                deadline = time.monotonic() + 600
                 while True:
                     observed = observe_client()
                     checks["client_after"] = observed

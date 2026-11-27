@@ -12,6 +12,7 @@ jobs:
       DC_SINGLE_IDENTITY: '1'
       DC_SINGLE_NATURAL_ONLY: '1'
       DC_SINGLE_OWN_WUA_PROCESS: '1'
+      DC_SINGLE_FRESH_AUTH: '1'
       APP_COMMIT: 3b1996040eda901ade8de64424b26f4cb79fa80a
     steps:
       - uses: actions/checkout@v4
