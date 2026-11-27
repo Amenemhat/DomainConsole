@@ -61,7 +61,9 @@ def verify_windows_firmware(nodes, ps, root, evidence, save):
 
 def exercise(nodes, ps, system, evidence, save, root, gui):
     clients = [n for n in nodes if n.startswith("CLONE")]
-    verify_windows_firmware(nodes,ps,root,evidence,save)
+    pair = len(clients) == 2
+    if not pair:
+        verify_windows_firmware(nodes,ps,root,evidence,save)
     probe = body("Identity58.cs", "IdentityProbe58")
     verify = body("IdentityConfirmation58.cs", "IdentityServerScript58")
     wsus_api = "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');$s=[Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530);"
@@ -79,7 +81,8 @@ $scan=$searcher.Search('IsInstalled=0 and IsHidden=0');if([int]$scan.ResultCode 
 & "$env:windir\\System32\\wuauclt.exe" /reportnow
 """
     def probe_client(node):
-        result = json.loads(ps(node, probe + "\n$dcIdentity58|ConvertTo-Json -Compress"))
+        boot = "\n$dcIdentity58.BootUtc=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString('o')" if pair else ""
+        result = json.loads(ps(node, probe + boot + "\n$dcIdentity58|ConvertTo-Json -Compress"))
         if result.get("Error") or not result.get("Machine") or not result.get("SusClientId"):
             incomplete=evidence["checks"].setdefault("incomplete",{})
             if node not in incomplete:
@@ -101,7 +104,13 @@ foreach($v in 'Registry64','Registry32'){
     def configure(node,shared=None):
         marker="Restart-Service wuauserv -Force"
         policy_only,scan=settings.split(marker,1)
-        if node==clients[-2]:
+        if pair:
+            policy_only+=r"""Stop-Service wuauserv
+(Get-Service wuauserv).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(30))
+& sc.exe config wuauserv type= own | Out-Null
+if($LASTEXITCODE){throw 'Could not isolate the disposable client service'}
+"""
+        elif node==clients[-2]:
             policy_only=policy_only.replace("http://dcwsus.dc057.test:8530","http://dcwsus:8530")
         if shared is None:
             # Reproduce an imaged machine on a pristine OS that may have no SusClientId yet.
@@ -129,6 +138,19 @@ foreach($v in 'Registry64','Registry32'){
         configure(node,shared)
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         list(pool.map(seed_clone,clients[1:]))
+    if pair:
+        installation = probe_client(clients[0])["InstallationId"]
+        uuid.UUID(installation)
+        ps(clients[1], "if($env:COMPUTERNAME -ne 'CLONE2' -or (Get-CimInstance Win32_ComputerSystem).Domain -ne 'dc057.test'){throw 'Disposable domain clone required'};"
+           + "Set-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Cryptography' -Name MachineGuid -Value " + quote(installation))
+        nics = {node: ps(node, r"""
+$active=@(Get-NetAdapter -Physical -ErrorAction Stop|Where-Object Status -eq 'Up')
+if($active.Count -ne 1){throw 'Exactly one isolated adapter is required'}
+$active[0].MacAddress
+""") for node in clients}
+        if len(set(nics.values())) != len(clients) or not all(nics.values()):
+            raise RuntimeError("The clone pair must have separate physical adapter addresses")
+        evidence["checks"]["pair_adapters"] = nics
     def resources(label, active):
         sample = r"""
 $p=@(Get-CimInstance Win32_Process|Where-Object Name -in 'DomainConsole.Agent.exe','wsmprovhost.exe','powershell.exe')
@@ -157,7 +179,9 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
         stable=read_all()
         evidence["checks"]["before"]=stable
         save()
-        if len({r["Machine"].lower() for r in stable.values()})==len(clients) and all(uuid.UUID(r["SusClientId"])==uuid.UUID(shared) for r in (*before.values(),*stable.values())):
+        hardware_count = len({r["Machine"].lower() for r in stable.values()})
+        valid_hardware = hardware_count == len(clients) if not pair else hardware_count == 1 and len({r["InstallationId"] for r in stable.values()}) == 1
+        if valid_hardware and all(uuid.UUID(r["SusClientId"])==uuid.UUID(shared) for r in (*before.values(),*stable.values())):
             before=stable
             break
         if attempt:
@@ -173,7 +197,7 @@ $size=if(Test-Path $store){(Get-ChildItem $store -Recurse -File|Measure-Object -
     evidence["checks"]["initial_server_records"]=initial
     save()
     if len(initial)!=1 or uuid.UUID(initial[0]["Id"])!=uuid.UUID(shared):
-        raise RuntimeError("Expected exactly one server record hiding five distinct clients: "+str(initial))
+        raise RuntimeError("Expected exactly one WSUS record for the shared client ID: "+str(initial))
     for node in clients[1:]:
         ps(node,"Remove-NetFirewallRule -Name DCLabPrepareClone;if(Get-NetFirewallRule -Name DCLabPrepareClone -ErrorAction SilentlyContinue){throw 'Establishment firewall rule still present'}")
     evidence["checks"]["fixture_network_restrictions_removed"]=True
@@ -315,68 +339,80 @@ $rc=[int]$search.Search('IsInstalled=0 and IsHidden=0').ResultCode
             finally:
                 save()
 
-    held = clients[-1]
-    tap = "dclab"+str(nodes[held])
-    subprocess.run(["ip","link","set",tap,"down"],check=True)
-    try:
-        try:
-            from socket import create_connection
-            with create_connection(("10.77.57."+str(nodes[held]),5985),timeout=2):
-                raise RuntimeError("Disconnected guest remained reachable")
-        except OSError:
-            evidence["checks"]["offline"] = held
+    def first_consent(active):
         gui.start(before)
         gui.wait("read-only.done",900)
         evidence["checks"]["read-only-survey"]=json.loads(gui.diagnostics())
         save()
-        resources("diagnosis",clients[:-1])
+        resources("diagnosis",active)
         for node,m in evidence["checks"]["resource_samples"]["diagnosis"].items():
             baseline=evidence["checks"]["resource_samples"]["before"][node]
             if m["RegistryBackups"]!=baseline["RegistryBackups"] or m["Agent"]>baseline["Agent"] or m["OwnedTasks"]>baseline["OwnedTasks"]:
                 raise RuntimeError("Read-only diagnosis changed the client on "+node)
         gui.mark("allow-consent.done")
         gui.wait("first-consent.done",800)
-        evidence["checks"]["consent-four"]=gui.remote("Get-Content C:\\DomainConsoleLab\\first-consent.done")
+        evidence["checks"]["initial_consent"]=gui.remote("Get-Content C:\\DomainConsoleLab\\first-consent.done")
         save()
-        resources("during",clients[:-1])
-        def changed(active):
-            deadline=time.monotonic()+900
-            last_diag=0
-            while time.monotonic()<deadline:
-                readings={}
-                for node in active:
-                    try:
-                        current=probe_client(node)
-                    except RuntimeError:
-                        # Windows can briefly have no ID between the guarded removal and registration.
-                        continue
-                    if current["SusClientId"].lower()!=shared.lower():
-                        readings[node]=current
-                if len(readings)==len(active):
-                    return readings
-                if time.monotonic()-last_diag>60:
-                    evidence["checks"]["repair-progress"]=json.loads(gui.diagnostics())
-                    save()
-                    last_diag=time.monotonic()
-                time.sleep(15)
-            capture_failed_repairs(active)
+        resources("during",active)
+
+    def changed(active):
+        deadline=time.monotonic()+900
+        last_diag=0
+        while time.monotonic()<deadline:
+            readings={}
+            for node in active:
+                try:
+                    current=probe_client(node)
+                except RuntimeError:
+                    # Windows can briefly have no ID between removal and registration.
+                    continue
+                if current["SusClientId"].lower()!=shared.lower():
+                    readings[node]=current
+            if len(readings)==len(active):
+                return readings
+            if time.monotonic()-last_diag>60:
+                evidence["checks"]["repair-progress"]=json.loads(gui.diagnostics())
+                save()
+                last_diag=time.monotonic()
+            time.sleep(15)
+        capture_failed_repairs(active)
+        if not pair:
             compare_wua_restart(active)
-            raise TimeoutError("Packaged console did not change registrations on "+", ".join(active)+" · "+gui.diagnostics()[:3300])
-        evidence["checks"]["four-replacements"]=changed(clients[:-1])
+        raise TimeoutError("Packaged console did not change registrations on "+", ".join(active)+" · "+gui.diagnostics()[:3300])
+
+    if pair:
+        first_consent(clients)
+        evidence["checks"]["pair_replacements"]=changed(clients)
         save()
-    finally:
-        subprocess.run(["ip","link","set",tap,"up"],check=True)
-    if probe_client(held)["SusClientId"].lower()!=shared.lower():
-        raise RuntimeError("Offline target was unexpectedly reset")
-    gui.mark("fifth-online.done")
-    gui.wait("expanded.done", 600)
-    evidence["checks"]["consent-five"]=gui.remote("Get-Content C:\\DomainConsoleLab\\expanded.done")
-    save()
-    changed([held])
+    else:
+        held = clients[-1]
+        tap = "dclab" + str(nodes[held])
+        subprocess.run(["ip", "link", "set", tap, "down"], check=True)
+        try:
+            from socket import create_connection
+            try:
+                with create_connection(("10.77.57." + str(nodes[held]), 5985), timeout=2):
+                    raise RuntimeError("Disconnected guest remained reachable")
+            except OSError:
+                evidence["checks"]["offline"] = held
+            first_consent(clients[:-1])
+            evidence["checks"]["four-replacements"] = changed(clients[:-1])
+            save()
+        finally:
+            subprocess.run(["ip", "link", "set", tap, "up"], check=True)
+        if probe_client(held)["SusClientId"].lower() != shared.lower():
+            raise RuntimeError("Offline target was unexpectedly reset")
+        gui.mark("fifth-online.done")
+        gui.wait("expanded.done", 600)
+        evidence["checks"]["consent-five"] = gui.remote("Get-Content C:\\DomainConsoleLab\\expanded.done")
+        save()
+        changed([held])
     after = {node: probe_client(node) for node in clients}
     ids={r["SusClientId"].lower() for r in after.values()}
     if shared.lower() in ids or len(ids)!=len(clients):
         raise RuntimeError("Repair failed to produce distinct new Windows IDs")
+    if pair and any(after[node]["BootUtc"] != before[node]["BootUtc"] for node in clients):
+        raise RuntimeError("Unexpected Windows reboot during the clone pair check")
     evidence["checks"]["after"] = after
     attempts=json.loads(gui.diagnostics())["Repair"]
     started={item["Host"].split(".",1)[0].upper():item["StartedUtc"] for item in attempts if item["JobId"]}
@@ -396,7 +432,7 @@ $rc=[int]$search.Search('IsInstalled=0 and IsHidden=0').ResultCode
                 continue
             # An update report must be newer than the repair of this exact device.
             if (target["Id"].lower()==current["SusClientId"].lower() and target["Name"].rstrip(".").lower()==current["Name"].rstrip(".").lower()
-                    and datetime.fromisoformat(target["ReportedUtc"])>=repair_start[node]
+                    and target["ReportedUtc"] and datetime.fromisoformat(target["ReportedUtc"])>=repair_start[node]
                     and "DCLabClients" in target["Groups"]):
                 pending.remove(node)
                 evidence["checks"].setdefault("confirmed",{})[node]=target
@@ -414,4 +450,4 @@ $rc=[int]$search.Search('IsInstalled=0 and IsHidden=0').ResultCode
         if m["Agent"]>1:
             raise RuntimeError("Multiple agents remained on "+node)
     save()
-    print("Real WSUS confirmed five independent reports and AD devices.",flush=True)
+    print(f"Real WSUS confirmed {len(clients)} independent reports and AD devices.",flush=True)

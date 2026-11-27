@@ -1,7 +1,7 @@
-name: Verify DomainConsole 0.59 on five isolated WSUS clients
+name: Verify two cloned WSUS clients through the packaged console
 on:
   push:
-    branches: ['lab/0.59-identity']
+    branches: ['lab/0.59-clone-pair']
 permissions:
   contents: read
   actions: read
@@ -11,8 +11,9 @@ jobs:
     timeout-minutes: 240
     env:
       GH_TOKEN: ${{ github.token }}
-      APP_COMMIT: 5334b257f807e8d91b2f23168f64b9868d85efa3
-      APP_RUN: '45902821605'
+      DC_IDENTITY_CLONE_PAIR: '1'
+      APP_COMMIT: 87e53d922695a1a7c6dffd17a19a18c678b48062
+      APP_RUN: '46002991760'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -70,7 +71,7 @@ jobs:
           cp -r .github/tests/domain-scenario "$lab/scenario-1"
           git rev-parse HEAD:.github/tests/domain-scenario > "$lab/scenario-1.tree"
           mv "$lab/package.json.tmp" "$lab/package.json"
-      - name: Check four initial repairs, the returning fifth client and all WSUS registrations
+      - name: Confirm one reset per clone and a fresh WSUS report per new ID
         run: |
           bash .github/lab/wait-for-guests.sh attempt-1 85
           jq -e '.passed==true' "$RUNNER_TEMP/dc-wsus-lab/attempt-1.json"

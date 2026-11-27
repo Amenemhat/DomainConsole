@@ -109,6 +109,7 @@ function Application-Window($title,[bool]$prefix=$false){
  })
  $chosen='clone1.dc057.test'
  $observed=Get-Content "$lab\observations.json" -Raw|ConvertFrom-Json
+ $pair=@($observed.PSObject.Properties).Count -eq 2
  $previous=@{}
  foreach($x in $observed.PSObject.Properties.Value){
   $hostName=$x.Name.ToLowerInvariant()
@@ -147,15 +148,19 @@ function Application-Window($title,[bool]$prefix=$false){
  if(@($discovered.Results.PSObject.Properties).Count -ne $computers.Count){throw 'The confirmed domain pass did not cover every AD computer'}
  Set-Content "$lab\read-only.done" 'checked'
  Wait-For {Test-Path "$lab\allow-consent.done"} 'read-only resource measurements' 120|Out-Null
- $firstCaption=Run-Repair $window 'Сбросить SusClientId' '4 ПК$'
- Set-Content "$lab\first-consent.done" '4'
- Wait-For {Test-Path "$lab\fifth-online.done"} 'new network observation' 1100|Out-Null
- Browse-Domain $window
- $extendedCaption=Run-Repair $window 'Подтвердить расширение группы' '1 ПК'
- Set-Content "$lab\expanded.done" '5'
- Wait-For {Test-Path "$lab\server-reports.done"} 'five external WSUS records' 2200|Out-Null
+ $expected=if($pair){2}else{5}
+ $initial=if($pair){2}else{4}
+ $firstCaption=Run-Repair $window 'Сбросить SusClientId' "$initial ПК$"
+ Set-Content "$lab\first-consent.done" $initial
+ if(!$pair){
+  Wait-For {Test-Path "$lab\fifth-online.done"} 'new network observation' 1100|Out-Null
+  Browse-Domain $window
+  $extendedCaption=Run-Repair $window 'Подтвердить расширение группы' '1 ПК'
+  Set-Content "$lab\expanded.done" '5'
+ }
+ Wait-For {Test-Path "$lab\server-reports.done"} 'fresh external WSUS records' 2200|Out-Null
  Click (Wait-For {Button $window 'Повторить проверку результата'} 'read-only verification')
- Wait-For {$attempts=Read-Data 'identity-repairs58.json';$attempts -and @($attempts.PSObject.Properties.Value|Where-Object Phase -eq 'Подтверждено').Count -eq 5} 'five confirmed registrations in the product' 400|Out-Null
+ Wait-For {$attempts=Read-Data 'identity-repairs58.json';$attempts -and @($attempts.PSObject.Properties.Value|Where-Object Phase -eq 'Подтверждено').Count -eq $expected} 'confirmed registrations in the product' 400|Out-Null
  $evidence=@{FirstConsentButton=$firstCaption;ExtensionButton=$extendedCaption;InitialCachedClients=1;InitialSurvey=$limited;FirstDomainSurvey=$discovered;Version=$process.MainModule.FileVersionInfo.ProductVersion;Attempts=(Read-Data 'identity-repairs58.json');Survey=(Read-Data 'identity-survey.json')}
  [IO.File]::WriteAllText("$lab\gui-evidence.json",($evidence|ConvertTo-Json -Depth 10),$utf8)
  }catch{

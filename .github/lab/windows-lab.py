@@ -30,12 +30,15 @@ nodes = {"DCWSUS": 10, "DCAD": 11, **{f"CLONE{i}": 20 + i for i in range(1, 6)}}
 bootstrap_only=os.environ.get("DC_BOOTSTRAP_ONLY")=="1"
 single_identity=os.environ.get("DC_SINGLE_IDENTITY")=="1"
 single_natural=single_identity and os.environ.get("DC_SINGLE_NATURAL_ONLY")=="1"
+clone_pair=os.environ.get("DC_IDENTITY_CLONE_PAIR")=="1"
 if bootstrap_only:
     nodes={"DCWSUS":10}
 elif single_natural:
     nodes={"DCWSUS":10,"CLONE1":21}
 elif single_identity:
     nodes={"DCWSUS":10,"DCAD":11,"CLONE1":21}
+elif clone_pair:
+    nodes={"DCWSUS":10,"DCAD":11,"CLONE1":21,"CLONE2":22}
 private_addresses=["10.77.57."+str(n) for n in nodes.values()]
 os.environ["NO_PROXY"]=os.environ["no_proxy"]=",".join(["localhost","127.0.0.1",*private_addresses,os.environ.get("NO_PROXY","")])
 evidence = {"source": os.environ["GITHUB_SHA"], "booted": {}, "checks": {}}
@@ -115,8 +118,9 @@ def prepare(node):
 def boot(node, gpt, specialize=False):
     memory = 3584 if specialize or node == "DCWSUS" else 2048 if node=="DCAD" else 1536
     tap = "dclab" + str(nodes[node])
+    firmware_id=hardware_ids["CLONE1"] if clone_pair and node.startswith("CLONE") else hardware_ids[node]
     args = [qemu, "-accel", "kvm", "-cpu", "host", "-smp", "2", "-m", str(memory),
-            "-machine", ("q35" if gpt else "pc")+",smbios-entry-point-type=32", "-uuid", hardware_ids[node], "-smbios", f"type=1,manufacturer=DCLab,product=WindowsDomainGuest,serial={node},uuid={hardware_ids[node]}", "-name", node,
+            "-machine", ("q35" if gpt else "pc")+",smbios-entry-point-type=32", "-uuid", firmware_id, "-smbios", f"type=1,manufacturer=DCLab,product=WindowsDomainGuest,serial={node},uuid={firmware_id}", "-name", node,
             "-drive", f"file={root / (node + '.qcow2')},format=qcow2,if=ide",
             "-cdrom", str(root / "drivers.iso"), "-boot", "c", "-display", "none",
             "-monitor", f"unix:{root / (node + '.sock')},server=on,wait=off", "-serial", "none",
@@ -304,6 +308,16 @@ def setup_domain():
 
 def join(node):
     ou="LabA" if nodes[node]%2 else "LabB"
+    if clone_pair:
+        ps(node,r"""
+$end=[DateTime]::UtcNow.AddMinutes(2)
+do {
+ $srv=Resolve-DnsName '_ldap._tcp.dc._msdcs.dc057.test' -Type SRV -Server 10.77.57.11 -DnsOnly -QuickTimeout -ErrorAction SilentlyContinue
+ if($srv.NameTarget){return}
+ Start-Sleep -Seconds 5
+}while([DateTime]::UtcNow -lt $end)
+throw 'The isolated domain SRV record was not advertised'
+""")
     start_role_task(node,"join-domain","Get-NetAdapter|Where-Object Status -eq Up|Set-DnsClientServerAddress -ServerAddresses 10.77.57.11;"
                     +"$cred=[pscredential]::new('DCLAB\\Administrator',(ConvertTo-SecureString '"+password+"' -AsPlainText -Force));"
                     +f"Add-Computer -DomainName dc057.test -OUPath 'OU={ou},DC=dc057,DC=test' -Credential $cred -Force")
