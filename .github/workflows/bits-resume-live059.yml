@@ -16,11 +16,11 @@ jobs:
       APP_SHA256: 4b10a3a0edbd999be29e8eb9a96e1dc17ff1776dd30231bb1e86bcc533fe4a9b
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 3
       - name: Verify the application script still matches the candidate
         shell: powershell
         run: |
+          git fetch --no-tags --depth=1 origin $env:APP_COMMIT
+          if($LASTEXITCODE){throw 'Could not retrieve the exact candidate source'}
           git diff --exit-code $env:APP_COMMIT HEAD -- DomainConsole-CSharp
           if($LASTEXITCODE){throw 'Candidate source differs from the lab source'}
       - name: Resume the original SYSTEM transfer through native BITS
