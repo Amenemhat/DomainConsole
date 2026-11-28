@@ -58,8 +58,7 @@ try{
    if(Test-Path -LiteralPath $err){throw ([IO.File]::ReadAllText($err))}
    if(Test-Path -LiteralPath $out){
     $result=Get-Content -LiteralPath $out -Raw -Encoding UTF8|ConvertFrom-Json -ErrorAction Stop
-    $at=[DateTime]::MinValue
-    if(![DateTime]::TryParse([string]$result.CollectedUtc,[ref]$at) -or $at.ToUniversalTime() -lt $started){throw 'Свежий результат проверки не подтверждён'}
+    if(!$result.CollectedUtc -or ([DateTimeOffset]$result.CollectedUtc).UtcDateTime -lt $started){throw 'Свежий результат проверки не подтверждён'}
     $result|ConvertTo-Json -Depth 12 -Compress
     return
    }

@@ -44,11 +44,11 @@ function Confirm-ActiveUpdate($folder) {
     if ($state.Status -ne 'Running' -or $state.ManagedSource54 -ne $true -or !$proof -or
         [guid]$proof.Id -ne $id -or [guid]$proof.UpdateId -ne [guid]$request.Proof.UpdateId -or
         $proof.Revision -lt 1 -or $proof.Revision -ne $request.Proof.Revision -or [uri]$proof.Url -ne $url) { return $false }
-    $seen=[DateTimeOffset]::Parse([string]$proof.ObservedUtc)
+    $seen=[DateTimeOffset]$proof.ObservedUtc
     if ($seen -gt [DateTimeOffset]::UtcNow -or [DateTimeOffset]::UtcNow-$seen -gt [TimeSpan]::FromSeconds(90)) { return $false }
     $executor=Get-Process -Id ([int]$state.ExecutorPid37) -ErrorAction SilentlyContinue
     if (!$executor -or $executor.ProcessName -ne 'DomainConsole.Agent') { return $false }
-    return ([Math]::Abs(($executor.StartTime.ToUniversalTime()-[datetime]::Parse($state.ExecutorStarted37).ToUniversalTime()).TotalSeconds) -lt 2)
+    return ([Math]::Abs(($executor.StartTime.ToUniversalTime()-([datetime]$state.ExecutorStarted37).ToUniversalTime()).TotalSeconds) -lt 2)
 }
 
 function Report-LocalWindowsUpdate([datetime]$after) {

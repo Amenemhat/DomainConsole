@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 12
     env:
-      APP_COMMIT: b00e2981c8299ae26a47b11a77b9c7bb6888634a
+      APP_COMMIT: ac4a741beac62c0b68abe0b42a4b41811ab72a7f
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,7 +22,12 @@ jobs:
           if($LASTEXITCODE){throw 'Candidate source differs from the lab source'}
       - name: Resume the original SYSTEM transfer through native BITS
         shell: powershell
-        run: ./.github/tests/bits-resume-live/live-resume.ps1
+        run: |
+          $previous=(Get-TimeZone).Id
+          try {
+            Set-TimeZone -Id 'Belarus Standard Time'
+            ./.github/tests/bits-resume-live/live-resume.ps1
+          } finally { Set-TimeZone -Id $previous }
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -71,3 +71,44 @@ foreach($name in 'paused','queued','moving','foreign','duplicate','busy','bytes-
     if($name -eq 'denied' -and $result.Message -notmatch 'access denied'){throw 'Resume failure was hidden'}
     Write-Output "PASS BITS resume $name"
 }
+
+function Get-Process {
+    param($Id)
+    @{ProcessName='DomainConsole.Agent';StartTime=$script:executorStart}
+}
+$fixtureRoot=Join-Path ([IO.Path]::GetTempPath()) ('dc-bits187-'+[guid]::NewGuid().ToString('N'))
+$previousRoot=$env:ProgramData
+try {
+    $env:ProgramData=$fixtureRoot
+    $operation=[guid]::NewGuid()
+    $jobPath=Join-Path $fixtureRoot ('DomainConsoleCSharp\'+$operation.ToString())
+    New-Item -ItemType Directory -Path $jobPath -Force | Out-Null
+    $script:executorStart=[DateTime]::UtcNow
+    $remoteTime=([DateTimeOffset]$script:executorStart).ToOffset([TimeSpan]::FromHours(3)).ToString('o')
+    $proof=@{Id=$id.ToString();UpdateId=[guid]::NewGuid().ToString();Revision=4;Url=$request.RemoteName;ObservedUtc=$remoteTime}
+    $state=@{Status='Running';ManagedSource54=$true;ManagedBits187=$proof
+             ExecutorPid37=42;ExecutorStarted37=$remoteTime}
+    $state | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $jobPath 'status.json') -Encoding UTF8
+    $request | Add-Member -NotePropertyName Proof -NotePropertyValue $proof
+    $request | Add-Member -NotePropertyName Operation -NotePropertyValue ($operation.ToString())
+    $request.Automatic=$true
+    $script:case='automatic'
+    $script:reads=0
+    $script:calls=@()
+    $literal="'"+($request | ConvertTo-Json -Depth 6 -Compress).Replace("'","''")+"'"
+    $autoScript=[ScriptBlock]::Create($raw.Replace("'{}'",$literal))
+    $accepted=& $autoScript | ConvertFrom-Json
+    $again=& $autoScript | ConvertFrom-Json
+    if(!$accepted.AwaitGrowth -or $again.AwaitGrowth -or ($script:calls -join ',') -ne 'Suspend,Resume' -or
+       $again.Message -notmatch 'уже была'){
+        throw "Single automatic attempt was not persisted. $($accepted.Message) / $($again.Message)"
+    }
+    $request.Proof.Revision=5
+    $literal="'"+($request | ConvertTo-Json -Depth 6 -Compress).Replace("'","''")+"'"
+    $mismatch=& ([ScriptBlock]::Create($raw.Replace("'{}'",$literal))) | ConvertFrom-Json
+    if($mismatch.Message -notmatch 'пакета не подтверждено' -or $script:calls.Count -ne 2){throw 'Changed update revision was accepted'}
+    Write-Output 'PASS BITS automatic attempt persistence, update revision and offset timestamps'
+}finally{
+    $env:ProgramData=$previousRoot
+    if(Test-Path -LiteralPath $fixtureRoot){Remove-Item -LiteralPath $fixtureRoot -Recurse -Force}
+}
