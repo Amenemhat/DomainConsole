@@ -46,7 +46,7 @@ function JobFor($hostName){
 $process=$null
 try {
     Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes
-    $desktop=[Windows.Automation.AutomationElement]::RootElement
+    . (Join-Path $lab 'window-discovery.ps1')
     $children=[Windows.Automation.TreeScope]::Descendants
     function Find($parent,$property,$value){
         $condition=[Windows.Automation.PropertyCondition]::new($property,$value)
@@ -78,7 +78,7 @@ try {
         [void]$submit.AddScript('param($b) $b.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()').AddArgument($editorButton)
         $op=$submit.BeginInvoke()
         try {
-            $dialog=Wait-For {ByName $desktop 'Подтверждение действия и целей'} 'target consent' 30
+            $dialog=Wait-For {Application-Window 'Подтверждение действия и целей'} 'target consent' 30
             if($batch){
                 $scope=Wait-For {ByName $dialog 'Все отмеченные: 2'} 'exactly two marked targets' 15
                 $scope.GetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern).Select()
@@ -105,7 +105,7 @@ try {
     Save-Json 'auto-service31.json' $false
     Save-Json 'shell-mode.json' 1
     $process=Start-Process (Join-Path $dir 'DomainConsole.exe') -WorkingDirectory $dir -ArgumentList '--software-rendering' -PassThru
-    $main=Wait-For {Find $desktop ([Windows.Automation.AutomationElement]::ProcessIdProperty) $process.Id} 'packaged main window'
+    $main=Wait-For {Application-Window 'DomainConsole' $true} 'packaged main window'
     $tree=Wait-For {ById $main 'OuTree'} 'computer tree'
     Mark-Target $tree 'DCWSUS'
     Mark-Target $tree 'CLONE1'
@@ -141,7 +141,13 @@ try {
     $evidence=@{Partial=$partial;Jobs=$final;RepeatRejected=$true;OriginalJobsReconciled=$true;Version=$process.MainModule.FileVersionInfo.ProductVersion}
     [IO.File]::WriteAllText((Join-Path $lab 'gui-evidence.json'),($evidence|ConvertTo-Json -Depth 10),$utf8)
 }catch{
-    [IO.File]::WriteAllText((Join-Path $lab 'gui-error.txt'),($_|Out-String),$utf8)
+    $problem=$_|Out-String
+    if($process){
+        $process.Refresh()
+        $problem+="`nAppExited=$($process.HasExited) AppSession=$($process.SessionId) HostSession=$((Get-Process -Id $PID).SessionId)"
+        if(!$process.HasExited){$problem+="`nApp windows: "+[DCLabNativeWindows]::Inventory($process.Id)}
+    }
+    [IO.File]::WriteAllText((Join-Path $lab 'gui-error.txt'),$problem,$utf8)
     exit 1
 }finally{
     if($process -and !$process.HasExited){[void]$process.CloseMainWindow()}
