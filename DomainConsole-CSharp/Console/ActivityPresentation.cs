@@ -27,9 +27,12 @@ public partial class MainWindow {
   BackgroundGroup.Visibility=Visibility.Collapsed;BackgroundProgress.Visibility=Visibility.Collapsed;DownloadPriorityButton.Visibility=Visibility.Collapsed;ContinueBits187.Visibility=Visibility.Collapsed;
   var downloadReceipt=bitsReceipts187.GetValueOrDefault(row.Host);
   if(downloadReceipt?.Endpoint!=Identity40.EndpointKey(ConnectionStore.Capture(selected.Target)))downloadReceipt=null;
-  if(backgroundUpdates.TryGetValue(row.Host,out var live)&&(live.Downloads.Count>0||live.InstallerBusy||live.Limitation.Length>0||downloadReceipt!=null)){
+  backgroundUpdates.TryGetValue(row.Host,out var live);
+  if(downloadReceipt!=null||live!=null&&(live.Downloads.Count>0||live.InstallerBusy||live.Limitation.Length>0)){
+   live??=new();
    BackgroundGroup.Visibility=Visibility.Visible;BackgroundSummary.Text="Фоновая активность клиента";BackgroundSummary.ToolTip=BackgroundLabel(live);BackgroundRelation.Text="Это отдельный снимок клиента, не результат выбранного задания. Связь записей BITS с этим запуском не установлена.";
-   var details=(downloadReceipt!=null?downloadReceipt.Text+"\n\n":"")+BackgroundText(row.Host,live)+"\n\n"+string.Join("\n\n",live.Downloads.Take(8).Select(d=>"Задание: "+d.Id+"\nФайл: "+d.LocalName+"\nИсточник: "+d.RemoteName+"\n"+DownloadSource(d,live)+"\nИзменено: "+LocalDateConverter.Format(d.ModifiedUtc)))+(live.Limitation.Length>0?"\nОшибка дополнительного опроса не меняет итог основного задания.":"");
+   if(downloadReceipt!=null)BackgroundRelation.Text=downloadReceipt.Text;
+   var details=BackgroundText(row.Host,live)+"\n\n"+string.Join("\n\n",live.Downloads.Take(8).Select(d=>"Задание: "+d.Id+"\nФайл: "+d.LocalName+"\nИсточник: "+d.RemoteName+"\n"+DownloadSource(d,live)+"\nИзменено: "+LocalDateConverter.Format(d.ModifiedUtc)))+(live.Limitation.Length>0?"\nОшибка дополнительного опроса не меняет итог основного задания.":"");
    if(BackgroundDetails.Text!=details)BackgroundDetails.Text=details;
    var download=live.Downloads.FirstOrDefault(d=>d.State=="Transferring");
    if(FreshActivity(live)&&download!=null){BackgroundProgress.Visibility=Visibility.Visible;BackgroundProgress.IsIndeterminate=!download.Total.HasValue||download.Total<=0||download.Received>download.Total;BackgroundProgress.Value=download.Total>0?Math.Clamp((double)download.Received*100/download.Total.Value,0,100):0;}

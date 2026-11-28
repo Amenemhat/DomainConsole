@@ -11,6 +11,16 @@ public sealed partial class RemoteService {
 
  public static string BitsSystemScript187(string input)=>BoundedSystemTask59(BitsResumeScript187(input),"BitsControl187");
 
+ public static string BitsActivitySystemScript187()=>BoundedSystemTask59(LiveUpdateScript,"BitsControl187");
+
+ public async Task<LiveUpdateActivity> ReadBitsActivity187(TargetRecord target){
+  using var lane=PollingControl43.Manual56("control");
+  using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(65));
+  if(Local(target))RequireLocalAdmin();
+  var json=await PowerShellBridge.Execute(Invoke(target,BitsActivitySystemScript187()),timeout.Token);
+  return ParseData34<LiveUpdateActivity>(json,"проверка BITS и установщика Windows Update");
+ }
+
  public async Task<string> ResumeBits187(TargetRecord target,BackgroundDownload download,LiveUpdateActivity live,
   ManagedBitsTransfer? proof,string operation,bool automatic) {
   using var lane=automatic?null:PollingControl43.Manual56("control");
@@ -74,15 +84,31 @@ public partial class MainWindow {
   &&live.Downloads.Count(d=>Uri.TryCreate(d.RemoteName,UriKind.Absolute,out var u)&&u.Equals(file)
      ||d.LocalName.Equals(download.LocalName,StringComparison.OrdinalIgnoreCase))==1;
 
- bool CanResumeBits187(TargetRecord endpoint,BackgroundDownload download,LiveUpdateActivity live,int minutes,DateTimeOffset now){
-  if(!DateTimeOffset.TryParse(live.CollectedUtc,out var at)||at>now||now-at>=TimeSpan.FromSeconds(90)
-    ||live.InstallerBusy||live.InstallationEvidence.Length!=0||live.Limitation.Length!=0||!WsusBits187(download,live)
-    ||!Guid.TryParse(download.Id,out var id)||id==Guid.Empty)return false;
-  if(download.State=="Suspended")return true;
-  if(download.State!="Queued"||!bits187.TryGetValue(BitsKey187(endpoint.Host,id),out var sample))return false;
-  return sample.Endpoint==Identity40.EndpointKey(endpoint)&&sample.Seen==at&&sample.Bytes==download.Received
-   &&sample.Samples>=3&&at-sample.Changed>=TimeSpan.FromMinutes(minutes);
+ static bool FreshBitsActivity187(LiveUpdateActivity live,DateTimeOffset now,out DateTimeOffset at)=>
+  DateTimeOffset.TryParse(live.CollectedUtc,out at)&&at<=now&&now-at<TimeSpan.FromSeconds(90);
+
+ bool HasBitsActivity187(TargetRecord endpoint,LiveUpdateActivity live,DateTimeOffset now)=>
+  live.Limitation.Length==0&&FreshBitsActivity187(live,now,out var at)&&
+  live.Downloads.Any(d=>Guid.TryParse(d.Id,out var id)&&bits187.TryGetValue(BitsKey187(endpoint.Host,id),out var sample)
+    &&sample.Endpoint==Identity40.EndpointKey(endpoint)&&sample.Seen==at);
+
+ string BitsResumeBlock187(TargetRecord endpoint,BackgroundDownload download,LiveUpdateActivity live,int minutes,DateTimeOffset now){
+  if(live.Limitation.Length>0)return "Не удалось проверить BITS и установщик Windows Update. "+live.Limitation.Trim(' ',';');
+  if(!FreshBitsActivity187(live,now,out var at))return "Снимок BITS устарел. Нажмите «Продолжить скачивание» ещё раз для проверки.";
+  if(live.InstallerBusy||live.InstallationEvidence.Length>0)return "Обнаружена установка или обслуживание Windows. Дождитесь завершения. "+live.InstallationEvidence;
+  if(!WsusBits187(download,live)||!Guid.TryParse(download.Id,out var id)||id==Guid.Empty)
+   return "Принадлежность передачи Windows Update и источнику WSUS не подтверждена либо найден дубль.";
+  if(download.State=="Suspended")return "";
+  if(download.State!="Queued")return "Состояние передачи изменилось · BITS "+download.State+".";
+  var sample=bits187.GetValueOrDefault(BitsKey187(endpoint.Host,id));
+  if(sample==null||sample.Endpoint!=Identity40.EndpointKey(endpoint)||sample.Seen!=at||sample.Bytes!=download.Received)
+   return "Для передачи в очереди пока нет последовательных замеров по тому же GUID.";
+  if(sample.Samples>=3&&at-sample.Changed>=TimeSpan.FromMinutes(minutes))return "";
+  return "BITS в очереди · без роста байтов подтверждено "+Age(at-sample.Changed)+" из "+minutes+
+   " мин. Передача сохранена. Замеры продолжатся в обычном опросе.";
  }
+ bool CanResumeBits187(TargetRecord endpoint,BackgroundDownload download,LiveUpdateActivity live,int minutes,DateTimeOffset now)=>
+  BitsResumeBlock187(endpoint,download,live,minutes,now).Length==0;
 
  async Task MaybeRecoverDownload(ComputerRow row,LiveUpdateActivity live){
   if(closing||!AutoServiceEnabled||!ConnectionFresh(row.Host)||bitsPending187.Contains(row.Host))return;
@@ -107,17 +133,39 @@ public partial class MainWindow {
   var row=Current();
   if(!bitsPending187.Add(row.Host))return;
   var endpoint=ConnectionStore.Capture(row.Target);
+  var live=backgroundUpdates.GetValueOrDefault(row.Host);
+  var selectedId=live?.Downloads.FirstOrDefault(d=>d.State is "Suspended" or "Queued")?.Id??"";
+  var pending=new BitsReceipt187(selectedId,Identity40.EndpointKey(endpoint),0,"Проверяем выбранную загрузку BITS…",false);
+  bitsReceipts187[row.Host]=pending;
+  if(IsCurrent(row))UpdateWsusStage();
   try{
-   if(!await EnsureEndpointCredentials(new(){row}))return;
+   if(!await EnsureEndpointCredentials(new(){row})){
+    RecordBitsReceipt187(row,endpoint,selectedId,0,"Продолжение не запущено · не подтверждено подключение к клиенту.","Warning");
+    return;
+   }
    endpoint=ConnectionStore.Capture(row.Target);
-   var live=await remote.ReadManualUpdateActivity(endpoint);
-   if(!CurrentEndpoint(endpoint))return;
-   backgroundUpdates[row.Host]=live;
-   RememberBits(row.Host,endpoint,live);
+   if(live==null||!HasBitsActivity187(endpoint,live,DateTimeOffset.UtcNow)){
+    live=await remote.ReadBitsActivity187(endpoint);
+    if(!CurrentEndpoint(endpoint)){
+     RecordBitsReceipt187(row,endpoint,selectedId,0,"Подключение изменилось. Продолжение скачивания не отправлено.","Warning");
+     return;
+    }
+    // Preserve the previous trusted snapshot when a manual read reports a partial result.
+    if(live.Limitation.Length==0){
+     backgroundUpdates[row.Host]=live;
+     RememberBits(row.Host,endpoint,live);
+    }
+   }
    var minimum=Math.Clamp(Store.Read("download-settings.json",new DownloadSettings()).NoMovementMinutes,10,180);
-   var candidates=live.Downloads.Where(d=>CanResumeBits187(endpoint,d,live,minimum,DateTimeOffset.UtcNow)).ToList();
+   var now=DateTimeOffset.UtcNow;
+   var offered=live.Downloads.Where(d=>d.State is "Suspended" or "Queued").ToArray();
+   var candidates=offered.Where(d=>CanResumeBits187(endpoint,d,live,minimum,now)).ToList();
    if(candidates.Count==0){
-    Notify(row.Name+" · доступные задания обновлены. Для задания в очереди нужен подтверждённый застой без установки.");
+    var first=offered.FirstOrDefault();
+    var reason=live.Limitation.Length>0?"Не удалось проверить BITS и установщик Windows Update. "+live.Limitation.Trim(' ',';'):
+     first==null?"Подходящая передача BITS больше не видна либо её состояние изменилось.":
+     BitsResumeBlock187(endpoint,first,live,minimum,now);
+    RecordBitsReceipt187(row,endpoint,first?.Id??selectedId,first?.Received??0,"Продолжение не запущено · "+reason,"Warning");
     return;
    }
    var panel=new StackPanel{Margin=new(16)};
@@ -131,13 +179,37 @@ public partial class MainWindow {
    var dialog=new Window{Owner=this,Title="Продолжить скачивание · "+row.Name,Width=560,
     SizeToContent=SizeToContent.Height,WindowStartupLocation=WindowStartupLocation.CenterOwner,Content=panel};
    ok.Click+=(s,args)=>dialog.DialogResult=true;
-   if(dialog.ShowDialog()!=true||list.SelectedItem is not BackgroundDownload download||
-      !CurrentEndpoint(endpoint)||!CanResumeBits187(endpoint,download,live,minimum,DateTimeOffset.UtcNow))return;
+   if(dialog.ShowDialog()!=true||list.SelectedItem is not BackgroundDownload download)return;
+   var latest=backgroundUpdates.GetValueOrDefault(row.Host)??live;
+   var matching=latest.Downloads.FirstOrDefault(d=>d.Id==download.Id);
+   string blocked=!CurrentEndpoint(endpoint)?"Подключение изменилось.":
+    matching==null?"Выбранный GUID больше не виден в BITS.":
+    matching.RemoteName!=download.RemoteName||matching.LocalName!=download.LocalName||
+     matching.Received!=download.Received||matching.Total!=download.Total||matching.State!=download.State||
+     latest.PolicySource!=live.PolicySource?"Источник, состояние или байты передачи изменились. Проверьте загрузку повторно.":
+    BitsResumeBlock187(endpoint,matching,latest,minimum,DateTimeOffset.UtcNow);
+   if(blocked.Length>0||matching==null){
+    RecordBitsReceipt187(row,endpoint,download.Id,download.Received,"Продолжение не запущено · "+blocked,"Warning");
+    return;
+   }
    var proof=ExecutionRow(row,true).Target.State?.ManagedBits187;
-   await ApplyBits187(row,endpoint,download,live,proof?.Id==download.Id?proof:null,"",false);
-  }catch{ForgetBits(row.Host);throw;}
-  finally{bitsPending187.Remove(row.Host);if(IsCurrent(row))UpdateWsusStage();}
+   await ApplyBits187(row,endpoint,matching,latest,proof?.Id==matching.Id?proof:null,"",false);
+  }catch(Exception error){
+   RecordBitsReceipt187(row,endpoint,selectedId,0,"Продолжение не запущено · "+ShortConnectionError(error.Message),"Warning");
+  }
+  finally{
+   bitsPending187.Remove(row.Host);
+   if(ReferenceEquals(bitsReceipts187.GetValueOrDefault(row.Host),pending))bitsReceipts187.Remove(row.Host);
+   if(IsCurrent(row))UpdateWsusStage();
+  }
  });
+
+ void RecordBitsReceipt187(ComputerRow row,TargetRecord endpoint,string id,long bytes,string text,string kind,bool awaitGrowth=false,bool notify=true){
+  if(CurrentEndpoint(endpoint))
+   bitsReceipts187[row.Host]=new(id,Identity40.EndpointKey(endpoint),bytes,text,awaitGrowth);
+  Event31(row.Host,"bits-resume",Guid.NewGuid().ToString("N"),"Продолжение скачивания BITS",kind,text,scope:id);
+  if(notify)Notify(row.Name+" · "+text);
+ }
 
  async Task ApplyBits187(ComputerRow row,TargetRecord endpoint,BackgroundDownload download,LiveUpdateActivity live,
   ManagedBitsTransfer? proof,string operation,bool automatic){
@@ -147,20 +219,19 @@ public partial class MainWindow {
    bitsReceipts187[row.Host]=new(download.Id,key,download.Received,"Передаём запрос на продолжение скачивания…",false);
    if(IsCurrent(row))UpdateWsusStage();
    var json=await remote.ResumeBits187(endpoint,download,live,proof,operation,automatic);
-   if(!CurrentEndpoint(endpoint))return;
+   if(!CurrentEndpoint(endpoint)){
+    RecordBitsReceipt187(row,endpoint,download.Id,download.Received,
+     "Подключение изменилось после отправки запроса. Исход продолжения скачивания не подтверждён.","Warning",notify:!automatic);
+    return;
+   }
    using var result=JsonDocument.Parse(json);
    var payload=result.RootElement;
    var text=payload.GetProperty("Message").GetString()??"Результат не получен.";
-   bitsReceipts187[row.Host]=new(download.Id,key,download.Received,text,payload.GetProperty("AwaitGrowth").GetBoolean());
-   Event31(row.Host,"bits-resume",Guid.NewGuid().ToString("N"),"Продолжение скачивания BITS","Info",text,scope:download.Id);
-   if(!automatic)Notify(row.Name+" · "+text);
+   RecordBitsReceipt187(row,endpoint,download.Id,download.Received,text,"Info",payload.GetProperty("AwaitGrowth").GetBoolean(),!automatic);
   }catch(Exception error){
-   if(!CurrentEndpoint(endpoint))return;
-   ForgetBits(row.Host);
+   if(CurrentEndpoint(endpoint))ForgetBits(row.Host);
    var text="Исход запроса не подтверждён. "+ShortConnectionError(error.Message);
-   bitsReceipts187[row.Host]=new(download.Id,key,download.Received,text,false);
-   Event31(row.Host,"bits-resume",Guid.NewGuid().ToString("N"),"Продолжение скачивания BITS","Warning",text,scope:download.Id);
-   if(!automatic)Notify(row.Name+" · "+text);
+   RecordBitsReceipt187(row,endpoint,download.Id,download.Received,text,"Warning",notify:!automatic);
   }finally{
    if(automatic)bitsPending187.Remove(row.Host);
    if(IsCurrent(row))UpdateWsusStage();

@@ -25,8 +25,16 @@ public partial class MainWindow {
    for(int n=9;n>=1;n--)Sample(now.AddMinutes(-n));
    Sample(now.AddSeconds(-1));
    if(Eligible())throw new Exception("BITS recovery was allowed at 9:59.");
+   if(!BitsResumeBlock187(endpoint,download,live,10,now).Contains("без роста байтов подтверждено"))
+    throw new Exception("An early manual BITS attempt did not explain why it was skipped.");
    Sample(now);
    if(!Eligible())throw new Exception("Ten minutes of fresh identical BITS byte counts were ignored.");
+   if(!HasBitsActivity187(endpoint,live,now)||HasBitsActivity187(endpoint,live,now.AddSeconds(90)))
+    throw new Exception("Manual BITS continuation did not distinguish current and stale activity.");
+   live.Limitation="WUA · 0x80070005";
+   if(HasBitsActivity187(endpoint,live,now)||!BitsResumeBlock187(endpoint,download,live,10,now).Contains("0x80070005"))
+    throw new Exception("An incomplete activity read was hidden or reused for manual BITS continuation.");
+   live.Limitation="";
    live.InstallerBusy=true;
    if(Eligible())throw new Exception("BITS recovery was allowed during installation.");
    live.InstallerBusy=false;
@@ -50,6 +58,11 @@ public partial class MainWindow {
    var system=RemoteService.BitsSystemScript187(fixture);
    if(!system.Contains("BitsControl187")||!system.Contains("IgnoreNew")||!system.Contains("SYSTEM"))
     throw new Exception("BITS continuation lost its bounded SYSTEM entry point.");
+   var activitySystem=RemoteService.BitsActivitySystemScript187();
+   if(!activitySystem.Contains("BitsControl187")||!activitySystem.Contains("Microsoft.Update.Installer")||
+      !activitySystem.Contains("IgnoreNew")||!activitySystem.Contains("SYSTEM"))
+    throw new Exception("BITS installer preflight did not reuse the bounded SYSTEM operation.");
+   File.WriteAllText(Path.Combine(Path.GetTempPath(),"bits-activity187-system.ps1"),activitySystem,new System.Text.UTF8Encoding(true));
    File.WriteAllText(Path.Combine(Path.GetTempPath(),"bits-resume187-fixture.json"),fixture);
    File.WriteAllText(Path.Combine(Path.GetTempPath(),"bits-resume187-template.ps1"),RemoteService.BitsResumeScript187("{}"));
   }finally{ForgetBits(host);}
