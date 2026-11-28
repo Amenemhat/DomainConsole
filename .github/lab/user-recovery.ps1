@@ -57,6 +57,8 @@ try{
     Save-Json 'auto-service31.json' $false
     $process=Start-Process (Join-Path $dir 'DomainConsole.exe') -WorkingDirectory $dir -ArgumentList '--software-rendering' -PassThru
     $main=Wait-For {Application-Window 'DomainConsole' $true} 'packaged main window'
+    Mark 'window-ready.done'
+    Wait-Mark 'start-outages.done'
 
     Inspect-Client
     $initial=Wait-For {
