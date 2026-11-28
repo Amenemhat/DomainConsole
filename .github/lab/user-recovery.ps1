@@ -101,8 +101,9 @@ try{
         if($connection.Error -and (Header-User) -eq $savedLabel){$connection}
     } 'WinRM outage with a confirmed name' 100
     if((Read-Entry 'client-users37.json' $target).SeenUtc -ne $confirmed.SeenUtc){throw 'WinRM failure replaced the confirmed timestamp.'}
-    [void]$process.CloseMainWindow()
-    if(!$process.WaitForExit(25000)){throw 'Console did not close after the recorded WinRM failure.'}
+    Mark 'winrm-name-kept.done'
+    Close-ApplicationWindow
+    if(!$process.WaitForExit(45000)){throw 'Verified window did not exit after WM_CLOSE during the WinRM outage.'}
     $process=Start-Process (Join-Path $dir 'DomainConsole.exe') -WorkingDirectory $dir -ArgumentList '--software-rendering' -PassThru
     $main=Wait-For {Application-Window 'DomainConsole' $true} 'restarted console window' 30
     Wait-For {(Header-User) -eq $savedLabel} 'the same confirmed name and time after restart' 30 | Out-Null
@@ -133,5 +134,5 @@ try{
     [IO.File]::WriteAllText((Join-Path $lab 'gui-error.txt'),$problem,$utf8)
     exit 1
 }finally{
-    if($process -and !$process.HasExited){[void]$process.CloseMainWindow()}
+    if($process -and !$process.HasExited){try{Close-ApplicationWindow}catch{}}
 }
