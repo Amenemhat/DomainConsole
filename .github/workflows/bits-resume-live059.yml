@@ -1,0 +1,59 @@
+name: Packaged BITS continuation with a stale snapshot
+on:
+  push:
+    branches: ['lab/0.59-bits-stale-ui']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  packaged-bits:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      APP_COMMIT: 9411f6022d352513e90618744c204acbbb106442
+      APP_RUN: '46163160584'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify the application script still matches the candidate
+        shell: powershell
+        run: |
+          git fetch --no-tags --depth=1 origin $env:APP_COMMIT
+          if($LASTEXITCODE){throw 'Could not retrieve the exact candidate source'}
+          git diff --exit-code $env:APP_COMMIT HEAD -- DomainConsole-CSharp
+          if($LASTEXITCODE){throw 'Candidate source differs from the lab source'}
+      - name: Verify the continuation button in the packaged console
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $repo="repos/$env:GITHUB_REPOSITORY"
+          $end=[DateTime]::UtcNow.AddMinutes(15)
+          do {
+            $run=gh api "$repo/actions/runs/$env:APP_RUN" | ConvertFrom-Json
+            if($LASTEXITCODE -or $run.head_sha -ne $env:APP_COMMIT){throw 'Candidate run did not match the commit'}
+            if($run.status -eq 'completed'){break}
+            Start-Sleep -Seconds 20
+          }while([DateTime]::UtcNow -lt $end)
+          if($run.conclusion -ne 'success'){throw 'The full candidate Windows CI did not succeed'}
+          $artifacts=gh api "$repo/actions/runs/$env:APP_RUN/artifacts" | ConvertFrom-Json
+          $packageArchive=@($artifacts.artifacts | Where-Object {$_.name -eq 'DomainConsole-Windows-x64' -and !$_.expired})
+          if($packageArchive.Count -ne 1 -or $packageArchive[0].digest -notmatch '^sha256:[a-f0-9]{64}$'){throw 'Exact candidate artifact unavailable'}
+          $env:APP_ARTIFACT=[string]$packageArchive[0].id
+          $env:APP_SHA256=([string]$packageArchive[0].digest).Substring(7)
+          $archive=Join-Path $env:RUNNER_TEMP 'dc-candidate187.zip'
+          curl.exe --fail --location --silent --show-error --max-time 90 --header "Authorization: Bearer $env:GH_TOKEN" --output $archive "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/artifacts/$env:APP_ARTIFACT/zip"
+          if($LASTEXITCODE){throw 'Could not retrieve the candidate ZIP'}
+          if((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne $env:APP_SHA256){throw 'Candidate ZIP hash differs'}
+          $package=Join-Path $env:RUNNER_TEMP 'dc-candidate187'
+          Expand-Archive -LiteralPath $archive -DestinationPath $package
+          powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File .github/tests/bits-resume-live/live-resume.ps1 -Package $package
+          if($LASTEXITCODE){throw 'Packaged BITS check failed'}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bits-stale-ui-evidence
+          path: |
+            ${{ runner.temp }}/dc-bits187-*/evidence.json
+            ${{ runner.temp }}/dc-bits187-ui/window.png
+          if-no-files-found: ignore
