@@ -286,7 +286,7 @@ def main():
         return
     if user_recovery:
         from user_recovery import exercise
-        exercise(root, ps, ip("CLONE1"), password, evidence, save)
+        exercise(root, ps, password, evidence, save)
         return
     system("DCWSUS", "install-wsus", (here / "wsus.ps1").read_text(), minutes=35)
     evidence["checks"]["WSUS"] = ps("DCWSUS", "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');([Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530)).Version.ToString()")

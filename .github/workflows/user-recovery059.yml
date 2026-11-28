@@ -58,11 +58,7 @@ jobs:
           jq -n --arg commit "$APP_COMMIT" --arg run "$APP_RUN" --arg artifact "$APP_ARTIFACT" --arg sha256 "$APP_DIGEST" '{commit:$commit,run:$run,artifact:$artifact,sha256:$sha256}' > "$lab/package.json.tmp"
           mv "$lab/package.json.tmp" "$lab/package.json"
       - name: Prepare the private network and launch Windows guests
-        run: |
-          sudo apt-get update -qq
-          if apt-cache show freerdp3-x11 >/dev/null 2>&1; then package=freerdp3-x11; else package=freerdp2-x11; fi
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$package" xvfb xauth
-          bash .github/lab/prepare-guests.sh
+        run: bash .github/lab/prepare-guests.sh
       - name: Observe and restore real directory and client connectivity failures
         run: bash .github/lab/wait-for-guests.sh guest-exit 65
       - uses: actions/upload-artifact@v4
