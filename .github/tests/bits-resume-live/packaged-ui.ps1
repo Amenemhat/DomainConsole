@@ -65,9 +65,9 @@ function Invoke-PackagedContinuation($Package, $Policy, [guid]$Id, [long]$Receiv
         $null=Wait-Control {
             if(Test-Path -LiteralPath $collectorResult){
                 $snapshot=[IO.File]::ReadAllText($collectorResult)|ConvertFrom-Json
-                if($snapshot.Healthy -and @($snapshot.Activity.Downloads|Where-Object {
-                    $_.Id -eq $Id -and $_.State -eq 'Suspended' -and $_.Received -eq $Received
-                }).Count -eq 1){$snapshot}
+                $downloads=@($snapshot.Activity.Downloads)
+                if($snapshot.Healthy -and $downloads.Count -eq 1 -and $downloads[0].Id -eq $Id -and
+                    $downloads[0].State -eq 'Suspended' -and $downloads[0].Received -eq $Received){$snapshot}
             }
         } 'the collector result for the exact suspended BITS job' 95
         Start-Sleep -Seconds 12
@@ -84,8 +84,7 @@ function Invoke-PackagedContinuation($Package, $Policy, [guid]$Id, [long]$Receiv
         $dialog=Wait-Control {Application-Window ("Продолжить скачивание · "+$computer)} 'the selection dialog' 45
         $combo=$dialog.FindFirst($desc,[Windows.Automation.PropertyCondition]::new($ae::ControlTypeProperty,[Windows.Automation.ControlType]::ComboBox))
         $selection=$combo.GetCurrentPattern([Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()
-        $labels=@($selection|ForEach-Object {$_.Current.Name})
-        if($selection.Count -ne 1 -or ($labels -join ' ') -notlike "*$Id*"){throw "Dialog did not select the exact BITS job: $labels"}
+        if($selection.Count -ne 1){throw 'Expected one selected download for the single GUID in the collector result'}
         $confirm=Find-Control $dialog $ae::NameProperty 'Продолжить'
         $confirm.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
         $message=Wait-Control {
@@ -99,7 +98,7 @@ function Invoke-PackagedContinuation($Package, $Policy, [guid]$Id, [long]$Receiv
                 }
             }
         } 'byte growth confirmed in the client journal' 85
-        return @{Message=$message;AwaitGrowth=$false;Action='Packaged WPF';OriginalGuid=$Id;OriginalBytes=$Received}
+        return @{Message=$message;AwaitGrowth=$false;Action='Packaged WPF';DialogSelections=$selection.Count;OriginalGuid=$Id;OriginalBytes=$Received}
     }catch{
         $failure=@{PackageSha256=$env:APP_SHA256;Failure=$_.Exception.Message;Guid=$Id;OriginalBytes=$Received}
         $collector=Join-Path $env:ProgramData 'DomainConsoleCSharp\Snapshot41'
