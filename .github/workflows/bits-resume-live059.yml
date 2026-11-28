@@ -1,0 +1,29 @@
+name: Native BITS continuation on disposable Windows
+on:
+  push:
+    branches: ['lab/0.59-bits-resume']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-bits:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    env:
+      APP_COMMIT: 79902e433f60c22f5ce615ca9545a05ef55435d5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify the application script still matches the candidate
+        shell: powershell
+        run: |
+          git diff --exit-code $env:APP_COMMIT HEAD -- DomainConsole-CSharp
+          if($LASTEXITCODE){throw 'Candidate source differs from the lab source'}
+      - name: Resume the original SYSTEM transfer through native BITS
+        shell: powershell
+        run: ./.github/tests/bits-resume-live/live-resume.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-bits-resume-evidence
+          path: ${{ runner.temp }}/dc-bits187-live/evidence.json
+          if-no-files-found: ignore
