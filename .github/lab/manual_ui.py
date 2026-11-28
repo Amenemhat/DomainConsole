@@ -90,11 +90,12 @@ $closed='C:\DomainConsoleLab\receipt-disconnected.txt'
   BitsStarted=$trace -match 'bits: работает после восстановления' 
   BITS=(Get-Service BITS).Status.ToString(); Tasks=$tasks.Count
   ActiveTasks=@($tasks|Where-Object State -eq 'Running').Count
-  TransportClosed=if(Test-Path $closed){Get-Content $closed -Raw}
+  TransportClosed=if(Test-Path $closed){[IO.File]::ReadAllText($closed)}
 } | ConvertTo-Json -Compress
 """)
-            states[node] = state = json.loads(actual)
+            states[node] = json.loads(actual)
             save()
+        for node, state in states.items():
             if state["Status"] != "Completed" or state["Executions"] != 1:
                 raise RuntimeError(node + " did not complete exactly one real service restart")
             if state["Tasks"] > 1 or state["ActiveTasks"] or not state["BitsStopped"] or not state["BitsStarted"]:
