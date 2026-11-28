@@ -1,10 +1,20 @@
 using System.DirectoryServices;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 namespace DomainConsole;
 public sealed class InteractiveUser37 {public string Account {get;set;}="";public bool Active {get;set;}public bool Local {get;set;}}
-public sealed class UserObservation37 {public string PreviousName37 {get;set;}="";public string PreviousSeen37 {get;set;}="";public string Account {get;set;}="";public string Name {get;set;}="";public string SeenUtc {get;set;}="";public string ReceivedUtc {get;set;}="";public bool Current {get;set;}}
-public sealed class UserName37 {public string Name {get;set;}="";public string CheckedUtc {get;set;}="";}
+public sealed class UserObservation37 {public string PreviousName37 {get;set;}="";public string PreviousSeen37 {get;set;}="";public string Account {get;set;}="";public string Name {get;set;}="";public string SeenUtc {get;set;}="";public string ReceivedUtc {get;set;}="";public bool Current {get;set;}public bool Local {get;set;}}
+public sealed class UserName37 {
+ public string Name {get;set;}="";
+ public string CheckedUtc {get;set;}="";
+ public bool DirectoryUnavailable {get;set;}
+ public bool LookupDue(DateTimeOffset now){
+  if(!DateTimeOffset.TryParse(CheckedUtc,out var checkedAt)||checkedAt>now)return true;
+  var retry=DirectoryUnavailable?TimeSpan.FromMinutes(2):Name.Length>0?TimeSpan.FromHours(24):TimeSpan.FromHours(1);
+  return now-checkedAt>=retry;
+ }
+}
 public partial class MainWindow {
  readonly Dictionary<string,UserObservation37> users37=new(Store.Read("client-users37.json",new Dictionary<string,UserObservation37>()),StringComparer.OrdinalIgnoreCase);
  readonly Dictionary<string,UserName37> userNames37=new(Store.Read("user-names37.json",new Dictionary<string,UserName37>()),StringComparer.OrdinalIgnoreCase);
@@ -23,14 +33,25 @@ public partial class MainWindow {
  }
  void RefreshUser37(ComputerRow row){
   var value=users37.GetValueOrDefault(row.Host);
-  string error=sessionReadErrors.GetValueOrDefault(row.Host,"");
-  bool fresh=value!=null&&error.Length==0&&ConnectionFresh(row.Host)&&
+  string sessionError=sessionReadErrors.GetValueOrDefault(row.Host,"");
+  bool linkFailed=clientConnections.TryGetValue(row.Host,out var link)&&link.Error.Length>0;
+  bool fresh=value!=null&&sessionError.Length==0&&!linkFailed&&ConnectionFresh(row.Host)&&
    DateTimeOffset.TryParse(value.ReceivedUtc,out var at)&&DateTimeOffset.UtcNow-at<TimeSpan.FromSeconds(90);
   var label=UserLabel37(value,fresh);
-  if(row.UserText37!=label){row.UserText37=label;row.Refresh();}
+  var hint=label;
+  if(linkFailed)hint+="\nНе удалось обновить сеансы через WinRM. Подробности в проверке связи.";
+  if(sessionError.Length>0)hint+="\nОпрос сеансов не завершён: "+sessionError;
+  if(value is {Current:true,Local:false,Account.Length:>0}&&
+     userNames37.TryGetValue(value.Account,out var lookup)&&lookup.DirectoryUnavailable)
+   hint+="\nНе удалось получить имя из Active Directory. Подробности в диагностике.";
+  if(row.UserText37!=label||row.UserHint37!=hint){
+   row.UserText37=label;
+   row.UserHint37=hint;
+   row.Refresh();
+  }
   if(CurrentHost(row.Host)){
    SetUserHeader39(row.UserText37);
-   HeaderUser37.ToolTip=label+(error.Length>0?"\nОпрос сеансов не завершён: "+error:"");
+   HeaderUser37.ToolTip=hint;
   }
  }
  void ObserveUsers37(string host,RebootSnapshot snapshot){
@@ -53,13 +74,41 @@ public partial class MainWindow {
   var name=selected.Local?null:userNames37.GetValueOrDefault(selected.Account);
   string display=selected.Local?"":name?.Name.Length>0?name.Name:same?old!.Name:"";
   // An unresolved new account must not be attributed the previous person's name.
-  users37[host]=new(){PreviousName37=old?.Name.Length>0?old.Name:old?.PreviousName37??"",PreviousSeen37=old?.Name.Length>0?old.SeenUtc:old?.PreviousSeen37??"",Account=selected.Account,Name=display,Current=true,SeenUtc=now,ReceivedUtc=DateTime.UtcNow.ToString("o")};Store.Write("client-users37.json",users37);
-  if(!selected.Local&&(name==null||!DateTimeOffset.TryParse(name.CheckedUtc,out var checkedAt)||DateTimeOffset.UtcNow-checkedAt>TimeSpan.FromHours(name.Name.Length>0?24:1)))_=ResolveUser37(selected.Account);
+  users37[host]=new(){PreviousName37=old?.Name.Length>0?old.Name:old?.PreviousName37??"",PreviousSeen37=old?.Name.Length>0?old.SeenUtc:old?.PreviousSeen37??"",Account=selected.Account,Name=display,Current=true,Local=selected.Local,SeenUtc=now,ReceivedUtc=DateTime.UtcNow.ToString("o")};Store.Write("client-users37.json",users37);
+  if(!selected.Local&&(name==null||name.LookupDue(DateTimeOffset.UtcNow)))_=ResolveUser37(selected.Account);
  }
- async Task ResolveUser37(string account){if(!resolvingUsers37.Add(account))return;try{
-  string name=await Task.Run(()=>DirectoryUserName37(account));if(closing)return;userNames37[account]=new(){Name=name,CheckedUtc=DateTime.UtcNow.ToString("o")};Store.Write("user-names37.json",userNames37);
-  foreach(var entry in users37.Where(x=>x.Value.Account.Equals(account,StringComparison.OrdinalIgnoreCase))){if(name.Length>0)entry.Value.Name=name;var row=Computers.FirstOrDefault(x=>x.Host.Equals(entry.Key,StringComparison.OrdinalIgnoreCase));if(row!=null)RefreshUser37(row);}Store.Write("client-users37.json",users37);
- }catch(Exception ex){userNames37[account]=new(){CheckedUtc=DateTime.UtcNow.ToString("o")};Store.Write("user-names37.json",userNames37);var folder=System.IO.Path.Combine(Store.Root,"Diagnostics");System.IO.Directory.CreateDirectory(folder);System.IO.File.WriteAllText(System.IO.Path.Combine(folder,"user-name37.log"),ex.ToString());}finally{resolvingUsers37.Remove(account);}}
+ async Task ResolveUser37(string account,Func<string,string>? lookup=null){
+  if(!resolvingUsers37.Add(account))return;
+  try{
+   string name;
+   try{name=await Task.Run(()=>(lookup??DirectoryUserName37)(account));}
+   catch(Exception ex){
+    if(closing)return;
+    var cache=userNames37.GetValueOrDefault(account)??new();
+    cache.CheckedUtc=DateTime.UtcNow.ToString("o");
+    cache.DirectoryUnavailable=true;
+    userNames37[account]=cache;
+    Store.Write("user-names37.json",userNames37);
+    RefreshDirectoryUser37(account,"");
+    var folder=Path.Combine(Store.Root,"Diagnostics");
+    Directory.CreateDirectory(folder);
+    File.WriteAllText(Path.Combine(folder,"user-name37.log"),ex.ToString());
+    return;
+   }
+   if(closing)return;
+   userNames37[account]=new(){Name=name,CheckedUtc=DateTime.UtcNow.ToString("o")};
+   Store.Write("user-names37.json",userNames37);
+   RefreshDirectoryUser37(account,name);
+   Store.Write("client-users37.json",users37);
+  }finally{resolvingUsers37.Remove(account);}
+ }
+ void RefreshDirectoryUser37(string account,string name){
+  foreach(var entry in users37.Where(x=>!x.Value.Local&&x.Value.Account.Equals(account,StringComparison.OrdinalIgnoreCase))){
+   if(name.Length>0)entry.Value.Name=name;
+   var row=Computers.FirstOrDefault(x=>x.Host.Equals(entry.Key,StringComparison.OrdinalIgnoreCase));
+   if(row!=null)RefreshUser37(row);
+  }
+ }
  static string DirectoryUserName37(string account){
   int separator=account.IndexOf('\\');
   if(separator<=0||separator==account.Length-1)return "";
