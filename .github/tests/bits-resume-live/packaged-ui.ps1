@@ -54,10 +54,23 @@ function Invoke-PackagedContinuation($Package, $Policy, [guid]$Id, [long]$Receiv
         Save-Json 'wsus-report-cache.json' $reports
         $process=Start-Process (Join-Path $Package 'DomainConsole.exe') -WorkingDirectory $Package -ArgumentList '--software-rendering' -PassThru
         $main=Wait-Control {Application-Window 'DomainConsole ·' $true} 'the WPF window' 100
+        $wsusView=Wait-Control {Find-Control $main $ae::AutomationIdProperty 'WsusNavigation33'} 'the WSUS view selector' 30
+        $select=$wsusView.GetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern)
+        if(!$select.Current.IsSelected){
+            Add-Type -AssemblyName System.Windows.Forms
+            $wsusView.SetFocus()
+            [Windows.Forms.SendKeys]::SendWait(' ')
+        }
+        $background=Wait-Control {
+            $item=Find-Control $main $ae::AutomationIdProperty 'BackgroundGroup'
+            if($item){$item}
+        } 'the background activity expander with the selected client' 115
+        $expand=$background.GetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern)
+        if($expand.Current.ExpandCollapseState -eq [Windows.Automation.ExpandCollapseState]::Collapsed){$expand.Expand()}
         $button=Wait-Control {
             $item=Find-Control $main $ae::AutomationIdProperty 'ContinueBits187'
             if($item -and $item.Current.IsEnabled){$item}
-        } 'the Continue download button for the live paused transfer' 115
+        } 'the Continue download button for the live paused transfer' 40
         $button.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
         $dialog=Wait-Control {Application-Window ("Продолжить скачивание · "+$computer)} 'the selection dialog' 45
         $combo=$dialog.FindFirst($desc,[Windows.Automation.PropertyCondition]::new($ae::ControlTypeProperty,[Windows.Automation.ControlType]::ComboBox))
@@ -87,11 +100,15 @@ function Invoke-PackagedContinuation($Package, $Policy, [guid]$Id, [long]$Receiv
         if($process -and !$process.HasExited){$failure.WindowInventory=[DCLabNativeWindows]::Inventory($process.Id)}
         if($main){
             $controls=@{}
-            foreach($name in 'CurrentStage','BackgroundSummary','BackgroundDetails','ContinueBits187'){
+            foreach($name in 'WsusNavigation33','CurrentStage','BackgroundGroup','BackgroundSummary','BackgroundDetails','ContinueBits187'){
                 $element=Find-Control $main $ae::AutomationIdProperty $name
                 if($element){$controls[$name]=@{Title=$element.Current.Name;Enabled=$element.Current.IsEnabled;Offscreen=$element.Current.IsOffscreen}}
             }
             $failure.Controls=$controls
+            $condition=[Windows.Automation.Condition]::TrueCondition
+            $failure.AutomationTree=@($main.FindAll($desc,$condition)|Select-Object -First 64|ForEach-Object {
+                [string]$_.Current.AutomationId+'|'+[string]$_.Current.ControlType.ProgrammaticName+'|'+[string]$_.Current.Name
+            })
         }
         $failure | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $root 'evidence.json') -Encoding UTF8
         throw
