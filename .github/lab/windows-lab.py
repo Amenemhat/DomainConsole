@@ -29,7 +29,10 @@ print("::add-mask::" + password, flush=True)
 nodes = {"DCWSUS": 10, "DCAD": 11, **{f"CLONE{i}": 20 + i for i in range(1, 6)}}
 bootstrap_only=os.environ.get("DC_BOOTSTRAP_ONLY")=="1"
 manual_pair=os.environ.get("DC_TEST_MANUAL_PAIR")=="1"
-if manual_pair:
+manual_ui=os.getenv("DC_TEST_MANUAL_UI")=="1"
+if manual_ui:
+    nodes={"DCWSUS":10,"DCAD":11,"CLONE1":21}
+elif manual_pair:
     nodes={"DCWSUS":10,"DCAD":11}
 elif bootstrap_only:
     nodes={"DCWSUS":10}
@@ -109,7 +112,7 @@ def prepare(node,extra_files=()):
 
 
 def boot(node, gpt):
-    memory = 3584 if manual_pair or node == "DCWSUS" else 1536
+    memory = 3584 if manual_pair or manual_ui or node == "DCWSUS" else 1536
     tap = "dclab" + str(nodes[node])
     args = [qemu, "-accel", "kvm", "-cpu", "host", "-smp", "2", "-m", str(memory),
             "-machine", "q35" if gpt else "pc", "-uuid", str(uuid.uuid4()), "-name", node,
@@ -213,6 +216,17 @@ def setup_domain():
     ps("DCAD", "shutdown.exe /r /t 2")
     time.sleep(20)
     wait("DCAD", True, 18)
+    until=time.monotonic()+120
+    while True:
+        try:
+            if ps("DCAD", "(Get-ADDomain -Server 'dcad.dc057.test').DNSRoot", True)=="dc057.test":
+                break
+        except RuntimeError:
+            if time.monotonic()>=until:
+                raise
+        if time.monotonic()>=until:
+            raise TimeoutError("Active Directory did not finish startup")
+        time.sleep(5)
     for name in ["LabA", "LabB"]:
         ps("DCAD", f"New-ADOrganizationalUnit -Name {name} -Path 'DC=dc057,DC=test' -ProtectedFromAccidentalDeletion $false", True)
 
@@ -265,6 +279,10 @@ def main():
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
         list(pool.map(join, [n for n in nodes if n != "DCAD"]))
     checkpoint("domain")
+    if manual_ui:
+        from manual_ui import exercise
+        exercise(root, ps, password, evidence, save)
+        return
     system("DCWSUS", "install-wsus", (here / "wsus.ps1").read_text(), minutes=35)
     evidence["checks"]["WSUS"] = ps("DCWSUS", "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');([Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530)).Version.ToString()")
     log("WSUS API available: " + evidence["checks"]["WSUS"])

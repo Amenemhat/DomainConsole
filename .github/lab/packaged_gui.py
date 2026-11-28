@@ -19,10 +19,10 @@ class PackagedConsole:
     def remote(self, script):
         return self.ps("DCAD", script, True)
 
-    def start(self, before):
+    def start(self, before, script="gui.ps1"):
         files = {
             "/DomainConsole.zip": self.root / "package.zip",
-            "/gui.ps1": Path(__file__).with_name("gui.ps1"),
+            "/gui.ps1": Path(__file__).with_name(script),
             "/observations.json": self.root / "observations.json",
         }
         files["/observations.json"].write_text(json.dumps(before))
@@ -41,6 +41,8 @@ class PackagedConsole:
 
         self.server = ThreadingHTTPServer(("10.77.57.1", 8765), Files)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        with files["/DomainConsole.zip"].open("rb") as archive:
+            digest = hashlib.file_digest(archive, "sha256").hexdigest()
         self.remote(r"""
 $p='C:\DomainConsoleLab'
 $web=New-Object Net.WebClient
@@ -54,7 +56,7 @@ $text=[IO.File]::ReadAllText("$p\gui.ps1",[Text.Encoding]::UTF8)
 $action=New-ScheduledTaskAction -Execute powershell.exe -Argument '-NoProfile -STA -ExecutionPolicy Bypass -File C:\DomainConsoleLab\gui.ps1'
 Register-ScheduledTask -TaskName DCLab-Console -Action $action -User 'DCLAB\Administrator' -Password 'PASSWORD' -RunLevel Highest -Force|Out-Null
 Start-ScheduledTask DCLab-Console
-""".replace("HASH",hashlib.file_digest(files["/DomainConsole.zip"].open("rb"),"sha256").hexdigest()).replace("PASSWORD",self.password))
+""".replace("HASH",digest).replace("PASSWORD",self.password))
 
     def wait(self, file, timeout):
         end = time.monotonic() + timeout

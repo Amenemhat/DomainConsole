@@ -1,0 +1,72 @@
+name: Manual launch receipt lost after dispatch on 0.59
+on:
+  push:
+    branches: ['lab/0.59-manual-dispatch']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  manual-dispatch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 115
+    env:
+      DC_TEST_MANUAL_UI: '1'
+      APP_COMMIT: 216ffb0fb1cde6438b1b9b94dd0d979aaef632fb
+      APP_RUN: '46030860502'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch and hash the published candidate bytes
+        run: |
+          set -euo pipefail
+          deadline=$((SECONDS + 45 * 60))
+          while (( SECONDS < deadline )); do
+            if build=$(timeout 20 gh api "repos/$GITHUB_REPOSITORY/actions/runs/$APP_RUN") &&
+               jq -e '.status=="completed"' <<<"$build" >/dev/null; then
+              break
+            fi
+            sleep 15
+          done
+          jq -e --arg sha "$APP_COMMIT" --arg repo "$GITHUB_REPOSITORY" '
+            .head_sha==$sha and .head_repository.full_name==$repo and .status=="completed" and .conclusion=="success"
+            and (.path|split("@")[0])==".github/workflows/build-windows.yml"' <<<"$build" >/dev/null ||
+            { echo "Source Windows run $APP_RUN did not match the successful candidate." >&2; exit 1; }
+          artifact=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$APP_RUN/artifacts" |
+            jq -ec '[.artifacts[] | select(.name=="DomainConsole-Windows-x64" and .expired==false)] |
+              if length==1 then .[0] else error("Expected one current Windows package") end')
+          APP_ARTIFACT=$(jq -er '.id' <<<"$artifact")
+          APP_DIGEST=$(jq -er '.digest | sub("^sha256:"; "")' <<<"$artifact")
+          test "$APP_ARTIFACT" = "15214798631"
+          test "$APP_DIGEST" = "f7b02b75b706a9f8b37299a18c8e37f4e3d6cc4596ed9444d1d81989e1e6fced"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$APP_ARTIFACT" |
+            jq -e --arg digest "sha256:$APP_DIGEST" --argjson run "$APP_RUN" '
+              .name=="DomainConsole-Windows-x64" and .digest==$digest and .workflow_run.id==$run and .expired==false' >/dev/null ||
+            { echo "Source Windows artifact $APP_ARTIFACT did not match its run and SHA-256." >&2; exit 1; }
+          lab="$RUNNER_TEMP/dc-wsus-lab"
+          mkdir -p "$lab"
+          for attempt in 1 2 3; do
+            if timeout 120 gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$APP_ARTIFACT/zip" > "$lab/package.zip.tmp"; then
+              mv "$lab/package.zip.tmp" "$lab/package.zip"
+              break
+            fi
+            echo "Artifact download attempt $attempt failed." >&2
+            sleep 5
+          done
+          test -s "$lab/package.zip"
+          echo "$APP_DIGEST  $lab/package.zip" | sha256sum -c
+          unzip -tqq "$lab/package.zip"
+          jq -n --arg commit "$APP_COMMIT" --arg run "$APP_RUN" --arg artifact "$APP_ARTIFACT" --arg sha256 "$APP_DIGEST" '{commit:$commit,run:$run,artifact:$artifact,sha256:$sha256}' > "$lab/package.json.tmp"
+          mv "$lab/package.json.tmp" "$lab/package.json"
+      - name: Prepare the private network and launch Windows guests
+        run: bash .github/lab/prepare-guests.sh
+      - name: Submit and repeat from the packaged console on the private domain
+        run: bash .github/lab/wait-for-guests.sh guest-exit 65
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: manual-dispatch-windows-evidence
+          path: |
+            ${{ runner.temp }}/dc-wsus-lab/package.json
+            ${{ runner.temp }}/dc-wsus-lab/evidence.json
+          if-no-files-found: ignore
