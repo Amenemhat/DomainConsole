@@ -13,6 +13,7 @@ jobs:
     env:
       DC_TEST_USER_RECOVERY: '1'
       APP_COMMIT: df245d6aad2838fb28d011e3adf0b7934365b5ff
+      DC_PROBE_COMMIT58: df245d6aad2838fb28d011e3adf0b7934365b5ff
       APP_RUN: '46117225954'
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -58,7 +59,15 @@ jobs:
           jq -n --arg commit "$APP_COMMIT" --arg run "$APP_RUN" --arg artifact "$APP_ARTIFACT" --arg sha256 "$APP_DIGEST" '{commit:$commit,run:$run,artifact:$artifact,sha256:$sha256}' > "$lab/package.json.tmp"
           mv "$lab/package.json.tmp" "$lab/package.json"
       - name: Prepare the private network and launch Windows guests
-        run: bash .github/lab/prepare-guests.sh
+        run: |
+          set -euo pipefail
+          lab="$RUNNER_TEMP/dc-wsus-lab"
+          gh api "repos/$GITHUB_REPOSITORY/contents/DomainConsole-CSharp/Console/UserObservation37.cs?ref=$DC_PROBE_COMMIT58" --jq .content | base64 -d > "$lab/UserObservation37.cs"
+          test -s "$lab/UserObservation37.cs"
+          sudo apt-get update -qq
+          if apt-cache show freerdp3-x11 >/dev/null 2>&1; then package=freerdp3-x11; else package=freerdp2-x11; fi
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$package" xvfb xauth
+          bash .github/lab/prepare-guests.sh
       - name: Observe and restore real directory and client connectivity failures
         run: bash .github/lab/wait-for-guests.sh guest-exit 65
       - uses: actions/upload-artifact@v4

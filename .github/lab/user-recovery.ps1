@@ -1,13 +1,13 @@
 $ErrorActionPreference='Stop'
-if($env:COMPUTERNAME -ne 'DCWSUS' -or (Get-CimInstance Win32_ComputerSystem).Domain -ne 'dc057.test'){
+if($env:COMPUTERNAME -ne 'CLONE1' -or (Get-CimInstance Win32_ComputerSystem).Domain -ne 'dc057.test'){
     throw 'Isolated console member required.'
 }
 $lab='C:\DomainConsoleLab'
 $dir=Join-Path $lab 'package'
 $data=Join-Path $dir 'Data'
 $fixture=Get-Content -LiteralPath (Join-Path $lab 'observations.json') -Raw | ConvertFrom-Json
-$target='clone1.dc057.test'
-if($fixture.Host -ne $target -or $fixture.Account -ne 'DCLAB\RecoveryFixture59'){throw 'Unexpected test target or account.'}
+$target='dcwsus.dc057.test'
+if($fixture.Host -ne $target -or $fixture.Account -ne 'DCLAB\RdpDomain58'){throw 'Unexpected test target or account.'}
 $utf8=[Text.UTF8Encoding]::new($false)
 
 function Save-Json($name,$value){
@@ -51,7 +51,7 @@ try{
         $button.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
     }
     New-Item -ItemType Directory -Path $data -Force | Out-Null
-    Save-Json 'computers.json' @(@{Name='CLONE1';Host=$target;OU='OU=LabA,DC=dc057,DC=test';OS='Windows Server'})
+    Save-Json 'computers.json' @(@{Name='DCWSUS';Host=$target;OU='OU=LabB,DC=dc057,DC=test';OS='Windows Server'})
     Save-Json 'view-state.json' @{Host=$target;Tab=0}
     Save-Json 'poll-paused41.json' $true
     Save-Json 'auto-service31.json' $false

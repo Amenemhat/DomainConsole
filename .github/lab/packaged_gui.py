@@ -16,7 +16,7 @@ class PackagedConsole:
         self.password = domain_password
         self.server = None
         self.host = host
-        self.address = {"DCAD": "10.77.57.11", "DCWSUS": "10.77.57.10"}[host]
+        self.address = {"DCAD": "10.77.57.11", "CLONE1": "10.77.57.21"}[host]
 
     def remote(self, script):
         return self.ps(self.host, script, True)
