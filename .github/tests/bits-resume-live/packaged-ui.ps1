@@ -1,4 +1,6 @@
-﻿function Invoke-PackagedContinuation($Package, $Policy, [guid]$Id, [long]$Received) {
+﻿. (Join-Path $PSScriptRoot 'window-discovery.ps1')
+
+function Invoke-PackagedContinuation($Package, $Policy, [guid]$Id, [long]$Received) {
     Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes
     $ae=[Windows.Automation.AutomationElement]
     $desc=[Windows.Automation.TreeScope]::Descendants
@@ -51,21 +53,13 @@
             Report=@{FullDomainName=$computer;LastReportedUtc=[DateTimeOffset]::UtcNow.AddDays(-3).ToString('o');LastSyncResult='Succeeded'}}
         Save-Json 'wsus-report-cache.json' $reports
         $process=Start-Process (Join-Path $Package 'DomainConsole.exe') -WorkingDirectory $Package -ArgumentList '--software-rendering' -PassThru
-        $main=Wait-Control {
-            $process.Refresh()
-            if($process.MainWindowHandle -ne [IntPtr]::Zero){$ae::FromHandle($process.MainWindowHandle)}
-        } 'the WPF window' 100
+        $main=Wait-Control {Application-Window 'DomainConsole ·' $true} 'the WPF window' 100
         $button=Wait-Control {
             $item=Find-Control $main $ae::AutomationIdProperty 'ContinueBits187'
             if($item -and $item.Current.IsEnabled){$item}
         } 'the Continue download button for the live paused transfer' 115
         $button.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
-        $dialog=Wait-Control {
-            $condition=[Windows.Automation.AndCondition]::new(
-                [Windows.Automation.PropertyCondition]::new($ae::ProcessIdProperty,$process.Id),
-                [Windows.Automation.PropertyCondition]::new($ae::NameProperty,("Продолжить скачивание · "+$computer)))
-            $ae::RootElement.FindFirst([Windows.Automation.TreeScope]::Children,$condition)
-        } 'the selection dialog' 45
+        $dialog=Wait-Control {Application-Window ("Продолжить скачивание · "+$computer)} 'the selection dialog' 45
         $combo=$dialog.FindFirst($desc,[Windows.Automation.PropertyCondition]::new($ae::ControlTypeProperty,[Windows.Automation.ControlType]::ComboBox))
         $selection=$combo.GetCurrentPattern([Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()
         if($selection.Count -ne 1 -or $selection[0].Current.Name -notlike "*$Id*"){throw 'Dialog did not select the exact BITS job'}
@@ -85,8 +79,12 @@
         $collector=Join-Path $env:ProgramData 'DomainConsoleCSharp\Snapshot41'
         foreach($name in 'state.json','Activity.json','Activity.error','error.txt','run.json'){
             $file=Join-Path $collector $name
-            if(Test-Path -LiteralPath $file){$failure[$name]=Get-Content -LiteralPath $file -Raw -Encoding UTF8}
+            if(Test-Path -LiteralPath $file){
+                $content=[IO.File]::ReadAllText($file)
+                $failure[$name]=$content.Substring(0,[Math]::Min(8192,$content.Length))
+            }
         }
+        if($process -and !$process.HasExited){$failure.WindowInventory=[DCLabNativeWindows]::Inventory($process.Id)}
         if($main){
             $controls=@{}
             foreach($name in 'CurrentStage','BackgroundSummary','BackgroundDetails','ContinueBits187'){

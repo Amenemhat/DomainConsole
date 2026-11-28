@@ -11,6 +11,15 @@ $task='DomainConsoleLab-BitsResume-'+[guid]::NewGuid().ToString('N')
 $server=$null
 $ids=@()
 try {
+    if($Package){
+        $quietUntil=[DateTime]::UtcNow.AddMinutes(6)
+        do {
+            $busy=@(Get-Process TiWorker,TrustedInstaller,MRT -ErrorAction SilentlyContinue)
+            if(!$busy.Count){break}
+            Start-Sleep -Seconds 6
+        }while([DateTime]::UtcNow -lt $quietUntil)
+        if($busy.Count){throw 'Windows maintenance on the runner did not become idle for the BITS test'}
+    }
     $portFile=Join-Path $root 'port.txt'
     $http=Join-Path $PSScriptRoot 'http_fixture.py'
     $server=Start-Process python -ArgumentList ('"'+$http+'" "'+$portFile+'"') -PassThru -NoNewWindow
