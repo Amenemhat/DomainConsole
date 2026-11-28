@@ -61,39 +61,44 @@ function Invoke-PackagedContinuation($Package, $Policy, [guid]$Id, [long]$Receiv
             $wsusView.SetFocus()
             [Windows.Forms.SendKeys]::SendWait(' ')
         }
-        $background=Wait-Control {
-            $item=Find-Control $main $ae::AutomationIdProperty 'BackgroundGroup'
-            if(!$item){$item=Find-Control $main $ae::NameProperty 'Фоновая активность клиента'}
-            if($item){$item}
-        } 'the background activity expander with the selected client' 115
-        if($background.Current.ControlType -ne [Windows.Automation.ControlType]::Group){
-            $walker=[Windows.Automation.TreeWalker]::ControlViewWalker
-            do {$background=$walker.GetParent($background)}
-            while($background -and $background.Current.ControlType -ne [Windows.Automation.ControlType]::Group)
+        $collectorResult=Join-Path $env:ProgramData 'DomainConsoleCSharp\Snapshot41\result.json'
+        $null=Wait-Control {
+            if(Test-Path -LiteralPath $collectorResult){
+                $snapshot=[IO.File]::ReadAllText($collectorResult)|ConvertFrom-Json
+                if($snapshot.Healthy -and @($snapshot.Activity.Downloads|Where-Object {
+                    $_.Id -eq $Id -and $_.State -eq 'Suspended' -and $_.Received -eq $Received
+                }).Count -eq 1){$snapshot}
+            }
+        } 'the collector result for the exact suspended BITS job' 95
+        Start-Sleep -Seconds 12
+        if(!$select.Current.IsSelected){throw 'WSUS is not the selected view'}
+        $bounds=$main.Current.BoundingRectangle
+        if([Math]::Abs($bounds.Width-1044) -gt 25 -or [Math]::Abs($bounds.Height-780) -gt 25){
+            throw "Unexpected window size for the verified screenshot layout: $bounds"
         }
-        if(!$background){throw 'Cannot locate the background activity group of the visible heading'}
-        $expand=$background.GetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern)
-        if($expand.Current.ExpandCollapseState -eq [Windows.Automation.ExpandCollapseState]::Collapsed){$expand.Expand()}
-        $button=Wait-Control {
-            $item=Find-Control $main $ae::AutomationIdProperty 'ContinueBits187'
-            if(!$item){$item=Find-Control $main $ae::NameProperty 'Продолжить скачивание…'}
-            if($item -and $item.Current.IsEnabled){$item}
-        } 'the Continue download button for the live paused transfer' 40
-        $button.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
+        # The WPF tab template renders its content without UI Automation descendants.
+        # Click the button inside the exact window using the recorded 1044x780 layout.
+        if(![DCLabNativeWindows]::ClickVisible([IntPtr]$main.Current.NativeWindowHandle,[int]($bounds.X+370),[int]($bounds.Y+450))){
+            throw 'The verified rendered button is not on the visible console window'
+        }
         $dialog=Wait-Control {Application-Window ("Продолжить скачивание · "+$computer)} 'the selection dialog' 45
         $combo=$dialog.FindFirst($desc,[Windows.Automation.PropertyCondition]::new($ae::ControlTypeProperty,[Windows.Automation.ControlType]::ComboBox))
         $selection=$combo.GetCurrentPattern([Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()
-        if($selection.Count -ne 1 -or $selection[0].Current.Name -notlike "*$Id*"){throw 'Dialog did not select the exact BITS job'}
+        $labels=@($selection|ForEach-Object {$_.Current.Name})
+        if($selection.Count -ne 1 -or ($labels -join ' ') -notlike "*$Id*"){throw "Dialog did not select the exact BITS job: $labels"}
         $confirm=Find-Control $dialog $ae::NameProperty 'Продолжить'
         $confirm.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
         $message=Wait-Control {
-            $details=Find-Control $main $ae::AutomationIdProperty 'BackgroundDetails'
-            if($details){
-                $value=$details.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).Current.Value
-                if($value -match 'Передача продолжилась .+ новых байт'){($value -split '\r?\n')[0]}
-                elseif($value -match 'Исход запроса не подтверждён|BITS не подтвердил|Пропущено'){throw ($value -split '\r?\n')[0]}
+            foreach($file in Get-ChildItem (Join-Path $data 'Events') -Recurse -Filter '*.jsonl' -File -ErrorAction SilentlyContinue){
+                foreach($line in [IO.File]::ReadAllLines($file.FullName)){
+                    $event=$line|ConvertFrom-Json
+                    if($event.Operation36 -eq "bits-resume|$Id" -and $event.Text -eq 'Продолжение скачивания BITS'){
+                        if($event.Details -match 'Передача продолжилась .+ новых байт'){return [string]$event.Details}
+                        if($event.Details -match 'Исход запроса не подтверждён|BITS не подтвердил|Пропущено'){throw $event.Details}
+                    }
+                }
             }
-        } 'byte growth confirmed in the background activity panel' 85
+        } 'byte growth confirmed in the client journal' 85
         return @{Message=$message;AwaitGrowth=$false;Action='Packaged WPF';OriginalGuid=$Id;OriginalBytes=$Received}
     }catch{
         $failure=@{PackageSha256=$env:APP_SHA256;Failure=$_.Exception.Message;Guid=$Id;OriginalBytes=$Received}

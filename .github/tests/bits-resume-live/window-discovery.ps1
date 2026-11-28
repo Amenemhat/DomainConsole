@@ -10,6 +10,20 @@ public static class DCLabNativeWindows {
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr window, StringBuilder title, int size);
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr window, StringBuilder name, int size);
     [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr window, IntPtr target, uint flags);
+    [StructLayout(LayoutKind.Sequential)] struct Point { public int X, Y; }
+    [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(Point point);
+    [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr window, uint flags);
+    [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr window);
+    [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] static extern void mouse_event(uint flags, uint x, uint y, uint data, UIntPtr extra);
+    public static bool ClickVisible(IntPtr window, int x, int y) {
+        SetForegroundWindow(window);
+        var point = new Point { X = x, Y = y };
+        if (GetAncestor(WindowFromPoint(point), 2) != window || !SetCursorPos(x, y)) return false;
+        mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero);
+        mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero);
+        return true;
+    }
     public static IntPtr Locate(int process, string title, bool prefix) {
         var match=IntPtr.Zero;
         foreach(ProcessThread thread in Process.GetProcessById(process).Threads) {
