@@ -3,6 +3,7 @@
 if($env:COMPUTERNAME -ne 'DCWSUS' -or !(Test-Path 'C:\DomainConsoleLab\node.json')) {
     throw 'The private fault fixture requires its disposable Windows guest.'
 }
+$global:DCLabReceiptFixtureReady=$true
 function global:Start-ScheduledTask([string]$TaskName) {
     ScheduledTasks\Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop
     if($TaskName -notmatch '^DomainConsoleCSharp-([a-fA-F0-9-]{36})$'){ return }
