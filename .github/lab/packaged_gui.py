@@ -10,14 +10,16 @@ import time
 
 
 class PackagedConsole:
-    def __init__(self, root, ps, domain_password):
+    def __init__(self, root, ps, domain_password, host="DCAD"):
         self.root = root
         self.ps = ps
         self.password = domain_password
         self.server = None
+        self.host = host
+        self.address = {"DCAD": "10.77.57.11", "DCWSUS": "10.77.57.10"}[host]
 
     def remote(self, script):
-        return self.ps("DCAD", script, True)
+        return self.ps(self.host, script, True)
 
     def start(self, before, script="gui.ps1"):
         files = {
@@ -27,9 +29,11 @@ class PackagedConsole:
         }
         files["/observations.json"].write_text(json.dumps(before))
 
+        address = self.address
+
         class Files(BaseHTTPRequestHandler):
             def do_GET(self):
-                if self.client_address[0] != "10.77.57.11" or self.path not in files:
+                if self.client_address[0] != address or self.path not in files:
                     self.send_error(404)
                     return
                 source = files[self.path]

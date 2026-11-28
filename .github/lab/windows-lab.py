@@ -30,7 +30,8 @@ nodes = {"DCWSUS": 10, "DCAD": 11, **{f"CLONE{i}": 20 + i for i in range(1, 6)}}
 bootstrap_only=os.environ.get("DC_BOOTSTRAP_ONLY")=="1"
 manual_pair=os.environ.get("DC_TEST_MANUAL_PAIR")=="1"
 manual_ui=os.getenv("DC_TEST_MANUAL_UI")=="1"
-if manual_ui:
+user_recovery=os.getenv("DC_TEST_USER_RECOVERY")=="1"
+if manual_ui or user_recovery:
     nodes={"DCWSUS":10,"DCAD":11,"CLONE1":21}
 elif manual_pair:
     nodes={"DCWSUS":10,"DCAD":11}
@@ -112,7 +113,7 @@ def prepare(node,extra_files=()):
 
 
 def boot(node, gpt):
-    memory = 3584 if manual_pair or manual_ui or node == "DCWSUS" else 1536
+    memory = 3584 if manual_pair or manual_ui or user_recovery or node == "DCWSUS" else 1536
     tap = "dclab" + str(nodes[node])
     args = [qemu, "-accel", "kvm", "-cpu", "host", "-smp", "2", "-m", str(memory),
             "-machine", "q35" if gpt else "pc", "-uuid", str(uuid.uuid4()), "-name", node,
@@ -282,6 +283,10 @@ def main():
     if manual_ui:
         from manual_ui import exercise
         exercise(root, ps, password, evidence, save)
+        return
+    if user_recovery:
+        from user_recovery import exercise
+        exercise(root, ps, ip("CLONE1"), password, evidence, save)
         return
     system("DCWSUS", "install-wsus", (here / "wsus.ps1").read_text(), minutes=35)
     evidence["checks"]["WSUS"] = ps("DCWSUS", "[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.UpdateServices.Administration');([Microsoft.UpdateServices.Administration.AdminProxy]::GetUpdateServer('localhost',$false,8530)).Version.ToString()")

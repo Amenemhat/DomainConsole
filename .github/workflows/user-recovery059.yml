@@ -1,0 +1,75 @@
+name: Directory and WinRM recovery in the packaged 0.59 console
+on:
+  push:
+    branches: ['lab/0.59-user-recovery']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  user-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 135
+    env:
+      DC_TEST_USER_RECOVERY: '1'
+      APP_COMMIT: df245d6aad2838fb28d011e3adf0b7934365b5ff
+      APP_RUN: '46117225954'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch and hash the published candidate bytes
+        run: |
+          set -euo pipefail
+          deadline=$((SECONDS + 45 * 60))
+          while (( SECONDS < deadline )); do
+            if build=$(timeout 20 gh api "repos/$GITHUB_REPOSITORY/actions/runs/$APP_RUN") &&
+               jq -e '.status=="completed"' <<<"$build" >/dev/null; then
+              break
+            fi
+            sleep 15
+          done
+          jq -e --arg sha "$APP_COMMIT" --arg repo "$GITHUB_REPOSITORY" '
+            .head_sha==$sha and .head_repository.full_name==$repo and .status=="completed" and .conclusion=="success"
+            and (.path|split("@")[0])==".github/workflows/build-windows.yml"' <<<"$build" >/dev/null ||
+            { echo "Source Windows run $APP_RUN did not match the successful candidate." >&2; exit 1; }
+          artifact=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$APP_RUN/artifacts" |
+            jq -ec '[.artifacts[] | select(.name=="DomainConsole-Windows-x64" and .expired==false)] |
+              if length==1 then .[0] else error("Expected one current Windows package") end')
+          APP_ARTIFACT=$(jq -er '.id' <<<"$artifact")
+          APP_DIGEST=$(jq -er '.digest | sub("^sha256:"; "")' <<<"$artifact")
+          [[ "$APP_DIGEST" =~ ^[a-f0-9]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$APP_ARTIFACT" |
+            jq -e --arg digest "sha256:$APP_DIGEST" --argjson run "$APP_RUN" '
+              .name=="DomainConsole-Windows-x64" and .digest==$digest and .workflow_run.id==$run and .expired==false' >/dev/null ||
+            { echo "Source Windows artifact $APP_ARTIFACT did not match its run and SHA-256." >&2; exit 1; }
+          lab="$RUNNER_TEMP/dc-wsus-lab"
+          mkdir -p "$lab"
+          for attempt in 1 2 3; do
+            if timeout 120 gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$APP_ARTIFACT/zip" > "$lab/package.zip.tmp"; then
+              mv "$lab/package.zip.tmp" "$lab/package.zip"
+              break
+            fi
+            echo "Artifact download attempt $attempt failed." >&2
+            sleep 5
+          done
+          test -s "$lab/package.zip"
+          echo "$APP_DIGEST  $lab/package.zip" | sha256sum -c
+          unzip -tqq "$lab/package.zip"
+          jq -n --arg commit "$APP_COMMIT" --arg run "$APP_RUN" --arg artifact "$APP_ARTIFACT" --arg sha256 "$APP_DIGEST" '{commit:$commit,run:$run,artifact:$artifact,sha256:$sha256}' > "$lab/package.json.tmp"
+          mv "$lab/package.json.tmp" "$lab/package.json"
+      - name: Prepare the private network and launch Windows guests
+        run: |
+          sudo apt-get update -qq
+          if apt-cache show freerdp3-x11 >/dev/null 2>&1; then package=freerdp3-x11; else package=freerdp2-x11; fi
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$package" xvfb xauth
+          bash .github/lab/prepare-guests.sh
+      - name: Observe and restore real directory and client connectivity failures
+        run: bash .github/lab/wait-for-guests.sh guest-exit 65
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: user-recovery-windows-evidence
+          path: |
+            ${{ runner.temp }}/dc-wsus-lab/package.json
+            ${{ runner.temp }}/dc-wsus-lab/evidence.json
+          if-no-files-found: ignore

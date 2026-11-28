@@ -32,6 +32,9 @@ sudo iptables -I FORWARD -i dclab0 ! -o dclab0 -j DROP
 sudo iptables -I FORWARD -o dclab0 ! -i dclab0 -j DROP
 sudo iptables -I FORWARD -i dclab0 -o dclab0 -j ACCEPT
 sudo iptables -I INPUT -i dclab0 -s 10.77.57.11/32 -p tcp --dport 8765 -j ACCEPT
+if [[ "${DC_TEST_USER_RECOVERY:-}" == "1" ]]; then
+  sudo iptables -I INPUT -i dclab0 -s 10.77.57.10/32 -p tcp --dport 8765 -j ACCEPT
+fi
 sudo chown root:kvm /dev/kvm
 sudo chmod 660 /dev/kvm
 if [[ "${DC_MEDIA_ONLY:-}" != "1" ]]; then bash .github/lab/boot-guests.sh; fi
