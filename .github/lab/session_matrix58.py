@@ -1,4 +1,5 @@
 """Run the native WTS probe with actual RDP sessions on the disposable Windows member."""
+import base64
 import contextlib
 import json
 import os
@@ -58,21 +59,42 @@ def exercise(root, ps, host, password, evidence, save, when_domain_session_activ
     configure("rdp_permissions", "DCWSUS",
         "$g=Get-LocalGroup -SID 'S-1-5-32-555';"
         f"Add-LocalGroupMember -Group $g -Member '{local_sid}','{domain_sid}'")
-    configure("rdp_listener", "DCWSUS",
-        r"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0;"
-        "New-NetFirewallRule -Name DCLabRdpFromRunner -Direction Inbound -Action Allow -Protocol TCP "
-        "-LocalPort 3389 -RemoteAddress 10.77.57.1 | Out-Null;"
-        "if((Get-Service TermService).Status -ne 'Running'){sc.exe start TermService | Out-Null;"
-        "if($LASTEXITCODE -notin 0,1056){throw ('TermService did not accept start: '+$LASTEXITCODE)}}")
-    deadline = time.monotonic() + 30
+    # Changes to the RDP listener and filtering can stall the endpoint used to configure them.
+    # Let one bounded SYSTEM task own the change while the runner tests the new socket separately.
+    setup=r"""
+$ErrorActionPreference='Stop'
+try {
+    Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0
+    netsh.exe advfirewall firewall add rule name=DCLabRdpFromRunner dir=in action=allow protocol=TCP localport=3389 remoteip=10.77.57.1 | Out-Null
+    if($LASTEXITCODE){throw "Cannot configure isolated RDP firewall rule: $LASTEXITCODE"}
+    if((Get-Service TermService).Status -ne 'Running'){Start-Service TermService}
+    Set-Content 'C:\DomainConsoleLab\rdp-setup.done' 'ready'
+} catch {($_|Out-String)|Set-Content 'C:\DomainConsoleLab\rdp-setup.error';exit 1}
+"""
+    encoded=base64.b64encode(setup.encode("utf-8-sig")).decode("ascii")
+    configure("start_rdp_configuration", "DCWSUS", rf"""
+$p='C:\DomainConsoleLab\rdp-setup.ps1'
+[IO.File]::WriteAllBytes($p,[Convert]::FromBase64String('{encoded}'))
+$action=New-ScheduledTaskAction -Execute powershell.exe -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File $p"
+$settings=New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::FromMinutes(2))
+Register-ScheduledTask -TaskName DCLab-RdpSetup -Action $action -Settings $settings -User SYSTEM -RunLevel Highest -Force | Out-Null
+Start-ScheduledTask -TaskName DCLab-RdpSetup
+""")
+    deadline = time.monotonic() + 150
     while time.monotonic() < deadline:
         try:
             with socket.create_connection((host, 3389), timeout=3):
                 break
         except OSError:
-            time.sleep(2)
+            time.sleep(3)
     else:
+        message=configure("rdp_listener_diagnostics", "DCWSUS", r"""
+$p='C:\DomainConsoleLab\rdp-setup.error'
+if(Test-Path -LiteralPath $p){Get-Content -LiteralPath $p -Raw}
+else{(Get-ScheduledTaskInfo DCLab-RdpSetup).LastTaskResult;(Get-Service TermService).Status}
+""")
         evidence["checks"]["rdp_endpoint"] = "TCP 3389 not reachable on the disposable member"
+        evidence["checks"]["rdp_listener_diagnostics"] = message
         save()
         raise TimeoutError(evidence["checks"]["rdp_endpoint"])
     evidence["checks"]["rdp_endpoint"] = "reachable from the isolated runner"
