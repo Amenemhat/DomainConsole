@@ -25,6 +25,7 @@ class PackagedConsole:
         files = {
             "/DomainConsole.zip": self.root / "package.zip",
             "/gui.ps1": Path(__file__).with_name(script),
+            "/window-discovery.ps1": Path(__file__).with_name("window-discovery.ps1"),
             "/observations.json": self.root / "observations.json",
         }
         files["/observations.json"].write_text(json.dumps(before))
@@ -51,12 +52,14 @@ class PackagedConsole:
 $p='C:\DomainConsoleLab'
 $web=New-Object Net.WebClient
 $web.Proxy=$null
-foreach($f in 'DomainConsole.zip','observations.json','gui.ps1'){$web.DownloadFile("http://10.77.57.1:8765/$f","$p\$f")}
+foreach($f in 'DomainConsole.zip','observations.json','gui.ps1','window-discovery.ps1'){$web.DownloadFile("http://10.77.57.1:8765/$f","$p\$f")}
 if((Get-FileHash "$p\DomainConsole.zip" -Algorithm SHA256).Hash -ne 'HASH'){throw 'Artifact changed in transit'}
 Expand-Archive -LiteralPath "$p\DomainConsole.zip" -DestinationPath "$p\package"
 # Windows PowerShell 5 requires a BOM to read Russian UI Automation labels.
-$text=[IO.File]::ReadAllText("$p\gui.ps1",[Text.Encoding]::UTF8)
-[IO.File]::WriteAllText("$p\gui.ps1",$text,(New-Object Text.UTF8Encoding($true)))
+foreach($script in 'gui.ps1','window-discovery.ps1'){
+ $text=[IO.File]::ReadAllText("$p\$script",[Text.Encoding]::UTF8)
+ [IO.File]::WriteAllText("$p\$script",$text,(New-Object Text.UTF8Encoding($true)))
+}
 $action=New-ScheduledTaskAction -Execute powershell.exe -Argument '-NoProfile -STA -ExecutionPolicy Bypass -File C:\DomainConsoleLab\gui.ps1'
 Register-ScheduledTask -TaskName DCLab-Console -Action $action -User 'DCLAB\Administrator' -Password 'PASSWORD' -RunLevel Highest -Force|Out-Null
 Start-ScheduledTask DCLab-Console

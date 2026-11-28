@@ -36,7 +36,7 @@ function Wait-Mark($name,$seconds=80){Wait-For {Test-Path (Join-Path $lab $name)
 $process=$null
 try{
     Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes
-    $root=[Windows.Automation.AutomationElement]::RootElement
+    . (Join-Path $lab 'window-discovery.ps1')
     $desc=[Windows.Automation.TreeScope]::Descendants
     function Find($parent,$property,$value){
         $condition=[Windows.Automation.PropertyCondition]::new($property,$value)
@@ -56,7 +56,7 @@ try{
     Save-Json 'poll-paused41.json' $true
     Save-Json 'auto-service31.json' $false
     $process=Start-Process (Join-Path $dir 'DomainConsole.exe') -WorkingDirectory $dir -ArgumentList '--software-rendering' -PassThru
-    $main=Wait-For {Find $root ([Windows.Automation.AutomationElement]::ProcessIdProperty) $process.Id} 'packaged main window'
+    $main=Wait-For {Application-Window 'DomainConsole' $true} 'packaged main window'
 
     Inspect-Client
     $initial=Wait-For {
@@ -102,7 +102,7 @@ try{
     [void]$process.CloseMainWindow()
     if(!$process.WaitForExit(25000)){throw 'Console did not close after the recorded WinRM failure.'}
     $process=Start-Process (Join-Path $dir 'DomainConsole.exe') -WorkingDirectory $dir -ArgumentList '--software-rendering' -PassThru
-    $main=Wait-For {Find $root ([Windows.Automation.AutomationElement]::ProcessIdProperty) $process.Id} 'restarted console window' 30
+    $main=Wait-For {Application-Window 'DomainConsole' $true} 'restarted console window' 30
     Wait-For {(Header-User) -eq $savedLabel} 'the same confirmed name and time after restart' 30 | Out-Null
     Mark 'winrm-with-history.done'
 
@@ -122,7 +122,13 @@ try{
     }
     [IO.File]::WriteAllText((Join-Path $lab 'gui-evidence.json'),($result|ConvertTo-Json -Depth 6),$utf8)
 }catch{
-    [IO.File]::WriteAllText((Join-Path $lab 'gui-error.txt'),($_|Out-String),$utf8)
+    $problem=$_|Out-String
+    if($process){
+        $process.Refresh()
+        $problem+="`nAppExited=$($process.HasExited) AppSession=$($process.SessionId) HostSession=$((Get-Process -Id $PID).SessionId)"
+        if(!$process.HasExited){$problem+="`nApp windows: "+[DCLabNativeWindows]::Inventory($process.Id)}
+    }
+    [IO.File]::WriteAllText((Join-Path $lab 'gui-error.txt'),$problem,$utf8)
     exit 1
 }finally{
     if($process -and !$process.HasExited){[void]$process.CloseMainWindow()}
