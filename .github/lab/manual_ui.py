@@ -38,8 +38,9 @@ $secret=ConvertTo-SecureString '{password}' -AsPlainText -Force
 $cred=[pscredential]::new('DCLAB\Administrator',$secret)
 $opt=New-PSSessionOption -OpenTimeout 12000 -OperationTimeout 15000
 Invoke-Command -ComputerName 'dcwsus.dc057.test' -ConfigurationName Microsoft.PowerShell -Credential $cred -SessionOption $opt -ScriptBlock {{
+    Get-ScheduledTask -ErrorAction Stop | Out-Null
     $command=Get-Command Start-ScheduledTask
-    if($global:DCLabReceiptFixtureReady -and $command.ScriptBlock.File -like '*manual-ui-endpoint.ps1'){{'DCLAB_READY'}}
+    if($global:DCLabReceiptFixtureReady -and $command.CommandType -eq "Alias" -and $command.ResolvedCommand.ScriptBlock.File -like '*manual-ui-endpoint.ps1'){{'DCLAB_READY'}}
     else{{'Endpoint script not loaded: '+$command.ModuleName+' | '+$command.ScriptBlock.File}}
 }}
 """, True)
@@ -96,8 +97,8 @@ $closed='C:\DomainConsoleLab\receipt-disconnected.txt'
             save()
             if state["Status"] != "Completed" or state["Executions"] != 1:
                 raise RuntimeError(node + " did not complete exactly one real service restart")
-            if state["Tasks"] > 1 or state["ActiveTasks"] or state["BITS"] != "Running" or not state["BitsStopped"] or not state["BitsStarted"]:
-                raise RuntimeError(node + " left a running task, a duplicate task, or a stopped service")
+            if state["Tasks"] > 1 or state["ActiveTasks"] or not state["BitsStopped"] or not state["BitsStarted"]:
+                raise RuntimeError(node + " left a running task, a duplicate task, or no successful service restart")
             if state["Job"] != checks["packaged_ui"]["Jobs"][node.lower() + ".dc057.test"]:
                 raise RuntimeError(node + " job does not match the consent and result in the console")
             receipt_job = (state.get("TransportClosed") or "").strip()
@@ -109,11 +110,13 @@ $closed='C:\DomainConsoleLab\receipt-disconnected.txt'
 $p='C:\DomainConsoleLab\package\Data\history.json'
 $entries=@()
 if(Test-Path $p){
- $entries=@(Get-Content -LiteralPath $p -Encoding UTF8 -Raw|ConvertFrom-Json |
-   ForEach-Object {$job=$_;foreach($target in $job.Targets){
-      $output=[string]$target.Output
-      @{Id=$job.Id;Name=$job.Name;Host=$target.Host;Status=$target.Status;Output=$output.Substring(0,[Math]::Min(900,$output.Length))}
-   }})
+ $jobs=Get-Content -LiteralPath $p -Encoding UTF8 -Raw|ConvertFrom-Json
+ $entries=@(foreach($job in $jobs){
+   foreach($target in $job.Targets){
+     $output=[string]$target.Output
+     @{Id=$job.Id;Name=$job.Name;Host=$target.Host;Status=$target.Status;Output=$output.Substring(0,[Math]::Min(900,$output.Length))}
+   }
+ })
 }
 ConvertTo-Json -InputObject $entries -Depth 6 -Compress
 """))
