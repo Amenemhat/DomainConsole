@@ -10,7 +10,7 @@ function global:Start-ScheduledTask([string]$TaskName) {
     $job=Join-Path $env:ProgramData "DomainConsoleCSharp\$id\job.json"
     $audit='C:\DomainConsoleLab\receipt-disconnected.txt'
     if(!(Test-Path $audit) -and (Test-Path $job) -and
-        ((Get-Content $job -Raw) -match 'DCLabManualReceipt059')) {
+        ((Get-Content $job -Raw) -match 'function Save-Dependents')) {
         $remoteHost=[Diagnostics.Process]::GetCurrentProcess()
         if($remoteHost.ProcessName -ne 'wsmprovhost'){throw 'Refusing to interrupt a process outside test WinRM'}
         New-NetFirewallRule -Name DCLabReceiptPaused -DisplayName 'Lab receipt loss recovery hold' `

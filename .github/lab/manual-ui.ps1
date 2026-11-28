@@ -9,15 +9,6 @@ $data=Join-Path $dir 'Data'
 $utf8=[Text.UTF8Encoding]::new($false)
 $first='dcwsus.dc057.test'
 $peer='clone1.dc057.test'
-$command=@'
-$ErrorActionPreference='Stop'
-Stop-Service BITS -ErrorAction Stop
-(Get-Service BITS).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(20))
-Start-Service BITS -ErrorAction Stop
-(Get-Service BITS).WaitForStatus('Running',[TimeSpan]::FromSeconds(20))
-Add-Content 'C:\DomainConsoleLab\DCLabManualReceipt059.txt' 'BITS stopped and started'
-'BITS stopped and started'
-'@
 
 function Save-Json($name,$value){
     [IO.File]::WriteAllText((Join-Path $data $name),(ConvertTo-Json -InputObject $value -Depth 12),$utf8)
@@ -37,7 +28,7 @@ function JobFor($hostName){
     try{$history=Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json}
     catch{return}
     $jobs=@($history | Where-Object {
-        $_.Targets.Host -contains $hostName -and @($_.Steps | Where-Object Code -match 'DCLabManualReceipt059').Count -eq 1
+        $_.Targets.Host -contains $hostName -and @($_.Steps | Where-Object Code -match 'function Save-Dependents').Count -eq 1
     })
     if($jobs.Count -gt 1){throw "Duplicate command admitted for $hostName"}
     if($jobs.Count -eq 1){return $jobs[0]}
@@ -73,11 +64,36 @@ try {
         if($pattern.Current.ToggleState -eq [Windows.Automation.ToggleState]::Off){$pattern.Toggle()}
         if($pattern.Current.ToggleState -ne [Windows.Automation.ToggleState]::On){throw "$name was not marked"}
     }
-    function Confirm-Command($editorButton,$batch){
-        $submit=[PowerShell]::Create()
-        [void]$submit.AddScript('param($b) $b.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()').AddArgument($editorButton)
-        $op=$submit.BeginInvoke()
+    function Open-Action($element){
+        $runspace=[PowerShell]::Create()
+        [void]$runspace.AddScript('param($b) $b.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()').AddArgument($element)
+        $invocation=$runspace.BeginInvoke()
+        return @{Runspace=$runspace;Invocation=$invocation}
+    }
+    function Confirm-Command($serviceTools,$batch){
+        $menuCall=Open-Action $serviceTools
+        $restartCall=$null
+        $selectionCall=$null
         try {
+            $menu=Wait-For {Application-Window 'Диагностика и восстановление'} 'service menu' 30
+            $label=Wait-For {ByName $menu 'Перезапуск служб…'} 'restart services action' 20
+            $walker=[Windows.Automation.TreeWalker]::ControlViewWalker
+            while($label -and $label.Current.ControlType -ne [Windows.Automation.ControlType]::Button){
+                $label=$walker.GetParent($label)
+            }
+            if(!$label){throw 'The restart action has no button.'}
+            $restartCall=Open-Action $label
+            $choice=Wait-For {Application-Window 'Перезапуск служб Windows Update'} 'Windows Update service selection' 30
+            foreach($service in 'UsoSvc','bits'){
+                $box=Wait-For {ByName $choice $service} $service 15
+                $toggle=$box.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern)
+                $state=if($service -eq 'bits'){[Windows.Automation.ToggleState]::On}else{[Windows.Automation.ToggleState]::Off}
+                if($toggle.Current.ToggleState -ne $state){$toggle.Toggle()}
+                if($toggle.Current.ToggleState -ne $state){throw "Wrong fixture state for $service"}
+            }
+            $selectionCall=Open-Action (Wait-For {
+                ByName $choice 'Применить к целям из следующего подтверждения'
+            } 'approve the selected service' 15)
             $dialog=Wait-For {Application-Window 'Подтверждение действия и целей'} 'target consent' 30
             if($batch){
                 $scope=Wait-For {ByName $dialog 'Все отмеченные: 2'} 'exactly two marked targets' 15
@@ -89,9 +105,15 @@ try {
                 }
             }
             Click (Wait-For {ByName $dialog 'Выполнить'} 'confirm action' 15)
-            if(!$op.AsyncWaitHandle.WaitOne(15000)){throw 'UI command did not return after consent'}
-            [void]$submit.EndInvoke($op)
-        }finally{$submit.Dispose()}
+            foreach($call in @($selectionCall,$restartCall,$menuCall)){
+                if(!$call.Invocation.AsyncWaitHandle.WaitOne(15000)){throw 'UI command did not return after consent'}
+                [void]$call.Runspace.EndInvoke($call.Invocation)
+            }
+        }finally{
+            foreach($call in @($selectionCall,$restartCall,$menuCall)){
+                if($call){$call.Runspace.Dispose()}
+            }
+        }
     }
 
     $computers=@(Get-ADComputer -Filter * -Properties DNSHostName,OperatingSystem | Where-Object DNSHostName -in @($first,$peer) | ForEach-Object {
@@ -100,19 +122,16 @@ try {
     if($computers.Count -ne 2){throw 'Expected two distinct lab targets.'}
     New-Item -ItemType Directory -Path $data -Force | Out-Null
     Save-Json 'computers.json' $computers
-    Save-Json 'view-state.json' @{Host=$first;Tab=0;Expanded=@($computers.OU)}
+    Save-Json 'view-state.json' @{Host=$first;Tab=2;Expanded=@($computers.OU)}
     Save-Json 'poll-paused41.json' $true
     Save-Json 'auto-service31.json' $false
-    Save-Json 'shell-mode.json' 1
     $process=Start-Process (Join-Path $dir 'DomainConsole.exe') -WorkingDirectory $dir -ArgumentList '--software-rendering' -PassThru
     $main=Wait-For {Application-Window 'DomainConsole' $true} 'packaged main window'
     $tree=Wait-For {ById $main 'OuTree'} 'computer tree'
     Mark-Target $tree 'DCWSUS'
     Mark-Target $tree 'CLONE1'
-    $editor=Wait-For {ById $main 'Editor'} 'command editor'
-    $editor.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).SetValue($command)
-    $run=Wait-For {ById $main 'RunEditorButton'} 'run from editor'
-    Confirm-Command $run $true
+    $serviceTools=Wait-For {ById $main 'ServiceTools36'} 'service tools'
+    Confirm-Command $serviceTools $true
 
     $partial=Wait-For {
         $a=JobFor $first
@@ -123,7 +142,7 @@ try {
     } 'uncertain delivery and a confirmed peer' 180
     $receiptJob=(JobFor $first).Id
     $peerJob=(JobFor $peer).Id
-    Confirm-Command $run $false
+    Confirm-Command $serviceTools $false
     Wait-For {
         $toast=ById $main 'ToastText'
         if($toast -and $toast.Current.Name -like '*действие уже принято или его исход уточняется*'){$true}

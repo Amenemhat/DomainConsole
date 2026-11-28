@@ -14,7 +14,8 @@ def exercise(root, ps, password, evidence, save):
     checks = evidence["checks"]
     guests = ("DCWSUS", "CLONE1")
     for node in guests:
-        ps(node, "Start-Service BITS")
+        ps(node, "Start-Service BITS;wevtutil.exe sl Microsoft-Windows-TaskScheduler/Operational /e:true;"
+           "if($LASTEXITCODE){throw 'Task execution auditing could not be enabled'}")
     checks["winrm_fault_fixture"] = {"node": guests[0], "phase": "configure"}
     save()
 
@@ -56,17 +57,21 @@ Start-ScheduledTask DCLab-ReloadEndpoint
 $folder=Join-Path $env:ProgramData 'DomainConsoleCSharp'
 $matched=@(Get-ChildItem $folder -Directory | Where-Object {
     $p=Join-Path $_.FullName 'job.json'
-    (Test-Path $p) -and ((Get-Content -Raw $p) -match 'DCLabManualReceipt059')
+    (Test-Path $p) -and ((Get-Content -Raw $p) -match 'function Save-Dependents')
 })
 if($matched.Count -ne 1){throw "Expected one job directory, found $($matched.Count)"}
 $id=$matched[0].Name
 $job=$matched[0].FullName
 $state=Get-Content (Join-Path $job 'status.json') -Raw | ConvertFrom-Json
 $tasks=@(Get-ScheduledTask -TaskName "DomainConsoleCSharp-$id" -ErrorAction SilentlyContinue)
-$marker='C:\DomainConsoleLab\DCLabManualReceipt059.txt'
+$trace=Get-Content -LiteralPath (Join-Path $job 'step-1.out') -Raw -Encoding UTF8
+$started=@(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-TaskScheduler/Operational';Id=100} -ErrorAction SilentlyContinue |
+ Where-Object {(([xml]$_.ToXml()).Event.EventData.Data | Where-Object Name -eq TaskName).'#text' -eq "\DomainConsoleCSharp-$id"})
 $closed='C:\DomainConsoleLab\receipt-disconnected.txt'
 @{
-  Job=$id; Status=$state.Status; Executions=@(Get-Content $marker).Count
+  Job=$id; Status=$state.Status; Executions=$started.Count
+  BitsStopped=$trace -match 'Остановлена: bits'
+  BitsStarted=$trace -match 'bits: работает после восстановления' 
   BITS=(Get-Service BITS).Status.ToString(); Tasks=$tasks.Count
   ActiveTasks=@($tasks|Where-Object State -eq 'Running').Count
   TransportClosed=if(Test-Path $closed){Get-Content $closed -Raw}
@@ -76,7 +81,7 @@ $closed='C:\DomainConsoleLab\receipt-disconnected.txt'
             save()
             if state["Status"] != "Completed" or state["Executions"] != 1:
                 raise RuntimeError(node + " did not complete exactly one real service restart")
-            if state["Tasks"] > 1 or state["ActiveTasks"] or state["BITS"] != "Running":
+            if state["Tasks"] > 1 or state["ActiveTasks"] or state["BITS"] != "Running" or not state["BitsStopped"] or not state["BitsStarted"]:
                 raise RuntimeError(node + " left a running task, a duplicate task, or a stopped service")
             if state["Job"] != checks["packaged_ui"]["Jobs"][node.lower() + ".dc057.test"]:
                 raise RuntimeError(node + " job does not match the consent and result in the console")
