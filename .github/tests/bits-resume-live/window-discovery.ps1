@@ -9,6 +9,7 @@ public static class DCLabNativeWindows {
     [DllImport("user32.dll")] static extern bool EnumThreadWindows(int thread, Visitor callback, IntPtr data);
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr window, StringBuilder title, int size);
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr window, StringBuilder name, int size);
+    [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr window, IntPtr target, uint flags);
     public static IntPtr Locate(int process, string title, bool prefix) {
         var match=IntPtr.Zero;
         foreach(ProcessThread thread in Process.GetProcessById(process).Threads) {

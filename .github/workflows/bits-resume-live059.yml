@@ -54,5 +54,7 @@ jobs:
         if: always()
         with:
           name: bits-resume-${{ matrix.scenario }}-evidence
-          path: ${{ runner.temp }}/dc-bits187-*/evidence.json
+          path: |
+            ${{ runner.temp }}/dc-bits187-*/evidence.json
+            ${{ runner.temp }}/dc-bits187-ui/window.png
           if-no-files-found: ignore

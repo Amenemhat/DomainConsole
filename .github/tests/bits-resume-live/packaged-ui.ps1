@@ -63,12 +63,20 @@ function Invoke-PackagedContinuation($Package, $Policy, [guid]$Id, [long]$Receiv
         }
         $background=Wait-Control {
             $item=Find-Control $main $ae::AutomationIdProperty 'BackgroundGroup'
+            if(!$item){$item=Find-Control $main $ae::NameProperty 'Фоновая активность клиента'}
             if($item){$item}
         } 'the background activity expander with the selected client' 115
+        if($background.Current.ControlType -ne [Windows.Automation.ControlType]::Group){
+            $walker=[Windows.Automation.TreeWalker]::ControlViewWalker
+            do {$background=$walker.GetParent($background)}
+            while($background -and $background.Current.ControlType -ne [Windows.Automation.ControlType]::Group)
+        }
+        if(!$background){throw 'Cannot locate the background activity group of the visible heading'}
         $expand=$background.GetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern)
         if($expand.Current.ExpandCollapseState -eq [Windows.Automation.ExpandCollapseState]::Collapsed){$expand.Expand()}
         $button=Wait-Control {
             $item=Find-Control $main $ae::AutomationIdProperty 'ContinueBits187'
+            if(!$item){$item=Find-Control $main $ae::NameProperty 'Продолжить скачивание…'}
             if($item -and $item.Current.IsEnabled){$item}
         } 'the Continue download button for the live paused transfer' 40
         $button.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
@@ -106,9 +114,22 @@ function Invoke-PackagedContinuation($Package, $Policy, [guid]$Id, [long]$Receiv
             }
             $failure.Controls=$controls
             $condition=[Windows.Automation.Condition]::TrueCondition
-            $failure.AutomationTree=@($main.FindAll($desc,$condition)|Select-Object -First 64|ForEach-Object {
+            $failure.AutomationTree=@($main.FindAll($desc,$condition)|Select-Object -First 200|ForEach-Object {
                 [string]$_.Current.AutomationId+'|'+[string]$_.Current.ControlType.ProgrammaticName+'|'+[string]$_.Current.Name
             })
+            try{
+                Add-Type -AssemblyName System.Drawing
+                $bounds=$main.Current.BoundingRectangle
+                if($bounds.Width -gt 0 -and $bounds.Height -gt 0 -and $bounds.Width -le 4096 -and $bounds.Height -le 2160){
+                    $image=[Drawing.Bitmap]::new([int]$bounds.Width,[int]$bounds.Height)
+                    $graphics=[Drawing.Graphics]::FromImage($image)
+                    $hdc=$graphics.GetHdc()
+                    try {$captured=[DCLabNativeWindows]::PrintWindow([IntPtr]$main.Current.NativeWindowHandle,$hdc,2)}
+                    finally {$graphics.ReleaseHdc($hdc);$graphics.Dispose()}
+                    if($captured){$image.Save((Join-Path $root 'window.png'),[Drawing.Imaging.ImageFormat]::Png)}
+                    $image.Dispose()
+                }
+            }catch{$failure.ScreenshotError=$_.Exception.Message}
         }
         $failure | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $root 'evidence.json') -Encoding UTF8
         throw
