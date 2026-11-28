@@ -9,17 +9,19 @@ public sealed partial class RemoteService {
  public static string BitsResumeScript187(string input)=>Resource42("bits-resume187.ps1")
   .Replace("@@REQUEST@@",PowerShellBridge.Literal(input));
 
+ public static string BitsSystemScript187(string input)=>BoundedSystemTask59(BitsResumeScript187(input),"BitsControl187");
+
  public async Task<string> ResumeBits187(TargetRecord target,BackgroundDownload download,LiveUpdateActivity live,
   ManagedBitsTransfer? proof,string operation,bool automatic) {
   using var lane=automatic?null:PollingControl43.Manual56("control");
   using var read=automatic?PollingControl43.Read():null;
-  using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(30));
+  using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(65));
   if(Local(target))RequireLocalAdmin();
   var input=JsonSerializer.Serialize(new {
    download.Id,download.State,download.Received,download.Total,download.RemoteName,download.LocalName,
    download.ModifiedUtc,live.PolicySource,Automatic=automatic,Proof=proof,Operation=operation
   });
-  return await PowerShellBridge.Execute(Invoke(target,BitsResumeScript187(input)),timeout.Token);
+  return await PowerShellBridge.Execute(Invoke(target,BitsSystemScript187(input)),timeout.Token);
  }
 }
 

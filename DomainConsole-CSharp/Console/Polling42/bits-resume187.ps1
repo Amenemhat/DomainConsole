@@ -3,7 +3,7 @@ $ProgressPreference='SilentlyContinue'
 $request=@@REQUEST@@ | ConvertFrom-Json -ErrorAction Stop
 
 function Reply([string]$message,[bool]$awaitGrowth=$false) {
-    @{Message=$message;AwaitGrowth=$awaitGrowth} | ConvertTo-Json -Compress
+    @{Message=$message;AwaitGrowth=$awaitGrowth;CollectedUtc=[DateTime]::UtcNow.ToString('o')} | ConvertTo-Json -Compress
 }
 
 function Owns-BitsJob($job) {

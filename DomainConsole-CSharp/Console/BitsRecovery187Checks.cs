@@ -47,6 +47,9 @@ public partial class MainWindow {
     download.Id,download.State,download.Received,download.Total,download.RemoteName,download.LocalName,download.ModifiedUtc,
     live.PolicySource,Automatic=false
    });
+   var system=RemoteService.BitsSystemScript187(fixture);
+   if(!system.Contains("BitsControl187")||!system.Contains("IgnoreNew")||!system.Contains("SYSTEM"))
+    throw new Exception("BITS continuation lost its bounded SYSTEM entry point.");
    File.WriteAllText(Path.Combine(Path.GetTempPath(),"bits-resume187-fixture.json"),fixture);
    File.WriteAllText(Path.Combine(Path.GetTempPath(),"bits-resume187-template.ps1"),RemoteService.BitsResumeScript187("{}"));
   }finally{ForgetBits(host);}
