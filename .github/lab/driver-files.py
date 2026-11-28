@@ -1,4 +1,4 @@
-"""Read the signed Server 2022 NetKVM folder from Fedora's official ISO by byte ranges."""
+"""Read the signed Windows Server NetKVM folder from Fedora's official ISO by byte ranges."""
 from pathlib import Path
 import re
 import subprocess
@@ -67,7 +67,10 @@ primary=descriptors[:block]
 if primary[:6]!=b"\x01CD001":
     raise ValueError("Invalid primary ISO volume descriptor")
 record=(joliet or primary)[156:190]
-for component in ("netkvm","2k22","amd64"):
+server=destination.parent.name.lower()
+if server not in {"2k19","2k22"}:
+    raise ValueError("Expected a Server 2019 or 2022 destination")
+for component in ("netkvm",server,"amd64"):
     record = directory(record)[component]
     if not record[25]&2:
         raise ValueError("Driver path is not a directory")

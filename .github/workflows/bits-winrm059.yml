@@ -1,0 +1,35 @@
+name: BITS continuation over WinRM on Windows Server 2019
+on:
+  push:
+    branches: ['lab/0.59-bits-winrm']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bits-winrm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      DC_BOOTSTRAP_ONLY: '1'
+      DC_TEST_BITS_WINRM: '1'
+      APP_COMMIT: 9411f6022d352513e90618744c204acbbb106442
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.APP_COMMIT }}
+          path: candidate
+      - name: Prepare an isolated Windows Server 2019 VM and WinRM
+        run: |
+          test "$(git -C candidate rev-parse HEAD)" = "$APP_COMMIT"
+          bash .github/lab/prepare-guests.sh
+      - name: Compare WinRM and SYSTEM preflight on the same transfer
+        run: bash .github/lab/wait-for-guests.sh guest-exit 28
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bits-winrm-server2019-evidence
+          path: |
+            ${{ runner.temp }}/dc-wsus-lab/evidence.json
+            ${{ runner.temp }}/dc-wsus-lab/*-boot.png
+          if-no-files-found: warn

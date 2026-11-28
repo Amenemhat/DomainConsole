@@ -338,6 +338,9 @@ def main():
         boot("DCWSUS",gpt,True)
         wait("DCWSUS",minutes=12,specialized=True)
         checkpoint("winrm")
+        if os.environ.get("DC_TEST_BITS_WINRM")=="1":
+            from bits_winrm import exercise
+            exercise(ps,system,evidence,save)
         return
     # Specialization and OOBE require substantially more RAM than an idle member.
     # Two fresh guests use 7 GiB combined. Preserve per-guest readiness and S5.

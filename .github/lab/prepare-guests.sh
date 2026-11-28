@@ -20,8 +20,15 @@ fi
 # Reclaim space from unused SDKs on this disposable runner before writing seven overlays.
 sudo rm -rf /usr/local/lib/android/sdk /usr/share/dotnet /opt/ghc
 df -h "$lab"
-curl --fail --location --retry 3 --max-time 1200 'https://go.microsoft.com/fwlink/p/?clcid=0x409&country=us&culture=en-us&linkid=2195166' -o "$lab/windows.vhd"
-if python3 .github/lab/driver-files.py "$lab/drivers/NetKVM/2k22/amd64"; then
+if [[ "${DC_TEST_BITS_WINRM:-}" == "1" ]]; then
+  media='https://go.microsoft.com/fwlink/p/?clcid=0x409&country=us&culture=en-us&linkid=2195334'
+  driver=2k19
+else
+  media='https://go.microsoft.com/fwlink/p/?clcid=0x409&country=us&culture=en-us&linkid=2195166'
+  driver=2k22
+fi
+curl --fail --location --retry 3 --max-time 1200 "$media" -o "$lab/windows.vhd"
+if python3 .github/lab/driver-files.py "$lab/drivers/NetKVM/$driver/amd64"; then
   genisoimage -quiet -R -J -o "$lab/drivers.iso" "$lab/drivers"
 else
   curl --fail --silent --show-error --location --retry 2 --max-time 1200 https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso -o "$lab/drivers.iso"
@@ -37,6 +44,9 @@ sudo iptables -I FORWARD -i dclab0 ! -o dclab0 -j DROP
 sudo iptables -I FORWARD -o dclab0 ! -i dclab0 -j DROP
 sudo iptables -I FORWARD -i dclab0 -o dclab0 -j ACCEPT
 sudo iptables -I INPUT -i dclab0 -s 10.77.57.11/32 -p tcp --dport 8765 -j ACCEPT
+if [[ "${DC_TEST_BITS_WINRM:-}" == "1" ]]; then
+  sudo iptables -I INPUT -i dclab0 -s 10.77.57.10/32 -p tcp --dport 8765 -j ACCEPT
+fi
 sudo chown root:kvm /dev/kvm
 sudo chmod 660 /dev/kvm
 if [[ "${DC_MEDIA_ONLY:-}" != "1" ]]; then bash .github/lab/boot-guests.sh; fi

@@ -12,9 +12,11 @@ try {
   Set-LocalUser -Name $admin.Name -Password (ConvertTo-SecureString $node.temporaryAdmin -AsPlainText -Force)
  }
  Step 'Local account ready'
+ $build=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').CurrentBuildNumber
+ $driver=if($build -eq '17763'){'2k19'}else{'2k22'}
  foreach($drive in [IO.DriveInfo]::GetDrives()){
   if($drive.DriveType -ne 'CDRom' -or !$drive.IsReady){continue}
-  $inf=Join-Path $drive.RootDirectory.FullName 'NetKVM\2k22\amd64\netkvm.inf'
+  $inf=Join-Path $drive.RootDirectory.FullName "NetKVM\$driver\amd64\netkvm.inf"
   if(Test-Path -LiteralPath $inf){
    $out=& pnputil.exe /add-driver $inf /install
    Step ("Signed network driver: "+($out -join ' '))
