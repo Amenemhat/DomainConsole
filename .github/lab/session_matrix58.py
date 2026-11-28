@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import time
@@ -27,16 +28,42 @@ def exercise(root, ps, host, password, evidence, save, when_domain_session_activ
     evidence["probe_commit"] = os.environ["DC_PROBE_COMMIT58"]
     evidence["checks"]["pre_rdp_wts"] = list(read())
     save()
-    ps("DCAD", f"$p=ConvertTo-SecureString '{password}' -AsPlainText -Force;"
-       "New-ADUser -Server 'dcad.dc057.test' -Name 'RdpDomain58' -SamAccountName RdpDomain58 -GivenName Directory -Surname Fixture "
-       "-AccountPassword $p -Enabled $true", True)
-    ps("DCWSUS", f"$p=ConvertTo-SecureString '{password}' -AsPlainText -Force;"
-       "New-LocalUser -Name RdpLocal58 -Password $p|Out-Null;"
-       "$g=Get-LocalGroup -SID 'S-1-5-32-555';"
-       "Add-LocalGroupMember -Group $g -Member 'DCWSUS\\RdpLocal58','DCLAB\\RdpDomain58';"
-       "Set-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server' -Name fDenyTSConnections -Value 0;"
-       "New-NetFirewallRule -Name DCLabRdpFromRunner -Direction Inbound -Action Allow -Protocol TCP -LocalPort 3389 -RemoteAddress 10.77.57.1 | Out-Null;"
-       "Start-Service TermService")
+    def configure(phase, node, script, domain_credentials=False):
+        evidence["checks"]["rdp_setup"] = {"phase": phase, "completed": False}
+        save()
+
+        def stop_waiting(*_):
+            raise TimeoutError("WinRM did not finish RDP fixture phase: " + phase)
+
+        previous = signal.signal(signal.SIGALRM, stop_waiting)
+        signal.setitimer(signal.ITIMER_REAL, 100)
+        try:
+            reply = ps(node, script, domain_credentials)
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, previous)
+        evidence["checks"]["rdp_setup"]["completed"] = True
+        save()
+        return reply
+
+    domain_sid=configure("domain_account", "DCAD",
+        f"$p=ConvertTo-SecureString '{password}' -AsPlainText -Force;"
+        "(New-ADUser -Server 'dcad.dc057.test' -Name 'RdpDomain58' -SamAccountName RdpDomain58 "
+        "-GivenName Directory -Surname Fixture -AccountPassword $p -Enabled $true -PassThru).SID.Value", True)
+    local_sid=configure("local_account", "DCWSUS",
+        f"$p=ConvertTo-SecureString '{password}' -AsPlainText -Force;"
+        "(New-LocalUser -Name RdpLocal58 -Password $p).SID.Value")
+    if not all(re.fullmatch(r"S-1-5-21-(?:[0-9]+-){3}[0-9]+", sid) for sid in (local_sid,domain_sid)):
+        raise RuntimeError("Lab accounts did not return valid SIDs")
+    configure("rdp_permissions", "DCWSUS",
+        "$g=Get-LocalGroup -SID 'S-1-5-32-555';"
+        f"Add-LocalGroupMember -Group $g -Member '{local_sid}','{domain_sid}'")
+    configure("rdp_listener", "DCWSUS",
+        r"Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0;"
+        "New-NetFirewallRule -Name DCLabRdpFromRunner -Direction Inbound -Action Allow -Protocol TCP "
+        "-LocalPort 3389 -RemoteAddress 10.77.57.1 | Out-Null;"
+        "if((Get-Service TermService).Status -ne 'Running'){sc.exe start TermService | Out-Null;"
+        "if($LASTEXITCODE -notin 0,1056){throw ('TermService did not accept start: '+$LASTEXITCODE)}}")
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline:
         try:
