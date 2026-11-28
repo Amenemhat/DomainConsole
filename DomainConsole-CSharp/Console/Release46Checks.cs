@@ -5,7 +5,7 @@ namespace DomainConsole;
 public partial class MainWindow {
  void VerifyRelease46(){
   VerifyEventHistory50();
-  VerifyStatus50();
+  VerifyStatus50();AwaitUi39(VerifyDirectoryUserRecovery175());
   AwaitUi39(VerifyObservation51());
   AwaitUi39(VerifyAcceptance51());AwaitUi39(VerifyRelease52());AwaitUi39(VerifyRelease53());VerifyRelease54();AwaitUi39(VerifyManual56());VerifyRelease58();AwaitUi39(VerifyOperation60());VerifyRecentFixes61();VerifyRelease057();
   System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(),"maintenance47.ps1"),MaintenanceRegistration47.Script,new System.Text.UTF8Encoding(true));

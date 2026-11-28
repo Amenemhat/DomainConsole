@@ -574,6 +574,11 @@ jobs:
             & ([ScriptBlock]::Create([IO.File]::ReadAllText((Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke/priority-restore.ps1'))))
             if($chosen.Priority -ne 'High' -or $other.Priority -ne 'Normal'){throw 'Original priority was not restored'}
           }finally{$env:ProgramData=$saved}
+      - name: Verify targeted BITS continuation and truthful results
+        shell: powershell
+        run: |
+          $smoke=Join-Path $env:RUNNER_TEMP 'DomainConsole-smoke'
+          ./.github/scripts/test-bits-resume187.ps1 -Template (Join-Path $smoke 'bits-resume187-template.ps1') -Fixture (Join-Path $smoke 'bits-resume187-fixture.json')
       - name: Verify cache cleanup protection and backup
         shell: pwsh
         run: |

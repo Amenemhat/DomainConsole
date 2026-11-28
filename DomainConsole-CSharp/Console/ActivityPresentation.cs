@@ -24,12 +24,17 @@ public partial class MainWindow {
   CurrentProgress.Visibility=progress47?Visibility.Visible:Visibility.Collapsed;CurrentProgress.IsIndeterminate=progress47&&fresh&&state?.Progress==null;CurrentProgress.Value=state?.Progress??0;CurrentProgress.ToolTip="Ход выполнения задания";WsusProgress.IsIndeterminate=CurrentProgress.IsIndeterminate;WsusStage.Text=CurrentStage.Text;
   RecommendationButton.Visibility=Visibility.Collapsed;RecommendationButton.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty,"ButtonSurface");RecommendationButton.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty,"WarningText");RecommendationButton.ToolTip=state?.Recommendation;
   DiagnosticStage.Text=state==null?"":"Диагностика: "+DiagnosticLabel(state);DiagnosticStage.Visibility=state!=null&&(state.DiagnosticStatus is "Pending" or "Running" or "LegacyRunning")?Visibility.Visible:Visibility.Collapsed;
-  BackgroundGroup.Visibility=Visibility.Collapsed;BackgroundProgress.Visibility=Visibility.Collapsed;DownloadPriorityButton.Visibility=Visibility.Collapsed;
-  if(backgroundUpdates.TryGetValue(row.Host,out var live)&&(live.Downloads.Count>0||live.InstallerBusy||live.Limitation.Length>0)){
+  BackgroundGroup.Visibility=Visibility.Collapsed;BackgroundProgress.Visibility=Visibility.Collapsed;DownloadPriorityButton.Visibility=Visibility.Collapsed;ContinueBits187.Visibility=Visibility.Collapsed;
+  var downloadReceipt=bitsReceipts187.GetValueOrDefault(row.Host);
+  if(downloadReceipt?.Endpoint!=Identity40.EndpointKey(ConnectionStore.Capture(selected.Target)))downloadReceipt=null;
+  if(backgroundUpdates.TryGetValue(row.Host,out var live)&&(live.Downloads.Count>0||live.InstallerBusy||live.Limitation.Length>0||downloadReceipt!=null)){
    BackgroundGroup.Visibility=Visibility.Visible;BackgroundSummary.Text="Фоновая активность клиента";BackgroundSummary.ToolTip=BackgroundLabel(live);BackgroundRelation.Text="Это отдельный снимок клиента, не результат выбранного задания. Связь записей BITS с этим запуском не установлена.";
-   BackgroundDetails.Text=BackgroundText(row.Host,live)+"\n\n"+string.Join("\n\n",live.Downloads.Take(8).Select(d=>"Задание: "+d.Id+"\nФайл: "+d.LocalName+"\nИсточник: "+d.RemoteName+"\n"+DownloadSource(d,live)+"\nИзменено: "+LocalDateConverter.Format(d.ModifiedUtc)))+(live.Limitation.Length>0?"\nОшибка дополнительного опроса не меняет итог основного задания.":"");
+   var details=(downloadReceipt!=null?downloadReceipt.Text+"\n\n":"")+BackgroundText(row.Host,live)+"\n\n"+string.Join("\n\n",live.Downloads.Take(8).Select(d=>"Задание: "+d.Id+"\nФайл: "+d.LocalName+"\nИсточник: "+d.RemoteName+"\n"+DownloadSource(d,live)+"\nИзменено: "+LocalDateConverter.Format(d.ModifiedUtc)))+(live.Limitation.Length>0?"\nОшибка дополнительного опроса не меняет итог основного задания.":"");
+   if(BackgroundDetails.Text!=details)BackgroundDetails.Text=details;
    var download=live.Downloads.FirstOrDefault(d=>d.State=="Transferring");
    if(FreshActivity(live)&&download!=null){BackgroundProgress.Visibility=Visibility.Visible;BackgroundProgress.IsIndeterminate=!download.Total.HasValue||download.Total<=0||download.Received>download.Total;BackgroundProgress.Value=download.Total>0?Math.Clamp((double)download.Received*100/download.Total.Value,0,100):0;}
+   ContinueBits187.Visibility=live.Downloads.Any(d=>d.State is "Suspended" or "Queued")?Visibility.Visible:Visibility.Collapsed;
+   ContinueBits187.IsEnabled=!bitsPending187.Contains(row.Host);
    DownloadPriorityButton.Visibility=FreshActivity(live)&&live.Downloads.Any(d=>d.Accelerated||(d.State is "Queued" or "Connecting" or "Transferring"))?Visibility.Visible:Visibility.Collapsed;
   }
   var pieces38=CurrentStage.Text.Split(new[]{'\n'},2);CurrentStage.Text=pieces38[0];OperationDetail38.Text=pieces38.Length>1?pieces38[1]:"";OperationDetail38.Visibility=OperationDetail38.Text.Length>0?Visibility.Visible:Visibility.Collapsed;

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using DomainConsole.Shared;
 
 namespace DomainConsole.Agent {
  public sealed class ExistingUpdateTransfer {
@@ -92,6 +93,18 @@ ConvertTo-Json -InputObject $jobs -Depth 4 -Compress
 
   static object ObserveExistingUpdate(dynamic session, object candidate, int source, string prefix,
       Stopwatch wait, bool installerWasBusy, bool inspectDownloads) {
+   try {
+    return ObserveExistingUpdateCore(session, candidate, source, prefix, wait, installerWasBusy, inspectDownloads);
+   } finally {
+    if (State.ManagedBits187 != null) {
+     State.ManagedBits187 = null;
+     Save();
+    }
+   }
+  }
+
+  static object ObserveExistingUpdateCore(dynamic session, object candidate, int source, string prefix,
+      Stopwatch wait, bool installerWasBusy, bool inspectDownloads) {
    dynamic update = candidate;
    string title = (string)update.Title;
    Guid id = Guid.Parse((string)update.Identity.UpdateID);
@@ -145,6 +158,10 @@ ConvertTo-Json -InputObject $jobs -Depth 4 -Compress
     }
     if (State.Stage != stage) Stage(stage);
     var now = DateTime.UtcNow;
+    State.ManagedBits187 = State.ManagedSource54 == true && match != null && match.Urls?.Length == 1
+     ? new ManagedBitsTransfer { Id = match.Id, UpdateId = id.ToString("D"), Revision = revision,
+       Url = match.Urls[0], ObservedUtc = now.ToString("o") }
+     : null;
     if (match != null && match.Total > 0 && match.Bytes >= 0 && match.Bytes <= match.Total) {
      string speed = previous?.Id == match.Id && match.Bytes >= previous.Bytes
       ? " · " + ((match.Bytes - previous.Bytes) / Math.Max(1, (now - sample).TotalSeconds) / 1024).ToString("F1") + " КиБ/с"

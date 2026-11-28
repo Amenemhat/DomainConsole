@@ -20,7 +20,15 @@ namespace DomainConsole.Shared {
  public class CacheResult50 {public int Isolated {get;set;}public int Backups {get;set;}public int PendingDelete {get;set;}public bool CleanupStarted {get;set;}}
  public class StepResult {public CacheResult50 Cache50 {get;set;}public int? UpdatesFound50 {get;set;}public string Kind {get;set;}="";public int? NativeExitCode {get;set;}public string Name {get;set;}="";public int ExitCode {get;set;}public string Started {get;set;}="";public string Ended {get;set;}="";public string Error {get;set;}="";}
  public class InstalledUpdate45 {public string Id {get;set;}="";public int Revision {get;set;}public string Title {get;set;}="";public string At {get;set;}="";}
- public class RemoteState {public bool? ManagedSource54 {get;set;}public string UpdateSource54 {get;set;}="";public string ReportRequestedUtc54 {get;set;}="";public bool Deferred52 {get;set;}public string ServiceRecoveryError47 {get;set;}="";public List<InstalledUpdate45> InstalledUpdates45 {get;set;}=new List<InstalledUpdate45>();public int UpdateTotal38 {get;set;}public int UpdateIndex38 {get;set;}public int InstalledCount38 {get;set;}public int ExecutorPid37 {get;set;}public string ExecutorStarted37 {get;set;}="";public bool HasUpdateSteps {get;set;}public int SchemaVersion {get;set;}public bool UpdateOperationStarted {get;set;}public bool ReportRequested {get;set;}public string AutoRebootDueUtc {get;set;}="";
+ public sealed class ManagedBitsTransfer {
+  public string Id {get;set;}="";
+  public string UpdateId {get;set;}="";
+  public int Revision {get;set;}
+  public string Url {get;set;}="";
+  public string ObservedUtc {get;set;}="";
+ }
+ public class RemoteState {
+  public ManagedBitsTransfer ManagedBits187 {get;set;}public bool? ManagedSource54 {get;set;}public string UpdateSource54 {get;set;}="";public string ReportRequestedUtc54 {get;set;}="";public bool Deferred52 {get;set;}public string ServiceRecoveryError47 {get;set;}="";public List<InstalledUpdate45> InstalledUpdates45 {get;set;}=new List<InstalledUpdate45>();public int UpdateTotal38 {get;set;}public int UpdateIndex38 {get;set;}public int InstalledCount38 {get;set;}public int ExecutorPid37 {get;set;}public string ExecutorStarted37 {get;set;}="";public bool HasUpdateSteps {get;set;}public int SchemaVersion {get;set;}public bool UpdateOperationStarted {get;set;}public bool ReportRequested {get;set;}public string AutoRebootDueUtc {get;set;}="";
   public RebootEvidence RebootEvidence {get;set;}
 
   public string ActivityMessage {get;set;}="";public string Recommendation {get;set;}="";public string RecommendationAction {get;set;}="";public string LastMovementUtc {get;set;}="";public string TransferText {get;set;}="";public int ForceCandidatePid {get;set;}public string ForceCandidateStarted {get;set;}="";

@@ -327,7 +327,7 @@
               </Expander.Header>
               <DockPanel MaxHeight="175">
                 <TextBlock x:Name="BackgroundRelation" DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,3"/>
-                <Button x:Name="DownloadPriorityButton" DockPanel.Dock="Top" Content="Скорость выбранной загрузки…" Click="DownloadPriority_Click" HorizontalAlignment="Left" Margin="0,0,0,4" Visibility="Collapsed" ToolTip="Выбрать конкретное задание BITS: повысить приоритет или вернуть исходный"/>
+                <WrapPanel DockPanel.Dock="Top"><Button x:Name="DownloadPriorityButton" Content="Скорость выбранной загрузки…" Click="DownloadPriority_Click" HorizontalAlignment="Left" Margin="0,0,0,4" Visibility="Collapsed" ToolTip="Выбрать конкретное задание BITS: повысить приоритет или вернуть исходный"/><Button x:Name="ContinueBits187" Content="Продолжить скачивание…" Click="ContinueBits187_Click" Margin="5,0,0,4" Visibility="Collapsed"/></WrapPanel>
                 <ProgressBar x:Name="BackgroundProgress" DockPanel.Dock="Top" Height="4" Maximum="100" Visibility="Collapsed"/>
                 <TextBox x:Name="BackgroundDetails" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="145" VerticalScrollBarVisibility="Auto" Margin="0,4"/>
               </DockPanel>
@@ -404,11 +404,10 @@
               </ComboBox>
               <Button Content="Сохранить ожидание и палитру" Click="SaveOperationSettings_Click" HorizontalAlignment="Left"/>
               <Separator Margin="0,16"/>
-              <CheckBox x:Name="AutomaticDownloadRecovery" ToolTip="По умолчанию выключено. Только свежие данные без установки; перезапуск BITS, UsoSvc и wuauserv без очистки кэша."><TextBlock Text="Автоматически восстанавливать загрузку (одна попытка на ПК)" TextWrapping="Wrap"/></CheckBox>
+              <CheckBox x:Name="AutomaticDownloadRecovery" ToolTip="По умолчанию выключено. Работает при включённом «Авто». Возобновляет одно подтверждённое задание BITS без очистки данных."><TextBlock Text="Автоматически продолжать скачивание (одна попытка на задание BITS)" TextWrapping="Wrap"/></CheckBox>
               <TextBlock Text="Минут непрерывного наблюдения без движения (10–180)"/>
-              <TextBox x:Name="DownloadWaitBox" Text="30" Width="100" HorizontalAlignment="Left"/>
+              <TextBox x:Name="DownloadWaitBox" Text="10" Width="100" HorizontalAlignment="Left"/>
               <Button Content="Сохранить восстановление загрузки" Click="SaveDownloadSettings_Click"/>
-              <Button Content="Сбросить счётчики попыток" Click="ResetRecoveryAttempts_Click"/>
               <TextBlock Text="Возраст отчёта для автоматической диагностики, часов (1–720)"/>
               <TextBox x:Name="ReportAgeBox" Text="24" Width="100" HorizontalAlignment="Left"/>
               <CheckBox x:Name="AutomaticReportRepair" ToolTip="После завершения обновлений: старый отчёт и накопившаяся старая очередь. Одна очистка EventCache на задержку отчёта, затем поиск и запрос отчёта без установки.">

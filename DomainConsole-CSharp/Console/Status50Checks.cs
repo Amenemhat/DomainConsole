@@ -2,6 +2,51 @@ using System.IO;
 using DomainConsole.Shared;
 namespace DomainConsole;
 public partial class MainWindow {
+ async Task VerifyDirectoryUserRecovery175(){
+  const string host="directory-recovery.fixture.invalid",account="FIXTURE\\hidden-login";
+  var row=new ComputerRow(new(){Host=host,Name="DIRECTORY-RECOVERY"});
+  var now=DateTimeOffset.UtcNow;
+  var seen=now.AddMinutes(-5).ToString("o");
+  Computers.Add(row);
+  try{
+   clientConnections[host]=new(){Error="WinRM unavailable for hidden-login"};
+   liveConnections.Add(host);
+   RefreshUser37(row);
+   if(row.UserText37!="Сведения о пользователе не получены"||
+      !row.NameHint36.Contains("WinRM")||row.NameHint36.Contains("hidden-login"))
+    throw new Exception("WinRM failure without a saved user was not distinguished in the user hint.");
+   clientConnections[host]=new(){LastSuccess=now};
+   users37[host]=new(){Account=account,Name="Тест Пользователь",Current=true,SeenUtc=seen,ReceivedUtc=now.ToString("o")};
+   userNames37[account]=new(){Name="Тест Пользователь",CheckedUtc=now.AddDays(-2).ToString("o")};
+   await ResolveUser37(account,_=>throw new IOException("Simulated directory outage"));
+   var failed=userNames37[account];
+   var attempt=DateTimeOffset.Parse(failed.CheckedUtc);
+   if(!failed.DirectoryUnavailable||failed.Name!="Тест Пользователь"||failed.LookupDue(attempt.AddSeconds(119))||
+      !failed.LookupDue(attempt.AddMinutes(2))||!row.UserHint37.Contains("Active Directory")||
+      !row.UserText37.StartsWith("Тест Пользователь")||users37[host].SeenUtc!=seen)
+    throw new Exception("An AD outage erased trusted information or was treated as a successful negative lookup.");
+   await ResolveUser37(account,_=>"Тест Восстановлен");
+   var recovered=userNames37[account];
+   if(recovered.DirectoryUnavailable||recovered.LookupDue(DateTimeOffset.UtcNow)||row.UserHint37.Contains("Active Directory")||
+      !row.UserText37.StartsWith("Тест Восстановлен")||users37[host].SeenUtc!=seen)
+    throw new Exception("Successful directory recovery did not clear the failure while preserving the session timestamp.");
+   var noName=new UserName37{CheckedUtc=now.ToString("o")};
+   if(noName.LookupDue(now.AddMinutes(2))||!noName.LookupDue(now.AddHours(1)))
+    throw new Exception("Successful negative lookup lost its normal cache duration.");
+   clientConnections[host].Error="WinRM unavailable";
+   RefreshUser37(row);
+   if(!row.UserText37.StartsWith("Тест Восстановлен")||!row.UserHint37.Contains("WinRM")||users37[host].SeenUtc!=seen)
+    throw new Exception("WinRM loss discarded the last confirmed name or timestamp.");
+  }finally{
+   Computers.Remove(row);
+   clientConnections.Remove(host);
+   liveConnections.Remove(host);
+   users37.Remove(host);
+   userNames37.Remove(account);
+   Store.Write("client-users37.json",users37);
+   Store.Write("user-names37.json",userNames37);
+  }
+ }
  void VerifyStatus50(){
   var now=DateTimeOffset.UtcNow;string at=now.ToString("o"),scan=now.AddMinutes(-2).ToString("o"),boot=now.AddDays(-1).ToString("o");
   WsusReport Report()=>new(){NeededCount=0,RequiredComplete=true,LastReportedUtc=now.AddMinutes(-1).ToString("o"),LastSyncUtc=scan,LastSyncResult="Succeeded"};
