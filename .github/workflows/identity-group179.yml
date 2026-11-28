@@ -12,8 +12,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       DC_IDENTITY_OWN_WUA_PROCESS: '1'
-      APP_COMMIT: b00e2981c8299ae26a47b11a77b9c7bb6888634a
-      APP_RUN: '46139453414'
+      APP_COMMIT: ac4a741beac62c0b68abe0b42a4b41811ab72a7f
+      APP_RUN: '46139909086'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
