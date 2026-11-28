@@ -12,8 +12,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       DC_IDENTITY_CLONE_PAIR: '1'
-      APP_COMMIT: 216ffb0fb1cde6438b1b9b94dd0d979aaef632fb
-      APP_RUN: '46030860502'
+      APP_COMMIT: 79902e433f60c22f5ce615ca9545a05ef55435d5
+      APP_RUN: '46138582904'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
