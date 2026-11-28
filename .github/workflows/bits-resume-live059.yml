@@ -5,12 +5,15 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   native-bits:
     runs-on: windows-latest
-    timeout-minutes: 12
+    timeout-minutes: 18
     env:
       APP_COMMIT: ac4a741beac62c0b68abe0b42a4b41811ab72a7f
+      APP_ARTIFACT: '15261980571'
+      APP_SHA256: 4b10a3a0edbd999be29e8eb9a96e1dc17ff1776dd30231bb1e86bcc533fe4a9b
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,9 +31,21 @@ jobs:
             Set-TimeZone -Id 'Belarus Standard Time'
             ./.github/tests/bits-resume-live/live-resume.ps1
           } finally { Set-TimeZone -Id $previous }
+      - name: Verify the continuation button in the packaged console
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $archive=Join-Path $env:RUNNER_TEMP 'dc-candidate187.zip'
+          Invoke-WebRequest -UseBasicParsing -Headers @{Authorization="Bearer $env:GH_TOKEN"} -Uri "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/artifacts/$env:APP_ARTIFACT/zip" -OutFile $archive
+          if((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne $env:APP_SHA256){throw 'Candidate ZIP hash differs'}
+          $package=Join-Path $env:RUNNER_TEMP 'dc-candidate187'
+          Expand-Archive -LiteralPath $archive -DestinationPath $package
+          powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File .github/tests/bits-resume-live/live-resume.ps1 -Package $package
+          if($LASTEXITCODE){throw 'Packaged BITS check failed'}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: native-bits-resume-evidence
-          path: ${{ runner.temp }}/dc-bits187-live/evidence.json
+          path: ${{ runner.temp }}/dc-bits187-*/evidence.json
           if-no-files-found: ignore

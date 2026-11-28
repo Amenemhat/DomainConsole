@@ -1,9 +1,10 @@
-﻿$ErrorActionPreference='Stop'
+﻿param([string]$Package)
+$ErrorActionPreference='Stop'
 if($env:GITHUB_ACTIONS -ne 'true' -or (Get-CimInstance Win32_ComputerSystem).PartOfDomain){
     throw 'Only the disposable workgroup Windows runner is supported.'
 }
 Import-Module BitsTransfer -ErrorAction Stop
-$root=Join-Path $env:RUNNER_TEMP 'dc-bits187-live'
+$root=Join-Path $env:RUNNER_TEMP $(if($Package){'dc-bits187-ui'}else{'dc-bits187-live'})
 New-Item -Path $root -ItemType Directory -Force | Out-Null
 $utf8=[Text.UTF8Encoding]::new($false)
 $task='DomainConsoleLab-BitsResume-'+[guid]::NewGuid().ToString('N')
@@ -72,6 +73,10 @@ try {
         PolicySource=$policy;Automatic=$false
     }
     $serviceBefore=Get-CimInstance Win32_Service -Filter "Name='BITS'"
+    if($Package){
+        . (Join-Path $PSScriptRoot 'packaged-ui.ps1')
+        $reply=Invoke-PackagedContinuation $Package $policy $ids[0] $request.Received
+    }else{
     $source=Join-Path $env:GITHUB_WORKSPACE 'DomainConsole-CSharp/Console/Polling42/bits-resume187.ps1'
     $literal="'"+($request|ConvertTo-Json -Compress).Replace("'","''")+"'"
     $logic=[IO.File]::ReadAllText($source).Replace('@@REQUEST@@',$literal)
@@ -93,6 +98,7 @@ function New-Object {param($ComObject) @{IsBusy=$false}}
     if(!$template.Success){throw 'Bounded SYSTEM template missing from the candidate'}
     $launcher=$template.Groups[1].Value.Replace('@@DIRECTORY@@',"'BitsControl187'").Replace('@@BODY@@',("'"+$worker.Replace("'","''")+"'"))
     $reply=& ([ScriptBlock]::Create($launcher)) | ConvertFrom-Json
+    }
     $control=Get-ScheduledTask -TaskName 'DomainConsoleCSharp-BitsControl187'
     if($control.State -in 'Running','Queued' -or $control.Settings.MultipleInstances -ne 'IgnoreNew'){
         throw 'Expected a single completed reusable SYSTEM task'
@@ -105,7 +111,7 @@ function New-Object {param($ComObject) @{IsBusy=$false}}
     }while([DateTime]::UtcNow -lt $deadline)
     $other=Get-BitsTransfer -AllUsers | Where-Object JobId -eq $ids[1]
     $serviceAfter=Get-CimInstance Win32_Service -Filter "Name='BITS'"
-    $proof=@{Version=$env:APP_COMMIT;Initial=$request;Reply=$reply;SameJob=$after.JobId -eq $ids[0]
+    $proof=@{Version=$env:APP_COMMIT;PackageSha256=if($Package){$env:APP_SHA256};Initial=$request;Reply=$reply;SameJob=$after.JobId -eq $ids[0]
         State=[string]$after.JobState;Bytes=[long]$after.BytesTransferred;BitsError=[string]$after.ErrorDescription
         ControlTask=[string]$control.TaskName;ControlTaskState=[string]$control.State
         OtherState=[string]$other.JobState;OtherBytes=[long]$other.BytesTransferred;SameServicePid=$serviceBefore.ProcessId -eq $serviceAfter.ProcessId}
