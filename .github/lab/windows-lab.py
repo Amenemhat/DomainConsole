@@ -356,13 +356,21 @@ def main():
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         list(pool.map(specialize,nodes))
     checkpoint("specialized")
+    if not single_natural:
+        # Complete promotion while the isolated controller has the runner to itself.
+        boot("DCAD",gpt)
+        wait("DCAD",minutes=12)
+        setup_domain()
+        evidence["checks"]["controller_promoted_before_members"] = True
+        save()
     for node in nodes:
+        if node=="DCAD":
+            continue
         boot(node,gpt)
         wait(node,minutes=12)
     checkpoint("winrm")
     if not single_natural:
-        setup_domain()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             list(pool.map(join, [n for n in nodes if n != "DCAD"]))
         checkpoint("domain")
     else:
