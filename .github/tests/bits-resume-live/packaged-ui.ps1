@@ -44,9 +44,11 @@
         Save-Json 'background-expanded32.json' $true
         Save-Json 'link-automatic31.json' $false
         Save-Json 'auto-service31.json' $false
+        Save-Json 'overview-settings.json' @{Automatic=$false;Hours=24}
         Save-Json 'wsus-settings.json' @{Host=$wsus.Host;Port=$wsus.Port;Ssl=$false}
         $reports=@{}
-        $reports[$computer]=@{Server=$wsus.Authority;Found=$false;ReceivedUtc=$stamp;Report=@{}}
+        $reports[$computer]=@{Server=$wsus.Authority;Found=$true;ReceivedUtc=$stamp
+            Report=@{FullDomainName=$computer;LastReportedUtc=[DateTimeOffset]::UtcNow.AddDays(-3).ToString('o');LastSyncResult='Succeeded'}}
         Save-Json 'wsus-report-cache.json' $reports
         $process=Start-Process (Join-Path $Package 'DomainConsole.exe') -WorkingDirectory $Package -ArgumentList '--software-rendering' -PassThru
         $main=Wait-Control {
@@ -79,8 +81,21 @@
         } 'byte growth confirmed in the background activity panel' 85
         return @{Message=$message;AwaitGrowth=$false;Action='Packaged WPF';OriginalGuid=$Id;OriginalBytes=$Received}
     }catch{
-        @{PackageSha256=$env:APP_SHA256;Failure=$_.Exception.Message;Guid=$Id;OriginalBytes=$Received} |
-            ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root 'evidence.json') -Encoding UTF8
+        $failure=@{PackageSha256=$env:APP_SHA256;Failure=$_.Exception.Message;Guid=$Id;OriginalBytes=$Received}
+        $collector=Join-Path $env:ProgramData 'DomainConsoleCSharp\Snapshot41'
+        foreach($name in 'state.json','Activity.json','Activity.error','error.txt','run.json'){
+            $file=Join-Path $collector $name
+            if(Test-Path -LiteralPath $file){$failure[$name]=Get-Content -LiteralPath $file -Raw -Encoding UTF8}
+        }
+        if($main){
+            $controls=@{}
+            foreach($name in 'CurrentStage','BackgroundSummary','BackgroundDetails','ContinueBits187'){
+                $element=Find-Control $main $ae::AutomationIdProperty $name
+                if($element){$controls[$name]=@{Title=$element.Current.Name;Enabled=$element.Current.IsEnabled;Offscreen=$element.Current.IsOffscreen}}
+            }
+            $failure.Controls=$controls
+        }
+        $failure | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $root 'evidence.json') -Encoding UTF8
         throw
     }finally{
         if($process -and !$process.HasExited){
