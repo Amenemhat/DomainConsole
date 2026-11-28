@@ -66,7 +66,6 @@ try {
     $peer=Get-BitsTransfer -AllUsers | Where-Object JobId -eq $ids[1]
     if($chosen.JobState -ne 'Suspended' -or $peer.JobState -ne 'Suspended'){throw 'Initial jobs are not paused'}
     $file=@($chosen.FileList)[0]
-    $policyBefore=@{UseWUServer=1;WUServer=$policy}
     $request=@{
         Id=$ids[0].ToString();State='Suspended';Received=[long]$chosen.BytesTransferred;Total=[long]$chosen.BytesTotal
         RemoteName=$file.RemoteName;LocalName=$file.LocalName;ModifiedUtc=$chosen.ModificationTime.ToUniversalTime().ToString('o')
@@ -75,14 +74,29 @@ try {
     $serviceBefore=Get-CimInstance Win32_Service -Filter "Name='BITS'"
     $source=Join-Path $env:GITHUB_WORKSPACE 'DomainConsole-CSharp/Console/Polling42/bits-resume187.ps1'
     $literal="'"+($request|ConvertTo-Json -Compress).Replace("'","''")+"'"
-    $body=[ScriptBlock]::Create([IO.File]::ReadAllText($source).Replace('@@REQUEST@@',$literal))
-    $reply=& {
-        # Supply the synthetic WSUS policy without changing the runner's Windows Update settings.
-        function Get-ItemProperty {param($LiteralPath) $policyBefore}
-        function Get-CimInstance {param($ClassName,$Filter)}
-        function New-Object {param($ComObject) @{IsBusy=$false}}
-        & $body
-    } | ConvertFrom-Json
+    $logic=[IO.File]::ReadAllText($source).Replace('@@REQUEST@@',$literal)
+    $isolation=@'
+function Get-ItemProperty {param($LiteralPath) @{UseWUServer=1;WUServer='FIXTURE_URL'}}
+function Get-CimInstance {param($ClassName,$Filter)}
+function New-Object {param($ComObject) @{IsBusy=$false}}
+'@
+    $prefix=$isolation.Replace('FIXTURE_URL',$policy)
+    $worker='$ErrorActionPreference="Stop"; try {$value=& {'+[Environment]::NewLine+$prefix+[Environment]::NewLine+
+        $logic+[Environment]::NewLine+'}|ConvertFrom-Json -ErrorAction Stop;'+
+        '$value|ConvertTo-Json -Depth 12 -Compress|Set-Content -LiteralPath (Join-Path $PSScriptRoot "result.tmp") -Encoding UTF8;'+
+        'Move-Item -LiteralPath (Join-Path $PSScriptRoot "result.tmp") -Destination (Join-Path $PSScriptRoot "result.json") -Force}'+
+        'catch{[IO.File]::WriteAllText((Join-Path $PSScriptRoot "error.txt"),$_.Exception.Message);exit 1}'
+    $outer=Join-Path $env:GITHUB_WORKSPACE 'DomainConsole-CSharp/Console/ManualReboot59.cs'
+    $template=[regex]::Match([IO.File]::ReadAllText($outer),'(?s)ManualRebootTemplate59="""?
+(.*?)?
+""";')
+    if(!$template.Success){throw 'Bounded SYSTEM template missing from the candidate'}
+    $launcher=$template.Groups[1].Value.Replace('@@DIRECTORY@@',"'BitsControl187'").Replace('@@BODY@@',("'"+$worker.Replace("'","''")+"'"))
+    $reply=& ([ScriptBlock]::Create($launcher)) | ConvertFrom-Json
+    $control=Get-ScheduledTask -TaskName 'DomainConsoleCSharp-BitsControl187'
+    if($control.State -in 'Running','Queued' -or $control.Settings.MultipleInstances -ne 'IgnoreNew'){
+        throw 'Expected a single completed reusable SYSTEM task'
+    }
     $deadline=[DateTime]::UtcNow.AddSeconds(35)
     do {
         $after=Get-BitsTransfer -AllUsers | Where-Object JobId -eq $ids[0]
@@ -93,6 +107,7 @@ try {
     $serviceAfter=Get-CimInstance Win32_Service -Filter "Name='BITS'"
     $proof=@{Version=$env:APP_COMMIT;Initial=$request;Reply=$reply;SameJob=$after.JobId -eq $ids[0]
         State=[string]$after.JobState;Bytes=[long]$after.BytesTransferred;BitsError=[string]$after.ErrorDescription
+        ControlTask=[string]$control.TaskName;ControlTaskState=[string]$control.State
         OtherState=[string]$other.JobState;OtherBytes=[long]$other.BytesTransferred;SameServicePid=$serviceBefore.ProcessId -eq $serviceAfter.ProcessId}
     [IO.File]::WriteAllText((Join-Path $root 'evidence.json'),($proof|ConvertTo-Json -Depth 6),$utf8)
     if(!$proof.SameJob -or $proof.Bytes -le $request.Received -or $proof.OtherState -ne 'Suspended' -or
@@ -107,5 +122,6 @@ try {
         Get-BitsTransfer -AllUsers | Where-Object { $_.JobId -in $ids } | Remove-BitsTransfer -Confirm:$false -ErrorAction SilentlyContinue
     }
     Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue
+    Unregister-ScheduledTask -TaskName DomainConsoleCSharp-BitsControl187 -Confirm:$false -ErrorAction SilentlyContinue
     if($server -and !$server.HasExited){Stop-Process -Id $server.Id}
 }

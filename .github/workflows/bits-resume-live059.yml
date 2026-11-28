@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 12
     env:
-      APP_COMMIT: 79902e433f60c22f5ce615ca9545a05ef55435d5
+      APP_COMMIT: b00e2981c8299ae26a47b11a77b9c7bb6888634a
     steps:
       - uses: actions/checkout@v4
         with:
